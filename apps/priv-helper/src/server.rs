@@ -451,8 +451,11 @@ mod tests {
 
         fn ask(&self, line: &[u8]) -> Response {
             let mut stream = UnixStream::connect(&self.config.socket).unwrap();
-            stream.write_all(line).unwrap();
-            stream.write_all(b"\n").unwrap();
+            // One write: a second one, after the helper has answered and closed, could be
+            // answered with a reset that breaks the read below.
+            let mut request = line.to_vec();
+            request.push(b'\n');
+            stream.write_all(&request).unwrap();
             let mut answer = String::new();
             BufReader::new(stream).read_line(&mut answer).unwrap();
             serde_json::from_str(&answer).unwrap()
