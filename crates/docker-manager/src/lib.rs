@@ -936,6 +936,45 @@ impl DockerManager {
         since_ms: i64,
         tail: u32,
     ) -> Result<LogRead, DockerError> {
+        let mut lines: std::collections::VecDeque<LogLine> = std::collections::VecDeque::new();
+        let mut bytes = 0usize;
+        let mut truncated = false;
+        self.visit_logs(name, since_ms, tail, |at_ms, stderr, text| {
+            bytes += text.len();
+            lines.push_back(LogLine {
+                at_ms,
+                stderr,
+                text: text.to_owned(),
+            });
+            // The newest lines are the ones worth keeping.
+            while bytes > MAX_LOG_BYTES {
+                truncated = true;
+                match lines.pop_front() {
+                    Some(old) => bytes -= old.text.len(),
+                    None => break,
+                }
+            }
+        })
+        .await?;
+        let mut lines: Vec<LogLine> = lines.into();
+        // stdout and stderr arrive as they were written; two streams are put in time order.
+        lines.sort_by_key(|l| l.at_ms);
+        Ok(LogRead { lines, truncated })
+    }
+
+    /// Calls `visit(at_ms, is_stderr, text)` for each line of a container's log at or after
+    /// `since_ms`, as they arrive, keeping none of them (for counting over a long log). At
+    /// most `tail` lines are read (the newest). Only containers of ours.
+    ///
+    /// # Errors
+    /// [`DockerError::NotFound`], [`DockerError::NotManaged`], an API error.
+    pub async fn visit_logs(
+        &self,
+        name: &Name,
+        since_ms: i64,
+        tail: u32,
+        mut visit: impl FnMut(i64, bool, &str) + Send,
+    ) -> Result<(), DockerError> {
         self.require_managed_container(name).await?;
         let options = bollard::query_parameters::LogsOptionsBuilder::default()
             .stdout(true)
@@ -945,9 +984,6 @@ impl DockerManager {
             .tail(&tail.to_string())
             .build();
         let mut stream = self.docker.logs(name.as_str(), Some(options));
-        let mut lines: std::collections::VecDeque<LogLine> = std::collections::VecDeque::new();
-        let mut bytes = 0usize;
-        let mut truncated = false;
         let mut pending: [String; 2] = [String::new(), String::new()];
         while let Some(chunk) = stream.next().await {
             let (is_err, message) = match chunk.map_err(map_error)? {
@@ -963,26 +999,10 @@ impl DockerManager {
                 if at_ms < since_ms {
                     continue;
                 }
-                bytes += text.len();
-                lines.push_back(LogLine {
-                    at_ms,
-                    stderr: is_err == 1,
-                    text: text.to_owned(),
-                });
-                // The newest lines are the ones worth keeping.
-                while bytes > MAX_LOG_BYTES {
-                    truncated = true;
-                    match lines.pop_front() {
-                        Some(old) => bytes -= old.text.len(),
-                        None => break,
-                    }
-                }
+                visit(at_ms, is_err == 1, text);
             }
         }
-        let mut lines: Vec<LogLine> = lines.into();
-        // stdout and stderr arrive as they were written; two streams are put in time order.
-        lines.sort_by_key(|l| l.at_ms);
-        Ok(LogRead { lines, truncated })
+        Ok(())
     }
 
     /// Reads a running container's resource usage once.

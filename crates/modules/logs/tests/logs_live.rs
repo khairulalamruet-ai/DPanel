@@ -174,7 +174,7 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         loop {
             let rows: Vec<(Uuid, Value)> = sqlx::query_as(
-                "SELECT id, payload FROM operations WHERE kind = 'read_log' AND status = 'pending'",
+                "SELECT id, payload FROM operations WHERE kind IN ('read_log', 'read_traffic') AND status = 'pending'",
             )
             .fetch_all(&pool)
             .await
@@ -190,6 +190,20 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                 if payload["username"] == "broken" {
                     sqlx::query("UPDATE operations SET status = 'failed', error = '{\"code\":\"not_found\",\"message\":\"x\",\"retryable\":false}', finished_at = now() WHERE id = $1")
                         .bind(id)
+                        .execute(&pool)
+                        .await
+                        .unwrap();
+                    continue;
+                }
+                if payload["type"] == "read_traffic" || payload.get("top").is_some() {
+                    let out = json!({"type": "traffic", "requests": 7, "bytes": 700, "status_2xx": 5,
+                        "status_3xx": 1, "status_4xx": 1, "status_5xx": 0, "bots": 2,
+                        "hours": [{"at_ms": 3_600_000, "requests": 7, "bytes": 700}],
+                        "top_paths": [{"path": format!("/top{}", payload["top"]), "requests": 4}],
+                        "partial": false});
+                    sqlx::query("UPDATE operations SET status = 'succeeded', output = $2, finished_at = now() WHERE id = $1")
+                        .bind(id)
+                        .bind(out)
                         .execute(&pool)
                         .await
                         .unwrap();
@@ -345,4 +359,68 @@ async fn the_activity_is_the_accounts_own_and_pages(pool: PgPool) {
     // Bob sees only his.
     let (_, got) = e.get(&bob, "/api/v1/client/activity").await;
     assert_eq!(got["items"].as_array().unwrap().len(), 1);
+}
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn traffic_is_counted_by_the_node_for_the_owner_only(pool: PgPool) {
+    let e = env(&pool, Duration::from_secs(5)).await;
+    let (alice_account, _) = client(&pool, "alice", 10_000).await;
+    let alice = e.sign_in(alice_account).await;
+    let staff = {
+        let admin: Uuid = sqlx::query_scalar(
+            "INSERT INTO accounts (kind, username, email, password_hash)
+             VALUES ('admin', 'rootuser', 'root@example.com', $1) RETURNING id",
+        )
+        .bind(HASH)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        e.sign_in(admin).await
+    };
+    let played = node(pool.clone());
+    let (status, got) = e.get(&staff, "/api/v1/client/traffic").await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{got}");
+    let (status, got) = e.get(&alice, "/api/v1/client/traffic?range=7d&top=3").await;
+    assert_eq!(status, StatusCode::OK, "{got}");
+    assert_eq!(
+        (got["requests"].as_u64(), got["bots"].as_u64()),
+        (Some(7), Some(2))
+    );
+    assert_eq!(got["range"], "7d");
+    assert_eq!(got["hours"][0]["bytes"], 700);
+    assert_eq!(
+        got["top_paths"][0]["path"], "/top3",
+        "the count asked for is sent on"
+    );
+    // The asked time is a week back from now.
+    let since: i64 = sqlx::query_scalar(
+        "SELECT (payload->>'since_ms')::bigint FROM operations WHERE kind = 'read_traffic' ORDER BY created_at DESC LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    let now_ms = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis(),
+    )
+    .unwrap();
+    assert!(
+        (now_ms - since - 7 * 24 * 3_600_000).abs() < 60_000,
+        "{since}"
+    );
+    for q in ["range=1y", "top=0", "top=51"] {
+        let (status, got) = e.get(&alice, &format!("/api/v1/client/traffic?{q}")).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{q}: {got}");
+    }
+    // A suspended account has no running web server to count.
+    sqlx::query("UPDATE tenants SET status = 'suspended' WHERE username = 'alice'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let (status, _) = e.get(&alice, "/api/v1/client/traffic").await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    played.abort();
 }

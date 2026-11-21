@@ -22551,6 +22551,110 @@
         ]
       }
     },
+    "/api/v1/client/traffic": {
+      "get": {
+        "tags": [
+          "logs"
+        ],
+        "summary": "How many requests the account's website got: totals, by kind of answer, per hour and the\nmost asked pages. Counted from the web server's log, which the node keeps for a while only.",
+        "operationId": "clientTraffic",
+        "parameters": [
+          {
+            "name": "range",
+            "in": "path",
+            "description": "`24h` (default), `7d` or `30d`.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "top",
+            "in": "path",
+            "description": "How many of the most asked pages (1-50, default 10).",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrafficView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; ask again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`client_only` or `feature_disabled`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`tenant_not_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A range or count that is not usable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`node_unavailable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/client/usage": {
       "get": {
         "tags": [
@@ -34309,6 +34413,137 @@
           "secret": {
             "type": "string",
             "description": "Base32 secret for manual entry."
+          }
+        }
+      },
+      "TrafficHourView": {
+        "type": "object",
+        "description": "One hour of traffic.",
+        "required": [
+          "at_ms",
+          "requests",
+          "bytes"
+        ],
+        "properties": {
+          "at_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The start of the hour (Unix milliseconds, UTC)."
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bytes sent in it.",
+            "minimum": 0
+          },
+          "requests": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Requests in it.",
+            "minimum": 0
+          }
+        }
+      },
+      "TrafficPathView": {
+        "type": "object",
+        "description": "A page and its requests.",
+        "required": [
+          "path",
+          "requests"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "The path (no query string)."
+          },
+          "requests": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Requests for it.",
+            "minimum": 0
+          }
+        }
+      },
+      "TrafficView": {
+        "type": "object",
+        "description": "An account's web traffic.",
+        "required": [
+          "range",
+          "requests",
+          "bytes",
+          "status_2xx",
+          "status_3xx",
+          "status_4xx",
+          "status_5xx",
+          "bots",
+          "hours",
+          "top_paths",
+          "partial"
+        ],
+        "properties": {
+          "bots": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Requests from robots (by their User-Agent).",
+            "minimum": 0
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bytes sent.",
+            "minimum": 0
+          },
+          "hours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrafficHourView"
+            },
+            "description": "Per hour, oldest first (hours without a request are left out)."
+          },
+          "partial": {
+            "type": "boolean",
+            "description": "The log held less than the range (the numbers are a lower bound)."
+          },
+          "range": {
+            "type": "string",
+            "description": "The range asked for."
+          },
+          "requests": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Requests counted.",
+            "minimum": 0
+          },
+          "status_2xx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Answers 200-299.",
+            "minimum": 0
+          },
+          "status_3xx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Answers 300-399.",
+            "minimum": 0
+          },
+          "status_4xx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Answers 400-499.",
+            "minimum": 0
+          },
+          "status_5xx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Answers 500-599.",
+            "minimum": 0
+          },
+          "top_paths": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrafficPathView"
+            },
+            "description": "The most asked pages, most first."
           }
         }
       },

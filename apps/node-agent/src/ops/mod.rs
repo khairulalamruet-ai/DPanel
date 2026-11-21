@@ -50,6 +50,7 @@ pub mod sqlexport;
 pub mod sqlimport;
 pub mod sqlsplit;
 pub mod tenant;
+pub mod traffic;
 pub mod transfer;
 pub mod vhost;
 pub mod webmail;
@@ -314,6 +315,10 @@ impl Registry {
             registry.register("read_log", {
                 let context = context.clone();
                 move |op| logs::read_log(context.clone(), op)
+            });
+            registry.register("read_traffic", {
+                let context = context.clone();
+                move |op| traffic::read_traffic(context.clone(), op)
             });
             registry.register("sync_cron_jobs", {
                 let context = context.clone();

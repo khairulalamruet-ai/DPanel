@@ -1098,6 +1098,31 @@ pub struct LogLine {
 /// Most lines one log read returns.
 pub const MAX_LOG_LINES: u32 = 2000;
 
+/// Most pages one traffic count names.
+pub const MAX_TRAFFIC_PATHS: u32 = 50;
+
+/// One hour of an account's web traffic.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TrafficHour {
+    /// The start of the hour (Unix milliseconds, UTC).
+    pub at_ms: i64,
+    /// Requests in it.
+    pub requests: u64,
+    /// Bytes sent in it.
+    pub bytes: u64,
+}
+
+/// A page and how often it was asked for.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TrafficPath {
+    /// The path without the query string.
+    pub path: String,
+    /// Requests for it.
+    pub requests: u64,
+}
+
 /// The node as a whole, as counters and levels (rates are made from two readings).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -2037,6 +2062,19 @@ pub enum Operation {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         contains: Option<String>,
     },
+    /// Counts an account's web requests since a time, from the web container's access log:
+    /// how many, how many bytes, by kind of answer, per hour, and the most asked pages.
+    /// Answered with [`Output::Traffic`].
+    ReadTraffic {
+        /// The tenant.
+        tenant_id: Uuid,
+        /// The tenant's system name.
+        username: String,
+        /// Requests before this time (Unix milliseconds) are not counted.
+        since_ms: i64,
+        /// How many of the most asked pages to name (1 to [`MAX_TRAFFIC_PATHS`]).
+        top: u32,
+    },
     /// The state of the node's core services that run as containers (database server,
     /// phpMyAdmin, file server) and of the agent itself. Answered with [`Output::Services`].
     ReportServices,
@@ -2699,6 +2737,7 @@ impl Operation {
         "restart_container",
         "collect_metrics",
         "read_log",
+        "read_traffic",
         "run_cron_job",
         "report_cron_runs",
         "export_backup",
@@ -2839,6 +2878,7 @@ impl Operation {
             Self::RestartContainer { .. } => "restart_container",
             Self::CollectMetrics => "collect_metrics",
             Self::ReadLog { .. } => "read_log",
+            Self::ReadTraffic { .. } => "read_traffic",
             Self::RunCronJob { .. } => "run_cron_job",
             Self::ReportCronRuns { .. } => "report_cron_runs",
             Self::ExportBackup { .. } => "export_backup",
@@ -3289,6 +3329,29 @@ pub enum Output {
         parts: Vec<BackupPartInfo>,
         /// Everything put in place, in bytes.
         size_bytes: u64,
+    },
+    /// Answer to [`Operation::ReadTraffic`].
+    Traffic {
+        /// Requests counted.
+        requests: u64,
+        /// Bytes sent (the body, as the web server logs it).
+        bytes: u64,
+        /// Answers 200-299.
+        status_2xx: u64,
+        /// Answers 300-399.
+        status_3xx: u64,
+        /// Answers 400-499.
+        status_4xx: u64,
+        /// Answers 500-599.
+        status_5xx: u64,
+        /// Requests whose User-Agent names a robot (bot, crawler, spider ...).
+        bots: u64,
+        /// Per hour, oldest first (hours without a request are left out).
+        hours: Vec<TrafficHour>,
+        /// The most asked pages, most first.
+        top_paths: Vec<TrafficPath>,
+        /// The log held less than the time asked for (it is a lower bound).
+        partial: bool,
     },
     /// Answer to [`Operation::ReadLog`].
     LogLines {
@@ -4550,6 +4613,12 @@ mod tests {
                 username: "alice".into(),
                 name: "site".into(),
             },
+            Operation::ReadTraffic {
+                tenant_id: id(),
+                username: "alice".into(),
+                since_ms: 0,
+                top: 10,
+            },
         ] {
             let wire = serde_json::to_value(&op).unwrap();
             assert_eq!(wire["type"], op.type_name());
@@ -4557,7 +4626,7 @@ mod tests {
         }
         assert_eq!(
             Operation::TYPE_NAMES.len(),
-            95,
+            96,
             "update TYPE_NAMES and type_name() together with the enum"
         );
     }
