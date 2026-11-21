@@ -1843,3 +1843,87 @@ async fn root_logs_in_with_the_servers_root_password(pool: PgPool) {
     let r = login(&app(st), "root", ROOT_PASSWORD, None).await;
     assert_eq!(r.status, StatusCode::FORBIDDEN, "{:?}", r.body);
 }
+
+// ------------------------------------------------------------ preferences
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn preferences_belong_to_one_account_and_are_checked(pool: PgPool) {
+    let hasher = PasswordHasher::new(fast_params(2)).unwrap();
+    create_account(&pool, &hasher, "amy", "active").await;
+    create_account(&pool, &hasher, "ben", "active").await;
+    let app = app(state(&pool, hasher));
+    let amy = sign_in(&app, "amy").await;
+    let ben = sign_in(&app, "ben").await;
+    let put = |b: &Browser, body: Value| {
+        let (app, cookie, csrf) = (app.clone(), b.cookie.clone(), b.csrf.clone());
+        async move {
+            send_with(
+                &app,
+                "PUT",
+                "/api/v1/auth/preferences",
+                Some(&cookie),
+                Some(body),
+                &[("x-csrf-token", &csrf)],
+            )
+            .await
+        }
+    };
+    let get = |b: &Browser| {
+        let (app, cookie) = (app.clone(), b.cookie.clone());
+        async move { send(&app, "GET", "/api/v1/auth/preferences", Some(&cookie), None).await }
+    };
+
+    // Nothing saved: the defaults.
+    let r = get(&amy).await;
+    assert_eq!(r.status, StatusCode::OK);
+    assert_eq!(r.body, json!({"locale": null, "favorites": []}));
+    // Saved, and read back in the order given.
+    let r = put(
+        &amy,
+        json!({"locale": "bn", "favorites": ["files", "domains/dns"]}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.body);
+    assert_eq!(
+        get(&amy).await.body,
+        json!({"locale": "bn", "favorites": ["files", "domains/dns"]})
+    );
+    // Replaced, not merged.
+    put(&amy, json!({"locale": null, "favorites": ["cron"]})).await;
+    assert_eq!(
+        get(&amy).await.body,
+        json!({"locale": null, "favorites": ["cron"]})
+    );
+    // Ben has his own.
+    assert_eq!(
+        get(&ben).await.body,
+        json!({"locale": null, "favorites": []})
+    );
+    // What is refused (and leaves the saved settings alone).
+    let many: Vec<String> = (0..31).map(|i| format!("k{i}")).collect();
+    for bad in [
+        json!({"locale": "fr", "favorites": []}),
+        json!({"locale": null, "favorites": ["Has Space"]}),
+        json!({"locale": null, "favorites": ["a", "a"]}),
+        json!({"locale": null, "favorites": [""]}),
+        json!({"locale": null, "favorites": many}),
+    ] {
+        let r = put(&amy, bad.clone()).await;
+        assert_eq!(
+            r.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{bad}: {}",
+            r.body
+        );
+    }
+    let r = put(&amy, json!({"locale": null, "favorites": [], "extra": 1})).await;
+    assert!(r.status.is_client_error(), "unknown field: {}", r.status);
+    assert_eq!(
+        get(&amy).await.body,
+        json!({"locale": null, "favorites": ["cron"]})
+    );
+    // Without a session.
+    let r = send(&app, "GET", "/api/v1/auth/preferences", None, None).await;
+    assert_eq!(r.status, StatusCode::UNAUTHORIZED);
+}

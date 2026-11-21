@@ -12269,6 +12269,107 @@
         ]
       }
     },
+    "/api/v1/auth/preferences": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The saved settings.",
+        "operationId": "getPreferences",
+        "responses": {
+          "200": {
+            "description": "The settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preferences"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not logged in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Replace the settings.",
+        "operationId": "putPreferences",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Preferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preferences"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not logged in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A language or entry that is not usable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/sessions": {
       "get": {
         "tags": [
@@ -31144,6 +31245,35 @@
             "format": "int32",
             "description": "The last port of a range (`port` to `to`).",
             "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "Preferences": {
+        "type": "object",
+        "description": "An account's settings.",
+        "required": [
+          "favorites"
+        ],
+        "properties": {
+          "favorites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Pinned menu entries, in the order the account wants them.",
+            "example": [
+              "files",
+              "domains"
+            ]
+          },
+          "locale": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`en` or `bn` (`null`: none chosen, the interface decides).",
+            "example": "bn"
           }
         },
         "additionalProperties": false
