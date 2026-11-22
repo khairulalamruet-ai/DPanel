@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input, useToas
 import { useTranslation } from "@builtpanel/i18n";
 import * as tools from "./api";
 
-type Tab = "cache" | "deploys" | "market" | "apps" | "scans" | "traffic" | "activity";
+type Tab = "cache" | "deploys" | "market" | "apps" | "containers" | "scans" | "traffic" | "activity";
 
 function fmtTime(sec?: number | null): string {
   return sec ? new Date(sec * 1000).toLocaleString() : "-";
@@ -333,6 +333,54 @@ function AppsTab() {
   );
 }
 
+function ContainersTab() {
+  const { t } = useTranslation();
+  const apps = useLoad(tools.listContainerApps);
+  const images = useLoad(tools.listApprovedImages);
+  const run = useRun(apps.reload);
+  const [form, setForm] = useState({ name: "", image_id: "" });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("tools.containers", "Containers")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {apps.error && <p className="text-sm text-destructive">{apps.error}</p>}
+        {apps.data?.map((c) => (
+          <div key={c.id} className="rounded border p-3 text-sm">
+            <span className="font-medium">{c.name}</span> <Badge variant="outline">{c.status}</Badge>
+            <div className="text-xs text-muted-foreground">
+              {c.image ?? "-"} · port {c.port} · {c.memory_mb} MB{c.domain ? ` · ${c.domain}` : ""}
+            </div>
+            {c.error && <div className="text-xs text-destructive">{c.error}</div>}
+          </div>
+        ))}
+        <form
+          className="flex flex-wrap gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void run(() => tools.createContainerApp(form));
+          }}
+        >
+          <Input placeholder="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <select
+            className="rounded border bg-background px-2 text-sm"
+            value={form.image_id}
+            onChange={(e) => setForm({ ...form, image_id: e.target.value })}
+            required
+          >
+            <option value="">{t("tools.pickImage", "choose an image")}</option>
+            {images.data?.map((i) => (
+              <option key={i.id} value={i.id}>{i.name}</option>
+            ))}
+          </select>
+          <Button type="submit">{t("tools.run", "Run")}</Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ActivityTab() {
   const { t } = useTranslation();
   const { data, error } = useLoad(tools.listActivity);
@@ -362,6 +410,7 @@ export function ClientToolsPage() {
     ["deploys", t("tools.deploys", "Git deploys")],
     ["market", t("tools.market", "Marketplace")],
     ["apps", t("tools.apps", "Node.js / Python apps")],
+    ["containers", t("tools.containers", "Containers")],
     ["scans", t("tools.scans", "Security scans")],
     ["traffic", t("tools.traffic", "Website traffic")],
     ["activity", t("tools.activity", "Account activity")],
@@ -380,6 +429,7 @@ export function ClientToolsPage() {
       {tab === "deploys" && <DeploysTab />}
       {tab === "market" && <MarketTab />}
       {tab === "apps" && <AppsTab />}
+      {tab === "containers" && <ContainersTab />}
       {tab === "activity" && <ActivityTab />}
       {tab === "scans" && <ScansTab />}
       {tab === "traffic" && <TrafficTab />}

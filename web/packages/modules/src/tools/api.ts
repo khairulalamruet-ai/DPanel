@@ -161,3 +161,25 @@ export interface ActivityItem {
 export async function listActivity(): Promise<ActivityItem[]> {
   return (await apiFetch<{ items: ActivityItem[] }>(`${BASE}/activity`)).items;
 }
+
+export interface ContainerApp {
+  id: string;
+  name: string;
+  image?: string | null;
+  status: string;
+  port: number;
+  memory_mb: number;
+  domain?: string | null;
+  error?: string | null;
+}
+export interface ApprovedImage {
+  id: string;
+  name: string;
+  note: string;
+  default_port: number;
+  default_memory_mb: number;
+}
+export const listContainerApps = () => apiFetch<ContainerApp[]>(`${BASE}/container-apps`);
+export const listApprovedImages = () => apiFetch<ApprovedImage[]>(`${BASE}/container-images`);
+export const createContainerApp = (input: { name: string; image_id: string; memory_mb?: number; port?: number }) =>
+  apiFetch<ContainerApp>(`${BASE}/container-apps`, { method: "POST", body: JSON.stringify(input) });

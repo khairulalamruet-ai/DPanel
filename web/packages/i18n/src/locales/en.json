@@ -37,7 +37,42 @@
     "saving": "Saving...",
     "processing": "Processing...",
     "next": "Next Step",
-    "back": "Back"
+    "back": "Back",
+    "delete": "Delete",
+    "generate": "Generate",
+    "creating": "Creating...",
+    "actions": "Actions",
+    "deleting": "Deleting...",
+    "refresh": "Refresh",
+    "active": "Active",
+    "suspended": "Suspended",
+    "suspend": "Suspend",
+    "unsuspend": "Activate",
+    "allowed": "Allowed",
+    "restricted": "Restricted",
+    "completed": "Completed",
+    "saveChanges": "Save Settings",
+    "success": "Success",
+    "all": "All",
+    "copied": "Copied to clipboard",
+    "copy": "Copy URL",
+    "generating": "Generating...",
+    "close": "Close",
+    "done": "Done & Close",
+    "enabled": "Active",
+    "locked": "Locked",
+    "submitting": "Submitting...",
+    "activating": "Activating...",
+    "action": "Action",
+    "reset": "Reset Default",
+    "edit": "Edit Record",
+    "initiating": "Connecting...",
+    "viewDetails": "View",
+    "unknownError": "Something went wrong",
+    "name": "Name",
+    "add": "Add",
+    "inactive": "Inactive",
+    "prev": "Previous"
   },
   "auth": {
     "login": "Sign In",
@@ -579,7 +614,8 @@
         "latency": "Latency",
         "output": "Output / Diagnostic"
       }
-    }
+    },
+    "idempotencyKey": "Operation ID"
   },
   "settings": {
     "nav": "Settings",
@@ -1268,7 +1304,9 @@
       "recordAdded": "Record added successfully",
       "recordUpdated": "DNS record updated successfully",
       "recordDeleted": "DNS record deleted successfully",
-      "nsVerifiedTitle": "Nameservers Verified"
+      "nsVerifiedTitle": "Nameservers Verified",
+      "nsNotVerifiedTitle": "Nameservers not set yet",
+      "nsMissing": "Point the domain at: {{servers}}"
     },
     "errors": {
       "nameRequired": "Record name is required (use @ for root)",
@@ -1413,7 +1451,8 @@
       "securitySettings": "HTTPS & HSTS Settings",
       "revoke": "Revoke Certificate",
       "revokeConfirm": "Revoke Certificate",
-      "installCert": "Install Certificate"
+      "installCert": "Install Certificate",
+      "refresh": "Read the certificate state again"
     },
     "customDialog": {
       "title": "Install Custom SSL Certificate",
@@ -1435,14 +1474,17 @@
     },
     "revokeDialog": {
       "title": "Revoke SSL Certificate",
-      "description": "Are you sure you want to revoke the SSL certificate for {{domain}}? Insecure HTTP traffic will no longer be encrypted until a new certificate is issued."
+      "description": "Are you sure you want to revoke the SSL certificate for {{domain}}? Insecure HTTP traffic will no longer be encrypted until a new certificate is issued.",
+      "warning": "Are you sure you want to remove the SSL certificate for {{domain}}? Visitors will see browser security warnings over HTTPS."
     },
     "toast": {
       "reissuedTitle": "SSL Re-issued",
       "reissuedDesc": "New 90-day Let's Encrypt certificate generated and installed for {{domain}}.",
       "customInstalled": "Custom SSL certificate installed successfully",
       "settingsUpdated": "Security settings saved successfully",
-      "revoked": "Certificate removed and reverted to unencrypted state"
+      "revoked": "Certificate removed and reverted to unencrypted state",
+      "refreshedTitle": "Certificate state refreshed",
+      "refreshed": "Certificates are renewed by the web server on its own; the state was read again."
     },
     "errors": {
       "fetchFailed": "Failed to load SSL certificates",
@@ -1454,7 +1496,8 @@
       "invalidKeyPem": "Invalid private key format. Expected PEM format starting with -----BEGIN (RSA|EC)? PRIVATE KEY-----",
       "uploadFailed": "Failed to install custom SSL certificate",
       "updateSettingsFailed": "Failed to update security settings"
-    }
+    },
+    "nav": "SSL / TLS Certificates"
   },
   "vhost": {
     "title": "VHost Templates & Directives",
@@ -1495,7 +1538,8 @@
       "defaultVersion": "Default Runtime",
       "domainsConfigured": "Configured Domains",
       "memoryLimit": "Memory Limit",
-      "opcache": "OPcache Bytecode"
+      "opcache": "OPcache Bytecode",
+      "uploadLimit": "Upload Limit"
     },
     "tabs": {
       "versions": "PHP Versions",
@@ -1617,7 +1661,8 @@
       "collation": "Collation",
       "connectionHost": "Allowed Connection Host",
       "targetDatabase": "Target Database",
-      "assignDatabases": "Assign to Databases"
+      "assignDatabases": "Assign to Databases",
+      "engine": "Database engine"
     },
     "table": {
       "title": "All Databases",
@@ -1627,7 +1672,8 @@
       "charset": "Collation",
       "assignedUsers": "Assigned Users",
       "assignedDatabases": "Database Grants",
-      "noDatabases": "No databases created yet."
+      "noDatabases": "No databases created yet.",
+      "engine": "Engine"
     },
     "usersTable": {
       "title": "Database Users & Privileges",
@@ -1665,7 +1711,8 @@
       "currentAllowlist": "Current Allowed Remote Hosts",
       "empty": "No external IPs configured. Database is accessible only within the internal tenant container network.",
       "invalidIp": "Enter a valid IPv4 address or CIDR (e.g. 192.168.1.100 or 10.5.0.0/16)",
-      "duplicateIp": "This IP address or CIDR is already in the allowlist"
+      "duplicateIp": "This IP address or CIDR is already in the allowlist",
+      "user": "Database user"
     },
     "deleteDb": {
       "title": "Delete Database",
@@ -1779,7 +1826,13 @@
     "deletedSuccess": "Moved to trash successfully",
     "uploadSuccess": "File uploaded successfully",
     "folderEmpty": "This folder is empty",
-    "dragDropToUpload": "Drag and drop files here to upload"
+    "dragDropToUpload": "Drag and drop files here to upload",
+    "editor": {
+      "loadFailed": "Failed to load file content",
+      "saved": "File {{name}} saved successfully",
+      "saveFailed": "Failed to save file",
+      "unsaved": "Unsaved Changes"
+    }
   },
   "diskUsage": {
     "title": "Disk & Inode Usage",
@@ -1879,7 +1932,18 @@
     "confirmDelete": "Are you sure you want to delete backup \"{{name}}\"?",
     "deletedSuccess": "Backup {{name}} deleted successfully",
     "downloadStarted": "Download started for {{name}}",
-    "noBackupsFound": "No backups found"
+    "noBackupsFound": "No backups found",
+    "scheduleSaved": "Backup schedule saved",
+    "scheduleRemoved": "Backup schedule removed; the backups already made stay",
+    "scheduleTitle": "Automatic backups",
+    "scheduleWhen": "When (cron, UTC)",
+    "keepDaily": "Keep daily",
+    "keepWeekly": "Keep weekly",
+    "wholeAccount": "The backup holds everything of this account. It is made in the background; it shows as ready in the list when it is done.",
+    "dnsRecords": "DNS records",
+    "exportPassphrase": "Choose a passphrase for the export file (keep it: it is needed to open the file)",
+    "exportPreparing": "Preparing the export",
+    "exportReady": "The export is ready: {{file}}"
   },
   "adminBackups": {
     "nav": "Backup Management",
@@ -1966,7 +2030,9 @@
     "retentionWeekly": "Keep Weekly Backups",
     "retentionMonthly": "Keep Monthly Backups",
     "scheduleCreated": "Schedule created successfully",
-    "saveSchedule": "Save Schedule"
+    "saveSchedule": "Save Schedule",
+    "destinationDefault": "{{name}} is the default destination now",
+    "makeDefault": "Make default"
   },
   "cron": {
     "nav": "Cron Jobs",
@@ -2053,7 +2119,8 @@
     "errorsDetected": "errors detected",
     "streamLive": "Live Stream Active",
     "streamPaused": "Live Stream Paused",
-    "virtualized100MbMode": "Virtualized 100MB Stress Test"
+    "virtualized100MbMode": "Virtualized 100MB Stress Test",
+    "onlyNewest": "Only the newest lines are shown"
   },
   "adminSystemLogs": {
     "nav": "System Logs",
@@ -2234,7 +2301,8 @@
     "auditAction": "Action",
     "auditActor": "Operator",
     "auditDetails": "Details",
-    "auditTimestamp": "Timestamp"
+    "auditTimestamp": "Timestamp",
+    "dropCachesDone": "The page cache was dropped"
   },
   "waf": {
     "nav": "WAF",
@@ -2299,7 +2367,21 @@
     "noDisabledRulesDescription": "No rules are currently disabled on this domain. The full OWASP CRS rule set is actively enforced.",
     "disableReason": "Exclusion Reason",
     "disabledAt": "Disabled At",
-    "reEnableRule": "Re-enable"
+    "reEnableRule": "Re-enable",
+    "modeFrom": "Decided by {{from}}.",
+    "disabledRules": "Rules switched off",
+    "noneDisabled": "None",
+    "useInherited": "Use the inherited policy",
+    "title": "Web Application Firewall",
+    "subtitle": "Detect or block attacks on each of your domains, and switch off rules that stop something that is fine.",
+    "saved": "Firewall policy saved",
+    "noDomains": "There are no domains yet.",
+    "adminTitle": "Web Application Firewall policy",
+    "adminSubtitle": "A domain's policy wins over its account's, which wins over the panel's.",
+    "levelGlobal": "The whole panel",
+    "levelTenant": "One account",
+    "levelDomain": "One domain",
+    "pickTarget": "Pick an account or a domain."
   },
   "firewall": {
     "nav": "Firewall",
@@ -2506,7 +2588,17 @@
     "maintenanceEnabled": "Maintenance Mode Active",
     "maintenanceDisabled": "Maintenance Mode Disabled",
     "stagingCreatedTitle": "Staging Environment Ready",
-    "stagingCreatedDesc": "Clone was created at {{url}}"
+    "stagingCreatedDesc": "Clone was created at {{url}}",
+    "scanning": "Scanning...",
+    "scan": "Scan",
+    "harden": "Fix the settings",
+    "scanFirst": "Scan the site to see how it is set up.",
+    "coreFiles": "Core files match WordPress's checksums",
+    "fileEditOff": "The file editor is off",
+    "noWritable": "No world-writable files",
+    "ok": "OK",
+    "needsFix": "Needs fixing",
+    "hardened": "The safety settings were put right"
   },
   "email": {
     "nav": "Email",
@@ -2629,7 +2721,28 @@
     "held": "held",
     "release": "Release",
     "hold": "Hold",
-    "mailServers": "Mail servers"
+    "mailServers": "Mail servers",
+    "createAccountBtn": "Create Account",
+    "secureConfigTitle": "Secure SSL/TLS Settings (Recommended)",
+    "secureConfigSubtitle": "Use these encrypted parameters to configure Outlook, Apple Mail, Thunderbird, or Mobile devices.",
+    "serverHost": "Host",
+    "encryption": "Encryption",
+    "smtpSslPort": "SMTP SSL Port",
+    "submissionPort": "Submission Port",
+    "smtpAuth": "Authentication",
+    "usernameNotice": "Username Format",
+    "usernameNoticeDesc": "Always use your full email address (e.g., info@{{domain}}) as the username for incoming and outgoing mail.",
+    "searchMailbox": "Search accounts...",
+    "createAccount": "Create Email Account",
+    "noAccountsFound": "No email accounts found for {{domain}}",
+    "createFirstAccountPrompt": "Click Create Email Account above to set up your primary mailbox.",
+    "accountHeader": "Account",
+    "storageQuota": "Storage / Quota",
+    "webmailHeader": "Webmail Access",
+    "openWebmail": "Open Webmail",
+    "password": "Password",
+    "deleteMailboxTitle": "Delete Email Account",
+    "deleteMailboxWarning": "Are you sure you want to permanently delete {{email}}? All messages and mail stored in this mailbox will be destroyed."
   },
   "reseller": {
     "nav": "Reseller Portal",
@@ -3031,7 +3144,20 @@
     "triggerNodeOffline": "Worker Node Disconnection / Offline",
     "triggerNodeOfflineDesc": "Trigger alert within 60 seconds if a cluster agent drops connection.",
     "triggerSecurity": "Security & Brute-Force Alerts",
-    "triggerSecurityDesc": "Coraza WAF anomalies, SSH jail triggers, and repeated login failures."
+    "triggerSecurityDesc": "Coraza WAF anomalies, SSH jail triggers, and repeated login failures.",
+    "channelAdded": "Channel added",
+    "channelsDesc": "Every notification also lands in the bell; a channel sends the chosen events elsewhere.",
+    "noChannels": "No channels yet.",
+    "allEvents": "all events",
+    "secretOnce": "The webhook's signing secret is shown only now:",
+    "kind": "Kind",
+    "address": "Address",
+    "eventsPick": "Events for the new channel (none picked: all)",
+    "quietTitle": "Quiet hours",
+    "pausedNow": "Notifications are paused.",
+    "activeNow": "Notifications are on.",
+    "resume": "Resume",
+    "pause": "Pause"
   },
   "branding": {
     "nav": "Branding",
@@ -3260,7 +3386,10 @@
     "install": "Install",
     "update": "Update",
     "redeploy": "Redeploy",
-    "noApps": "No application yet."
+    "noApps": "No application yet.",
+    "containers": "Containers",
+    "pickImage": "choose an image",
+    "run": "Run"
   },
   "adminTools": {
     "nav": "System tools",
