@@ -2621,10 +2621,30 @@ export const handlers = [
 
     return [
       // List Nodes (GET /api/v1/admin/nodes) TODO(api:T02.08)
+      // Shaped like `NodeView` in openapi.json
       http.get(/\/api\/v1\/admin\/nodes$/, () => {
         return HttpResponse.json({
-          items: mockNodes,
-          total: mockNodes.length,
+          items: mockNodes.map((n) => ({
+            id: n.id,
+            name: n.name,
+            hostname: n.hostname,
+            public_ip: n.ip_address,
+            status: n.status,
+            agent_version: n.version,
+            capabilities: {
+              cpu_cores: n.capabilities.cpu_cores,
+              memory_bytes: n.capabilities.ram_total_bytes,
+              disk_total_bytes: n.capabilities.disk_total_bytes,
+              disk_free_bytes: n.capabilities.disk_total_bytes - n.capabilities.disk_used_bytes,
+              kernel: n.capabilities.kernel,
+              docker_version: n.capabilities.docker_version,
+              seccomp: n.capabilities.security_features.includes("seccomp"),
+              apparmor: n.capabilities.security_features.includes("apparmor"),
+              user_namespaces: n.capabilities.security_features.includes("userns"),
+            },
+            last_seen_at: n.last_seen_at,
+            created_at: n.enrolled_at,
+          })),
         });
       }),
 
@@ -2683,10 +2703,7 @@ export const handlers = [
         if (target) {
           target.status = "revoked";
         }
-        return HttpResponse.json({
-          success: true,
-          message: "Node revoked successfully",
-        });
+        return HttpResponse.json({ node_id: nodeId, certificates_revoked: 1, session_closed: true });
       }),
 
       // Get Signed Release Manifest (GET /api/v1/admin/cluster/agent/release-manifest) TODO(api:T16.08)
