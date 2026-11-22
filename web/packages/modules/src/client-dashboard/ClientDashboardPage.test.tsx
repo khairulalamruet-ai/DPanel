@@ -135,9 +135,9 @@ const mockDashboardData = {
   ],
 };
 
-const mockApiFetch = vi.fn();
-vi.mock("@builtpanel/api", () => ({
-  apiFetch: (...args: any[]) => mockApiFetch(...args),
+const { mockLoad } = vi.hoisted(() => ({ mockLoad: vi.fn() }));
+vi.mock("./api", () => ({
+  loadClientDashboard: (...args: any[]) => mockLoad(...args),
 }));
 
 const mockLocalStorage: Record<string, string> = {};
@@ -145,7 +145,7 @@ const mockLocalStorage: Record<string, string> = {};
 describe("ClientDashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockApiFetch.mockResolvedValue(mockDashboardData);
+    mockLoad.mockResolvedValue(mockDashboardData);
     Object.keys(mockLocalStorage).forEach((k) => delete mockLocalStorage[k]);
     vi.stubGlobal("localStorage", {
       getItem: vi.fn((key: string) => mockLocalStorage[key] || null),

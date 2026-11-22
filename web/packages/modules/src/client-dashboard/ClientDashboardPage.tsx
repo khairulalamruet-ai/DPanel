@@ -9,7 +9,8 @@ import {
   Badge,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { useOptionalSession } from "@builtpanel/auth";
+import { loadClientDashboard } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import {
   Globe,
@@ -45,6 +46,7 @@ function formatBytes(mb: number): string {
 export function ClientDashboardPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const session = useOptionalSession();
   const [data, setData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -80,7 +82,7 @@ export function ClientDashboardPage() {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      const res = await apiFetch<ClientDashboardData>("/api/v1/client/dashboard");
+      const res = await loadClientDashboard(session?.data?.limits ?? {});
       setData(res);
     } catch (err: any) {
       toast({
