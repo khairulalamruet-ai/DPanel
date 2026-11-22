@@ -21,7 +21,6 @@ export interface PhpIniSettings {
   max_execution_time: number;
   max_input_time: number;
   display_errors: boolean;
-  opcache_enable: boolean;
   date_timezone: string;
 }
 
@@ -38,5 +37,4 @@ export interface PhpConfigResponse {
   ini_settings: PhpIniSettings;
   plan_defaults: PhpIniSettings;
   plan_limits: PhpPlanLimits;
-  installed_extensions: string[];
 }

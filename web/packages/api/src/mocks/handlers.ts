@@ -1639,7 +1639,6 @@ const defaultPlanIni = {
   max_execution_time: 60,
   max_input_time: 60,
   display_errors: false,
-  opcache_enable: true,
   date_timezone: "UTC",
 };
 
@@ -1662,10 +1661,6 @@ const getInitialPhpConfig = () => ({
     max_execution_time: 300,
     max_upload_filesize: "128M",
   },
-  installed_extensions: [
-    "bcmath", "curl", "fileinfo", "gd", "intl", "json", "mbstring", "mysqli",
-    "opcache", "pdo", "pdo_mysql", "pdo_sqlite", "redis", "sodium", "xml", "zip"
-  ],
 });
 
 let mockClientPhpConfig = getInitialPhpConfig();
@@ -4976,83 +4971,99 @@ export const handlers = [
     });
   }),
 
-  // PHP: Get Client PHP Configuration (GET /api/v1/client/php/config)
-  // TODO(api:T06.08): Replace with real backend client PHP config endpoint
-  http.get(/\/api\/v1\/client\/php\/config$/, () => {
-    return HttpResponse.json(mockClientPhpConfig);
-  }),
-
-  // PHP: Update PHP Version (PUT /api/v1/client/php/version)
-  // TODO(api:T06.09): Replace with real backend set php version endpoint
-  http.put(/\/api\/v1\/client\/php\/version$/, async ({ request }) => {
-    const body = (await request.json()) as { version: string; domain_id?: string };
-    const ver = mockClientPhpConfig.supported_versions.find((v) => v.version === body.version);
-    if (!ver) {
-      return HttpResponse.json({ message: `Unsupported PHP version: ${body.version}` }, { status: 400 });
-    }
-
-    if (body.domain_id) {
-      const dom = mockClientPhpConfig.domain_configs.find((d) => d.domain_id === body.domain_id);
-      if (dom) {
-        dom.php_version = body.version;
-        dom.is_custom = body.version !== mockClientPhpConfig.default_version;
-      }
-    } else {
-      mockClientPhpConfig.default_version = body.version;
-      mockClientPhpConfig.supported_versions.forEach((v) => {
-        v.is_default = v.version === body.version;
-      });
-    }
-
+  // GET /api/v1/client/php: the account's version and its domains', shaped like `PhpInfo` in openapi.json
+  http.get(/\/api\/v1\/client\/php$/, () => {
     return HttpResponse.json({
-      success: true,
-      message: `PHP version set to ${body.version} successfully.`,
-      config: mockClientPhpConfig,
+      account_version: mockClientPhpConfig.default_version,
+      applied: true,
+      available: mockClientPhpConfig.supported_versions.map((v) => v.version),
+      domains: mockClientPhpConfig.domain_configs.map((d) => ({
+        id: d.domain_id,
+        fqdn: d.domain_name,
+        php_version: d.is_custom ? d.php_version : null,
+        effective_version: d.php_version,
+      })),
     });
   }),
 
-  // PHP: Update php.ini options (PUT /api/v1/client/php/ini)
-  // TODO(api:T06.10): Replace with real backend php.ini update endpoint
-  http.put(/\/api\/v1\/client\/php\/ini$/, async ({ request }) => {
-    const body = (await request.json()) as Record<string, any>;
-
-    // T06.10: Validate against plan limits (e.g. max_memory_limit 512M, max_execution_time 300)
-    if (body.max_execution_time !== undefined && Number(body.max_execution_time) > mockClientPhpConfig.plan_limits.max_execution_time) {
-      return HttpResponse.json(
-        { message: `max_execution_time exceeds plan limit of ${mockClientPhpConfig.plan_limits.max_execution_time}s`, code: "plan_limit_exceeded" },
-        { status: 422 }
-      );
+  // PUT /api/v1/client/php  { version }
+  http.put(/\/api\/v1\/client\/php$/, async ({ request }) => {
+    const body = (await request.json()) as { version: string };
+    if (!mockClientPhpConfig.supported_versions.some((v) => v.version === body.version)) {
+      return problem(422, "unknown_version", `Unsupported PHP version: ${body.version}`);
     }
+    mockClientPhpConfig.default_version = body.version;
+    mockClientPhpConfig.supported_versions.forEach((v) => {
+      v.is_default = v.version === body.version;
+    });
+    mockClientPhpConfig.domain_configs.forEach((d) => {
+      if (!d.is_custom) d.php_version = body.version;
+    });
+    return HttpResponse.json({ ok: true });
+  }),
 
-    const parseM = (s: string) => parseInt(s.replace(/[^0-9]/g, ""), 10) || 0;
-    if (body.memory_limit && parseM(body.memory_limit) > parseM(mockClientPhpConfig.plan_limits.max_memory_limit)) {
-      return HttpResponse.json(
-        { message: `memory_limit exceeds plan limit of ${mockClientPhpConfig.plan_limits.max_memory_limit}`, code: "plan_limit_exceeded" },
-        { status: 422 }
-      );
+  // PUT /api/v1/client/domains/:id/php  { version | null }
+  http.put(/\/api\/v1\/client\/domains\/([^/]+)\/php$/, async ({ params, request }) => {
+    const body = (await request.json()) as { version: string | null };
+    const dom = mockClientPhpConfig.domain_configs.find((d) => d.domain_id === params[0]);
+    if (!dom) return problem(404, "not_found", "No such domain");
+    if (body.version !== null && !mockClientPhpConfig.supported_versions.some((v) => v.version === body.version)) {
+      return problem(422, "unknown_version", `Unsupported PHP version: ${body.version}`);
     }
+    dom.php_version = body.version ?? mockClientPhpConfig.default_version;
+    dom.is_custom = body.version !== null && body.version !== mockClientPhpConfig.default_version;
+    return HttpResponse.json({ ok: true });
+  }),
 
+  // GET/PUT /api/v1/client/php/settings, shaped like `PhpSettingsView`
+  http.get(/\/api\/v1\/client\/php\/settings$/, () => {
+    const ini = mockClientPhpConfig.ini_settings;
+    const defaults = mockClientPhpConfig.plan_defaults;
+    const asValues = (i: typeof ini) => ({
+      memory_limit: i.memory_limit,
+      upload_max_filesize: i.upload_max_filesize,
+      post_max_size: i.post_max_size,
+      max_execution_time: i.max_execution_time,
+      max_input_time: i.max_input_time,
+      display_errors: i.display_errors ? "On" : "Off",
+      "date.timezone": i.date_timezone,
+    });
+    return HttpResponse.json({
+      options: Object.entries(asValues(defaults)).map(([key, value]) => ({
+        key,
+        kind: typeof value === "number" ? "int" : key === "display_errors" ? "flag" : key === "date.timezone" ? "timezone" : "size",
+        default: String(value),
+        choices: [],
+      })),
+      values: asValues(ini),
+      plan_limits: { memory_limit_mb: 512, upload_max_mb: 128, max_execution_time: 300 },
+    });
+  }),
+  http.put(/\/api\/v1\/client\/php\/settings$/, async ({ request }) => {
+    const { values } = (await request.json()) as { values: Record<string, any> };
+    if (Object.keys(values).length === 0) {
+      // An empty object puts every option back to its default.
+      mockClientPhpConfig.ini_settings = { ...mockClientPhpConfig.plan_defaults };
+      return HttpResponse.json({ ok: true });
+    }
+    const parseM = (v: string) => parseInt(String(v).replace(/[^0-9]/g, ""), 10) || 0;
+    if (values.max_execution_time !== undefined && Number(values.max_execution_time) > 300) {
+      return problem(422, "above_plan_limit", "max_execution_time is above what the plan allows (300)");
+    }
+    if (values.memory_limit && parseM(values.memory_limit) > 512) {
+      return problem(422, "above_plan_limit", "memory_limit is above what the plan allows (512M)");
+    }
     mockClientPhpConfig.ini_settings = {
       ...mockClientPhpConfig.ini_settings,
-      ...body,
+      memory_limit: values.memory_limit ?? mockClientPhpConfig.ini_settings.memory_limit,
+      upload_max_filesize: values.upload_max_filesize ?? mockClientPhpConfig.ini_settings.upload_max_filesize,
+      post_max_size: values.post_max_size ?? mockClientPhpConfig.ini_settings.post_max_size,
+      max_execution_time: values.max_execution_time ?? mockClientPhpConfig.ini_settings.max_execution_time,
+      max_input_time: values.max_input_time ?? mockClientPhpConfig.ini_settings.max_input_time,
+      display_errors: values.display_errors ?? mockClientPhpConfig.ini_settings.display_errors,
+      date_timezone: values["date.timezone"] ?? mockClientPhpConfig.ini_settings.date_timezone,
     };
-
-    return HttpResponse.json({
-      success: true,
-      message: "php.ini directives updated successfully.",
-      ini_settings: mockClientPhpConfig.ini_settings,
-    });
-  }),
-
-  // PHP: Reset php.ini options to Plan Defaults (POST /api/v1/client/php/ini/reset)
-  // TODO(api:T06.10): Replace with real backend php.ini reset endpoint
-  http.post(/\/api\/v1\/client\/php\/ini\/reset$/, () => {
-    mockClientPhpConfig.ini_settings = { ...mockClientPhpConfig.plan_defaults };
-    return HttpResponse.json({
-      success: true,
-      message: "php.ini directives reset to hosting plan defaults.",
-      ini_settings: mockClientPhpConfig.ini_settings,
-    });
+    return HttpResponse.json({ ok: true });
   }),
 
   // Services: List web services (GET /api/v1/client/services)
@@ -6968,33 +6979,26 @@ export const handlers = [
                                     ];
 
                                     return [
-                                      // GET /api/v1/client/processes (TODO(api:T10.14))
+                                      // GET /api/v1/client/processes, shaped like `ProcessView` in openapi.json
                                       http.get(/\/api\/v1\/client\/processes$/, () => {
-                                        return HttpResponse.json(mockClientProcesses);
-                                      }),
-
-                                      // GET /api/v1/client/processes/stats (TODO(api:T10.14))
-                                      http.get(/\/api\/v1\/client\/processes\/stats$/, () => {
-                                        const totalCpu = mockClientProcesses.reduce((acc, p) => acc + p.cpu_percent, 0);
-                                        const totalMem = mockClientProcesses.reduce((acc, p) => acc + p.mem_rss_mb, 0);
                                         return HttpResponse.json({
-                                          total_processes: mockClientProcesses.length,
-                                          running_processes: mockClientProcesses.filter((p) => p.stat.startsWith("R")).length,
-                                          sleeping_processes: mockClientProcesses.filter((p) => p.stat.startsWith("S")).length,
-                                          zombie_processes: mockClientProcesses.filter((p) => p.stat.startsWith("Z")).length,
-                                          total_cpu_percent: Math.round(totalCpu * 10) / 10,
-                                          total_mem_rss_mb: Math.round(totalMem * 10) / 10,
+                                          items: mockClientProcesses.map((p) => ({
+                                            container: p.command.includes("php") ? "demo-php" : "demo-web",
+                                            pid: p.pid,
+                                            uid: 1000,
+                                            state: p.stat.slice(0, 1),
+                                            command: p.command,
+                                          })),
                                         });
                                       }),
 
-                                      // POST /api/v1/client/processes/:id/kill (TODO(api:T10.14))
-                                      http.post(/\/api\/v1\/client\/processes\/([^/]+)\/kill$/, ({ params }) => {
-                                        const pid = Number(params[0] || params.id);
+                                      // POST /api/v1/client/processes/:container/:pid/signal
+                                      http.post(/\/api\/v1\/client\/processes\/([^/]+)\/([^/]+)\/signal$/, ({ params }) => {
+                                        const pid = Number(params[1]);
                                         const idx = mockClientProcesses.findIndex((p) => p.pid === pid);
-                                        if (idx !== -1) {
-                                          mockClientProcesses.splice(idx, 1);
-                                        }
-                                        return HttpResponse.json({ success: true, message: `Process ${pid} terminated` });
+                                        if (idx === -1) return problem(404, "not_found", "No such process");
+                                        mockClientProcesses.splice(idx, 1);
+                                        return HttpResponse.json({ outcome: "terminated", pid });
                                       }),
 
                                       // GET /api/v1/admin/processes (TODO(api:T10.14))

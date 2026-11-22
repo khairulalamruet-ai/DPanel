@@ -10,7 +10,7 @@ import {
   Badge,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { saveIni, resetIni } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import { Settings2, RotateCcw, Save, AlertCircle } from "lucide-react";
 import type { PhpIniSettings, PhpPlanLimits } from "./types";
@@ -50,13 +50,7 @@ export function PhpIniForm({
     try {
       setIsSaving(true);
       setError(null);
-      await apiFetch<{ success: boolean; message: string; ini_settings: PhpIniSettings }>(
-        "/api/v1/client/php/ini",
-        {
-          method: "PUT",
-          body: JSON.stringify(formData),
-        }
-      );
+      await saveIni(formData);
       toast({
         title: t("common.success", "Success"),
         description: t("php.toast.iniSaved", "php.ini directives updated successfully"),
@@ -78,10 +72,7 @@ export function PhpIniForm({
     try {
       setIsResetting(true);
       setError(null);
-      await apiFetch<{ success: boolean; message: string; ini_settings: PhpIniSettings }>(
-        "/api/v1/client/php/ini/reset",
-        { method: "POST" }
-      );
+      await resetIni();
       setFormData(planDefaults);
       toast({
         title: t("common.success", "Success"),
@@ -275,23 +266,6 @@ export function PhpIniForm({
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-3 border rounded-lg flex items-center justify-between">
-                <div>
-                  <label htmlFor="checkbox-opcache-enable" className="text-xs font-semibold text-foreground block">
-                    opcache.enable
-                  </label>
-                  <p className="text-[11px] text-muted-foreground">Precompiled opcode bytecode caching</p>
-                </div>
-                <input
-                  id="checkbox-opcache-enable"
-                  type="checkbox"
-                  checked={formData.opcache_enable}
-                  onChange={(e) => handleChange("opcache_enable", e.target.checked)}
-                  className="h-4 w-4 rounded text-primary focus:ring-primary"
-                  data-testid="checkbox-opcache-enable"
-                />
-              </div>
-
               <div className="p-3 border rounded-lg flex items-center justify-between">
                 <div>
                   <label htmlFor="checkbox-display-errors" className="text-xs font-semibold text-foreground block">

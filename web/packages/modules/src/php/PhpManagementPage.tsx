@@ -4,7 +4,7 @@ import {
   Button,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { loadPhp } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import {
   Cpu,
@@ -18,7 +18,6 @@ import {
 import type { PhpConfigResponse } from "./types";
 import { PhpVersionSelector } from "./PhpVersionSelector";
 import { PhpIniForm } from "./PhpIniForm";
-import { PhpExtensionsList } from "./PhpExtensionsList";
 
 export function PhpManagementPage() {
   const { t } = useTranslation();
@@ -26,12 +25,12 @@ export function PhpManagementPage() {
 
   const [config, setConfig] = useState<PhpConfigResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"versions" | "ini" | "extensions">("versions");
+  const [activeTab, setActiveTab] = useState<"versions" | "ini">("versions");
 
   const fetchConfig = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await apiFetch<PhpConfigResponse>("/api/v1/client/php/config");
+      const data = await loadPhp();
       setConfig(data);
     } catch {
       toast({
@@ -122,10 +121,10 @@ export function PhpManagementPage() {
           <Card className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase font-semibold">
-                {t("php.metrics.opcache", "OPcache Bytecode")}
+                {t("php.metrics.uploadLimit", "Upload Limit")}
               </p>
-              <p className="text-2xl font-bold mt-1 text-primary" data-testid="metric-php-opcache">
-                {config.ini_settings.opcache_enable ? "Active" : "Disabled"}
+              <p className="text-2xl font-bold mt-1 text-primary" data-testid="metric-php-upload">
+                {config.ini_settings.upload_max_filesize}
               </p>
             </div>
             <Zap className="h-8 w-8 text-primary/40 shrink-0" />
@@ -159,17 +158,6 @@ export function PhpManagementPage() {
           {t("php.tabs.ini", "php.ini Directives")}
         </Button>
 
-        <Button
-          type="button"
-          size="sm"
-          variant={activeTab === "extensions" ? "default" : "outline"}
-          onClick={() => setActiveTab("extensions")}
-          className="text-xs h-8 gap-1.5 rounded-full"
-          data-testid="tab-php-extensions"
-        >
-          <Blocks className="h-3.5 w-3.5" />
-          {t("php.tabs.extensions", "Extensions")}
-        </Button>
       </div>
 
       {/* Main Tab Panels */}
@@ -196,10 +184,6 @@ export function PhpManagementPage() {
               planLimits={config.plan_limits}
               onUpdated={fetchConfig}
             />
-          )}
-
-          {activeTab === "extensions" && (
-            <PhpExtensionsList extensions={config.installed_extensions} />
           )}
         </div>
       ) : null}

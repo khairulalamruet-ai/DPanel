@@ -15,7 +15,7 @@ import {
   TableCell,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { setAccountVersion, setDomainVersion } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import { Check, Globe, Cpu } from "lucide-react";
 import type { PhpVersion, PhpDomainConfig } from "./types";
@@ -43,10 +43,7 @@ export function PhpVersionSelector({
   const handleUpdateDefault = async () => {
     try {
       setIsUpdatingDefault(true);
-      await apiFetch<{ success: boolean; message: string }>("/api/v1/client/php/version", {
-        method: "PUT",
-        body: JSON.stringify({ version: selectedDefault }),
-      });
+      await setAccountVersion(selectedDefault);
       toast({
         title: t("common.success", "Success"),
         description: t("php.toast.versionUpdated", "Default PHP version updated to {{version}}", {
@@ -68,10 +65,7 @@ export function PhpVersionSelector({
   const handleUpdateDomainVersion = async (domainId: string, version: string) => {
     try {
       setUpdatingDomainId(domainId);
-      await apiFetch<{ success: boolean; message: string }>("/api/v1/client/php/version", {
-        method: "PUT",
-        body: JSON.stringify({ domain_id: domainId, version }),
-      });
+      await setDomainVersion(domainId, version);
       toast({
         title: t("common.success", "Success"),
         description: t("php.toast.domainVersionUpdated", "Domain PHP version updated to {{version}}", {

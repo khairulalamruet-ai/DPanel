@@ -26,7 +26,7 @@ describe("PhpManagementPage (T06.11)", () => {
     // Check metric cards
     expect(screen.getByTestId("metric-php-default-version")).toHaveTextContent("PHP 8.3");
     expect(screen.getByTestId("metric-php-memory-limit")).toHaveTextContent("256M");
-    expect(screen.getByTestId("metric-php-opcache")).toHaveTextContent("Active");
+    expect(screen.getByTestId("metric-php-upload")).toHaveTextContent("64M");
 
     // Check domains listed
     expect(screen.getByText("alpha-hosting.com")).toBeInTheDocument();
