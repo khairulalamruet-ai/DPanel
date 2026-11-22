@@ -109,3 +109,55 @@ export async function getTraffic(): Promise<Traffic> {
   const { untilAnswered } = await import("@builtpanel/api");
   return untilAnswered(() => apiFetch<Traffic>(`${BASE}/traffic`));
 }
+
+export interface MarketItem {
+  slug: string;
+  name: string;
+  description: string;
+  version: string;
+  installed?: { id: string; status: string; update_available: boolean } | null;
+}
+export async function listMarket(): Promise<MarketItem[]> {
+  return apiFetch(`${BASE}/marketplace`);
+}
+export async function installMarket(slug: string): Promise<void> {
+  await apiFetch(`${BASE}/marketplace/${encodeURIComponent(slug)}/install`, { method: "POST", body: JSON.stringify({}) });
+}
+export async function updateMarket(slug: string): Promise<void> {
+  await apiFetch(`${BASE}/marketplace/${encodeURIComponent(slug)}/update`, { method: "POST" });
+}
+export async function removeMarket(slug: string): Promise<void> {
+  await apiFetch(`${BASE}/marketplace/${encodeURIComponent(slug)}`, { method: "DELETE" });
+}
+
+export interface RuntimeApp {
+  id: string;
+  name: string;
+  kind: string;
+  version: string;
+  status: string;
+  start_command: string;
+  domain?: string | null;
+  error?: string | null;
+}
+export async function listRuntimeApps(): Promise<RuntimeApp[]> {
+  return (await apiFetch<{ items: RuntimeApp[] }>(`${BASE}/runtime-apps`)).items;
+}
+export async function redeployRuntimeApp(id: string): Promise<void> {
+  await apiFetch(`${BASE}/runtime-apps/${encodeURIComponent(id)}/redeploy`, { method: "POST", body: JSON.stringify({}) });
+}
+export async function deleteRuntimeApp(id: string): Promise<void> {
+  await apiFetch(`${BASE}/runtime-apps/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export interface ActivityItem {
+  id: string;
+  action: string;
+  at: string;
+  outcome: string;
+  ip?: string | null;
+  by_you: boolean;
+}
+export async function listActivity(): Promise<ActivityItem[]> {
+  return (await apiFetch<{ items: ActivityItem[] }>(`${BASE}/activity`)).items;
+}

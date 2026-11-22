@@ -28,6 +28,7 @@ import {
   XCircle,
   Inbox,
 } from "lucide-react";
+import { AdminMailControl } from "./AdminMailControl";
 import { MailQueueItem, DeliverabilityCheck } from "./types";
 
 export function AdminMailQueuePage() {
@@ -395,6 +396,7 @@ export function AdminMailQueuePage() {
           </DialogContent>
         </Dialog>
       )}
+      <AdminMailControl />
     </div>
   );
 }

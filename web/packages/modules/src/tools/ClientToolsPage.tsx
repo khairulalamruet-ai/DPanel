@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input, useToas
 import { useTranslation } from "@builtpanel/i18n";
 import * as tools from "./api";
 
-type Tab = "cache" | "deploys" | "scans" | "traffic";
+type Tab = "cache" | "deploys" | "market" | "apps" | "scans" | "traffic" | "activity";
 
 function fmtTime(sec?: number | null): string {
   return sec ? new Date(sec * 1000).toLocaleString() : "-";
@@ -253,14 +253,118 @@ function TrafficTab() {
   );
 }
 
+function useRun(reload: () => Promise<void>) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  return async (fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+      toast({ title: t("tools.queued", "Queued") });
+      await reload();
+    } catch (e) {
+      toast({ title: e instanceof Error ? e.message : String(e), variant: "destructive" });
+    }
+  };
+}
+
+function MarketTab() {
+  const { t } = useTranslation();
+  const { data, error, reload } = useLoad(tools.listMarket);
+  const run = useRun(reload);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("tools.market", "Marketplace")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {data?.map((m) => (
+          <div key={m.slug} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3">
+            <div>
+              <div className="font-medium">
+                {m.name} <span className="text-xs text-muted-foreground">{m.version}</span>
+                {m.installed && <Badge variant="outline" className="ml-2">{m.installed.status}</Badge>}
+              </div>
+              <div className="text-xs text-muted-foreground">{m.description}</div>
+            </div>
+            <div className="flex gap-2">
+              {!m.installed && <Button size="sm" onClick={() => run(() => tools.installMarket(m.slug))}>{t("tools.install", "Install")}</Button>}
+              {m.installed?.update_available && <Button size="sm" onClick={() => run(() => tools.updateMarket(m.slug))}>{t("tools.update", "Update")}</Button>}
+              {m.installed && <Button size="sm" variant="outline" onClick={() => run(() => tools.removeMarket(m.slug))}>{t("common.delete", "Delete")}</Button>}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AppsTab() {
+  const { t } = useTranslation();
+  const { data, error, reload } = useLoad(tools.listRuntimeApps);
+  const run = useRun(reload);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("tools.apps", "Node.js / Python apps")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {data?.length === 0 && <p className="text-sm text-muted-foreground">{t("tools.noApps", "No application yet.")}</p>}
+        {data?.map((a) => (
+          <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3">
+            <div>
+              <div className="font-medium">
+                {a.name} <Badge variant="outline">{a.status}</Badge>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {a.kind} {a.version} · {a.start_command}{a.domain ? ` · ${a.domain}` : ""}
+              </div>
+              {a.error && <div className="text-xs text-destructive">{a.error}</div>}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => run(() => tools.redeployRuntimeApp(a.id))}>{t("tools.redeploy", "Redeploy")}</Button>
+              <Button size="sm" variant="outline" onClick={() => run(() => tools.deleteRuntimeApp(a.id))}>{t("common.delete", "Delete")}</Button>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ActivityTab() {
+  const { t } = useTranslation();
+  const { data, error } = useLoad(tools.listActivity);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("tools.activity", "Account activity")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-1">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {data?.map((a) => (
+          <div key={a.id} className="flex flex-wrap justify-between gap-2 border-b py-1 text-sm">
+            <span>{a.action} <Badge variant="outline">{a.outcome}</Badge></span>
+            <span className="text-xs text-muted-foreground">{a.ip ?? ""} · {new Date(a.at).toLocaleString()}</span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ClientToolsPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>("cache");
   const tabs: [Tab, string][] = [
     ["cache", t("tools.cache", "Cache servers")],
     ["deploys", t("tools.deploys", "Git deploys")],
+    ["market", t("tools.market", "Marketplace")],
+    ["apps", t("tools.apps", "Node.js / Python apps")],
     ["scans", t("tools.scans", "Security scans")],
     ["traffic", t("tools.traffic", "Website traffic")],
+    ["activity", t("tools.activity", "Account activity")],
   ];
   return (
     <div className="space-y-4" data-testid="client-tools-page">
@@ -274,6 +378,9 @@ export function ClientToolsPage() {
       </div>
       {tab === "cache" && <CacheTab />}
       {tab === "deploys" && <DeploysTab />}
+      {tab === "market" && <MarketTab />}
+      {tab === "apps" && <AppsTab />}
+      {tab === "activity" && <ActivityTab />}
       {tab === "scans" && <ScansTab />}
       {tab === "traffic" && <TrafficTab />}
     </div>

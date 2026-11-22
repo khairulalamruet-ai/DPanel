@@ -72,6 +72,13 @@ export const registeredFrontendModules: FrontendModule[] = [
         href: "/security",
         order: 20,
       },
+      {
+        id: "security-center",
+        labelKey: "securityCenter.nav",
+        icon: <ShieldAlert className="h-4 w-4" />,
+        href: "/security-center",
+        order: 21,
+      },
     ],
     clientNav: [
       {
