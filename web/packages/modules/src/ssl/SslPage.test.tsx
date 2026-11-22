@@ -25,11 +25,10 @@ describe("SslPage (T05.19)", () => {
     });
 
     expect(screen.getByRole("heading", { level: 3, name: "blog.alpha-hosting.com" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "beta-app.io" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "dev.internal-net.org" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "shop.alpha-hosting.com" })).toBeInTheDocument();
 
     // Check metric cards
-    expect(screen.getByText("4")).toBeInTheDocument(); // total
+    expect(screen.getByText("3")).toBeInTheDocument(); // total
   });
 
   it("filters certificates by status pill and search keyword", async () => {
@@ -43,7 +42,7 @@ describe("SslPage (T05.19)", () => {
     const expiredFilterBtn = screen.getByTestId("btn-filter-ssl-expired");
     fireEvent.click(expiredFilterBtn);
 
-    expect(screen.getByRole("heading", { level: 3, name: "beta-app.io" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "shop.alpha-hosting.com" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 3, name: "alpha-hosting.com" })).not.toBeInTheDocument();
 
     // Reset to all
@@ -55,23 +54,20 @@ describe("SslPage (T05.19)", () => {
     fireEvent.change(searchInput, { target: { value: "blog" } });
 
     expect(screen.getByRole("heading", { level: 3, name: "blog.alpha-hosting.com" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { level: 3, name: "beta-app.io" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 3, name: "shop.alpha-hosting.com" })).not.toBeInTheDocument();
   });
 
-  it("re-issues / renews SSL certificate via Let's Encrypt (DoD)", async () => {
+  it("reads the certificate state again (the web server renews certificates itself)", async () => {
     renderWithProviders(<SslPage />);
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 3, name: "blog.alpha-hosting.com" })).toBeInTheDocument();
     });
 
-    // Find the reissue button for blog.alpha-hosting.com (dom_02)
-    const reissueBtn = screen.getByTestId("btn-reissue-ssl-dom_02");
-    fireEvent.click(reissueBtn);
+    fireEvent.click(screen.getByTestId("btn-reissue-ssl-dom_02"));
 
-    // After reissuance, days remaining should be 90
     await waitFor(() => {
-      expect(screen.getByText(/(90|৯০)\s*(days left|দিন বাকি)/)).toBeInTheDocument();
+      expect(screen.getByText(/read again|আবার পড়া/)).toBeInTheDocument();
     });
   });
 
@@ -79,10 +75,10 @@ describe("SslPage (T05.19)", () => {
     renderWithProviders(<SslPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 3, name: "beta-app.io" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 3, name: "shop.alpha-hosting.com" })).toBeInTheDocument();
     });
 
-    // Open Custom Cert dialog for beta-app.io (dom_03)
+    // Open Custom Cert dialog for shop.alpha-hosting.com (dom_03)
     const customBtn = screen.getByTestId("btn-upload-custom-ssl-dom_03");
     fireEvent.click(customBtn);
 
@@ -120,7 +116,7 @@ MIIEowIBAAKCAQEAz999EXAMPLE
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Custom Uploaded CA")).toBeInTheDocument();
+      expect(screen.getByText("Custom CA")).toBeInTheDocument();
     });
   });
 
@@ -155,24 +151,20 @@ MIIEowIBAAKCAQEAz999EXAMPLE
     });
   });
 
-  it("revokes SSL certificate through confirmation dialog", async () => {
+  it("goes back from an uploaded certificate to the web server's own one", async () => {
     renderWithProviders(<SslPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 3, name: "alpha-hosting.com" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 3, name: "blog.alpha-hosting.com" })).toBeInTheDocument();
     });
 
-    // Open revoke dialog for alpha-hosting.com (dom_01)
-    const revokeBtn = screen.getByTestId("btn-revoke-ssl-dom_01");
-    fireEvent.click(revokeBtn);
+    // Only an uploaded certificate (dom_02) can be taken away; the others are the web server's own.
+    expect(screen.queryByTestId("btn-revoke-ssl-dom_01")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("btn-revoke-ssl-dom_02"));
+    fireEvent.click(screen.getByTestId("btn-confirm-revoke-ssl"));
 
-    // Confirm revoke
-    const confirmBtn = screen.getByTestId("btn-confirm-revoke-ssl");
-    fireEvent.click(confirmBtn);
-
-    // Certificate should now have "none" status
     await waitFor(() => {
-      expect(screen.getByText(/No Certificate|কোনো সার্টিফিকেট নেই/)).toBeInTheDocument();
+      expect(screen.queryByTestId("btn-revoke-ssl-dom_02")).not.toBeInTheDocument();
     });
   });
 });

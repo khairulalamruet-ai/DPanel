@@ -7,10 +7,10 @@ import {
   DialogFooter,
   Button,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { installCustomCertificate } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import { UploadCloud, AlertCircle, Key, FileCheck } from "lucide-react";
-import type { SslCertificateItem, CustomCertPayload } from "./types";
+import type { SslCertificateItem } from "./types";
 
 interface CustomCertUploadDialogProps {
   open: boolean;
@@ -84,22 +84,13 @@ export function CustomCertUploadDialog({
 
     try {
       setIsSubmitting(true);
-      const payload: CustomCertPayload = {
-        cert_pem: certPem.trim(),
-        key_pem: keyPem.trim(),
-        chain_pem: chainPem.trim() || null,
-      };
+      const res = await installCustomCertificate(domainId, {
+        certificate: certPem,
+        chain: chainPem,
+        privateKey: keyPem,
+      });
 
-      const res = await apiFetch<{ success: boolean; certificate: SslCertificateItem }>(
-        `/api/v1/client/ssl/${domainId}/custom`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      onSuccess(res.certificate);
+      onSuccess(res);
       handleClose();
     } catch (err: any) {
       setError(err?.message || t("ssl.errors.uploadFailed", "Failed to install custom SSL certificate"));

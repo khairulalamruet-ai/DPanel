@@ -59,7 +59,8 @@ export interface PreviewLinkInfo {
   created_at?: string;
   expires_at?: string;
   is_expired?: boolean;
-  ttl_hours?: number;
+  /** Whether the preview-link feature is on for this account. */
+  feature_available?: boolean;
 }
 
 export interface GeneratePreviewLinkPayload {

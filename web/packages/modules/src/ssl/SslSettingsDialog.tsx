@@ -7,10 +7,10 @@ import {
   DialogFooter,
   Button,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { saveHttpsSettings } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
-import { Shield, ShieldAlert, Lock, RefreshCw, AlertCircle } from "lucide-react";
-import type { SslCertificateItem, SslSettingsPayload } from "./types";
+import { Shield, ShieldAlert, Lock, AlertCircle } from "lucide-react";
+import type { SslCertificateItem } from "./types";
 
 interface SslSettingsDialogProps {
   open: boolean;
@@ -29,9 +29,6 @@ export function SslSettingsDialog({
 
   const [forceHttps, setForceHttps] = useState(false);
   const [hstsEnabled, setHstsEnabled] = useState(false);
-  const [hstsSubdomains, setHstsSubdomains] = useState(false);
-  const [hstsPreload, setHstsPreload] = useState(false);
-  const [autoRenew, setAutoRenew] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +37,6 @@ export function SslSettingsDialog({
     if (certificate) {
       setForceHttps(certificate.force_https);
       setHstsEnabled(certificate.hsts_enabled);
-      setHstsSubdomains(certificate.hsts_subdomains);
-      setHstsPreload(certificate.hsts_preload);
-      setAutoRenew(certificate.auto_renew);
       setError(null);
     }
   }, [certificate]);
@@ -54,22 +48,10 @@ export function SslSettingsDialog({
 
     try {
       setIsSubmitting(true);
-      const payload: SslSettingsPayload = {
+      const updated = await saveHttpsSettings(certificate.domain_id, {
         force_https: forceHttps,
-        hsts_enabled: hstsEnabled,
-        hsts_subdomains: hstsSubdomains,
-        hsts_preload: hstsPreload,
-        auto_renew: autoRenew,
-      };
-
-      const updated = await apiFetch<SslCertificateItem>(
-        `/api/v1/client/ssl/${certificate.domain_id}/settings`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+        hsts: hstsEnabled,
+      });
 
       onSuccess(updated);
       onOpenChange(false);
@@ -155,61 +137,6 @@ export function SslSettingsDialog({
               )}
             </p>
 
-            {hstsEnabled && (
-              <div className="pl-6 space-y-2 pt-2 border-t text-xs">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="toggle-hsts-subdomains"
-                    checked={hstsSubdomains}
-                    onChange={(e) => setHstsSubdomains(e.target.checked)}
-                    className="rounded border-input text-primary focus:ring-primary h-3.5 w-3.5"
-                    data-testid="checkbox-hsts-subdomains"
-                  />
-                  <label htmlFor="toggle-hsts-subdomains" className="cursor-pointer text-xs">
-                    {t("ssl.settings.includeSubdomains", "Include all subdomains (includeSubDomains)")}
-                  </label>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="toggle-hsts-preload"
-                    checked={hstsPreload}
-                    onChange={(e) => setHstsPreload(e.target.checked)}
-                    className="rounded border-input text-primary focus:ring-primary h-3.5 w-3.5"
-                    data-testid="checkbox-hsts-preload"
-                  />
-                  <label htmlFor="toggle-hsts-preload" className="cursor-pointer text-xs">
-                    {t("ssl.settings.preload", "Enable browser HSTS preload list eligibility (preload)")}
-                  </label>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Auto-renew */}
-          <div className="p-3 rounded-lg border bg-muted/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <label htmlFor="toggle-auto-renew" className="cursor-pointer font-semibold text-xs flex items-center gap-2">
-                <RefreshCw className="h-4 w-4 text-blue-500" />
-                {t("ssl.settings.autoRenew", "Automatic Certificate Renewal")}
-              </label>
-              <input
-                type="checkbox"
-                id="toggle-auto-renew"
-                checked={autoRenew}
-                onChange={(e) => setAutoRenew(e.target.checked)}
-                className="rounded border-input text-primary focus:ring-primary h-4 w-4"
-                data-testid="checkbox-auto-renew"
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              {t(
-                "ssl.settings.autoRenewDesc",
-                "Automatically trigger background ACME renewal 30 days prior to certificate expiration."
-              )}
-            </p>
           </div>
 
           <DialogFooter className="pt-2">

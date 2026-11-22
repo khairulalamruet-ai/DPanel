@@ -37,7 +37,7 @@ describe("PreviewLinkDialog (T06.14)", () => {
     resetMockPreviewLinks();
   });
 
-  it("renders preview dialog and generates a new temporary preview link with TTL", async () => {
+  it("renders preview dialog and generates a new temporary preview link", async () => {
     renderWithProviders(
       <PreviewLinkDialog open={true} onOpenChange={() => {}} domain={mockDomain} />
     );
@@ -46,11 +46,6 @@ describe("PreviewLinkDialog (T06.14)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("btn-generate-preview-link")).toBeInTheDocument();
     });
-
-    // Select 48 Hours TTL
-    const ttl48Btn = screen.getByTestId("btn-ttl-48");
-    expect(ttl48Btn).toBeInTheDocument();
-    fireEvent.click(ttl48Btn);
 
     // Click Generate
     fireEvent.click(screen.getByTestId("btn-generate-preview-link"));
@@ -103,7 +98,7 @@ describe("PreviewLinkDialog (T06.14)", () => {
     });
   });
 
-  it("extends an active preview link TTL", async () => {
+  it("makes a new preview link while one is active", async () => {
     renderWithProviders(
       <PreviewLinkDialog open={true} onOpenChange={() => {}} domain={mockDomain} />
     );
@@ -118,8 +113,6 @@ describe("PreviewLinkDialog (T06.14)", () => {
       expect(screen.getByTestId("btn-extend-preview-link")).toBeInTheDocument();
     });
 
-    // Select TTL and click extend
-    fireEvent.change(screen.getByTestId("select-extend-ttl"), { target: { value: "48" } });
     fireEvent.click(screen.getByTestId("btn-extend-preview-link"));
 
     await waitFor(() => {

@@ -817,6 +817,45 @@ export const resetMockClientDomains = () => {
   mockClientDomains = getInitialClientDomains();
 };
 
+/** A client domain as the backend's `DomainView` has it. */
+const clientDomainView = (d: MockClientDomain) => {
+  const cert = mockSslCertificates.find((c) => c.domain_id === d.id);
+  return {
+    id: d.id,
+    fqdn: d.name,
+    unicode: d.name,
+    kind: d.type === "subdomain" ? "sub" : d.type,
+    docroot: d.docroot.replace(/^\/+/, ""),
+    force_https: cert?.force_https ?? false,
+    hsts: cert?.hsts_enabled ?? false,
+    status: "active",
+    parent_domain_id: null,
+    tenant_id: "usr_0001",
+    tenant_username: "demo",
+    suspended_at: null,
+    created_at: d.created_at,
+  };
+};
+
+/** The certificate state of a domain as the backend's `SslView` has it. */
+const sslViewOf = (domainId: string) => {
+  const domain = mockClientDomains.find((d) => d.id === domainId);
+  const cert = mockSslCertificates.find((c) => c.domain_id === domainId);
+  if (!domain) return null;
+  const status = cert?.status ?? domain.ssl_status;
+  const days = cert?.days_remaining ?? 0;
+  const state = status === "active" ? (days <= 14 ? "expiring" : "valid") : status === "expired" ? "expired" : "none";
+  return {
+    state,
+    kind: cert?.type === "custom" ? "custom" : state === "none" ? null : "acme",
+    issuer: cert?.issuer ?? domain.ssl_issuer ?? null,
+    not_before: cert?.created_at ?? null,
+    not_after: cert?.expires_at ?? domain.ssl_expires_at ?? null,
+    days_left: state === "none" ? null : days,
+    last_seen_at: cert?.updated_at ?? null,
+  };
+};
+
 interface MockAdminDomain {
   id: string;
   name: string;
@@ -1088,7 +1127,7 @@ const getInitialDnsZones = (): MockDnsZone[] => [
   {
     id: "zone_beta_01",
     domain_id: "dom_03",
-    domain_name: "beta-app.io",
+    domain_name: "shop.alpha-hosting.com",
     tenant_id: "usr_0001",
     nameservers: ["ns1.builtpanel.net", "ns2.builtpanel.net"],
     soa_serial: 2026111303,
@@ -1347,8 +1386,8 @@ const getInitialSslCertificates = (): MockSslCert[] => [
     domain_id: "dom_02",
     domain_name: "blog.alpha-hosting.com",
     status: "active",
-    type: "lets_encrypt",
-    issuer: "Let's Encrypt Authority X3",
+    type: "custom",
+    issuer: "DigiCert Global CA",
     subject: "CN=blog.alpha-hosting.com",
     sans: ["blog.alpha-hosting.com"],
     expires_at: new Date(Date.now() + 12 * 86400 * 1000).toISOString(),
@@ -1365,7 +1404,7 @@ const getInitialSslCertificates = (): MockSslCert[] => [
   {
     id: "cert_03",
     domain_id: "dom_03",
-    domain_name: "beta-app.io",
+    domain_name: "shop.alpha-hosting.com",
     status: "expired",
     type: "zerossl",
     issuer: "ZeroSSL RSA Domain Secure Site CA",
@@ -1381,26 +1420,6 @@ const getInitialSslCertificates = (): MockSslCert[] => [
     created_at: new Date(Date.now() - 92 * 86400 * 1000).toISOString(),
     updated_at: new Date(Date.now() - 2 * 86400 * 1000).toISOString(),
     cert_fingerprint: "SHA256:aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99",
-  },
-  {
-    id: "cert_04",
-    domain_id: "dom_04",
-    domain_name: "dev.internal-net.org",
-    status: "self_signed",
-    type: "self_signed",
-    issuer: "Built Panel Internal Self-Signed CA",
-    subject: "CN=dev.internal-net.org",
-    sans: ["dev.internal-net.org"],
-    expires_at: new Date(Date.now() + 350 * 86400 * 1000).toISOString(),
-    days_remaining: 350,
-    auto_renew: false,
-    force_https: false,
-    hsts_enabled: false,
-    hsts_subdomains: false,
-    hsts_preload: false,
-    created_at: new Date(Date.now() - 15 * 86400 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 15 * 86400 * 1000).toISOString(),
-    cert_fingerprint: "SHA256:99:88:77:66:55:44:33:22:11:00:ff:ee:dd:cc:bb:aa",
   },
 ];
 
@@ -4140,129 +4159,128 @@ export const handlers = [
     });
   }),
 
-  // Client: List domains & limits (GET /api/v1/client/domains)
-  // TODO(api:T05.03): Replace with real backend client domains endpoint
+  // ---- Client domains, shaped like `DomainView`, `SslView`, `RedirectView` in openapi.json.
+  // GET /api/v1/client/domains
   http.get(/\/api\/v1\/client\/domains$/, () => {
-    return HttpResponse.json({
-      items: mockClientDomains,
-      total: mockClientDomains.length,
-      limits: {
-        max_domains: 5,
-        used_domains: mockClientDomains.length,
-      },
-    });
+    return HttpResponse.json({ items: mockClientDomains.map(clientDomainView), total: mockClientDomains.length });
   }),
 
-  // Client: Create domain (POST /api/v1/client/domains)
-  // TODO(api:T05.03): Replace with real backend client domain creation endpoint
+  // POST /api/v1/client/domains
   http.post(/\/api\/v1\/client\/domains$/, async ({ request }) => {
     const body = (await request.json()) as any;
-    if (!body || !body.name) {
-      return HttpResponse.json({ message: "Domain name is required" }, { status: 400 });
+    if (!body || !body.fqdn) return problem(422, "required", "The domain name is required");
+    const fqdn = String(body.fqdn).trim().toLowerCase();
+    if (mockClientDomains.some((d) => d.name.toLowerCase() === fqdn)) {
+      return problem(409, "domain_taken", `Domain ${fqdn} is already configured`);
     }
-
-    if (mockClientDomains.length >= 5) {
-      return HttpResponse.json(
-        { message: "Domain limit reached for your plan" },
-        { status: 400 }
-      );
-    }
-
-    const domainName = String(body.name).trim().toLowerCase();
-    const existing = mockClientDomains.find(
-      (d) => d.name.toLowerCase() === domainName
-    );
-    if (existing) {
-      return HttpResponse.json(
-        { message: `Domain ${domainName} is already configured` },
-        { status: 409 }
-      );
-    }
-
-    const newDomain: MockClientDomain = {
+    if (mockClientDomains.length >= 5) return problem(409, "limit_reached", "Domain limit reached for your plan");
+    const kind = body.kind === "sub" ? "subdomain" : body.kind || "addon";
+    const created: MockClientDomain = {
       id: `dom_${Date.now()}`,
-      name: domainName,
-      type: body.type || "addon",
-      docroot: body.docroot || `/domains/${domainName}/public_html`,
+      name: fqdn,
+      type: kind,
+      docroot: `/${body.docroot ?? ""}`,
       is_primary: false,
-      ssl_status: body.enable_ssl ? "pending" : "none",
+      ssl_status: "none",
       ssl_expires_at: null,
       ssl_issuer: null,
       dns_status: "pending",
-      redirect: body.redirect?.enabled
-        ? {
-            enabled: true,
-            target_url: body.redirect.target_url,
-            status_code: body.redirect.status_code || 301,
-          }
-        : null,
+      redirect: null,
       php_version: "PHP 8.3",
       created_at: new Date().toISOString(),
     };
-
-    mockClientDomains = [newDomain, ...mockClientDomains];
-    return HttpResponse.json(newDomain, { status: 201 });
+    mockClientDomains = [created, ...mockClientDomains];
+    return HttpResponse.json(clientDomainView(created), { status: 201 });
   }),
 
-  // Client: Update docroot (PUT /api/v1/client/domains/:id/docroot)
-  // TODO(api:T05.04): Replace with real backend client update docroot endpoint
-  http.put(/\/api\/v1\/client\/domains\/([^/]+)\/docroot$/, async ({ params, request }) => {
-    const id = params[0] as string;
-    const body = (await request.json()) as any;
-    const domain = mockClientDomains.find((d) => d.id === id);
-    if (!domain) {
-      return HttpResponse.json({ message: "Domain not found" }, { status: 404 });
-    }
-
-    if (!body.docroot || !String(body.docroot).startsWith("/")) {
-      return HttpResponse.json({ message: "Valid document root path is required" }, { status: 400 });
-    }
-
-    domain.docroot = String(body.docroot).trim();
-    return HttpResponse.json(domain);
+  // GET /api/v1/client/domains/:id
+  http.get(/\/api\/v1\/client\/domains\/([^/]+)$/, ({ params }) => {
+    const domain = mockClientDomains.find((d) => d.id === params[0]);
+    return domain ? HttpResponse.json(clientDomainView(domain)) : problem(404, "not_found", "No such domain");
   }),
 
-  // Client: Update redirect (PUT /api/v1/client/domains/:id/redirect)
-  // TODO(api:T05.04): Replace with real backend client update redirect endpoint
-  http.put(/\/api\/v1\/client\/domains\/([^/]+)\/redirect$/, async ({ params, request }) => {
-    const id = params[0] as string;
-    const body = (await request.json()) as any;
-    const domain = mockClientDomains.find((d) => d.id === id);
-    if (!domain) {
-      return HttpResponse.json({ message: "Domain not found" }, { status: 404 });
+  // PATCH /api/v1/client/domains/:id (docroot, force_https, hsts)
+  http.patch(/\/api\/v1\/client\/domains\/([^/]+)$/, async ({ params, request }) => {
+    const domain = mockClientDomains.find((d) => d.id === params[0]);
+    if (!domain) return problem(404, "not_found", "No such domain");
+    const body = (await request.json()) as { docroot?: string; force_https?: boolean; hsts?: boolean };
+    if (body.docroot !== undefined) domain.docroot = `/${body.docroot}`;
+    const cert = mockSslCertificates.find((c) => c.domain_id === domain.id);
+    if (cert) {
+      if (body.force_https !== undefined) cert.force_https = body.force_https;
+      if (body.hsts !== undefined) cert.hsts_enabled = body.hsts;
     }
-
-    if (body.enabled) {
-      domain.redirect = {
-        enabled: true,
-        target_url: body.target_url,
-        status_code: body.status_code || 301,
-      };
-    } else {
-      domain.redirect = null;
-    }
-
-    return HttpResponse.json(domain);
+    return HttpResponse.json(clientDomainView(domain));
   }),
 
-  // Client: Delete domain (DELETE /api/v1/client/domains/:id)
-  // TODO(api:T05.03): Replace with real backend client delete domain endpoint
+  // DELETE /api/v1/client/domains/:id
   http.delete(/\/api\/v1\/client\/domains\/([^/]+)$/, ({ params }) => {
-    const id = params[0] as string;
-    const domain = mockClientDomains.find((d) => d.id === id);
-    if (!domain) {
-      return HttpResponse.json({ message: "Domain not found" }, { status: 404 });
-    }
+    const domain = mockClientDomains.find((d) => d.id === params[0]);
+    if (!domain) return problem(404, "not_found", "No such domain");
+    if (domain.is_primary) return problem(409, "primary_domain", "The primary domain cannot be removed");
+    mockClientDomains = mockClientDomains.filter((d) => d.id !== domain.id);
+    return new HttpResponse(null, { status: 204 });
+  }),
 
-    if (domain.is_primary) {
-      return HttpResponse.json(
-        { message: "Primary domain cannot be deleted" },
-        { status: 400 }
-      );
-    }
-
-    mockClientDomains = mockClientDomains.filter((d) => d.id !== id);
-    return HttpResponse.json({ status: "deleted", id });
+  // GET /api/v1/client/domains/:id/redirects, POST, PATCH/DELETE .../:redirect_id
+  http.get(/\/api\/v1\/client\/domains\/([^/]+)\/redirects$/, ({ params }) => {
+    const domain = mockClientDomains.find((d) => d.id === params[0]);
+    if (!domain) return problem(404, "not_found", "No such domain");
+    return HttpResponse.json({
+      items: domain.redirect
+        ? [
+            {
+              id: `red_${domain.id}`,
+              domain_id: domain.id,
+              source_path: "/",
+              target: domain.redirect.target_url,
+              code: domain.redirect.status_code,
+              created_at: domain.created_at,
+            },
+          ]
+        : [],
+    });
+  }),
+  http.post(/\/api\/v1\/client\/domains\/([^/]+)\/redirects$/, async ({ params, request }) => {
+    const domain = mockClientDomains.find((d) => d.id === params[0]);
+    if (!domain) return problem(404, "not_found", "No such domain");
+    const body = (await request.json()) as { source_path: string; target: string; code?: number };
+    domain.redirect = { enabled: true, target_url: body.target, status_code: body.code === 302 ? 302 : 301 };
+    return HttpResponse.json(
+      {
+        id: `red_${domain.id}`,
+        domain_id: domain.id,
+        source_path: body.source_path,
+        target: body.target,
+        code: body.code ?? 301,
+        created_at: new Date().toISOString(),
+      },
+      { status: 201 },
+    );
+  }),
+  http.patch(/\/api\/v1\/client\/domains\/([^/]+)\/redirects\/([^/]+)$/, async ({ params, request }) => {
+    const domain = mockClientDomains.find((d) => d.id === params[0]);
+    if (!domain?.redirect) return problem(404, "not_found", "No such redirect");
+    const body = (await request.json()) as { target?: string; code?: number };
+    domain.redirect = {
+      enabled: true,
+      target_url: body.target ?? domain.redirect.target_url,
+      status_code: (body.code ?? domain.redirect.status_code) === 302 ? 302 : 301,
+    };
+    return HttpResponse.json({
+      id: `red_${domain.id}`,
+      domain_id: domain.id,
+      source_path: "/",
+      target: domain.redirect.target_url,
+      code: domain.redirect.status_code,
+      created_at: domain.created_at,
+    });
+  }),
+  http.delete(/\/api\/v1\/client\/domains\/([^/]+)\/redirects\/([^/]+)$/, ({ params }) => {
+    const domain = mockClientDomains.find((d) => d.id === params[0]);
+    if (!domain?.redirect) return problem(404, "not_found", "No such redirect");
+    domain.redirect = null;
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // Admin: List all domains with filters (GET /api/v1/admin/domains)
@@ -4876,158 +4894,59 @@ export const handlers = [
     });
   }),
 
-  // SSL: List all certificates (GET /api/v1/client/ssl)
-  // TODO(api:T05.16): Replace with real backend SSL list endpoint
-  http.get(/\/api\/v1\/client\/ssl$/, () => {
-    return HttpResponse.json({
-      items: mockSslCertificates,
-      total: mockSslCertificates.length,
-    });
+  // GET /api/v1/client/domains/:id/ssl
+  http.get(/\/api\/v1\/client\/domains\/([^/]+)\/ssl$/, ({ params }) => {
+    const view = sslViewOf(params[0] as string);
+    return view ? HttpResponse.json(view) : problem(404, "not_found", "No such domain");
   }),
 
-  // SSL: Get domain certificate (GET /api/v1/client/ssl/:domainId)
-  // TODO(api:T05.16): Replace with real backend SSL detail endpoint
-  http.get(/\/api\/v1\/client\/ssl\/([^/]+)$/, ({ params }) => {
-    const key = (params.domainId || params[0]) as string;
-    const cert = mockSslCertificates.find(
-      (c) => c.domain_id === key || c.domain_name === key || c.id === key
-    );
+  // PUT /api/v1/client/domains/:id/ssl/custom  { certificate, private_key }
+  http.put(/\/api\/v1\/client\/domains\/([^/]+)\/ssl\/custom$/, async ({ params, request }) => {
+    const domain = mockClientDomains.find((d) => d.id === params[0]);
+    if (!domain) return problem(404, "not_found", "No such domain");
+    const body = (await request.json()) as { certificate: string; private_key: string };
+    if (!body.certificate?.includes("BEGIN CERTIFICATE")) {
+      return problem(422, "invalid_certificate", "That is not a PEM certificate");
+    }
+    let cert = mockSslCertificates.find((c) => c.domain_id === domain.id);
     if (!cert) {
-      return HttpResponse.json({ message: "Certificate not found" }, { status: 404 });
+      cert = {
+        id: `cert_${Date.now()}`,
+        domain_id: domain.id,
+        domain_name: domain.name,
+        status: "active",
+        type: "custom",
+        issuer: null,
+        subject: `CN=${domain.name}`,
+        sans: [domain.name],
+        expires_at: null,
+        days_remaining: 0,
+        auto_renew: false,
+        force_https: false,
+        hsts_enabled: false,
+        hsts_subdomains: false,
+        hsts_preload: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      mockSslCertificates.push(cert);
     }
-    return HttpResponse.json(cert);
-  }),
-
-  // SSL: Re-issue / Renew certificate via ACME (POST /api/v1/client/ssl/:domainId/reissue)
-  // TODO(api:T05.16): Replace with real ACME reissue endpoint
-  http.post(/\/api\/v1\/client\/ssl\/([^/]+)\/reissue$/, ({ params }) => {
-    const key = (params.domainId || params[0]) as string;
-    const cert = mockSslCertificates.find(
-      (c) => c.domain_id === key || c.domain_name === key || c.id === key
-    );
-    if (!cert) {
-      return HttpResponse.json({ message: "Certificate not found" }, { status: 404 });
-    }
-
-    const opId = `op_ssl_renew_${Date.now()}`;
-    cert.status = "active";
-    cert.type = "lets_encrypt";
-    cert.issuer = "Let's Encrypt Authority X3";
-    cert.expires_at = new Date(Date.now() + 90 * 86400 * 1000).toISOString();
-    cert.days_remaining = 90;
-    cert.auto_renew = true;
-    cert.updated_at = new Date().toISOString();
-
-    return HttpResponse.json({
-      success: true,
-      operation_id: opId,
-      status: "succeeded",
-      message: `SSL Certificate for ${cert.domain_name} renewed successfully. Valid for 90 days.`,
-      certificate: cert,
-    });
-  }),
-
-  // SSL: Custom certificate upload (POST /api/v1/client/ssl/:domainId/custom)
-  // TODO(api:T05.17): Replace with real custom cert upload endpoint
-  http.post(/\/api\/v1\/client\/ssl\/([^/]+)\/custom$/, async ({ params, request }) => {
-    const key = (params.domainId || params[0]) as string;
-    const cert = mockSslCertificates.find(
-      (c) => c.domain_id === key || c.domain_name === key || c.id === key
-    );
-    if (!cert) {
-      return HttpResponse.json({ message: "Certificate not found" }, { status: 404 });
-    }
-
-    const body = (await request.json().catch(() => ({}))) as any;
-    const { cert_pem = "", key_pem = "" } = body || {};
-
-    if (!cert_pem.includes("BEGIN CERTIFICATE") || !cert_pem.includes("END CERTIFICATE")) {
-      return HttpResponse.json(
-        { message: "Invalid PEM format: Missing 'BEGIN CERTIFICATE' or 'END CERTIFICATE' header" },
-        { status: 422 }
-      );
-    }
-
-    if (!key_pem.includes("BEGIN PRIVATE KEY") && !key_pem.includes("BEGIN RSA PRIVATE KEY")) {
-      return HttpResponse.json(
-        { message: "Invalid PEM format: Missing 'BEGIN PRIVATE KEY' header" },
-        { status: 422 }
-      );
-    }
-
-    // Check for simulated key mismatch
-    if (key_pem.includes("MISMATCH_KEY")) {
-      return HttpResponse.json(
-        { message: "Private key does not match the provided public certificate modulus" },
-        { status: 422 }
-      );
-    }
-
     cert.status = "active";
     cert.type = "custom";
-    cert.issuer = "Custom Uploaded CA";
+    cert.issuer = "Custom CA";
     cert.expires_at = new Date(Date.now() + 365 * 86400 * 1000).toISOString();
     cert.days_remaining = 365;
-    cert.auto_renew = false;
-    cert.cert_fingerprint = `SHA256:custom:${Date.now().toString(16)}`;
     cert.updated_at = new Date().toISOString();
-
-    return HttpResponse.json({
-      success: true,
-      message: `Custom SSL certificate installed successfully for ${cert.domain_name}.`,
-      certificate: cert,
-    });
+    return HttpResponse.json(sslViewOf(domain.id));
   }),
 
-  // SSL: Update settings like force_https, HSTS, auto_renew (PUT /api/v1/client/ssl/:domainId/settings)
-  // TODO(api:T05.18): Replace with real SSL settings endpoint
-  http.put(/\/api\/v1\/client\/ssl\/([^/]+)\/settings$/, async ({ params, request }) => {
-    const key = (params.domainId || params[0]) as string;
-    const cert = mockSslCertificates.find(
-      (c) => c.domain_id === key || c.domain_name === key || c.id === key
-    );
-    if (!cert) {
-      return HttpResponse.json({ message: "Certificate not found" }, { status: 404 });
-    }
-
-    const body = (await request.json().catch(() => ({}))) as any;
-    if (body.auto_renew !== undefined) cert.auto_renew = Boolean(body.auto_renew);
-    if (body.force_https !== undefined) cert.force_https = Boolean(body.force_https);
-    if (body.hsts_enabled !== undefined) cert.hsts_enabled = Boolean(body.hsts_enabled);
-    if (body.hsts_subdomains !== undefined) cert.hsts_subdomains = Boolean(body.hsts_subdomains);
-    if (body.hsts_preload !== undefined) cert.hsts_preload = Boolean(body.hsts_preload);
-    cert.updated_at = new Date().toISOString();
-
-    return HttpResponse.json(cert);
-  }),
-
-  // SSL: Revoke / Revert to None (DELETE /api/v1/client/ssl/:domainId)
-  // TODO(api:T05.17): Replace with real SSL revoke endpoint
-  http.delete(/\/api\/v1\/client\/ssl\/([^/]+)$/, ({ params }) => {
-    const key = (params.domainId || params[0]) as string;
-    const cert = mockSslCertificates.find(
-      (c) => c.domain_id === key || c.domain_name === key || c.id === key
-    );
-    if (!cert) {
-      return HttpResponse.json({ message: "Certificate not found" }, { status: 404 });
-    }
-
-    cert.status = "none";
-    cert.type = "none";
-    cert.issuer = null;
-    cert.expires_at = null;
-    cert.days_remaining = 0;
-    cert.auto_renew = false;
-    cert.force_https = false;
-    cert.hsts_enabled = false;
-    cert.updated_at = new Date().toISOString();
-
-    return HttpResponse.json({
-      success: true,
-      status: "revoked",
-      id: cert.id,
-      certificate: cert,
-    });
+  // DELETE /api/v1/client/domains/:id/ssl/custom: back to the web server's own certificate
+  http.delete(/\/api\/v1\/client\/domains\/([^/]+)\/ssl\/custom$/, ({ params }) => {
+    const cert = mockSslCertificates.find((c) => c.domain_id === params[0] && c.type === "custom");
+    if (!cert) return problem(404, "not_found", "No uploaded certificate");
+    cert.type = "lets_encrypt";
+    cert.issuer = "Let's Encrypt";
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // VHost Templates: List all (GET /api/v1/admin/vhost-templates)
@@ -5406,48 +5325,24 @@ export const handlers = [
     return HttpResponse.json(tpl);
   }),
 
-  // Temporary Preview Link: Get status (GET /api/v1/client/domains/:id/preview-link)
-  // TODO(api:T06.14): Replace with real backend preview link status endpoint
-  http.get(/\/api\/v1\/client\/domains\/([^/]+)\/preview-link$/, ({ params }) => {
-    const domainId = (params.id || params[0]) as string;
-    const domain = mockClientDomains.find((d) => d.id === domainId);
-    if (!domain) {
-      return HttpResponse.json({ message: "Domain not found" }, { status: 404 });
-    }
-
+  // GET/POST /api/v1/client/domains/:id/previews, DELETE .../:preview_id
+  http.get(/\/api\/v1\/client\/domains\/([^/]+)\/previews$/, ({ params }) => {
+    const domainId = params[0] as string;
+    if (!mockClientDomains.some((d) => d.id === domainId)) return problem(404, "not_found", "No such domain");
     const link = mockPreviewLinks[domainId];
-    if (!link || !link.enabled) {
-      return HttpResponse.json({
-        enabled: false,
-        domain_id: domainId,
-        target_domain: domain.name,
-      });
-    }
-
-    const isExpired = Date.now() > new Date(link.expires_at).getTime();
     return HttpResponse.json({
-      ...link,
-      is_expired: isExpired,
+      enabled: true,
+      items: link?.enabled ? [{ id: link.token ?? "prv", host: new URL(link.url ?? "https://x.preview.builtpanel.net").host, expires_at: link.expires_at }] : [],
     });
   }),
-
-  // Temporary Preview Link: Generate / Extend (POST /api/v1/client/domains/:id/preview-link)
-  // TODO(api:T06.14): Replace with real backend preview link generation endpoint
-  http.post(/\/api\/v1\/client\/domains\/([^/]+)\/preview-link$/, async ({ params, request }) => {
-    const domainId = (params.id || params[0]) as string;
+  http.post(/\/api\/v1\/client\/domains\/([^/]+)\/previews$/, ({ params }) => {
+    const domainId = params[0] as string;
     const domain = mockClientDomains.find((d) => d.id === domainId);
-    if (!domain) {
-      return HttpResponse.json({ message: "Domain not found" }, { status: 404 });
-    }
-
-    const body = (await request.json().catch(() => ({}))) as { ttl_hours?: number };
-    const ttl = body.ttl_hours && body.ttl_hours > 0 ? body.ttl_hours : 24;
-
+    if (!domain) return problem(404, "not_found", "No such domain");
     const token = `prv_${Math.random().toString(36).substring(2, 8)}`;
     const now = Date.now();
-    const expiresAt = new Date(now + ttl * 3600 * 1000).toISOString();
-
-    const link: MockPreviewLink = {
+    const expiresAt = new Date(now + 24 * 3600 * 1000).toISOString();
+    mockPreviewLinks[domainId] = {
       domain_id: domainId,
       target_domain: domain.name,
       enabled: true,
@@ -5455,34 +5350,15 @@ export const handlers = [
       url: `https://${token}.preview.builtpanel.net`,
       created_at: new Date(now).toISOString(),
       expires_at: expiresAt,
-      ttl_hours: ttl,
+      ttl_hours: 24,
     };
-
-    mockPreviewLinks[domainId] = link;
-
-    return HttpResponse.json({
-      ...link,
-      is_expired: false,
-    });
+    return HttpResponse.json({ id: token, host: `${token}.preview.builtpanel.net`, expires_at: expiresAt }, { status: 201 });
   }),
-
-  // Temporary Preview Link: Revoke (DELETE /api/v1/client/domains/:id/preview-link)
-  // TODO(api:T06.14): Replace with real backend preview link revocation endpoint
-  http.delete(/\/api\/v1\/client\/domains\/([^/]+)\/preview-link$/, ({ params }) => {
-    const domainId = (params.id || params[0]) as string;
-    const domain = mockClientDomains.find((d) => d.id === domainId);
-    if (!domain) {
-      return HttpResponse.json({ message: "Domain not found" }, { status: 404 });
-    }
-
-    if (mockPreviewLinks[domainId]) {
-      mockPreviewLinks[domainId].enabled = false;
-    }
-
-    return HttpResponse.json({
-      success: true,
-      message: "Preview link revoked",
-    });
+  http.delete(/\/api\/v1\/client\/domains\/([^/]+)\/previews\/([^/]+)$/, ({ params }) => {
+    const link = mockPreviewLinks[params[0] as string];
+    if (!link) return problem(404, "not_found", "No such preview link");
+    link.enabled = false;
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // Temporary Preview Link Proxy: Test / Access Link (GET /api/v1/preview/:token)

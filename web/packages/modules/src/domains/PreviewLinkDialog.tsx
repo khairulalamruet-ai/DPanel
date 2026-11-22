@@ -11,7 +11,7 @@ import {
   Input,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { getPreview, createPreview, deletePreview } from "./api";
 import {
   Globe2,
   Copy,
@@ -44,7 +44,6 @@ export function PreviewLinkDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
-  const [ttlHours, setTtlHours] = useState<number>(24);
   const [copied, setCopied] = useState(false);
 
   // Fetch status when dialog opens
@@ -52,9 +51,7 @@ export function PreviewLinkDialog({
     if (!domain) return;
     try {
       setIsLoading(true);
-      const res = await apiFetch<PreviewLinkInfo>(
-        `/api/v1/client/domains/${domain.id}/preview-link`
-      );
+      const res = await getPreview(domain);
       setPreviewInfo(res);
     } catch {
       // Default to empty state on 404 or first load
@@ -79,13 +76,7 @@ export function PreviewLinkDialog({
     if (!domain) return;
     try {
       setIsGenerating(true);
-      const res = await apiFetch<PreviewLinkInfo>(
-        `/api/v1/client/domains/${domain.id}/preview-link`,
-        {
-          method: "POST",
-          body: JSON.stringify({ ttl_hours: ttlHours }),
-        }
-      );
+      const res = await createPreview(domain);
       setPreviewInfo(res);
       toast({
         title: t("common.success"),
@@ -107,9 +98,7 @@ export function PreviewLinkDialog({
     if (!domain) return;
     try {
       setIsRevoking(true);
-      await apiFetch(`/api/v1/client/domains/${domain.id}/preview-link`, {
-        method: "DELETE",
-      });
+      await deletePreview(domain);
       setPreviewInfo({
         enabled: false,
         domain_id: domain.id,
@@ -254,16 +243,6 @@ export function PreviewLinkDialog({
                 </Button>
 
                 <div className="flex items-center gap-2">
-                  <select
-                    value={ttlHours}
-                    onChange={(e) => setTtlHours(Number(e.target.value))}
-                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                    data-testid="select-extend-ttl"
-                  >
-                    <option value={24}>24 Hours</option>
-                    <option value={48}>48 Hours</option>
-                    <option value={168}>7 Days</option>
-                  </select>
                   <Button
                     size="sm"
                     onClick={handleGenerate}
@@ -272,7 +251,7 @@ export function PreviewLinkDialog({
                     data-testid="btn-extend-preview-link"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isGenerating ? "animate-spin" : ""}`} />
-                    {isGenerating ? t("common.loading") : t("domains.preview.extend", "Extend TTL")}
+                    {isGenerating ? t("common.loading") : t("domains.preview.extend", "Make a new link")}
                   </Button>
                 </div>
               </div>
@@ -298,40 +277,11 @@ export function PreviewLinkDialog({
                   <p>
                     {t(
                       "domains.preview.intro",
-                      "Preview your site immediately before DNS records propagate worldwide. A temporary URL (<hash>.preview.builtpanel.net) will be created with an automated expiration."
+                      "Preview your site immediately before DNS records propagate worldwide. A temporary URL will be created and expires on its own."
                     )}
                   </p>
                 </div>
               )}
-
-              {/* TTL Options Selector */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-foreground">
-                  {t("domains.preview.selectValidity", "Select Link Validity Period")}
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "24 Hours", value: 24 },
-                    { label: "48 Hours", value: 48 },
-                    { label: "7 Days", value: 168 },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setTtlHours(opt.value)}
-                      className={`flex flex-col items-center justify-center p-2.5 rounded-lg border text-xs font-medium transition-colors ${
-                        ttlHours === opt.value
-                          ? "border-primary bg-primary/10 text-primary font-semibold"
-                          : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
-                      }`}
-                      data-testid={`btn-ttl-${opt.value}`}
-                    >
-                      <Clock className="h-4 w-4 mb-1" />
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <div className="pt-2">
                 <Button
