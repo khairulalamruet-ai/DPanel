@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@builtpanel/i18n";
-import { apiFetch } from "@builtpanel/api";
+import { getLicense, refreshLicense, activateLicense, requestRecovery } from "./api";
 import { useToast, Button } from "@builtpanel/ui";
 import { KeyRound, RefreshCw, LifeBuoy, AlertCircle } from "lucide-react";
 import {
   LicenseState,
-  ActivateLicensePayload,
   RecoveryRequestPayload,
   RecoveryRequestResponse,
 } from "./types";
@@ -31,7 +30,7 @@ export function LicensePage() {
     try {
       setIsLoading(true);
       setIsError(false);
-      const res = await apiFetch<LicenseState>("/api/v1/license/status");
+      const res = await getLicense();
       setLicense(res);
     } catch {
       setIsError(true);
@@ -48,9 +47,7 @@ export function LicensePage() {
   const handleRevalidate = async () => {
     try {
       setRevalidating(true);
-      const updated = await apiFetch<LicenseState>("/api/v1/license/validate", {
-        method: "POST",
-      });
+      const updated = await refreshLicense();
       setLicense(updated);
       toast({
         title: t("license.validatedTitle", "License Validated"),
@@ -69,11 +66,7 @@ export function LicensePage() {
   };
 
   const handleActivate = async (licenseKey: string) => {
-    const payload: ActivateLicensePayload = { license_key: licenseKey };
-    const activated = await apiFetch<LicenseState>("/api/v1/license/activate", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const activated = await activateLicense(licenseKey);
     setLicense(activated);
     toast({
       title: t("license.activatedTitle", "License Activated"),
@@ -87,11 +80,7 @@ export function LicensePage() {
   const handleRecoverySubmit = async (
     payload: RecoveryRequestPayload
   ): Promise<RecoveryRequestResponse> => {
-    const res = await apiFetch<RecoveryRequestResponse>("/api/v1/license/recovery", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    return res;
+    return requestRecovery(payload);
   };
 
   return (
