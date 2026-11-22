@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   CardHeader,
@@ -9,7 +9,6 @@ import {
   Input,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
 import { useTranslation } from "@builtpanel/i18n";
 import {
   FileText,
@@ -19,42 +18,33 @@ import {
   Play,
   Pause,
   RefreshCw,
-  Globe,
   AlertTriangle,
   ArrowDown,
   Layers,
-  Sparkles,
 } from "lucide-react";
-import { LogEntry, LogType, DomainLogOverview } from "./types";
+import { LogEntry, LogType } from "./types";
+import { readLog } from "./api";
 import { VirtualizedLogList } from "./VirtualizedLogList";
 
 export function LogViewerPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [selectedDomain, setSelectedDomain] = useState<string>("all");
   const [logType, setLogType] = useState<LogType>("access");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLiveTail, setIsLiveTail] = useState(false);
   const [entries, setEntries] = useState<LogEntry[]>([]);
-  const [domains, setDomains] = useState<DomainLogOverview[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [autoScroll, setAutoScroll] = useState(false);
-  const [is100MbLoaded, setIs100MbLoaded] = useState(false);
+  const [truncated, setTruncated] = useState(false);
 
-  // Fetch log overviews and initial logs
+  // The newest lines of the chosen log
   const fetchLogs = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [domainsRes, logsRes] = await Promise.all([
-        apiFetch<DomainLogOverview[]>("/api/v1/client/logs/overview"),
-        apiFetch<LogEntry[]>(
-          `/api/v1/client/logs?domain=${encodeURIComponent(selectedDomain)}&type=${encodeURIComponent(logType)}`
-        ),
-      ]);
-      setDomains(domainsRes);
-      setEntries(logsRes);
-      setIs100MbLoaded(false);
+      const res = await readLog(logType, { lines: 1000 });
+      setEntries(res.entries);
+      setTruncated(res.truncated);
     } catch (err: any) {
       toast({
         title: t("common.error"),
@@ -64,91 +54,32 @@ export function LogViewerPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDomain, logType, t, toast]);
+  }, [logType, t, toast]);
 
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
 
-  // Live Tail simulation (SSE or periodic interval)
+  // Live tail: ask for what was written since the last line, every few seconds
+  const lastAt = useRef(0);
+  useEffect(() => {
+    lastAt.current = entries.length ? Date.parse(entries[entries.length - 1].timestamp) : Date.now();
+  }, [entries]);
+
   useEffect(() => {
     if (!isLiveTail) return;
-
-    const interval = setInterval(() => {
-      const now = new Date();
-      const randomStatus = [200, 200, 200, 201, 304, 404, 500][Math.floor(Math.random() * 7)];
-      const randomMethod = ["GET", "POST", "GET", "HEAD"][Math.floor(Math.random() * 4)];
-      const randomPaths = [
-        "/api/v1/health",
-        "/wp-content/themes/builtpanel/style.css",
-        "/index.php",
-        "/cart/checkout",
-        "/wp-login.php",
-      ];
-      const randomPath = randomPaths[Math.floor(Math.random() * randomPaths.length)];
-      const currentDomain = selectedDomain === "all" ? "demo.builtpanel.test" : selectedDomain;
-
-      const newEntry: LogEntry = {
-        id: `live_${Date.now()}_${Math.random()}`,
-        lineNumber: entries.length + 1,
-        timestamp: now.toISOString(),
-        type: logType,
-        domain: currentDomain,
-        status_code: logType === "access" ? randomStatus : undefined,
-        level: logType === "error" || randomStatus >= 500 ? "error" : randomStatus >= 400 ? "warn" : "info",
-        method: logType === "access" ? randomMethod : undefined,
-        path: logType === "access" ? randomPath : undefined,
-        ip: "192.168.1.105",
-        message:
-          logType === "php"
-            ? `PHP Notice: Undefined index in /var/www/${currentDomain}/public_html/index.php line 42`
-            : logType === "error"
-            ? `[error] connect() failed (111: Connection refused) while connecting to upstream`
-            : `${randomMethod} ${randomPath} HTTP/2.0 ${randomStatus}`,
-        raw: `${now.toISOString()} [${currentDomain}] ${randomMethod} ${randomPath} ${randomStatus}`,
-      };
-
-      setEntries((prev) => [...prev, newEntry]);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isLiveTail, logType, selectedDomain, entries.length]);
-
-  // Handle 100MB heavy load simulation for DoD verification (50,000 lines)
-  const handleLoad100MbLog = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const heavyEntries: LogEntry[] = [];
-      const baseTime = Date.now() - 3600 * 1000 * 24;
-
-      for (let i = 1; i <= 50000; i++) {
-        const time = new Date(baseTime + i * 1500).toISOString();
-        const code = i % 250 === 0 ? 500 : i % 50 === 0 ? 404 : 200;
-        heavyEntries.push({
-          id: `heavy_${i}`,
-          lineNumber: i,
-          timestamp: time,
-          type: "access",
-          domain: i % 2 === 0 ? "demo.builtpanel.test" : "store.builtpanel.test",
-          status_code: code,
-          level: code >= 500 ? "error" : code >= 400 ? "warn" : "info",
-          method: "GET",
-          path: `/products/item-${(i % 100) + 1}?page=${(i % 5) + 1}`,
-          ip: `10.0.${Math.floor(i / 256) % 256}.${i % 256}`,
-          message: `GET /products/item-${(i % 100) + 1} HTTP/2.0 ${code}`,
-          raw: `${time} [store.builtpanel.test] 10.0.0.1 GET /products/item-${(i % 100) + 1} HTTP/2.0 ${code} - Mozilla/5.0`,
-        });
+    const interval = setInterval(async () => {
+      try {
+        const res = await readLog(logType, { lines: 500, sinceMs: lastAt.current });
+        if (res.entries.length > 0) {
+          setEntries((prev) => [...prev, ...res.entries.map((e, i) => ({ ...e, lineNumber: prev.length + i + 1 }))]);
+        }
+      } catch {
+        // The next round tries again.
       }
-
-      setEntries(heavyEntries);
-      setIs100MbLoaded(true);
-      setIsLoading(false);
-      toast({
-        title: t("common.success"),
-        description: t("logs.loaded100MbSuccess"),
-      });
-    }, 50);
-  };
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isLiveTail, logType]);
 
   const handleDownloadLog = () => {
     if (entries.length === 0) return;
@@ -157,7 +88,7 @@ export function LogViewerPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${selectedDomain}-${logType}-${new Date().toISOString().slice(0, 10)}.log`;
+    link.download = `${logType}-${new Date().toISOString().slice(0, 10)}.log`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -165,20 +96,13 @@ export function LogViewerPage() {
 
     toast({
       title: t("common.success"),
-      description: t("logs.downloadStarted", { name: `${selectedDomain}-${logType}.log` }),
+      description: t("logs.downloadStarted", { name: `${logType}.log` }),
     });
   };
 
-  const currentOverview = domains.find((d) => d.domain === selectedDomain);
-  const logSizeFormatted = is100MbLoaded
-    ? "102.4 MB"
-    : currentOverview
-    ? logType === "access"
-      ? currentOverview.access_log_size_formatted
-      : logType === "error"
-      ? currentOverview.error_log_size_formatted
-      : currentOverview.php_error_log_size_formatted
-    : "8.5 MB";
+  const loadedBytes = entries.reduce((sum, e) => sum + e.raw.length + 1, 0);
+  const logSizeFormatted =
+    loadedBytes > 1048576 ? `${(loadedBytes / 1048576).toFixed(1)} MB` : `${(loadedBytes / 1024).toFixed(1)} KB`;
 
   const errorCount = entries.filter(
     (e) => e.level === "error" || (e.status_code && e.status_code >= 500)
@@ -198,19 +122,6 @@ export function LogViewerPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Load 100MB test button (DoD demonstration) */}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleLoad100MbLog}
-            className="gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5"
-            data-testid="btn-load-heavy-log"
-            title="Load 50,000 lines (100MB) virtualized test log"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            {t("logs.btn100MbTest")}
-          </Button>
-
           {/* Live Tail Toggle */}
           <Button
             size="sm"
@@ -272,24 +183,6 @@ export function LogViewerPage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Domain Picker & Log Type Tabs */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Domain Selector */}
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
-              <select
-                value={selectedDomain}
-                onChange={(e) => setSelectedDomain(e.target.value)}
-                className="h-8 text-xs rounded-md border border-input bg-background px-2.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                data-testid="select-log-domain"
-              >
-                <option value="all">{t("logs.allDomains")}</option>
-                {domains.map((d) => (
-                  <option key={d.domain} value={d.domain}>
-                    {d.domain}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Log Type Pill Tabs */}
             <div className="flex items-center rounded-lg bg-muted p-1 text-xs">
               <button
@@ -380,9 +273,9 @@ export function LogViewerPage() {
             </Badge>
           )}
 
-          {is100MbLoaded && (
-            <Badge variant="secondary" className="font-mono text-[11px]" data-testid="badge-virtualized-mode">
-              ⚡ {t("logs.virtualized100MbMode")}
+          {truncated && (
+            <Badge variant="secondary" className="font-mono text-[11px]" data-testid="badge-log-truncated">
+              {t("logs.onlyNewest", "Only the newest lines are shown")}
             </Badge>
           )}
         </div>

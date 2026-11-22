@@ -9,14 +9,13 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 describe("LogViewerPage (T10.06)", () => {
-  it("renders page title, domain dropdown, log type tabs, and virtualized log lines", async () => {
+  it("renders page title, log type tabs, and virtualized log lines", async () => {
     renderWithProviders(<LogViewerPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId("log-viewer-title")).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("select-log-domain")).toBeInTheDocument();
     expect(screen.getByTestId("tab-log-access")).toBeInTheDocument();
     expect(screen.getByTestId("tab-log-error")).toBeInTheDocument();
     expect(screen.getByTestId("tab-log-php")).toBeInTheDocument();
@@ -46,22 +45,6 @@ describe("LogViewerPage (T10.06)", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("metric-loaded-lines")).toHaveTextContent("40");
-    });
-  });
-
-  it("switches selected domain from dropdown", async () => {
-    renderWithProviders(<LogViewerPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("select-log-domain")).toBeInTheDocument();
-    });
-
-    fireEvent.change(screen.getByTestId("select-log-domain"), {
-      target: { value: "store.builtpanel.test" },
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("virtualized-log-container")).toBeInTheDocument();
     });
   });
 
@@ -98,24 +81,6 @@ describe("LogViewerPage (T10.06)", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("badge-live-tail-status")).toHaveTextContent(/Live Stream Paused|লাইভ স্ট্রিম স্থগিত/i);
-    });
-  });
-
-  it("DoD verification: loads 100MB heavy log (50,000 lines) with zero browser lockup via virtualized list", async () => {
-    renderWithProviders(<LogViewerPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("btn-load-heavy-log")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTestId("btn-load-heavy-log"));
-
-    // Verify 50,000 lines loaded in state and virtualizer handles them smoothly
-    await waitFor(() => {
-      expect(screen.getByTestId("metric-loaded-lines")).toHaveTextContent("50,000");
-      expect(screen.getByTestId("metric-log-size")).toHaveTextContent("102.4 MB");
-      expect(screen.getByTestId("badge-virtualized-mode")).toBeInTheDocument();
-      expect(screen.getByTestId("virtualized-log-line-0")).toBeInTheDocument();
     });
   });
 });

@@ -6549,17 +6549,16 @@ export const handlers = [
 
                         return [
                           // GET /api/v1/client/logs/overview (TODO(api:T10.04))
-                          http.get(/\/api\/v1\/client\/logs\/overview$/, () => {
-                            return HttpResponse.json(mockDomainOverviews);
-                          }),
-
-                          // GET /api/v1/client/logs (TODO(api:T10.04))
+                          // GET /api/v1/client/logs?source=web_access|web_error|php_error&since_ms=&lines=
                           http.get(/\/api\/v1\/client\/logs$/, ({ request }) => {
                             const url = new URL(request.url);
-                            const domain = url.searchParams.get("domain") || "all";
-                            const type = url.searchParams.get("type") || "access";
-                            const logs = generateSeedLogs(domain, type);
-                            return HttpResponse.json(logs);
+                            const source = url.searchParams.get("source") || "web_access";
+                            const since = Number(url.searchParams.get("since_ms") || 0);
+                            const type = source === "web_error" ? "error" : source === "php_error" ? "php" : "access";
+                            const lines = generateSeedLogs("all", type)
+                              .map((e: any) => ({ at_ms: Date.parse(e.timestamp), text: e.raw as string }))
+                              .filter((l: { at_ms: number }) => l.at_ms > since);
+                            return HttpResponse.json({ lines, truncated: false });
                           }),
 
                           // ===================================                          // ADMIN SYSTEM LOGS (TODO(api:T10.07))
