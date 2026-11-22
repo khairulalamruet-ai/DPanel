@@ -752,14 +752,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.security.read"],
     },
     adminNav: [
-      {
-        id: "admin-security-center",
-        labelKey: "securityCenter.nav",
-        icon: <ShieldAlert className="h-4 w-4" />,
-        href: "/admin/security",
-        order: 66,
-        permission: "admin.security.read",
-      },
     ],
   },
   {
@@ -954,13 +946,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.branding.manage", "admin.settings.manage", "*"],
     },
     adminNav: [
-      {
-        id: "branding",
-        labelKey: "branding.nav",
-        icon: <Palette className="h-4 w-4" />,
-        href: "/admin/branding",
-        order: 86,
-      },
     ],
   },
   {
