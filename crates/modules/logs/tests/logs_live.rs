@@ -174,7 +174,7 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         loop {
             let rows: Vec<(Uuid, Value)> = sqlx::query_as(
-                "SELECT id, payload FROM operations WHERE kind IN ('read_log', 'read_traffic') AND status = 'pending'",
+                "SELECT id, payload FROM operations WHERE kind IN ('read_log', 'read_traffic', 'read_waf_events') AND status = 'pending'",
             )
             .fetch_all(&pool)
             .await
@@ -190,6 +190,19 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                 if payload["username"] == "broken" {
                     sqlx::query("UPDATE operations SET status = 'failed', error = '{\"code\":\"not_found\",\"message\":\"x\",\"retryable\":false}', finished_at = now() WHERE id = $1")
                         .bind(id)
+                        .execute(&pool)
+                        .await
+                        .unwrap();
+                    continue;
+                }
+                if payload["type"] == "read_waf_events" {
+                    let out = json!({"type": "waf_events", "available": true, "partial": false, "events": [
+                        {"at_ms": 5, "method": "GET", "host": "a.example",
+                         "uri": format!("/?limit={} hosts={}", payload["limit"], payload["hosts"]),
+                         "rule_id": 942100, "message": "SQL Injection", "blocked": true}]});
+                    sqlx::query("UPDATE operations SET status = 'succeeded', output = $2, finished_at = now() WHERE id = $1")
+                        .bind(id)
+                        .bind(out)
                         .execute(&pool)
                         .await
                         .unwrap();
@@ -413,6 +426,27 @@ async fn traffic_is_counted_by_the_node_for_the_owner_only(pool: PgPool) {
     );
     for q in ["range=1y", "top=0", "top=51"] {
         let (status, got) = e.get(&alice, &format!("/api/v1/client/traffic?{q}")).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{q}: {got}");
+    }
+    // What the firewall stopped: the account's own names and the limit are sent on.
+    let (status, got) = e.get(&staff, "/api/v1/client/waf/events").await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{got}");
+    let (status, got) = e.get(&alice, "/api/v1/client/waf/events?limit=7").await;
+    assert_eq!(status, StatusCode::OK, "{got}");
+    assert_eq!(got["available"], true);
+    assert_eq!(got["items"][0]["rule_id"], 942_100);
+    assert_eq!(got["items"][0]["blocked"], true);
+    assert!(
+        got["items"][0]["uri"]
+            .as_str()
+            .unwrap()
+            .starts_with("/?limit=7 hosts="),
+        "{got}"
+    );
+    for q in ["range=1y", "limit=0", "limit=201"] {
+        let (status, got) = e
+            .get(&alice, &format!("/api/v1/client/waf/events?{q}"))
+            .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{q}: {got}");
     }
     // A suspended account has no running web server to count.

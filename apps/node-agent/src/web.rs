@@ -173,6 +173,12 @@ pub struct WebContext {
 }
 
 impl WebContext {
+    /// Whether this node's web server has the firewall (its rules directory is set).
+    #[must_use]
+    pub fn has_waf(&self) -> bool {
+        self.settings.waf_dir.is_some()
+    }
+
     /// A context keeping its files in `<state_dir>/routes`.
     #[must_use]
     pub fn new(settings: Settings, state_dir: &Path) -> Arc<Self> {
@@ -263,6 +269,13 @@ fn validate(username: &TenantUsername, routes: &[SiteRoute]) -> Result<(), Agent
                     .any(|r| !(1..=999_999).contains(r)))
         {
             return Err(invalid("the firewall setting of a site is not valid"));
+        }
+        if site.blocked_ips.len() > builtpanel_node_protocol::MAX_BLOCKED_IPS
+            || site.blocked_ips.iter().any(|ip| {
+                builtpanel_node_protocol::normalize_ip_block(ip).as_deref() != Ok(ip.as_str())
+            })
+        {
+            return Err(invalid("the blocked addresses of a site are not valid"));
         }
     }
     let mut hosts = BTreeSet::new();
@@ -505,6 +518,20 @@ fn waf_directives(setting: &builtpanel_node_protocol::WafSetting, dir: &Path) ->
 
 fn site_route(site: &SiteRoute, pages: &Pages, waf_dir: Option<&Path>) -> Value {
     let mut inner: Vec<Value> = Vec::new();
+    // Turned-away addresses come first: the firewall and the site never see them. Caddy sits
+    // on the machine's own ports, so this is the visitor's real address.
+    if !site.blocked_ips.is_empty() {
+        inner.push(json!({
+            "match": [{"remote_ip": {"ranges": site.blocked_ips}}],
+            "handle": [{
+                "handler": "static_response",
+                "status_code": 403,
+                "headers": {"Content-Type": ["text/plain; charset=utf-8"]},
+                "body": "Forbidden"
+            }],
+            "terminal": true
+        }));
+    }
     // The firewall looks at the request before anything answers it.
     if let (Some(setting), Some(dir), Some(_)) = (&site.waf, waf_dir, &site.upstream) {
         inner.push(json!({
@@ -1479,6 +1506,7 @@ mod tests {
     fn site(hosts: &[&str], upstream: Option<&str>) -> SiteRoute {
         SiteRoute {
             waf: None,
+            blocked_ips: Vec::new(),
             hosts: hosts.iter().map(|h| (*h).to_owned()).collect(),
             upstream: upstream.map(str::to_owned),
             redirects: vec![],
@@ -1501,6 +1529,47 @@ mod tests {
             waf_dir: None,
             panel: None,
         }
+    }
+
+    #[test]
+    fn turned_away_addresses_are_answered_403_before_anything_else() {
+        let mut s = site(&["a.com"], Some("bp-alice-web:8080"));
+        s.blocked_ips = vec!["203.0.113.9".into(), "198.51.100.0/24".into()];
+        assert!(validate(&alice(), &[s.clone()]).is_ok());
+        let route = site_route(&s, &Pages::default(), None).to_string();
+        let blocked = route.find("remote_ip").expect("the match is there");
+        let proxy = route.find("reverse_proxy").unwrap();
+        assert!(blocked < proxy, "{route}");
+        assert!(
+            route.contains("\"ranges\":[\"203.0.113.9\",\"198.51.100.0/24\"]"),
+            "{route}"
+        );
+        assert!(route.contains("\"status_code\":403"), "{route}");
+        // A site with none has no such match.
+        assert!(
+            !site_route(
+                &site(&["a.com"], Some("bp-alice-web:8080")),
+                &Pages::default(),
+                None
+            )
+            .to_string()
+            .contains("remote_ip")
+        );
+        // What is not canonical, or too many, is refused.
+        for bad in [
+            vec!["203.0.113.9/24".to_owned()],
+            vec!["nonsense".to_owned()],
+            vec!["127.0.0.1".to_owned()],
+        ] {
+            let mut s = site(&["a.com"], Some("bp-alice-web:8080"));
+            s.blocked_ips = bad;
+            assert!(validate(&alice(), &[s]).is_err());
+        }
+        let mut s = site(&["a.com"], Some("bp-alice-web:8080"));
+        s.blocked_ips = (0..=builtpanel_node_protocol::MAX_BLOCKED_IPS)
+            .map(|i| format!("10.{}.{}.1", i / 256, i % 256))
+            .collect();
+        assert!(validate(&alice(), &[s]).is_err());
     }
 
     #[test]

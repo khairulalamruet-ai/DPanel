@@ -55,6 +55,7 @@ async fn get(url: &str, host: &str, path: &str) -> (u16, Option<String>, String)
 fn site(hosts: &[&str], upstream: Option<&str>, redirects: Vec<RouteRedirect>) -> SiteRoute {
     SiteRoute {
         waf: None,
+        blocked_ips: Vec::new(),
         hosts: hosts.iter().map(|h| (*h).to_owned()).collect(),
         upstream: upstream.map(str::to_owned),
         redirects,

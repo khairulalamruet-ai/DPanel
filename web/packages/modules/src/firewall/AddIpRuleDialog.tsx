@@ -17,6 +17,8 @@ interface AddIpRuleDialogProps {
   onOpenChange: (open: boolean) => void;
   domain: string;
   defaultAction?: IpRuleAction;
+  /** Only turning addresses away is possible (the web server has no allow list). */
+  blockOnly?: boolean;
   onConfirm: (rule: { domain: string; ip_cidr: string; action: IpRuleAction; notes: string }) => Promise<void>;
 }
 
@@ -35,6 +37,7 @@ export function AddIpRuleDialog({
   onOpenChange,
   domain,
   defaultAction = "block",
+  blockOnly = false,
   onConfirm,
 }: AddIpRuleDialogProps) {
   const { t } = useTranslation();
@@ -99,6 +102,7 @@ export function AddIpRuleDialog({
               />
             </div>
 
+            {!blockOnly && (
             <div>
               <label className="text-xs font-medium text-foreground">
                 {t("firewall.actionType")}
@@ -128,6 +132,7 @@ export function AddIpRuleDialog({
                 </Button>
               </div>
             </div>
+            )}
 
             <div>
               <label className="text-xs font-medium text-foreground">

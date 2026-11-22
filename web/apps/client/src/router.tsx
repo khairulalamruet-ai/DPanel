@@ -27,7 +27,7 @@ const NAV_FEATURE: Record<string, string> = {
 };
 
 /** Pages whose backend does not exist yet: they stay out of the menu until it does. */
-const NOT_YET = new Set(["firewall", "migration"]);
+const NOT_YET = new Set(["migration"]);
 
 function AuthenticatedContent() {
   const { data: session, isLoading, hasFeature } = useSession();

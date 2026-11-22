@@ -1,3 +1,4 @@
+import { WafEventsCard } from "./WafEventsCard";
 import React, { useCallback, useEffect, useState } from "react";
 import { Button, useToast } from "@builtpanel/ui";
 import { useTranslation } from "@builtpanel/i18n";
@@ -95,6 +96,7 @@ export function ClientWafPage() {
       ) : (
         !isLoading && <p className="text-sm text-muted-foreground">{t("waf.noDomains", "There are no domains yet.")}</p>
       )}
+      <WafEventsCard />
     </div>
   );
 }

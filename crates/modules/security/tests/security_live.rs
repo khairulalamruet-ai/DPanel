@@ -465,7 +465,118 @@ async fn the_most_specific_policy_decides_and_clients_are_kept_to_their_own_doma
     .await
     .unwrap();
     assert_eq!(audited, 7);
+
+    // Turning addresses away from a domain: only one's own, only canonical ones, sent to the node.
+    let blocks = format!("/api/v1/client/waf/domains/{a_dom}/ip-blocks");
+    assert_eq!(
+        e.call(&root, "GET", &blocks, None).await.0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        e.call(&b, "GET", &blocks, None).await.0,
+        StatusCode::NOT_FOUND,
+        "not Bob's domain"
+    );
+    let (status, listed) = e.call(&a, "GET", &blocks, None).await;
+    assert_eq!(status, StatusCode::OK, "{listed}");
+    assert_eq!(listed["items"].as_array().unwrap().len(), 0);
+    assert_eq!(listed["limit"], 100);
+    synced(7).await;
+    let (status, got) = e
+        .call(
+            &a,
+            "POST",
+            &blocks,
+            Some(json!({"cidr": "203.0.113.77/24", "note": "scraper"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CREATED, "{got}");
+    assert_eq!(
+        got["cidr"], "203.0.113.0/24",
+        "the network is made canonical"
+    );
+    assert_eq!(version_of(alice).await, 0, "her routes are sent again");
+    assert_eq!(
+        e.call(&a, "POST", &blocks, Some(json!({"cidr": "203.0.113.0/24"})))
+            .await
+            .0,
+        StatusCode::CONFLICT
+    );
+    for bad in [
+        "nonsense",
+        "127.0.0.1",
+        "0.0.0.0/0",
+        "10.0.0.0/7",
+        "1.2.3.4/40",
+    ] {
+        let (status, got) = e
+            .call(&a, "POST", &blocks, Some(json!({"cidr": bad})))
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{bad}: {got}");
+    }
+    assert_eq!(
+        e.call(&b, "POST", &blocks, Some(json!({"cidr": "198.51.100.9"})))
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    // The list the node is sent: what the dispatcher reads for this domain.
+    let by = builtpanel_database::ip_blocks::for_domains(&pool, alice, &[a_dom])
+        .await
+        .unwrap();
+    assert_eq!(by[&a_dom], ["203.0.113.0/24"]);
+    // The limit.
+    for i in 1..100 {
+        let (status, got) = e
+            .call(
+                &a,
+                "POST",
+                &blocks,
+                Some(json!({"cidr": format!("198.51.{}.{}", i / 250, i % 250 + 1)})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{i}: {got}");
+    }
+    let (status, got) = e
+        .call(&a, "POST", &blocks, Some(json!({"cidr": "192.0.2.1"})))
+        .await;
+    assert_eq!(
+        (status, got["code"].as_str()),
+        (StatusCode::CONFLICT, Some("ip_block_limit"))
+    );
+    let id = got_id(&e, &a, &blocks).await;
+    assert_eq!(
+        e.call(&b, "DELETE", &format!("{blocks}/{id}"), None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        e.call(&a, "DELETE", &format!("{blocks}/{id}"), None)
+            .await
+            .0,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        e.call(&a, "DELETE", &format!("{blocks}/{id}"), None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    let audited: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit_logs WHERE action IN ('ip_block.added', 'ip_block.removed')",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(audited, 101);
     let _ = b;
+}
+
+/// The id of the first entry of a domain's list.
+async fn got_id(e: &Env, who: &Browser, blocks: &str) -> String {
+    let (_, list) = e.call(who, "GET", blocks, None).await;
+    list["items"][0]["id"].as_str().unwrap().to_owned()
 }
 
 #[sqlx::test(migrations = "../../../migrations")]

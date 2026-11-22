@@ -2381,7 +2381,14 @@
     "levelGlobal": "The whole panel",
     "levelTenant": "One account",
     "levelDomain": "One domain",
-    "pickTarget": "Pick an account or a domain."
+    "pickTarget": "Pick an account or a domain.",
+    "events": "Refused requests",
+    "range": "Time range",
+    "eventsUnavailable": "This server keeps no record of refused requests (yet): the firewall's log is not there.",
+    "noEvents": "Nothing was refused in this time.",
+    "refused": "refused",
+    "noticed": "noticed",
+    "eventsPartial": "Only the newest are shown."
   },
   "firewall": {
     "nav": "Firewall",
@@ -2469,7 +2476,8 @@
     "enableRateLimiting": "Enable Inbound Rate Limiting",
     "enableRateLimitingSubtext": "Drops incoming packets from any single source exceeding the maximum RPS limit",
     "maxRpsPerIp": "Max Requests / Second per IP",
-    "rateLimitSavedSuccess": "Rate limiting parameters successfully saved"
+    "rateLimitSavedSuccess": "Rate limiting parameters successfully saved",
+    "limit": "Most per domain"
   },
   "securityCenter": {
     "title": "Security center",

@@ -425,6 +425,15 @@ impl Dispatcher {
                 })
                 .collect();
         routes::apply_waf(&mut routes, &by_host);
+        // The addresses each site turns away.
+        let blocks = builtpanel_database::ip_blocks::for_domains(db, tenant.id, &ids)
+            .await
+            .map_err(|e| e.to_string())?;
+        let blocked: std::collections::BTreeMap<String, Vec<String>> = domains
+            .iter()
+            .filter_map(|d| Some((d.fqdn.clone(), blocks.get(&d.id)?.clone())))
+            .collect();
+        routes::apply_ip_blocks(&mut routes, &blocked);
         // The uploaded certificates go first, so a site never answers without the
         // certificate it should have. Their keys are not in the ledger.
         let certificates = builtpanel_database::certificates::custom_of_tenant(db, tenant.id)

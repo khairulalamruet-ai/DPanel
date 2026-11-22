@@ -509,6 +509,10 @@ impl Registry {
                 let context = context.clone();
                 move |op| crate::web::set_user_agent_blocklist(context.clone(), op)
             });
+            self.register("read_waf_events", {
+                let context = context.clone();
+                move |op| crate::wafevents::read_waf_events(context.clone(), op)
+            });
             self.register("report_web_service", {
                 let context = context.clone();
                 move |op| crate::web::report_web_service(context.clone(), op)

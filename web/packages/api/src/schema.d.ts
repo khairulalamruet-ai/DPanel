@@ -4681,6 +4681,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/waf/domains/{id}/ip-blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The addresses one of the account's domains turns away. */
+        get: operations["clientListIpBlocks"];
+        put?: never;
+        /**
+         * Turn an address or a network away from one of the account's domains: the web server answers
+         *     it `403` within seconds, before the firewall or the site sees the request.
+         */
+        post: operations["clientAddIpBlock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/waf/domains/{id}/ip-blocks/{block_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Stop turning an address away. */
+        delete: operations["clientRemoveIpBlock"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/waf/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The requests the account's web application firewall refused, the newest first, read from the
+         *     firewall's log on the node (which holds the recent past only).
+         */
+        get: operations["clientWafEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/email/autoresponders": {
         parameters: {
             query?: never;
@@ -5313,6 +5371,17 @@ export interface components {
             read_only?: boolean;
             /** @description Allow SFTP (default yes). */
             sftp?: boolean | null;
+        };
+        /** @description An address or a network to turn away. */
+        AddIpBlock: {
+            /**
+             * @description An IPv4 or IPv6 address, or a network in CIDR form (`203.0.113.0/24`). Networks larger
+             *     than a /8 (IPv4) or a /16 (IPv6) are refused.
+             * @example 203.0.113.0/24
+             */
+            cidr: string;
+            /** @description Why (at most 200 characters). */
+            note?: string | null;
         };
         /** @description A record to add. */
         AddRecord: {
@@ -7626,6 +7695,33 @@ export interface components {
             update_available: boolean;
             /** @description The version it runs. */
             version: string;
+        };
+        /** @description A domain's turned-away addresses. */
+        IpBlockList: {
+            /** @description Oldest first. */
+            items: components["schemas"]["IpBlockView"][];
+            /**
+             * Format: int64
+             * @description Most one domain may list.
+             */
+            limit: number;
+        };
+        /** @description An address or a network a domain turns away. */
+        IpBlockView: {
+            /** @description The address (`203.0.113.9`) or the network (`203.0.113.0/24`). */
+            cidr: string;
+            /**
+             * Format: int64
+             * @description When it was added (Unix seconds).
+             */
+            created_at: number;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description Why, if said. */
+            note?: string | null;
         };
         /** @description The jobs of an account. */
         JobList: {
@@ -10812,6 +10908,40 @@ export interface components {
             source: string;
             /** @description `queued`, `running`, `done` or `failed`. */
             state: string;
+        };
+        /** @description What the firewall stopped. */
+        WafEventList: {
+            /** @description The node's web server has the firewall and its log; without, `items` is empty and says nothing. */
+            available: boolean;
+            /** @description The newest first. */
+            items: components["schemas"]["WafEventView"][];
+            /** @description There were more than were returned, or the log held less than the range. */
+            partial: boolean;
+            /** @description The range asked for. */
+            range: string;
+        };
+        /** @description One request the firewall stopped. */
+        WafEventView: {
+            /**
+             * Format: int64
+             * @description When (Unix milliseconds, UTC).
+             */
+            at_ms: number;
+            /** @description The request was refused. */
+            blocked: boolean;
+            /** @description The name asked for. */
+            host: string;
+            /** @description What the rule says. */
+            message: string;
+            /** @description The request method. */
+            method: string;
+            /**
+             * Format: int32
+             * @description The rule that named the attack (0: not told).
+             */
+            rule_id: number;
+            /** @description The path and query asked for. */
+            uri: string;
         };
         /** @description A policy as stored. */
         WafPolicyView: {
@@ -26895,6 +27025,200 @@ export interface operations {
             };
             /** @description Not one of the account's domains, or no policy */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListIpBlocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IpBlockList"];
+                };
+            };
+            /** @description Not one of the account's domains */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientAddIpBlock: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddIpBlock"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IpBlockView"];
+                };
+            };
+            /** @description Not one of the account's domains */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `ip_block_exists` or `ip_block_limit` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not an address or network that can be turned away */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRemoveIpBlock: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Entry id */
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not one of the account's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWafEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `24h` (default), `7d` or `30d`. */
+                range: string | null;
+                /** @description How many events at most, the newest (1-200, default 50). */
+                limit: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WafEventList"];
+                };
+            };
+            /** @description The node is slow; ask again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A range or count that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `node_unavailable` */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

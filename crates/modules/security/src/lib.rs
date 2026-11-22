@@ -17,6 +17,8 @@
 //! | GET, POST, DELETE | `/api/v1/admin/security/wp-advisories[/{id}]` | `admin.security.read`, `.manage` |
 //! | GET | `/api/v1/client/waf/domains` | a client |
 //! | PUT, DELETE | `/api/v1/client/waf/domains/{id}` | the domain's owner |
+//! | GET, POST | `/api/v1/client/waf/domains/{id}/ip-blocks` | the domain's owner |
+//! | DELETE | `/api/v1/client/waf/domains/{id}/ip-blocks/{block_id}` | the domain's owner |
 //!
 //! A policy is a mode (`off`, `detect`, `block`) and a list of rule ids that do not apply (the
 //! way out of a false positive). The most specific policy that exists decides the mode (domain,
@@ -34,7 +36,7 @@ use axum::{
 use builtpanel_audit::{AuditEntry, Outcome};
 use builtpanel_database::{
     accounts::DbAccountKind,
-    domains,
+    domains, ip_blocks,
     sqlx::PgPool,
     tenants, users,
     waf::{self, Mode, Policy, Scope},
@@ -151,6 +153,18 @@ pub fn client_router() -> Router<SecurityState> {
             "/api/v1/client/waf/domains/{id}",
             axum::routing::put(client_put).delete(client_delete),
         )
+        .route(
+            "/api/v1/client/waf/domains/{id}/ip-blocks",
+            get(client_list_ip_blocks).post(client_add_ip_block),
+        )
+        .route(
+            "/api/v1/client/waf/domains/{id}/ip-blocks/{block_id}",
+            axum::routing::delete(client_remove_ip_block),
+        )
+}
+
+fn field_error(field: &str, code: &str, message: &str) -> AppError {
+    AppError::validation(vec![FieldError::new(field, code, message)])
 }
 
 fn internal(err: impl Into<Box<dyn std::error::Error + Send + Sync + 'static>>) -> AppError {
@@ -692,6 +706,161 @@ pub async fn client_delete(
     let tenant = client_tenant(&state, &who).await?;
     let target = own_domain(&state, &tenant, id).await?;
     delete_policy(&state, &who, &target).await
+}
+
+/// An address or a network a domain turns away.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct IpBlockView {
+    /// Id.
+    pub id: Uuid,
+    /// The address (`203.0.113.9`) or the network (`203.0.113.0/24`).
+    pub cidr: String,
+    /// Why, if said.
+    pub note: Option<String>,
+    /// When it was added (Unix seconds).
+    pub created_at: i64,
+}
+
+/// A domain's turned-away addresses.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct IpBlockList {
+    /// Oldest first.
+    pub items: Vec<IpBlockView>,
+    /// Most one domain may list.
+    pub limit: i64,
+}
+
+/// An address or a network to turn away.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AddIpBlock {
+    /// An IPv4 or IPv6 address, or a network in CIDR form (`203.0.113.0/24`). Networks larger
+    /// than a /8 (IPv4) or a /16 (IPv6) are refused.
+    #[schema(example = "203.0.113.0/24")]
+    pub cidr: String,
+    /// Why (at most 200 characters).
+    pub note: Option<String>,
+}
+
+fn ip_block_view(b: ip_blocks::IpBlock) -> IpBlockView {
+    IpBlockView {
+        id: b.id,
+        cidr: b.cidr,
+        note: b.note,
+        created_at: b.created_at,
+    }
+}
+
+/// The addresses one of the account's domains turns away.
+#[utoipa::path(get, path = "/api/v1/client/waf/domains/{id}/ip-blocks", tag = "security", operation_id = "clientListIpBlocks",
+    security(("session" = [])), params(("id" = Uuid, Path, description = "Domain id")),
+    responses((status = 200, description = "The list", body = IpBlockList),
+              (status = 404, description = "Not one of the account's domains", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn client_list_ip_blocks(
+    State(state): State<SecurityState>,
+    who: Principal,
+    Path(id): Path<Uuid>,
+) -> Result<Json<IpBlockList>, AppError> {
+    let tenant = client_tenant(&state, &who).await?;
+    own_domain(&state, &tenant, id).await?;
+    let items = ip_blocks::list(&state.db, tenant.id, id)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .map(ip_block_view)
+        .collect();
+    Ok(Json(IpBlockList {
+        items,
+        limit: ip_blocks::MAX_PER_DOMAIN,
+    }))
+}
+
+/// Turn an address or a network away from one of the account's domains: the web server answers
+/// it `403` within seconds, before the firewall or the site sees the request.
+#[utoipa::path(post, path = "/api/v1/client/waf/domains/{id}/ip-blocks", tag = "security", operation_id = "clientAddIpBlock",
+    security(("session" = [])), params(("id" = Uuid, Path, description = "Domain id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    request_body = AddIpBlock,
+    responses((status = 201, description = "Added", body = IpBlockView),
+              (status = 404, description = "Not one of the account's domains", body = ProblemDetails, content_type = "application/problem+json"),
+              (status = 409, description = "`ip_block_exists` or `ip_block_limit`", body = ProblemDetails, content_type = "application/problem+json"),
+              (status = 422, description = "Not an address or network that can be turned away", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn client_add_ip_block(
+    State(state): State<SecurityState>,
+    who: Principal,
+    Path(id): Path<Uuid>,
+    Json(req): Json<AddIpBlock>,
+) -> Result<(StatusCode, Json<IpBlockView>), AppError> {
+    let tenant = client_tenant(&state, &who).await?;
+    own_domain(&state, &tenant, id).await?;
+    let cidr = builtpanel_node_protocol::normalize_ip_block(&req.cidr)
+        .map_err(|reason| field_error("cidr", "invalid", reason))?;
+    let note = req.note.as_deref().map(str::trim).filter(|n| !n.is_empty());
+    if note.is_some_and(|n| n.chars().count() > 200 || n.chars().any(char::is_control)) {
+        return Err(field_error(
+            "note",
+            "invalid",
+            "At most 200 characters, no control characters.",
+        ));
+    }
+    let added = ip_blocks::add(&state.db, tenant.id, id, &cidr, note, who.account_id())
+        .await
+        .map_err(|e| match e {
+            ip_blocks::AddError::Taken => {
+                AppError::conflict("ip_block_exists", "That address is already turned away.")
+            }
+            ip_blocks::AddError::Full => AppError::conflict(
+                "ip_block_limit",
+                "This domain already turns away as many addresses as it may.",
+            ),
+            ip_blocks::AddError::Database(e) => internal(e),
+        })?;
+    resend(&state.db, Some(tenant.id)).await?;
+    audit_ip_block(&state, &who, tenant.id, id, "ip_block.added", &cidr).await?;
+    Ok((StatusCode::CREATED, Json(ip_block_view(added))))
+}
+
+/// Stop turning an address away.
+#[utoipa::path(delete, path = "/api/v1/client/waf/domains/{id}/ip-blocks/{block_id}", tag = "security", operation_id = "clientRemoveIpBlock",
+    security(("session" = [])), params(("id" = Uuid, Path, description = "Domain id"), ("block_id" = Uuid, Path, description = "Entry id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    responses((status = 204, description = "Removed"),
+              (status = 404, description = "Not one of the account's", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn client_remove_ip_block(
+    State(state): State<SecurityState>,
+    who: Principal,
+    Path((id, block_id)): Path<(Uuid, Uuid)>,
+) -> Result<StatusCode, AppError> {
+    let tenant = client_tenant(&state, &who).await?;
+    own_domain(&state, &tenant, id).await?;
+    if !ip_blocks::remove(&state.db, tenant.id, id, block_id)
+        .await
+        .map_err(internal)?
+    {
+        return Err(AppError::not_found("ip_block"));
+    }
+    resend(&state.db, Some(tenant.id)).await?;
+    audit_ip_block(&state, &who, tenant.id, id, "ip_block.removed", "").await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn audit_ip_block(
+    state: &SecurityState,
+    who: &Principal,
+    tenant: Uuid,
+    domain: Uuid,
+    action: &'static str,
+    cidr: &str,
+) -> Result<(), AppError> {
+    builtpanel_audit::insert(
+        &state.db,
+        &AuditEntry::new(action, Outcome::Success)
+            .actor(who.account_id())
+            .tenant(tenant)
+            .target("domain", domain)
+            .metadata(serde_json::json!({ "cidr": cidr })),
+    )
+    .await
+    .map_err(internal)?;
+    Ok(())
 }
 
 /// A User-Agent text that is refused.
@@ -1757,14 +1926,14 @@ async fn store_firewall(
     paths(
         admin_get_global, admin_put_global, admin_delete_global, admin_get_tenant, admin_put_tenant,
         admin_delete_tenant, admin_get_domain, admin_put_domain, admin_delete_domain, client_list,
-        client_put, client_delete, list_user_agents, add_user_agent, remove_user_agent,
+        client_put, client_delete, client_list_ip_blocks, client_add_ip_block, client_remove_ip_block, list_user_agents, add_user_agent, remove_user_agent,
         get_node_firewall, put_node_firewall, reset_node_firewall,
         admin_list_scans, admin_start_scan, client_list_scans, client_start_scan,
         admin_list_vuln, admin_start_vuln, client_list_vuln, client_start_vuln,
         list_advisories, add_advisory, remove_advisory,
         list_images, image_vulnerabilities, scan_image_now
     ),
-    components(schemas(SecurityImageView, ImageList, ImageVulns, ScanImageRequest, builtpanel_node_protocol::ImageVulnerability, VulnScanView, VulnScanList, VulnIssue, AdvisoryView, AdvisoryList, AddAdvisory, builtpanel_node_protocol::WpInstall, builtpanel_node_protocol::WpComponent, ScanRequest, ScanView, ScanList, builtpanel_node_protocol::Infection, NodeFirewall, builtpanel_node_protocol::FirewallPolicy, builtpanel_node_protocol::PortRule, builtpanel_node_protocol::RateLimit, UserAgentView, UserAgentList, AddUserAgent, PolicyRequest, WafPolicyView, EffectiveView, PolicyState, DomainWaf, DomainWafList)),
+    components(schemas(SecurityImageView, ImageList, ImageVulns, ScanImageRequest, builtpanel_node_protocol::ImageVulnerability, VulnScanView, VulnScanList, VulnIssue, AdvisoryView, AdvisoryList, AddAdvisory, builtpanel_node_protocol::WpInstall, builtpanel_node_protocol::WpComponent, ScanRequest, ScanView, ScanList, builtpanel_node_protocol::Infection, NodeFirewall, builtpanel_node_protocol::FirewallPolicy, builtpanel_node_protocol::PortRule, builtpanel_node_protocol::RateLimit, UserAgentView, UserAgentList, AddUserAgent, PolicyRequest, WafPolicyView, EffectiveView, PolicyState, DomainWaf, DomainWafList, IpBlockView, IpBlockList, AddIpBlock)),
     tags((name = "security", description = "The web application firewall"))
 )]
 pub struct SecurityApi;

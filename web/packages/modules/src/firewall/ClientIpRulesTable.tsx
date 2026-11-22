@@ -91,7 +91,6 @@ export function ClientIpRulesTable({
           >
             <option value="all">{t("firewall.allRuleTypes")}</option>
             <option value="block">{t("firewall.onlyBlocked")}</option>
-            <option value="allow">{t("firewall.onlyAllowed")}</option>
           </select>
         </div>
       </CardHeader>

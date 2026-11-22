@@ -29,6 +29,7 @@ pub mod ftp_accounts;
 pub mod git_deploys;
 pub mod images;
 pub mod imports;
+pub mod ip_blocks;
 pub mod license;
 pub mod mail;
 pub mod malware;

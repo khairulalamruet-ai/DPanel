@@ -27,7 +27,8 @@ use builtpanel_database::{
 };
 use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
 use builtpanel_node_protocol::{
-    LogLine, LogSource, MAX_LOG_LINES, MAX_TRAFFIC_PATHS, Operation, Output,
+    LogLine, LogSource, MAX_LOG_LINES, MAX_TRAFFIC_PATHS, MAX_WAF_EVENTS, MAX_WAF_HOSTS, Operation,
+    Output,
 };
 use builtpanel_rbac::Principal;
 use builtpanel_session::SessionStore;
@@ -70,6 +71,7 @@ pub fn client_router() -> Router<LogsState> {
         .route("/api/v1/client/logs", get(read_logs))
         .route("/api/v1/client/activity", get(activity))
         .route("/api/v1/client/traffic", get(traffic))
+        .route("/api/v1/client/waf/events", get(waf_events))
 }
 
 fn internal(err: impl Into<Box<dyn std::error::Error + Send + Sync + 'static>>) -> AppError {
@@ -604,6 +606,135 @@ pub async fn traffic(
     }
 }
 
+/// Which time, how many.
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct WafEventsQuery {
+    /// `24h` (default), `7d` or `30d`.
+    pub range: Option<String>,
+    /// How many events at most, the newest (1-200, default 50).
+    pub limit: Option<u32>,
+}
+
+/// One request the firewall stopped.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct WafEventView {
+    /// When (Unix milliseconds, UTC).
+    pub at_ms: i64,
+    /// The request method.
+    pub method: String,
+    /// The name asked for.
+    pub host: String,
+    /// The path and query asked for.
+    pub uri: String,
+    /// The rule that named the attack (0: not told).
+    pub rule_id: u32,
+    /// What the rule says.
+    pub message: String,
+    /// The request was refused.
+    pub blocked: bool,
+}
+
+/// What the firewall stopped.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct WafEventList {
+    /// The range asked for.
+    pub range: String,
+    /// The node's web server has the firewall and its log; without, `items` is empty and says nothing.
+    pub available: bool,
+    /// The newest first.
+    pub items: Vec<WafEventView>,
+    /// There were more than were returned, or the log held less than the range.
+    pub partial: bool,
+}
+
+/// The requests the account's web application firewall refused, the newest first, read from the
+/// firewall's log on the node (which holds the recent past only).
+#[utoipa::path(
+    get,
+    path = "/api/v1/client/waf/events",
+    tag = "logs",
+    operation_id = "clientWafEvents",
+    security(("session" = [])),
+    params(WafEventsQuery),
+    responses(
+        (status = 200, description = "The events", body = WafEventList),
+        (status = 202, description = "The node is slow; ask again", body = Pending),
+        (status = 403, description = "`client_only` or `feature_disabled`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 409, description = "`tenant_not_running`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "A range or count that is not usable", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 503, description = "`node_unavailable`", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn waf_events(
+    State(state): State<LogsState>,
+    who: Principal,
+    Query(q): Query<WafEventsQuery>,
+) -> Result<Response, AppError> {
+    if who.kind != DbAccountKind::Client {
+        return Err(AppError::forbidden(
+            "client_only",
+            "This is for hosting accounts.",
+        ));
+    }
+    let range = q.range.unwrap_or_else(|| "24h".to_owned());
+    let hours: i64 = match range.as_str() {
+        "24h" => 24,
+        "7d" => 7 * 24,
+        "30d" => 30 * 24,
+        _ => return Err(bad("range", "invalid", "24h, 7d or 30d.")),
+    };
+    let limit = q.limit.unwrap_or(50);
+    if !(1..=MAX_WAF_EVENTS).contains(&limit) {
+        return Err(bad("limit", "out_of_range", "Between 1 and 200."));
+    }
+    let tenant = running_hosting(&state, &who).await?;
+    // The names of the account's sites: the log is of the whole node.
+    let hosts: Vec<String> = builtpanel_database::routes::domains(&state.db, tenant.id)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .map(|d| d.fqdn)
+        .take(MAX_WAF_HOSTS)
+        .collect();
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(0));
+    let op = Operation::ReadWafEvents {
+        tenant_id: tenant.id,
+        hosts,
+        since_ms: (now_ms - hours * 3_600_000).max(0),
+        limit,
+    };
+    match ask_node(&state, &tenant, who.account_id(), &op, "waf_events").await? {
+        Answer::Slow(id) => {
+            Ok((StatusCode::ACCEPTED, Json(Pending { operation_id: id })).into_response())
+        }
+        Answer::Done(Output::WafEvents {
+            available,
+            events,
+            partial,
+        }) => Ok(Json(WafEventList {
+            range,
+            available,
+            items: events
+                .into_iter()
+                .map(|e| WafEventView {
+                    at_ms: e.at_ms,
+                    method: e.method,
+                    host: e.host,
+                    uri: e.uri,
+                    rule_id: e.rule_id,
+                    message: e.message,
+                    blocked: e.blocked,
+                })
+                .collect(),
+            partial,
+        })
+        .into_response()),
+        Answer::Done(_) => Err(internal(std::io::Error::other("an unexpected answer"))),
+    }
+}
+
 /// Microseconds since the epoch as RFC 3339 (UTC).
 fn rfc3339(micros: i64) -> String {
     time::OffsetDateTime::from_unix_timestamp_nanos(i128::from(micros) * 1000)
@@ -618,8 +749,8 @@ fn rfc3339(micros: i64) -> String {
 /// The module's OpenAPI document.
 #[derive(OpenApi)]
 #[openapi(
-    paths(read_logs, activity, traffic),
-    components(schemas(LogView, LogLineView, Pending, ActivityItem, ActivityPage, TrafficView, TrafficHourView, TrafficPathView)),
+    paths(read_logs, activity, traffic, waf_events),
+    components(schemas(LogView, LogLineView, Pending, ActivityItem, ActivityPage, TrafficView, TrafficHourView, TrafficPathView, WafEventView, WafEventList)),
     tags((name = "logs", description = "Logs"))
 )]
 pub struct LogsApi;

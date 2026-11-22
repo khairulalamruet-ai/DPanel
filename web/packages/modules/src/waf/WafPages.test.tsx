@@ -8,6 +8,7 @@ import { AdminWafPage } from "./AdminWafPage";
 const mockApiFetch = vi.fn();
 vi.mock("@builtpanel/api", () => ({
   apiFetch: (...args: any[]) => mockApiFetch(...args),
+  untilAnswered: (call: () => Promise<unknown>) => call(),
 }));
 
 function renderWithToast(ui: React.ReactElement) {

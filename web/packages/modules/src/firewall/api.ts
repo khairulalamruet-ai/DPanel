@@ -1,5 +1,5 @@
 import { apiFetch } from "@builtpanel/api";
-import type { AdminFirewallOverview, GlobalIpBan, NodePortRule } from "./types";
+import type { AdminFirewallOverview, ClientIpRule, GlobalIpBan, NodePortRule } from "./types";
 
 /** A node's firewall policy as the backend keeps it (`FirewallPolicy`). */
 export interface FirewallPolicy {
@@ -99,4 +99,52 @@ export async function blockAddress(nodeId: string, ip: string): Promise<void> {
 export async function unblockAddress(nodeId: string, ip: string): Promise<void> {
   const p = await getPolicy(nodeId);
   await putPolicy(nodeId, { ...p, blocked: (p.blocked ?? []).filter((a) => a !== ip) });
+}
+
+
+// ---------------------------------------------------------------- a hosting account's own sites
+
+interface IpBlockView {
+  id: string;
+  cidr: string;
+  note?: string | null;
+  created_at: number;
+}
+
+export interface OwnDomain {
+  id: string;
+  name: string;
+}
+
+const own = (domainId: string) => `/api/v1/client/waf/domains/${enc(domainId)}/ip-blocks`;
+
+/** The account's domains (what the address list is kept per). */
+export async function listOwnDomains(): Promise<OwnDomain[]> {
+  const res = await apiFetch<{ items: { id: string; fqdn: string; unicode?: string }[] }>("/api/v1/client/domains");
+  return res.items.map((d) => ({ id: d.id, name: d.unicode || d.fqdn }));
+}
+
+/** The addresses one domain turns away, as the rules the page shows. */
+export async function listIpBlocks(domain: OwnDomain): Promise<{ rules: ClientIpRule[]; limit: number }> {
+  const res = await apiFetch<{ items: IpBlockView[]; limit: number }>(own(domain.id));
+  return {
+    limit: res.limit,
+    rules: res.items.map((b) => ({
+      id: b.id,
+      domain: domain.name,
+      ip_cidr: b.cidr,
+      action: "block" as const,
+      notes: b.note ?? undefined,
+      created_at: new Date(b.created_at * 1000).toISOString(),
+    })),
+  };
+}
+
+/** Turns an address (or network) away from a domain; the web server knows within seconds. */
+export async function addIpBlock(domain: OwnDomain, cidr: string, note: string): Promise<void> {
+  await apiFetch(own(domain.id), { method: "POST", body: JSON.stringify({ cidr, note: note || null }) });
+}
+
+export async function removeIpBlock(domain: OwnDomain, id: string): Promise<void> {
+  await apiFetch(`${own(domain.id)}/${enc(id)}`, { method: "DELETE" });
 }

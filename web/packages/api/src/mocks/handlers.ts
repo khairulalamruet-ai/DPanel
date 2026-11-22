@@ -6915,14 +6915,22 @@ export const handlers = [
                                             };
 
                                             return [
-                                              // GET /api/v1/client/waf/events (TODO(api:T11.04))
-                                              http.get(/\/api\/v1\/client\/waf\/events$/, ({ request }) => {
-                                                const url = new URL(request.url);
-                                                const domain = url.searchParams.get("domain");
-                                                if (domain && domain !== "all") {
-                                                  return HttpResponse.json(mockWafEvents.filter((e) => e.domain === domain));
-                                                }
-                                                return HttpResponse.json(mockWafEvents);
+                                              // GET /api/v1/client/waf/events: what the firewall refused, in the real shape.
+                                              http.get(/\/api\/v1\/client\/waf\/events$/, () => {
+                                                return HttpResponse.json({
+                                                  range: "24h",
+                                                  available: true,
+                                                  partial: false,
+                                                  items: mockWafEvents.filter((e) => e.action === "blocked").map((e) => ({
+                                                    at_ms: Date.parse(e.timestamp) || Date.now(),
+                                                    method: e.http_method,
+                                                    host: e.domain,
+                                                    uri: e.uri,
+                                                    rule_id: e.rule_id,
+                                                    message: e.rule_message,
+                                                    blocked: true,
+                                                  })),
+                                                });
                                               }),
 
                                               // GET /api/v1/client/waf/rules/disabled (TODO(api:T11.04))
@@ -7067,39 +7075,7 @@ export const handlers = [
                                                 return HttpResponse.json({ success: true, policy: mockWafPolicies[domain] });
                                               }),
 ...(() => {
-                                                const mockClientIpRules: Array<{
-                                                  id: string;
-                                                  domain: string;
-                                                  ip_cidr: string;
-                                                  action: "block" | "allow";
-                                                  notes?: string;
-                                                  created_at: string;
-                                                }> = [
-                                                  {
-                                                    id: "ip-rule-1",
-                                                    domain: "example.com",
-                                                    ip_cidr: "198.51.100.42",
-                                                    action: "block",
-                                                    notes: "Aggressive scraper / brute force",
-                                                    created_at: "2026-11-12 14:00:00",
-                                                  },
-                                                  {
-                                                    id: "ip-rule-2",
-                                                    domain: "example.com",
-                                                    ip_cidr: "203.0.113.0/24",
-                                                    action: "block",
-                                                    notes: "Suspicious hosting subnet",
-                                                    created_at: "2026-11-12 16:30:00",
-                                                  },
-                                                  {
-                                                    id: "ip-rule-3",
-                                                    domain: "example.com",
-                                                    ip_cidr: "192.0.2.10",
-                                                    action: "allow",
-                                                    notes: "Office static IP",
-                                                    created_at: "2026-11-10 10:00:00",
-                                                  },
-                                                ];
+                                                const mockIpBlocks = new Map<string, Array<{ id: string; cidr: string; note: string | null; created_at: number }>>();
 
                                                 const mockAdminFirewallOverview: {
                                                   node_id: string;
@@ -7145,36 +7121,32 @@ export const handlers = [
                                                 };
 
                                                 return [
-                                                  // GET /api/v1/client/firewall/rules (TODO(api:T11.08))
-                                                  http.get(/\/api\/v1\/client\/firewall\/rules$/, ({ request }) => {
-                                                    const url = new URL(request.url);
-                                                    const domain = url.searchParams.get("domain") || "example.com";
-                                                    return HttpResponse.json(mockClientIpRules.filter((r) => r.domain === domain));
+                                                  // The addresses one domain turns away.
+                                                  http.get(/\/api\/v1\/client\/waf\/domains\/([^/]+)\/ip-blocks$/, ({ params }) => {
+                                                    const list = mockIpBlocks.get(String(params[0])) ?? [];
+                                                    return HttpResponse.json({ items: list, limit: 100 });
                                                   }),
 
-                                                  // POST /api/v1/client/firewall/rules (TODO(api:T11.08))
-                                                  http.post(/\/api\/v1\/client\/firewall\/rules$/, async ({ request }) => {
-                                                    const body = (await request.json().catch(() => ({}))) as any;
-                                                    const newRule = {
-                                                      id: `ip-rule-${Date.now()}`,
-                                                      domain: body.domain || "example.com",
-                                                      ip_cidr: body.ip_cidr,
-                                                      action: body.action || "block",
-                                                      notes: body.notes || "",
-                                                      created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
-                                                    };
-                                                    mockClientIpRules.unshift(newRule);
-                                                    return HttpResponse.json({ success: true, rule: newRule });
-                                                  }),
-
-                                                  // DELETE /api/v1/client/firewall/rules/:id (TODO(api:T11.08))
-                                                  http.delete(/\/api\/v1\/client\/firewall\/rules\/([^/]+)$/, ({ params }) => {
-                                                    const id = String(params[0] || params.id);
-                                                    const idx = mockClientIpRules.findIndex((r) => r.id === id);
-                                                    if (idx !== -1) {
-                                                      mockClientIpRules.splice(idx, 1);
+                                                  http.post(/\/api\/v1\/client\/waf\/domains\/([^/]+)\/ip-blocks$/, async ({ request, params }) => {
+                                                    const body = (await request.json().catch(() => ({}))) as { cidr?: string; note?: string | null };
+                                                    const domain = String(params[0]);
+                                                    const list = mockIpBlocks.get(domain) ?? [];
+                                                    if (!body.cidr || !/^[0-9a-fA-F:.]+(\/\d{1,3})?$/.test(body.cidr)) {
+                                                      return problem(422, "validation_failed", "Not an IP address or network.");
                                                     }
-                                                    return HttpResponse.json({ success: true, id });
+                                                    if (list.some((b) => b.cidr === body.cidr)) {
+                                                      return problem(409, "ip_block_exists", "That address is already turned away.");
+                                                    }
+                                                    const added = { id: `ipb-${Date.now()}-${list.length}`, cidr: body.cidr, note: body.note ?? null, created_at: Math.floor(Date.now() / 1000) };
+                                                    mockIpBlocks.set(domain, [...list, added]);
+                                                    return HttpResponse.json(added, { status: 201 });
+                                                  }),
+
+                                                  http.delete(/\/api\/v1\/client\/waf\/domains\/([^/]+)\/ip-blocks\/([^/]+)$/, ({ params }) => {
+                                                    const domain = String(params[0]);
+                                                    const list = mockIpBlocks.get(domain) ?? [];
+                                                    mockIpBlocks.set(domain, list.filter((b) => b.id !== String(params[1])));
+                                                    return new HttpResponse(null, { status: 204 });
                                                   }),
 
                                                   // GET /api/v1/admin/firewall/overview (TODO(api:T11.08))

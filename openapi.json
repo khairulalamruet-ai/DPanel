@@ -23149,6 +23149,303 @@
         ]
       }
     },
+    "/api/v1/client/waf/domains/{id}/ip-blocks": {
+      "get": {
+        "tags": [
+          "security"
+        ],
+        "summary": "The addresses one of the account's domains turns away.",
+        "operationId": "clientListIpBlocks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Domain id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpBlockList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not one of the account's domains",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "security"
+        ],
+        "summary": "Turn an address or a network away from one of the account's domains: the web server answers\nit `403` within seconds, before the firewall or the site sees the request.",
+        "operationId": "clientAddIpBlock",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Domain id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddIpBlock"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpBlockView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not one of the account's domains",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`ip_block_exists` or `ip_block_limit`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not an address or network that can be turned away",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/waf/domains/{id}/ip-blocks/{block_id}": {
+      "delete": {
+        "tags": [
+          "security"
+        ],
+        "summary": "Stop turning an address away.",
+        "operationId": "clientRemoveIpBlock",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Domain id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "description": "Entry id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "404": {
+            "description": "Not one of the account's",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/waf/events": {
+      "get": {
+        "tags": [
+          "logs"
+        ],
+        "summary": "The requests the account's web application firewall refused, the newest first, read from the\nfirewall's log on the node (which holds the recent past only).",
+        "operationId": "clientWafEvents",
+        "parameters": [
+          {
+            "name": "range",
+            "in": "path",
+            "description": "`24h` (default), `7d` or `30d`.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "path",
+            "description": "How many events at most, the newest (1-200, default 50).",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WafEventList"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; ask again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`client_only` or `feature_disabled`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`tenant_not_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A range or count that is not usable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`node_unavailable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/email/autoresponders": {
       "get": {
         "tags": [
@@ -25134,6 +25431,28 @@
               "null"
             ],
             "description": "Allow SFTP (default yes)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "AddIpBlock": {
+        "type": "object",
+        "description": "An address or a network to turn away.",
+        "required": [
+          "cidr"
+        ],
+        "properties": {
+          "cidr": {
+            "type": "string",
+            "description": "An IPv4 or IPv6 address, or a network in CIDR form (`203.0.113.0/24`). Networks larger\nthan a /8 (IPv4) or a /16 (IPv6) are refused.",
+            "example": "203.0.113.0/24"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why (at most 200 characters)."
           }
         },
         "additionalProperties": false
@@ -29870,6 +30189,60 @@
           "version": {
             "type": "string",
             "description": "The version it runs."
+          }
+        }
+      },
+      "IpBlockList": {
+        "type": "object",
+        "description": "A domain's turned-away addresses.",
+        "required": [
+          "items",
+          "limit"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IpBlockView"
+            },
+            "description": "Oldest first."
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Most one domain may list."
+          }
+        }
+      },
+      "IpBlockView": {
+        "type": "object",
+        "description": "An address or a network a domain turns away.",
+        "required": [
+          "id",
+          "cidr",
+          "created_at"
+        ],
+        "properties": {
+          "cidr": {
+            "type": "string",
+            "description": "The address (`203.0.113.9`) or the network (`203.0.113.0/24`)."
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "When it was added (Unix seconds)."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why, if said."
           }
         }
       },
@@ -36198,6 +36571,83 @@
           "state": {
             "type": "string",
             "description": "`queued`, `running`, `done` or `failed`."
+          }
+        }
+      },
+      "WafEventList": {
+        "type": "object",
+        "description": "What the firewall stopped.",
+        "required": [
+          "range",
+          "available",
+          "items",
+          "partial"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "The node's web server has the firewall and its log; without, `items` is empty and says nothing."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WafEventView"
+            },
+            "description": "The newest first."
+          },
+          "partial": {
+            "type": "boolean",
+            "description": "There were more than were returned, or the log held less than the range."
+          },
+          "range": {
+            "type": "string",
+            "description": "The range asked for."
+          }
+        }
+      },
+      "WafEventView": {
+        "type": "object",
+        "description": "One request the firewall stopped.",
+        "required": [
+          "at_ms",
+          "method",
+          "host",
+          "uri",
+          "rule_id",
+          "message",
+          "blocked"
+        ],
+        "properties": {
+          "at_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "When (Unix milliseconds, UTC)."
+          },
+          "blocked": {
+            "type": "boolean",
+            "description": "The request was refused."
+          },
+          "host": {
+            "type": "string",
+            "description": "The name asked for."
+          },
+          "message": {
+            "type": "string",
+            "description": "What the rule says."
+          },
+          "method": {
+            "type": "string",
+            "description": "The request method."
+          },
+          "rule_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The rule that named the attack (0: not told).",
+            "minimum": 0
+          },
+          "uri": {
+            "type": "string",
+            "description": "The path and query asked for."
           }
         }
       },
