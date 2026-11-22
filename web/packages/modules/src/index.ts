@@ -42,6 +42,7 @@ export * from "./security-center";
 export * from "./apps";
 export * from "./email";
 export * from "./resellers";
+export * from "./accounts";
 export * from "./migration";
 export * from "./license";
 export * from "./la";

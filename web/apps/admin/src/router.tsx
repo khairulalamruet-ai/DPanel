@@ -69,6 +69,7 @@ import {
   AdminFirewallPage,
   ResellerPortalPage,
   AdminResellersPage,
+  AdministratorsPage,
   AdminSecurityCenterPage,
   AdminSystemToolsPage,
   filterNavItems,
@@ -668,6 +669,12 @@ const resellerRoute = createRoute({
   component: ResellerPortalPage,
 });
 
+const administratorsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/administrators",
+  component: AdministratorsPage,
+});
+
 const adminResellersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/resellers",
@@ -769,6 +776,7 @@ const routeTree = rootRoute.addChildren([
   adminEmailRoute,
   resellerRoute,
   adminResellersRoute,
+  administratorsRoute,
   adminResellerRoute,
   adminMigrationRoute,
   clientMigrationRoute,

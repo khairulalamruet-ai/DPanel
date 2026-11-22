@@ -41,6 +41,7 @@ import {
 import { UserItem, UsersListResponse, UserStatus } from "./types";
 import { ChangePlanDialog, AVAILABLE_PLANS } from "./ChangePlanDialog";
 import { SuspendUserDialog } from "./SuspendUserDialog";
+import { AccountsTabs } from "../accounts/AccountsTabs";
 
 export const AVAILABLE_NODES = [
   { id: "node-sgp-01", name: "node-sgp-01 (Singapore)" },
@@ -290,6 +291,7 @@ export function UsersPage() {
 
   return (
     <div className="space-y-6">
+      <AccountsTabs active="users" />
       {/* Page Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>

@@ -33,6 +33,7 @@ import {
 import { ResellerAccount, ResellerPackage } from "./types";
 import { CreateResellerDialog } from "./CreateResellerDialog";
 import { CreateResellerPackageDialog } from "./CreateResellerPackageDialog";
+import { AccountsTabs } from "../accounts/AccountsTabs";
 
 export function AdminResellersPage() {
   const { t } = useTranslation();
@@ -160,6 +161,7 @@ export function AdminResellersPage() {
 
   return (
     <div className="space-y-6" data-testid="admin-resellers-page">
+      <AccountsTabs active="resellers" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

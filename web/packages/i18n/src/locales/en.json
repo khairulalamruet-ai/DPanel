@@ -3418,5 +3418,28 @@
     "fromName": "sender name",
     "sendTest": "Send a test mail",
     "testSent": "Test mail sent"
+  },
+  "accounts": {
+    "title": "Accounts",
+    "tabs": {
+      "users": "Users",
+      "resellers": "Resellers",
+      "administrators": "Administrators"
+    },
+    "administrators": {
+      "title": "Administrators",
+      "desc": "The people who can sign in to the admin area of this panel.",
+      "username": "Username",
+      "email": "Email",
+      "status": "Status",
+      "roles": "Roles",
+      "mfa": "Two-factor",
+      "mfaOn": "On",
+      "mfaOff": "Off",
+      "mfaRequired": "Required, not set up",
+      "lastLogin": "Last sign-in",
+      "none": "No administrators.",
+      "loadError": "The administrators could not be loaded"
+    }
   }
 }
