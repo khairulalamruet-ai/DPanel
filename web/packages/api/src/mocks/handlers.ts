@@ -4260,102 +4260,69 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // Admin: List all domains with filters (GET /api/v1/admin/domains)
-  // TODO(api:T05.03): Replace with real backend admin domains endpoint
+  // Admin: domains of every account (GET /api/v1/admin/domains?limit&offset&q&status&kind), shaped like `DomainView`
   http.get(/\/api\/v1\/admin\/domains$/, ({ request }) => {
     const url = new URL(request.url);
     const q = (url.searchParams.get("q") || "").toLowerCase().trim();
-    const status = url.searchParams.get("status") || "all";
-    const type = url.searchParams.get("type") || "all";
-    const node = url.searchParams.get("node") || "all";
-    const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
-    const perPage = Math.max(1, parseInt(url.searchParams.get("per_page") || "10", 10));
+    const status = url.searchParams.get("status");
+    const kind = url.searchParams.get("kind");
+    const limit = Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10));
+    const offset = Math.max(0, parseInt(url.searchParams.get("offset") || "0", 10));
 
     const filtered = mockAdminDomains.filter((d) => {
-      const matchSearch =
-        !q ||
-        d.name.toLowerCase().includes(q) ||
-        d.tenant_username.toLowerCase().includes(q);
-      const matchStatus = status === "all" || d.status === status;
-      const matchType = type === "all" || d.type === type;
-      const matchNode = node === "all" || d.node_id === node || d.node_name.includes(node);
-      return matchSearch && matchStatus && matchType && matchNode;
+      const matchSearch = !q || d.name.toLowerCase().includes(q) || d.tenant_username.toLowerCase().includes(q);
+      const matchStatus = !status || d.status === status;
+      const matchKind = !kind || (kind === "sub" ? d.type === "subdomain" : d.type === kind);
+      return matchSearch && matchStatus && matchKind;
     });
 
-    const total = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(total / perPage));
-    const start = (page - 1) * perPage;
-    const paginated = filtered.slice(start, start + perPage);
-
     return HttpResponse.json({
-      items: paginated,
-      total,
-      page,
-      per_page: perPage,
-      total_pages: totalPages,
-      stats: {
-        total_domains: mockAdminDomains.length,
-        active_domains: mockAdminDomains.filter((d) => d.status === "active").length,
-        suspended_domains: mockAdminDomains.filter((d) => d.status === "suspended").length,
-        ssl_active_count: mockAdminDomains.filter((d) => d.ssl_status === "active").length,
-      },
+      items: filtered.slice(offset, offset + limit).map((d) => ({
+        id: d.id,
+        fqdn: d.name,
+        unicode: d.name,
+        kind: d.type === "subdomain" ? "sub" : d.type,
+        docroot: d.docroot.replace(/^\/+/, ""),
+        force_https: false,
+        hsts: false,
+        status: d.status,
+        parent_domain_id: null,
+        tenant_id: d.tenant_id,
+        tenant_username: d.tenant_username,
+        suspended_at: d.suspended_at ?? null,
+        created_at: d.created_at,
+      })),
+      total: filtered.length,
     });
   }),
 
-  // Admin: Bulk add domains into operation queue (POST /api/v1/admin/domains/bulk-create)
-  // TODO(api:T05.03): Replace with real backend bulk create endpoint
-  http.post(/\/api\/v1\/admin\/domains\/bulk-create$/, async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as any;
-    const { tenant_id = "usr_0001", node_id = "node-sgp-01", domains = [], enable_ssl = true } = body || {};
-
-    const opId = `op_bulk_dom_${Date.now()}`;
-    const tenantUsername = tenant_id === "usr_0001" ? "alpha" : "tenant";
-    const nodeName = `${node_id} (Cluster)`;
-
-    // Add domains to mockAdminDomains
-    const newItems: MockAdminDomain[] = domains.map((domainName: string, idx: number) => ({
-      id: `adm_bulk_${Date.now()}_${idx}`,
-      name: String(domainName).toLowerCase(),
+  // Admin: add a domain to an account (POST /api/v1/admin/domains  { user_id, fqdn })
+  http.post(/\/api\/v1\/admin\/domains$/, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { user_id?: string; fqdn?: string };
+    const name = String(body.fqdn ?? "").toLowerCase();
+    if (!name) return problem(422, "required", "The domain name is required");
+    if (mockAdminDomains.some((d) => d.name === name)) return problem(409, "domain_taken", `Domain ${name} is already configured`);
+    const item: MockAdminDomain = {
+      id: `adm_bulk_${Date.now()}_${mockAdminDomains.length}`,
+      name,
       type: "addon" as const,
-      tenant_id,
-      tenant_username: tenantUsername,
-      node_id,
-      node_name: nodeName,
-      docroot: `/domains/${String(domainName).toLowerCase()}/public_html`,
+      tenant_id: body.user_id ?? "usr_0001",
+      tenant_username: "alpha",
+      node_id: "node-sgp-01",
+      node_name: "node-sgp-01 (Cluster)",
+      docroot: `/domains/${name}/public_html`,
       is_primary: false,
       status: "active" as const,
-      ssl_status: enable_ssl ? ("pending" as const) : ("none" as const),
+      ssl_status: "none" as const,
       dns_status: "pending" as const,
       redirect: null,
       php_version: "PHP 8.3",
       created_at: new Date().toISOString(),
-    }));
-
-    mockAdminDomains = [...newItems, ...mockAdminDomains];
-
-    // Register successful background operation in mock store
-    mockOperations.unshift({
-      id: opId,
-      idempotency_key: `idemp_${opId}`,
-      op_type: "AttachDomain",
-      node_id,
-      tenant_id,
-      status: "succeeded",
-      retries_count: 0,
-      payload: { count: domains.length, tenant_id, node_id },
-      output: { message: `Successfully attached ${domains.length} domains`, count: domains.length },
-      error: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-
-    return HttpResponse.json({
-      operation_id: opId,
-      total_requested: domains.length,
-      enqueued_count: domains.length,
-      skipped_count: 0,
-      status: "queued",
-    });
+    };
+    // New ones go to the top, in the order they were added.
+    const at = mockAdminDomains.filter((d) => d.id.startsWith("adm_bulk_")).length;
+    mockAdminDomains = [...mockAdminDomains.slice(0, at), item, ...mockAdminDomains.slice(at)];
+    return HttpResponse.json({ id: item.id, fqdn: item.name }, { status: 201 });
   }),
 
   // Admin: Suspend domain (POST /api/v1/admin/domains/:id/suspend)
@@ -4382,33 +4349,6 @@ export const handlers = [
     return HttpResponse.json(domain);
   }),
 
-  // Admin: Bulk suspend (POST /api/v1/admin/domains/bulk-suspend)
-  http.post(/\/api\/v1\/admin\/domains\/bulk-suspend$/, async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as any;
-    const ids: string[] = body?.ids || [];
-    const now = new Date().toISOString();
-    mockAdminDomains.forEach((d) => {
-      if (ids.includes(d.id)) {
-        d.status = "suspended";
-        d.suspended_at = now;
-      }
-    });
-    return HttpResponse.json({ success: true, count: ids.length });
-  }),
-
-  // Admin: Bulk unsuspend (POST /api/v1/admin/domains/bulk-unsuspend)
-  http.post(/\/api\/v1\/admin\/domains\/bulk-unsuspend$/, async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as any;
-    const ids: string[] = body?.ids || [];
-    mockAdminDomains.forEach((d) => {
-      if (ids.includes(d.id)) {
-        d.status = "active";
-        d.suspended_at = null;
-      }
-    });
-    return HttpResponse.json({ success: true, count: ids.length });
-  }),
-
   // Admin: Delete domain (DELETE /api/v1/admin/domains/:id)
   http.delete(/\/api\/v1\/admin\/domains\/([^/]+)$/, ({ params }) => {
     const id = params[0] as string;
@@ -4417,7 +4357,7 @@ export const handlers = [
       return HttpResponse.json({ message: "Domain not found" }, { status: 404 });
     }
     mockAdminDomains = mockAdminDomains.filter((d) => d.id !== id);
-    return HttpResponse.json({ status: "deleted", id });
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // GET /api/v1/client/dns/nameservers

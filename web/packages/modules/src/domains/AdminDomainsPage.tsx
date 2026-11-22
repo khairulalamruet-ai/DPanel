@@ -23,6 +23,7 @@ import {
 } from "@builtpanel/ui";
 import { useTranslation } from "@builtpanel/i18n";
 import { apiFetch } from "@builtpanel/api";
+import { listAdminDomains, bulkSuspend } from "./adminApi";
 import {
   Globe,
   Plus,
@@ -91,16 +92,13 @@ export function AdminDomainsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const query = new URLSearchParams({
-        page: String(page),
-        per_page: String(perPage),
-        ...(searchQuery.trim() ? { q: searchQuery.trim() } : {}),
-        ...(statusFilter !== "all" ? { status: statusFilter } : {}),
-        ...(typeFilter !== "all" ? { type: typeFilter } : {}),
-        ...(nodeFilter !== "all" ? { node: nodeFilter } : {}),
+      const res = await listAdminDomains({
+        page,
+        perPage,
+        search: searchQuery.trim() || undefined,
+        status: statusFilter,
+        type: typeFilter,
       });
-
-      const res = await apiFetch<AdminDomainsResponse>(`/api/v1/admin/domains?${query}`);
       setDomains(res.items || []);
       setTotal(res.total || 0);
       setTotalPages(res.total_pages || Math.max(1, Math.ceil((res.total || 0) / perPage)));
@@ -188,11 +186,7 @@ export function AdminDomainsPage() {
     if (ids.length === 0) return;
 
     try {
-      await apiFetch(`/api/v1/admin/domains/bulk-${suspend ? "suspend" : "unsuspend"}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
+      await bulkSuspend(ids, suspend);
       toast({
         title: t("common.success", "Success"),
         description: t("adminDomains.toast.bulkUpdated", "Updated {{count}} domains", { count: ids.length }),
