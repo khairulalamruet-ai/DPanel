@@ -8,7 +8,7 @@ import {
   Badge,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { loadClientUsage } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import {
   Cpu,
@@ -34,9 +34,7 @@ export function ClientUsagePage() {
   const fetchUsage = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<ClientUsageSummary>(
-        `/api/v1/client/usage?range=${encodeURIComponent(range)}`
-      );
+      const res = await loadClientUsage(range);
       setData(res);
     } catch (err: any) {
       toast({
