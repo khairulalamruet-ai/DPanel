@@ -8,7 +8,7 @@ import {
   Button,
   Input,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { createRecord } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import { Plus, AlertCircle } from "lucide-react";
 import type { DnsRecord, DnsRecordType, CreateDnsRecordPayload } from "./types";
@@ -133,11 +133,7 @@ export function DnsRecordFormDialog({
         tag: type === "CAA" ? tag : null,
       };
 
-      const res = await apiFetch<DnsRecord>(`/api/v1/client/dns/zones/${zoneId}/records`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await createRecord(zoneId, payload);
 
       onSuccess(res);
       handleClose();

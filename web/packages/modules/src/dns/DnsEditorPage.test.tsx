@@ -170,7 +170,7 @@ describe("DnsEditorPage (T05.11)", () => {
 
     const exportPre = screen.getByTestId("pre-bind-export");
     expect(exportPre.textContent).toContain("$ORIGIN alpha-hosting.com.");
-    expect(exportPre.textContent).toContain("IN  SOA");
+    expect(exportPre.textContent).toContain("IN\tSOA");
     expect(exportPre.textContent).toContain("192.168.1.100");
 
     // Switch to Import Tab

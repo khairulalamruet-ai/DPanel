@@ -7,16 +7,19 @@ import {
   DialogFooter,
   Button,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { toBind, importBind } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import { FileText, Download, Copy, Check, UploadCloud, AlertCircle } from "lucide-react";
-import type { BindExportResponse, BindImportResponse } from "./types";
+import type { BindImportResponse, DnsRecord } from "./types";
 
 interface BindExportImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   zoneId: string;
   domainName: string;
+  /** The records the zone has now (what an export writes). */
+  records: DnsRecord[];
+  nameservers: string[];
   onImportSuccess: () => void;
 }
 
@@ -25,6 +28,8 @@ export function BindExportImportDialog({
   onOpenChange,
   zoneId,
   domainName,
+  records,
+  nameservers,
   onImportSuccess,
 }: BindExportImportDialogProps) {
   const { t } = useTranslation();
@@ -52,11 +57,7 @@ export function BindExportImportDialog({
   const fetchExport = async () => {
     try {
       setIsExportLoading(true);
-      const res = await apiFetch<BindExportResponse>(
-        `/api/v1/client/dns/zones/${zoneId}/export`,
-        { method: "POST" }
-      );
-      setBindExportText(res.bind_text);
+      setBindExportText(toBind(domainName, records, nameservers));
     } catch {
       setBindExportText(`; Error exporting zone ${domainName}`);
     } finally {
@@ -95,17 +96,7 @@ export function BindExportImportDialog({
 
     try {
       setIsImporting(true);
-      const res = await apiFetch<BindImportResponse>(
-        `/api/v1/client/dns/zones/${zoneId}/import`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bind_text: bindImportText,
-            overwrite,
-          }),
-        }
-      );
+      const res = await importBind(zoneId, domainName, bindImportText, overwrite);
 
       setImportResult(res);
       onImportSuccess();
