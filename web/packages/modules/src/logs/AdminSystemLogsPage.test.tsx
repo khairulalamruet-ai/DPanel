@@ -17,9 +17,6 @@ describe("AdminSystemLogsPage (T10.07)", () => {
     });
 
     expect(screen.getByTestId("tab-service-control-plane")).toBeInTheDocument();
-    expect(screen.getByTestId("tab-service-agent")).toBeInTheDocument();
-    expect(screen.getByTestId("tab-service-caddy")).toBeInTheDocument();
-    expect(screen.getByTestId("tab-service-auth")).toBeInTheDocument();
     expect(screen.getByTestId("select-admin-log-node")).toBeInTheDocument();
     expect(screen.getByTestId("select-admin-log-level")).toBeInTheDocument();
     expect(screen.getByTestId("btn-download-admin-log")).toBeInTheDocument();
@@ -31,33 +28,24 @@ describe("AdminSystemLogsPage (T10.07)", () => {
     });
   });
 
-  it("switches across services: Node Agent, Caddy, Auth, and Control Plane", async () => {
+  it("switches between the control plane and the core services of a node", async () => {
     renderWithProviders(<AdminSystemLogsPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("tab-service-agent")).toBeInTheDocument();
+      expect(screen.getByTestId("tab-service-database")).toBeInTheDocument();
     });
 
-    // Switch to Node Agent
-    fireEvent.click(screen.getByTestId("tab-service-agent"));
+    fireEvent.click(screen.getByTestId("tab-service-database"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("badge-service-active")).toHaveTextContent("agent");
-      expect(screen.getByTestId("virtualized-log-container")).toBeInTheDocument();
+      expect(screen.getByTestId("badge-service-active")).toHaveTextContent("database");
+      expect(screen.getByTestId("metric-admin-lines")).toHaveTextContent("40");
     });
 
-    // Switch to Caddy
-    fireEvent.click(screen.getByTestId("tab-service-caddy"));
+    fireEvent.click(screen.getByTestId("tab-service-control-plane"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("badge-service-active")).toHaveTextContent("caddy");
-    });
-
-    // Switch to Auth
-    fireEvent.click(screen.getByTestId("tab-service-auth"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("badge-service-active")).toHaveTextContent("auth");
+      expect(screen.getByTestId("badge-service-active")).toHaveTextContent("control-plane");
     });
   });
 

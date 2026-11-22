@@ -6626,19 +6626,40 @@ export const handlers = [
                             };
 
                             return [
-                              // GET /api/v1/admin/logs/system/stats (TODO(api:T10.07))
-                              http.get(/\/api\/v1\/admin\/logs\/system\/stats$/, () => {
-                                return HttpResponse.json(mockServiceStats);
+                              // GET /api/v1/admin/system-logs?level&since_ms&search&lines, shaped like `SystemLogList`
+                              http.get(/\/api\/v1\/admin\/system-logs$/, ({ request }) => {
+                                const url = new URL(request.url);
+                                const level = url.searchParams.get("level") || "all";
+                                const since = Number(url.searchParams.get("since_ms") || 0);
+                                const logs = generateSystemLogs("control-plane", "node-01", level)
+                                  .map((e: any) => ({ at_ms: Date.parse(e.timestamp), level: String(e.level).toUpperCase(), target: e.component, text: e.message }))
+                                  .filter((l: { at_ms: number }) => l.at_ms > since);
+                                return HttpResponse.json({ items: logs });
                               }),
 
-                              // GET /api/v1/admin/logs/system (TODO(api:T10.07))
-                              http.get(/\/api\/v1\/admin\/logs\/system$/, ({ request }) => {
-                                const url = new URL(request.url);
-                                const service = url.searchParams.get("service") || "control-plane";
-                                const node = url.searchParams.get("node") || "node-01";
-                                const level = url.searchParams.get("level") || "all";
-                                const logs = generateSystemLogs(service, node, level);
-                                return HttpResponse.json(logs);
+                              // GET /api/v1/admin/nodes/:id/services (the core services a node reports)
+                              http.get(/\/api\/v1\/admin\/nodes\/([^/]+)\/services$/, () => {
+                                return HttpResponse.json({
+                                  items: ["database", "phpmyadmin", "sftp"].map((name) => ({
+                                    name,
+                                    state: "running",
+                                    detail: "",
+                                    since: Math.floor(Date.now() / 1000) - 86400,
+                                    checked_at: Math.floor(Date.now() / 1000),
+                                  })),
+                                });
+                              }),
+
+                              // GET /api/v1/admin/nodes/:id/services/:name/log
+                              http.get(/\/api\/v1\/admin\/nodes\/([^/]+)\/services\/([^/]+)\/log$/, ({ params }) => {
+                                const now = Date.now();
+                                return HttpResponse.json({
+                                  lines: Array.from({ length: 40 }).map((_, i) => ({
+                                    at_ms: now - (40 - i) * 1000,
+                                    text: `${params[1]}: line ${i + 1}`,
+                                  })),
+                                  truncated: false,
+                                });
                               }),
 
                               // ===================================                              // USAGE ANALYTICS (TODO(api:T10.09))
