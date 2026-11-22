@@ -26,6 +26,9 @@ const NAV_FEATURE: Record<string, string> = {
   logs: "logs",
 };
 
+/** Pages whose backend does not exist yet: they stay out of the menu until it does. */
+const NOT_YET = new Set(["firewall", "migration"]);
+
 function AuthenticatedContent() {
   const { data: session, isLoading, hasFeature } = useSession();
   const { t } = useTranslation();
@@ -169,7 +172,9 @@ function AuthenticatedContent() {
     <>
       <AppShell
         title={t("common.clientTitle")}
-        navItems={navItems.filter((item) => !NAV_FEATURE[item.id] || hasFeature(NAV_FEATURE[item.id]))}
+        navItems={navItems.filter(
+          (item) => !NOT_YET.has(item.id) && (!NAV_FEATURE[item.id] || hasFeature(NAV_FEATURE[item.id])),
+        )}
         headerActions={
           <div className="flex items-center gap-2">
             <CommandPaletteTrigger onClick={() => setCommandPaletteOpen(true)} />

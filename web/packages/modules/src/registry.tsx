@@ -100,14 +100,6 @@ export const registeredFrontendModules: FrontendModule[] = [
         order: 22,
         permission: "admin.nodes.read",
       },
-      {
-        id: "ip-pools",
-        labelKey: "nodes.ipPools.nav",
-        icon: <Globe className="h-4 w-4" />,
-        href: "/admin/ip-pools",
-        order: 23,
-        permission: "admin.nodes.read",
-      },
     ],
   },
   {
@@ -305,14 +297,6 @@ export const registeredFrontendModules: FrontendModule[] = [
         order: 32,
         permission: "dns.read",
         feature: "dns",
-      },
-      {
-        id: "dns-cluster",
-        labelKey: "dns.cluster.nav",
-        icon: <Network className="h-4 w-4" />,
-        href: "/admin/dns-cluster",
-        order: 33,
-        permission: "dns.read",
       },
     ],
     clientNav: [
@@ -798,14 +782,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       },
     ],
     adminNav: [
-      {
-        id: "admin-apps",
-        labelKey: "apps.nav",
-        icon: <Boxes className="h-4 w-4" />,
-        href: "/admin/apps",
-        order: 55,
-        permission: "apps.read",
-      },
     ],
   },
   {
@@ -828,14 +804,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       },
     ],
     adminNav: [
-      {
-        id: "admin-email",
-        labelKey: "email.adminNav",
-        icon: <Mail className="h-4 w-4" />,
-        href: "/admin/mail",
-        order: 56,
-        permission: "admin.email.manage",
-      },
     ],
   },
   {
@@ -858,14 +826,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       },
     ],
     adminNav: [
-      {
-        id: "admin-resellers",
-        labelKey: "reseller.adminNav",
-        icon: <Briefcase className="h-4 w-4" />,
-        href: "/admin/resellers",
-        order: 58,
-        permission: "admin.resellers.manage",
-      },
     ],
   },
   {
@@ -983,14 +943,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.license.read", "admin.settings.read"],
     },
     adminNav: [
-      {
-        id: "license-authority",
-        labelKey: "la.nav",
-        icon: <KeyRound className="h-4 w-4" />,
-        href: "/la",
-        order: 85,
-        permission: "admin.settings.read",
-      },
     ],
   },
   {
@@ -1020,14 +972,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.update.manage"],
     },
     adminNav: [
-      {
-        id: "update",
-        labelKey: "update.nav",
-        icon: <ArrowUpCircle className="h-4 w-4" />,
-        href: "/admin/update",
-        order: 87,
-        permission: "admin.update.manage",
-      },
     ],
   },
   {
@@ -1039,14 +983,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.tokens.manage"],
     },
     adminNav: [
-      {
-        id: "api_tokens",
-        labelKey: "apiTokens.nav",
-        icon: <Key className="h-4 w-4" />,
-        href: "/admin/api-tokens",
-        order: 88,
-        permission: "admin.tokens.manage",
-      },
     ],
   },
   {
@@ -1058,13 +994,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.support.read", "admin.settings.manage", "*"],
     },
     adminNav: [
-      {
-        id: "support-report",
-        labelKey: "support.nav",
-        icon: <FileText className="h-4 w-4" />,
-        href: "/admin/support-report",
-        order: 90,
-      },
     ],
   },
 ];
@@ -1086,6 +1015,8 @@ export function filterNavItems(
   if (!session) return [];
 
   const activeModules = session.modules || [];
+  // Some interface modules are parts of one backend module.
+  const backendModuleOf = (name: string): string => (name === "dns" || name === "ssl" ? "domains" : name);
   const activeFeatures = session.features || [];
   const permissions = session.permissions || [];
   const roles = session.roles || [];
@@ -1114,7 +1045,7 @@ export function filterNavItems(
   for (const mod of modules) {
     // 1. Module Gate: Check if module is core or in active modules
     const isModuleEnabled =
-      !session.modules || mod.manifest.core || activeModules.includes(mod.manifest.name);
+      !session.modules || mod.manifest.core || activeModules.includes(backendModuleOf(mod.manifest.name));
     if (!isModuleEnabled) continue;
 
     // Pick target nav list

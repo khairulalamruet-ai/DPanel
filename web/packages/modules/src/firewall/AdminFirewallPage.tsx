@@ -45,7 +45,6 @@ export function AdminFirewallPage() {
       .catch((err: any) =>
         toast({ title: t("common.error"), description: err?.message || t("common.unknownError"), variant: "destructive" }),
       );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchOverview = useCallback(async () => {
