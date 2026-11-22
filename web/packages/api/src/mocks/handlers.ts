@@ -2279,40 +2279,6 @@ export const handlers = [
     });
   }),
 
-  // Account Password change (POST /api/v1/account/password)
-  http.post(/\/api\/v1\/account\/password$/, async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as any;
-    const { current_password, new_password } = body || {};
-
-    if (!current_password || !new_password) {
-      return HttpResponse.json(
-        { error: "bad_request", message: "Current and new password are required" },
-        { status: 400 }
-      );
-    }
-
-    if (current_password === "wrong-password") {
-      return HttpResponse.json(
-        { error: "invalid_current_password", message: "Current password does not match" },
-        { status: 400 }
-      );
-    }
-
-    if (new_password.length < 8) {
-      return HttpResponse.json(
-        { error: "weak_password", message: "Password must be at least 8 characters" },
-        { status: 400 }
-      );
-    }
-
-    return HttpResponse.json({ success: true, message: "Password updated successfully" });
-  }),
-
-  // Login History (GET /api/v1/account/login-history)
-  http.get(/\/api\/v1\/account\/login-history$/, () => {
-    return HttpResponse.json({ events: loginEvents });
-  }),
-
   // Audit Logs (GET /api/v1/admin/audit-logs) (T01.12 / T01.16)
   ...(() => {
     const mockAuditLogs = Array.from({ length: 30 }, (_, i) => {
@@ -3487,49 +3453,6 @@ export const handlers = [
 
     featureSets.splice(index, 1);
     return HttpResponse.json({ success: true });
-  }),
-
-  // Node Groups: List available cluster node groups (GET /api/v1/admin/cluster/node-groups)
-  // TODO(api:T16.03): Replace with real backend cluster node-groups endpoint
-  http.get(/\/api\/v1\/admin\/cluster\/node-groups$/, () => {
-    return HttpResponse.json({
-      items: [
-        {
-          id: "ng_global",
-          name: "Global Cluster (Default)",
-          description: "Default multi-region pool matching all standard tenant nodes.",
-          region: "global",
-          tags: ["general", "standard"],
-          nodes_count: 4,
-          is_default: true,
-        },
-        {
-          id: "ng_us_east",
-          name: "US-East General Pool",
-          description: "North American low-latency cluster pool on NVMe storage.",
-          region: "us-east-1",
-          tags: ["us-east", "nvme", "ssd"],
-          nodes_count: 2,
-        },
-        {
-          id: "ng_sgp_highmem",
-          name: "Singapore High-RAM Pool",
-          description: "Asia-Pacific memory-optimized nodes for enterprise workloads.",
-          region: "ap-southeast-1",
-          tags: ["apac", "highmem", "high-cpu"],
-          nodes_count: 1,
-        },
-        {
-          id: "ng_fra_isolated",
-          name: "Frankfurt EU-West Group",
-          description: "GDPR-compliant isolated cluster strictly hosted in Frankfurt EU-West.",
-          region: "eu-central-1",
-          tags: ["eu", "gdpr", "dedicated"],
-          nodes_count: 1,
-        },
-      ],
-      total: 4,
-    });
   }),
 
   // Plans: List all hosting plans (GET /api/v1/admin/plans)
@@ -6721,87 +6644,6 @@ export const handlers = [
                                         ];
 
                                         return [
-                                          // GET /api/v1/admin/server/overview (TODO(api:T10.15))
-                                          http.get(/\/api\/v1\/admin\/server\/overview$/, () => {
-                                            return HttpResponse.json(mockServerOverview);
-                                          }),
-
-                                          // GET /api/v1/admin/server/ssh-config (TODO(api:T10.15))
-                                          http.get(/\/api\/v1\/admin\/server\/ssh-config$/, () => {
-                                            return HttpResponse.json(mockSshConfig);
-                                          }),
-
-                                          // GET /api/v1/admin/server/audit-events (TODO(api:T10.15))
-                                          http.get(/\/api\/v1\/admin\/server\/audit-events$/, () => {
-                                            return HttpResponse.json(mockServerAuditEvents);
-                                          }),
-
-                                          // POST /api/v1/admin/server/timezone (TODO(api:T10.15))
-                                          http.post(/\/api\/v1\/admin\/server\/timezone$/, async ({ request }) => {
-                                            const body = (await request.json().catch(() => ({}))) as any;
-                                            mockServerOverview.timezone = body.timezone || "UTC";
-                                            mockServerOverview.current_time = `${new Date().toISOString().slice(0, 19).replace("T", " ")} ${mockServerOverview.timezone}`;
-                                            mockServerAuditEvents.unshift({
-                                              id: `srv-aud-${Date.now()}`,
-                                              action: "server.set_timezone",
-                                              actor: "admin",
-                                              details: `Timezone updated to ${mockServerOverview.timezone} via priv-helper`,
-                                              created_at: new Date().toISOString(),
-                                              status: "success",
-                                            });
-                                            return HttpResponse.json({ success: true, timezone: mockServerOverview.timezone });
-                                          }),
-
-                                          // POST /api/v1/admin/server/swap (TODO(api:T10.15))
-                                          http.post(/\/api\/v1\/admin\/server\/swap$/, async ({ request }) => {
-                                            const body = (await request.json().catch(() => ({}))) as any;
-                                            mockServerOverview.swap.total_mb = body.total_mb ?? mockServerOverview.swap.total_mb;
-                                            mockServerOverview.swap.swappiness = body.swappiness ?? mockServerOverview.swap.swappiness;
-                                            mockServerOverview.swap.free_mb = Math.max(0, mockServerOverview.swap.total_mb - mockServerOverview.swap.used_mb);
-                                            mockServerAuditEvents.unshift({
-                                              id: `srv-aud-${Date.now()}`,
-                                              action: "server.configure_swap",
-                                              actor: "admin",
-                                              details: `Swap set to ${mockServerOverview.swap.total_mb} MB, swappiness ${mockServerOverview.swap.swappiness}`,
-                                              created_at: new Date().toISOString(),
-                                              status: "success",
-                                            });
-                                            return HttpResponse.json({ success: true, swap: mockServerOverview.swap });
-                                          }),
-
-                                          // POST /api/v1/admin/server/drop-caches (TODO(api:T10.15))
-                                          http.post(/\/api\/v1\/admin\/server\/drop-caches$/, () => {
-                                            const dropped = Math.round(mockServerOverview.memory.cached_mb * 0.7);
-                                            mockServerOverview.memory.cached_mb -= dropped;
-                                            mockServerOverview.memory.available_mb += dropped;
-                                            mockServerOverview.memory.free_mb += dropped;
-                                            mockServerAuditEvents.unshift({
-                                              id: `srv-aud-${Date.now()}`,
-                                              action: "server.drop_caches",
-                                              actor: "admin",
-                                              details: `Dropped ${dropped} MB cached memory (echo 3 > /proc/sys/vm/drop_caches)`,
-                                              created_at: new Date().toISOString(),
-                                              status: "success",
-                                            });
-                                            return HttpResponse.json({ success: true, dropped_mb: dropped });
-                                          }),
-
-                                          // POST /api/v1/admin/server/reboot (TODO(api:T10.15))
-                                          http.post(/\/api\/v1\/admin\/server\/reboot$/, async ({ request }) => {
-                                            const body = (await request.json().catch(() => ({}))) as any;
-                                            if (body.confirmation !== "REBOOT") {
-                                              return HttpResponse.json({ error: "Invalid confirmation text" }, { status: 400 });
-                                            }
-                                            mockServerAuditEvents.unshift({
-                                              id: `srv-aud-${Date.now()}`,
-                                              action: "server.reboot",
-                                              actor: "admin",
-                                              details: `Server node ${body.node || "node-1"} reboot initiated via priv-helper`,
-                                              created_at: new Date().toISOString(),
-                                              status: "success",
-                                            });
-                                            return HttpResponse.json({ success: true, message: "Reboot initiated" });
-                                          }),
 
                                           ...(() => {
                                             const mockWafEvents: Array<{
@@ -7004,20 +6846,6 @@ export const handlers = [
                                                 mockWafPolicies[domain].updated_at = new Date().toISOString();
                                                 return HttpResponse.json({ success: true, policy: mockWafPolicies[domain] });
                                               }),
-                                              // GET /api/v1/admin/waf/events (TODO(api:T11.04))
-                                              http.get(/\/api\/v1\/admin\/waf\/events$/, ({ request }) => {
-                                                const url = new URL(request.url);
-                                                const domain = url.searchParams.get("domain");
-                                                if (domain && domain !== "all") {
-                                                  return HttpResponse.json(mockWafEvents.filter((e) => e.domain === domain));
-                                                }
-                                                return HttpResponse.json(mockWafEvents);
-                                              }),
-
-                                              // GET /api/v1/admin/waf/rules/disabled (TODO(api:T11.04))
-                                              http.get(/\/api\/v1\/admin\/waf\/rules\/disabled$/, () => {
-                                                return HttpResponse.json(mockDisabledRules);
-                                              }),
 
                                               // GET /api/v1/admin/waf/policy (TODO(api:T11.04))
                                               http.get(/\/api\/v1\/admin\/waf\/policy$/, ({ request }) => {
@@ -7030,38 +6858,6 @@ export const handlers = [
                                                   paranoia_level: 1,
                                                   updated_at: new Date().toISOString(),
                                                 });
-                                              }),
-
-                                              // GET /api/v1/admin/waf/stats (TODO(api:T11.04))
-                                              http.get(/\/api\/v1\/admin\/waf\/stats$/, () => {
-                                                return HttpResponse.json(computeStats("all"));
-                                              }),
-
-                                              // POST /api/v1/admin/waf/rules/disable (TODO(api:T11.04))
-                                              http.post(/\/api\/v1\/admin\/waf\/rules\/disable$/, async ({ request }) => {
-                                                const body = (await request.json().catch(() => ({}))) as any;
-                                                const ruleId = Number(body.rule_id);
-                                                const domain = body.domain || "example.com";
-                                                mockDisabledRules.unshift({
-                                                  rule_id: ruleId,
-                                                  domain,
-                                                  description: body.reason || `Admin disabled rule ${ruleId}`,
-                                                  disabled_at: new Date().toISOString().slice(0, 19).replace("T", " "),
-                                                  reason: body.reason || "False positive override by admin",
-                                                });
-                                                return HttpResponse.json({ success: true, rule_id: ruleId, domain });
-                                              }),
-
-                                              // POST /api/v1/admin/waf/rules/enable (TODO(api:T11.04))
-                                              http.post(/\/api\/v1\/admin\/waf\/rules\/enable$/, async ({ request }) => {
-                                                const body = (await request.json().catch(() => ({}))) as any;
-                                                const ruleId = Number(body.rule_id);
-                                                const domain = body.domain || "example.com";
-                                                const idx = mockDisabledRules.findIndex((r) => r.rule_id === ruleId && r.domain === domain);
-                                                if (idx !== -1) {
-                                                  mockDisabledRules.splice(idx, 1);
-                                                }
-                                                return HttpResponse.json({ success: true, rule_id: ruleId, domain });
                                               }),
 
                                               // POST /api/v1/admin/waf/policy (TODO(api:T11.04))
@@ -7147,70 +6943,6 @@ export const handlers = [
                                                     const list = mockIpBlocks.get(domain) ?? [];
                                                     mockIpBlocks.set(domain, list.filter((b) => b.id !== String(params[1])));
                                                     return new HttpResponse(null, { status: 204 });
-                                                  }),
-
-                                                  // GET /api/v1/admin/firewall/overview (TODO(api:T11.08))
-                                                  http.get(/\/api\/v1\/admin\/firewall\/overview$/, () => {
-                                                    return HttpResponse.json(mockAdminFirewallOverview);
-                                                  }),
-
-                                                  // POST /api/v1/admin/firewall/ports (TODO(api:T11.08))
-                                                  http.post(/\/api\/v1\/admin\/firewall\/ports$/, async ({ request }) => {
-                                                    const body = (await request.json().catch(() => ({}))) as any;
-                                                    const newPort = {
-                                                      id: `port-${Date.now()}`,
-                                                      port: Number(body.port),
-                                                      protocol: body.protocol || "tcp",
-                                                      service_name: body.service_name || "Custom Port",
-                                                      is_system_protected: false,
-                                                       status: "open" as const,
-                                                    };
-                                                    mockAdminFirewallOverview.active_ports.push(newPort);
-                                                    return HttpResponse.json({ success: true, port: newPort });
-                                                  }),
-
-                                                  // DELETE /api/v1/admin/firewall/ports/:id (TODO(api:T11.08))
-                                                  http.delete(/\/api\/v1\/admin\/firewall\/ports\/([^/]+)$/, ({ params }) => {
-                                                    const id = String(params[0] || params.id);
-                                                    const idx = mockAdminFirewallOverview.active_ports.findIndex((p) => p.id === id);
-                                                    if (idx !== -1) {
-                                                      mockAdminFirewallOverview.active_ports.splice(idx, 1);
-                                                    }
-                                                    return HttpResponse.json({ success: true, id });
-                                                  }),
-
-                                                  // POST /api/v1/admin/firewall/bans (TODO(api:T11.08))
-                                                  http.post(/\/api\/v1\/admin\/firewall\/bans$/, async ({ request }) => {
-                                                    const body = (await request.json().catch(() => ({}))) as any;
-                                                    const newBan = {
-                                                      id: `ban-${Date.now()}`,
-                                                      ip: body.ip,
-                                                      reason: body.reason || "Manual admin ban",
-                                                      source: "admin_manual" as const,
-                                                      service: "manual" as const,
-                                                      banned_at: new Date().toISOString().slice(0, 19).replace("T", " "),
-                                                      expires_at: body.duration_hours > 0 ? `${body.duration_hours} hours from now` : "Permanent",
-                                                    };
-                                                    mockAdminFirewallOverview.active_bans.unshift(newBan);
-                                                    return HttpResponse.json({ success: true, ban: newBan });
-                                                  }),
-
-                                                  // DELETE /api/v1/admin/firewall/bans/:id (TODO(api:T11.08))
-                                                  http.delete(/\/api\/v1\/admin\/firewall\/bans\/([^/]+)$/, ({ params }) => {
-                                                    const id = String(params[0] || params.id);
-                                                    const idx = mockAdminFirewallOverview.active_bans.findIndex((b) => b.id === id);
-                                                    if (idx !== -1) {
-                                                      mockAdminFirewallOverview.active_bans.splice(idx, 1);
-                                                    }
-                                                    return HttpResponse.json({ success: true, id });
-                                                  }),
-
-                                                  // POST /api/v1/admin/firewall/rate-limit (TODO(api:T11.08))
-                                                  http.post(/\/api\/v1\/admin\/firewall\/rate-limit$/, async ({ request }) => {
-                                                    const body = (await request.json().catch(() => ({}))) as any;
-                                                    mockAdminFirewallOverview.rate_limit_enabled = Boolean(body.enabled);
-                                                    mockAdminFirewallOverview.rate_limit_rps = Number(body.rate_limit_rps || 50);
-                                                    return HttpResponse.json({ success: true, enabled: mockAdminFirewallOverview.rate_limit_enabled, rate_limit_rps: mockAdminFirewallOverview.rate_limit_rps });
                                                   }),
 
                                                    ...(() => {
@@ -8829,46 +8561,6 @@ export const handlers = [
   };
 
   return [
-    // GET /api/v1/license/status (TODO(api:T17.09), TODO(api:T17.13))
-    http.get(/\/api\/v1\/license\/status$/, () => {
-      return HttpResponse.json(mockLicenseState);
-    }),
-
-    // POST /api/v1/license/activate (TODO(api:T17.08), TODO(api:T17.13))
-    http.post(/\/api\/v1\/license\/activate$/, async ({ request }) => {
-      const body = (await request.json().catch(() => ({}))) as any;
-      const key = String(body.license_key || "").trim().toUpperCase();
-      if (!key.startsWith("DHP-")) {
-        return HttpResponse.json(
-          { title: "Invalid License Key", detail: "License keys must start with DHP- prefix." },
-          { status: 400 }
-        );
-      }
-      mockLicenseState.license_key = key;
-      mockLicenseState.status = "active";
-      mockLicenseState.last_heartbeat_at = new Date().toISOString();
-      mockLicenseState.next_refresh_at = new Date(Date.now() + 43200000).toISOString();
-      return HttpResponse.json(mockLicenseState);
-    }),
-
-    // POST /api/v1/license/validate (TODO(api:T17.09), TODO(api:T17.10))
-    http.post(/\/api\/v1\/license\/validate$/, () => {
-      mockLicenseState.last_heartbeat_at = new Date().toISOString();
-      mockLicenseState.next_refresh_at = new Date(Date.now() + 43200000).toISOString();
-      return HttpResponse.json(mockLicenseState);
-    }),
-
-    // POST /api/v1/license/recovery (TODO(api:T17.13))
-    http.post(/\/api\/v1\/license\/recovery$/, async ({ request }) => {
-      const body = (await request.json().catch(() => ({}))) as any;
-      const ticketId = `REC-${Math.floor(1000 + Math.random() * 9000)}-${body.reason ? body.reason.slice(0, 3).toUpperCase() : "REQ"}`;
-      return HttpResponse.json({
-        ticket_id: ticketId,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        message: "Recovery request dispatched to License Authority. An integrity audit token has been generated.",
-      });
-    }),
   ];
 })(),
 ...(() => {
@@ -8914,10 +8606,6 @@ export const handlers = [
   };
 
   return [
-    // GET /api/v1/admin/dashboard/summary (TODO(api:T18.01))
-    http.get(/\/api\/v1\/admin\/dashboard\/summary$/, () => {
-      return HttpResponse.json(mockDashboardSummary);
-    }),
   ];
 })(),
 ...(() => {
