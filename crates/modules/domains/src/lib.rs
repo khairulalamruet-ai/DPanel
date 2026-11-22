@@ -1186,8 +1186,8 @@ pub async fn client_delete(
         vhost_templates::TemplateView, vhost_templates::TemplateList, vhost_templates::TemplateInput,
         vhost_templates::VersionView, vhost_templates::VersionList, vhost_templates::PreviewInput,
         vhost_templates::Preview, vhost_templates::Applied, redirects::RedirectView, redirects::RedirectList, redirects::AddRedirect,
-        redirects::UpdateRedirect, dns::TemplateLine, dns::TemplateView, dns::TemplateList,
-        dns::TemplateInput, records::RecordView, records::RecordList, records::ZoneView,
+        redirects::UpdateRedirect, dns::TemplateLine, dns::DnsTemplateView, dns::DnsTemplateList,
+        dns::DnsTemplateInput, records::RecordView, records::RecordList, records::ZoneView,
         records::AddRecord, records::UpdateRecord, nameservers::Nameservers,
         nameservers::DelegationView, ssl::SslView, ssl::UploadCertificate
     )),

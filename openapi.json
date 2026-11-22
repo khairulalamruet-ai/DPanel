@@ -1128,7 +1128,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StartImport"
+                "$ref": "#/components/schemas/BackupStartImport"
               }
             }
           },
@@ -1608,7 +1608,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TemplateList"
+                  "$ref": "#/components/schemas/DnsTemplateList"
                 }
               }
             }
@@ -1651,7 +1651,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TemplateInput"
+                "$ref": "#/components/schemas/DnsTemplateInput"
               }
             }
           },
@@ -1663,7 +1663,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TemplateView"
+                  "$ref": "#/components/schemas/DnsTemplateView"
                 }
               }
             }
@@ -1731,7 +1731,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TemplateView"
+                  "$ref": "#/components/schemas/DnsTemplateView"
                 }
               }
             }
@@ -1794,7 +1794,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TemplateInput"
+                "$ref": "#/components/schemas/DnsTemplateInput"
               }
             }
           },
@@ -1806,7 +1806,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TemplateView"
+                  "$ref": "#/components/schemas/DnsTemplateView"
                 }
               }
             }
@@ -5450,7 +5450,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TransferView"
+                    "$ref": "#/components/schemas/MigrationTransferView"
                   }
                 }
               }
@@ -5495,7 +5495,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/MigrationTransferView"
                 }
               }
             }
@@ -5553,7 +5553,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/MigrationTransferView"
                 }
               }
             }
@@ -5650,7 +5650,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/MigrationTransferView"
                 }
               }
             }
@@ -5708,7 +5708,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/MigrationTransferView"
                 }
               }
             }
@@ -5878,7 +5878,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TransferView"
+                    "$ref": "#/components/schemas/NodeTransferView"
                   }
                 }
               }
@@ -5934,7 +5934,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -5992,7 +5992,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -6049,7 +6049,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -6116,7 +6116,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -6183,7 +6183,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -7371,11 +7371,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Restarted",
+            "description": "ServiceRestarted",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Restarted"
+                  "$ref": "#/components/schemas/ServiceRestarted"
                 }
               }
             }
@@ -13643,7 +13643,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExportList"
+                  "$ref": "#/components/schemas/BackupExportList"
                 }
               }
             }
@@ -14006,7 +14006,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExportView"
+                  "$ref": "#/components/schemas/BackupExportView"
                 }
               }
             }
@@ -14611,11 +14611,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Restarted",
+            "description": "ServiceRestarted",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Restarted"
+                  "$ref": "#/components/schemas/ServiceRestarted"
                 }
               }
             }
@@ -19506,7 +19506,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DownloadLink"
+                  "$ref": "#/components/schemas/FileDownloadLink"
                 }
               }
             }
@@ -25557,6 +25557,81 @@
           }
         }
       },
+      "BackupExportList": {
+        "type": "object",
+        "description": "The exports.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupExportView"
+            },
+            "description": "Newest first."
+          }
+        }
+      },
+      "BackupExportView": {
+        "type": "object",
+        "description": "An export.",
+        "required": [
+          "id",
+          "backup_id",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "backup_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The backup it packs."
+          },
+          "created_at": {
+            "type": "string",
+            "description": "When it was asked for."
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What went wrong."
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When it ended."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "object": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The file's name at the destination (once ready)."
+          },
+          "size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Its size in bytes (once ready)."
+          },
+          "status": {
+            "type": "string",
+            "description": "`queued`, `running`, `ready` or `failed`."
+          }
+        }
+      },
       "BackupList": {
         "type": "object",
         "description": "The backups.",
@@ -25572,6 +25647,38 @@
             "description": "Newest first."
           }
         }
+      },
+      "BackupStartImport": {
+        "type": "object",
+        "description": "An export file to turn into a backup.",
+        "required": [
+          "tenant_id",
+          "destination_id",
+          "object",
+          "passphrase"
+        ],
+        "properties": {
+          "destination_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The destination the file is at (and the backup is made at)."
+          },
+          "object": {
+            "type": "string",
+            "description": "The file's name, `exports/<id>.tar`.",
+            "example": "exports/0190a1b2c3d4e5f60718293a4b5c6d7e.tar"
+          },
+          "passphrase": {
+            "type": "string",
+            "description": "The passphrase the export was made with."
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The hosting account the backup is for."
+          }
+        },
+        "additionalProperties": false
       },
       "BackupView": {
         "type": "object",
@@ -27674,6 +27781,102 @@
           }
         }
       },
+      "DnsTemplateInput": {
+        "type": "object",
+        "description": "A template to write.",
+        "required": [
+          "name",
+          "records"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "What it is for."
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "Make it the template new zones start from."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique name: lower-case letters, digits and `_`, 2-32 characters.",
+            "example": "web_only"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateLine"
+            },
+            "description": "The lines (at most 100)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DnsTemplateList": {
+        "type": "object",
+        "description": "The templates.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DnsTemplateView"
+            },
+            "description": "The default first, then by name."
+          }
+        }
+      },
+      "DnsTemplateView": {
+        "type": "object",
+        "description": "A zone template.",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "records",
+          "is_default",
+          "built_in",
+          "updated_at"
+        ],
+        "properties": {
+          "built_in": {
+            "type": "boolean",
+            "description": "Made by the installation: it can be changed but not deleted."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "New zones start from this one."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique name.",
+            "example": "default"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateLine"
+            },
+            "description": "The lines."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last change (RFC 3339, UTC)."
+          }
+        }
+      },
       "DomainList": {
         "type": "object",
         "description": "A page of domains.",
@@ -27836,7 +28039,7 @@
           "policy": {
             "oneOf": [
               {
-                "$ref": "#/components/schemas/PolicyView",
+                "$ref": "#/components/schemas/WafPolicyView",
                 "description": "The domain's own policy (`null`: none)."
               },
               {
@@ -28445,6 +28648,25 @@
           }
         }
       },
+      "FileDownloadLink": {
+        "type": "object",
+        "description": "A download link.",
+        "required": [
+          "url",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Until when the link works (RFC 3339, UTC)."
+          },
+          "url": {
+            "type": "string",
+            "description": "Where to download from (a path on this panel)."
+          }
+        }
+      },
       "FirewallPolicy": {
         "type": "object",
         "description": "The node's firewall (T11.06): who may reach which port. Applied by the privileged helper as\none nftables table of its own; IPv4 only.",
@@ -28939,7 +29161,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ImageView"
+              "$ref": "#/components/schemas/SecurityImageView"
             },
             "description": "By role."
           }
@@ -30071,6 +30293,114 @@
           }
         }
       },
+      "MigrationTransferView": {
+        "type": "object",
+        "description": "A transfer.",
+        "required": [
+          "id",
+          "source_type",
+          "backup_file",
+          "tenant_username",
+          "target_domain",
+          "dry_run",
+          "status",
+          "progress_percent",
+          "current_step",
+          "steps",
+          "logs",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "backup_file": {
+            "type": "string",
+            "description": "The backup's file name."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339, UTC."
+          },
+          "current_step": {
+            "type": "string",
+            "description": "The step being done."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Whether it only plans."
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why it failed."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The log (the last 2000 lines)."
+          },
+          "plan": {
+            "description": "What the import does and what stands in its way (the dry run's answer)."
+          },
+          "progress_percent": {
+            "type": "integer",
+            "format": "int32",
+            "description": "0 to 100."
+          },
+          "size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The backup's size, in bytes."
+          },
+          "source_host": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The server it was fetched from."
+          },
+          "source_type": {
+            "type": "string",
+            "description": "`cpanel`, `cyberpanel`, `openpanel` or `builtpanel_archive`."
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `running`, `completed`, `failed` or `cancelled`."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StepView"
+            },
+            "description": "The steps, in order."
+          },
+          "target_domain": {
+            "type": "string",
+            "description": "The main domain here."
+          },
+          "tenant_username": {
+            "type": "string",
+            "description": "The account's name here."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339, UTC."
+          }
+        }
+      },
       "ModuleChange": {
         "type": "object",
         "description": "What a switch changed.",
@@ -30437,6 +30767,81 @@
           "state": {
             "type": "string",
             "description": "`running`, `stopped`, `unreachable` or `not_installed`."
+          }
+        }
+      },
+      "NodeTransferView": {
+        "type": "object",
+        "description": "A transfer of an account to another node.",
+        "required": [
+          "id",
+          "tenant_id",
+          "from_node",
+          "to_node",
+          "destination_id",
+          "auto_cutover",
+          "state",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "auto_cutover": {
+            "type": "boolean",
+            "description": "Whether it goes on to the last pass by itself."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it was asked for (RFC 3339, UTC)."
+          },
+          "destination_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The backup destination the copies pass through."
+          },
+          "downtime_secs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Seconds the site was off (when it is over)."
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What went wrong."
+          },
+          "from_node": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The node it is leaving."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "state": {
+            "type": "string",
+            "description": "`requested`, `provisioning`, `precopy_backup`, `precopy_restore`, `precopied` (waiting\nfor `cutover`), `freezing`, `delta_backup`, `delta_restore`, `switching`, `switched`\n(the old copy is still there), `cleaning`, `done`, `cancelling`, `cancelled` or\n`failed`."
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The account."
+          },
+          "to_node": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The node it goes to."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it last changed (RFC 3339, UTC)."
           }
         }
       },
@@ -31327,7 +31732,7 @@
           "policy": {
             "oneOf": [
               {
-                "$ref": "#/components/schemas/PolicyView",
+                "$ref": "#/components/schemas/WafPolicyView",
                 "description": "The policy set exactly here (`null`: none)."
               },
               {
@@ -32780,6 +33185,96 @@
         },
         "additionalProperties": false
       },
+      "SecurityImageView": {
+        "type": "object",
+        "description": "An image of the allow-list and what is known about it.",
+        "required": [
+          "reference",
+          "role",
+          "note",
+          "update_available"
+        ],
+        "properties": {
+          "checked_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "When the registry was asked (Unix seconds)."
+          },
+          "critical": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Findings by severity (`null`: not scanned)."
+          },
+          "high": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Findings by severity."
+          },
+          "latest_digest": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What the registry says the tag is now."
+          },
+          "low": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Findings by severity."
+          },
+          "medium": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Findings by severity."
+          },
+          "note": {
+            "type": "string",
+            "description": "What it is."
+          },
+          "reference": {
+            "type": "string",
+            "description": "The pinned reference (`name@sha256:…`)."
+          },
+          "role": {
+            "type": "string",
+            "description": "The role it plays (`web`, `php`, `db`, …)."
+          },
+          "scanned_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "When it was scanned (Unix seconds); `null`: not yet."
+          },
+          "tag": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The moving tag it was pinned from."
+          },
+          "update_available": {
+            "type": "boolean",
+            "description": "A newer image exists: the tag now has another digest than the pin."
+          }
+        }
+      },
       "ServerActionView": {
         "type": "object",
         "description": "Done.",
@@ -32965,6 +33460,24 @@
           "text": {
             "type": "string",
             "description": "The line."
+          }
+        }
+      },
+      "ServiceRestarted": {
+        "type": "object",
+        "description": "A restarted service.",
+        "required": [
+          "name",
+          "state"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The container."
+          },
+          "state": {
+            "type": "string",
+            "description": "Its state now."
           }
         }
       },
@@ -34134,31 +34647,20 @@
       },
       "TemplateInput": {
         "type": "object",
-        "description": "A template to write.",
+        "description": "A template to save.",
         "required": [
           "name",
-          "records"
+          "body"
         ],
         "properties": {
-          "description": {
+          "body": {
             "type": "string",
-            "description": "What it is for."
-          },
-          "is_default": {
-            "type": "boolean",
-            "description": "Make it the template new zones start from."
+            "description": "The configuration, up to 32 KiB."
           },
           "name": {
             "type": "string",
-            "description": "Unique name: lower-case letters, digits and `_`, 2-32 characters.",
-            "example": "web_only"
-          },
-          "records": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TemplateLine"
-            },
-            "description": "The lines (at most 100)."
+            "description": "Its name: letters, digits, spaces, `.`, `_` and `-`, up to 64.",
+            "example": "Default"
           }
         },
         "additionalProperties": false
@@ -34218,9 +34720,9 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/TemplateView"
+              "$ref": "#/components/schemas/TemplateSummary"
             },
-            "description": "The default first, then by name."
+            "description": "By name."
           }
         }
       },
@@ -34268,24 +34770,20 @@
       },
       "TemplateView": {
         "type": "object",
-        "description": "A zone template.",
+        "description": "A template with its text.",
         "required": [
           "id",
           "name",
-          "description",
-          "records",
+          "server",
           "is_default",
-          "built_in",
-          "updated_at"
+          "version",
+          "updated_at",
+          "body"
         ],
         "properties": {
-          "built_in": {
-            "type": "boolean",
-            "description": "Made by the installation: it can be changed but not deleted."
-          },
-          "description": {
+          "body": {
             "type": "string",
-            "description": "Description."
+            "description": "The configuration with `{{variables}}`: `domain`, `server_names`,\n`docroot`, `php_upstream`, `policy_http`, `policy` and `custom`."
           },
           "id": {
             "type": "string",
@@ -34294,24 +34792,25 @@
           },
           "is_default": {
             "type": "boolean",
-            "description": "New zones start from this one."
+            "description": "Whether new sites use it."
           },
           "name": {
             "type": "string",
-            "description": "Unique name.",
-            "example": "default"
+            "description": "Name."
           },
-          "records": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TemplateLine"
-            },
-            "description": "The lines."
+          "server": {
+            "type": "string",
+            "description": "The web server it is for (`nginx`)."
           },
           "updated_at": {
             "type": "string",
             "format": "date-time",
             "description": "Last change (RFC 3339, UTC)."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Which save it is."
           }
         }
       },
@@ -35401,6 +35900,28 @@
           "state": {
             "type": "string",
             "description": "`queued`, `running`, `done` or `failed`."
+          }
+        }
+      },
+      "WafPolicyView": {
+        "type": "object",
+        "description": "A policy as stored.",
+        "required": [
+          "mode",
+          "disabled_rules"
+        ],
+        "properties": {
+          "disabled_rules": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Rule ids that do not apply."
+          },
+          "mode": {
+            "type": "string",
+            "description": "`off`, `detect` or `block`."
           }
         }
       },

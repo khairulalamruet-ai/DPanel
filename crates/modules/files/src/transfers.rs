@@ -634,7 +634,7 @@ pub async fn start_download(
 
 /// A download link.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct DownloadLink {
+pub struct FileDownloadLink {
     /// Where to download from (a path on this panel).
     pub url: String,
     /// Until when the link works (RFC 3339, UTC).
@@ -654,7 +654,7 @@ pub struct DownloadLink {
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "The link (a new one replaces the last)", body = DownloadLink),
+        (status = 200, description = "The link (a new one replaces the last)", body = FileDownloadLink),
         (status = 409, description = "`not_ready`", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
@@ -662,7 +662,7 @@ pub async fn make_link(
     State(state): State<FilesState>,
     who: Principal,
     Path(id): Path<Uuid>,
-) -> Result<Json<DownloadLink>, AppError> {
+) -> Result<Json<FileDownloadLink>, AppError> {
     let h = client_hosting(&state, &who).await?;
     let t = owned(&state, h.tenant.id, id).await?;
     if t.kind != "download" || t.status != "ready" {
@@ -687,7 +687,7 @@ pub async fn make_link(
     )
     .await
     .map_err(internal)?;
-    Ok(Json(DownloadLink {
+    Ok(Json(FileDownloadLink {
         url: format!("/api/v1/public/files/transfers/{id}/download?token={token}"),
         expires_at: rfc3339(at),
     }))

@@ -90,19 +90,19 @@ export function ClientBackupsPage() {
 
   const handleDownload = async (backup: BackupItem) => {
     try {
-      // A download is an account export: one file, sealed with a passphrase, that another panel can import.
+      // The "download" is an account export: one file, sealed with a passphrase, that another panel
+      // can import. It is kept at the backup destination.
       const passphrase = window.prompt(t("backups.exportPassphrase", "Choose a passphrase for the export file (keep it: it is needed to open the file)"));
       if (!passphrase) return;
       toast({
         title: t("backups.exportPreparing", "Preparing the export"),
         description: backup.name,
       });
-      const url = await exportBackup(backup.id, passphrase);
+      const exp = await exportBackup(backup.id, passphrase);
       toast({
         title: t("common.success"),
-        description: t("backups.downloadStarted", { name: backup.name }),
+        description: t("backups.exportReady", "The export is ready: {{file}}", { file: exp.object ?? backup.name }),
       });
-      window.open(url, "_blank");
     } catch (err: any) {
       toast({
         title: t("common.error"),

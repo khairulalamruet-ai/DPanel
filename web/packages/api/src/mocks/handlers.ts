@@ -5992,21 +5992,28 @@ export const handlers = [
                 );
               }),
 
-              // POST /api/v1/client/backups/:id/export (202): the file is then fetched through /client/exports
+              // POST /api/v1/client/backups/:id/export (202), GET /api/v1/client/backup-exports
               http.post(/\/api\/v1\/client\/backups\/([^/]+)\/export$/, ({ params }) => {
                 if (!mockBackups.some((b) => b.id === params[0])) return problem(404, "not_found", "No such backup");
                 return HttpResponse.json(
-                  {
-                    id: "exp_bk_1",
-                    database: "",
-                    database_id: "",
-                    status: "queued",
-                    received_bytes: 0,
-                    created_at: new Date().toISOString(),
-                  },
+                  { id: "exp_bk_1", backup_id: params[0], status: "queued", created_at: new Date().toISOString() },
                   { status: 202 },
                 );
               }),
+              http.get(/\/api\/v1\/client\/backup-exports$/, () =>
+                HttpResponse.json({
+                  items: [
+                    {
+                      id: "exp_bk_1",
+                      backup_id: "bk_01",
+                      status: "ready",
+                      object: "account-export-demo.bpx",
+                      size_bytes: 1048576,
+                      created_at: new Date().toISOString(),
+                    },
+                  ],
+                }),
+              ),
 
               // DELETE /api/v1/client/backups/:id (204: being removed)
               http.delete(/\/api\/v1\/client\/backups\/([^/]+)$/, ({ params }) => {

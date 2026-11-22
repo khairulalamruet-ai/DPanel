@@ -1401,7 +1401,7 @@ pub async fn purge_trash(db: &PgPool, settings: &SettingsRegistry) -> Result<usi
         EntryView, DirectoryPage, FileContent, TrashEntry, TrashList, Changed, Pending, SaveFile,
         OnePath, FromTo, SetMode, PackRequest, UnpackRequest, FolderUse, DiskUsageView, ftp::FtpAccountView, ftp::FtpAccountList, ftp::AddFtpAccount,
         ftp::ChangeFtpAccount, ftp::NewFtpPassword, ftp::FtpAccountCreated, transfers::StartUpload,
-        transfers::TransferView, transfers::DownloadLink
+        transfers::TransferView, transfers::FileDownloadLink
     )),
     tags((name = "files", description = "The file manager"))
 )]

@@ -28,7 +28,7 @@ use crate::{
 /// An export file to turn into a backup.
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
-pub struct StartImport {
+pub struct BackupStartImport {
     /// The hosting account the backup is for.
     pub tenant_id: Uuid,
     /// The destination the file is at (and the backup is made at).
@@ -48,7 +48,7 @@ pub struct StartImport {
     operation_id = "adminStartBackupImport",
     security(("session" = [])),
     params(("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
-    request_body = StartImport,
+    request_body = BackupStartImport,
     responses(
         (status = 202, description = "Queued; the backup is `ready` when the node has unpacked it", body = BackupView),
         (status = 404, description = "No such account, destination or file", body = ProblemDetails, content_type = "application/problem+json"),
@@ -59,7 +59,7 @@ pub struct StartImport {
 pub async fn start_import(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
-    Json(req): Json<StartImport>,
+    Json(req): Json<BackupStartImport>,
 ) -> Result<(StatusCode, Json<BackupView>), AppError> {
     let plain_object = req
         .object

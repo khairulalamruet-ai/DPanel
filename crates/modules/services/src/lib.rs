@@ -147,7 +147,7 @@ pub struct ServiceList {
 
 /// A restarted service.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct Restarted {
+pub struct ServiceRestarted {
     /// The container.
     pub name: String,
     /// Its state now.
@@ -305,7 +305,7 @@ pub async fn list_services(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Restarted", body = Restarted),
+        (status = 200, description = "ServiceRestarted", body = ServiceRestarted),
         (status = 202, description = "The node is slow; the restart goes on", body = Pending),
         (status = 404, description = "The account has no such service", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`tenant_not_running`", body = ProblemDetails, content_type = "application/problem+json"),
@@ -331,7 +331,7 @@ pub async fn restart_service(
     match ask(&state, &tenant, &who, &op).await? {
         Ok(Output::ContainerRestarted { name, state: s }) => {
             builtpanel_audit_entry(&state, &who, &tenant, &name).await?;
-            Ok(Json(Restarted { name, state: s }).into_response())
+            Ok(Json(ServiceRestarted { name, state: s }).into_response())
         }
         Ok(_) => Err(internal(std::io::Error::other("an unexpected answer"))),
         Err(operation_id) => {
@@ -1002,7 +1002,7 @@ async fn ask_node(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Restarted", body = Restarted),
+        (status = 200, description = "ServiceRestarted", body = ServiceRestarted),
         (status = 202, description = "The node is slow; the restart goes on", body = Pending),
         (status = 404, description = "No such node, service, or it is not installed there", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 503, description = "`node_unavailable`", body = ProblemDetails, content_type = "application/problem+json")
@@ -1028,7 +1028,7 @@ pub async fn restart_node_service(
             )
             .await
             .map_err(internal)?;
-            Ok(Json(Restarted { name, state: s }).into_response())
+            Ok(Json(ServiceRestarted { name, state: s }).into_response())
         }
         Ok(_) => Err(internal(std::io::Error::other("an unexpected answer"))),
         Err(operation_id) => {
@@ -1125,7 +1125,7 @@ pub async fn node_service_log(
         set_timezone, set_swap, drop_caches, reboot_node, node_services, restart_node_service, node_service_log
     ),
     components(schemas(
-        ServiceView, ServiceList, Restarted, Pending, ProcessView, ProcessList, SignalRequest,
+        ServiceView, ServiceList, ServiceRestarted, Pending, ProcessView, ProcessList, SignalRequest,
         Signalled, ServerInfoView, SshSetting, TimezoneRequest, SwapRequest, RebootRequest,
         ServerActionView, NodeServiceView, NodeServiceList,
         ServiceLogLine, ServiceLog

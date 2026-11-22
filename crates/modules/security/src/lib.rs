@@ -170,7 +170,7 @@ pub struct PolicyRequest {
 
 /// A policy as stored.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct PolicyView {
+pub struct WafPolicyView {
     /// `off`, `detect` or `block`.
     pub mode: String,
     /// Rule ids that do not apply.
@@ -192,13 +192,13 @@ pub struct EffectiveView {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PolicyState {
     /// The policy set exactly here (`null`: none).
-    pub policy: Option<PolicyView>,
+    pub policy: Option<WafPolicyView>,
     /// What really applies (for a domain; for the others the policy or the default).
     pub effective: EffectiveView,
 }
 
-fn view(p: &Policy) -> PolicyView {
-    PolicyView {
+fn view(p: &Policy) -> WafPolicyView {
+    WafPolicyView {
         mode: p.mode.as_str().to_owned(),
         disabled_rules: p.disabled_rules.clone(),
     }
@@ -608,7 +608,7 @@ pub struct DomainWaf {
     /// Its name.
     pub fqdn: String,
     /// The domain's own policy (`null`: none).
-    pub policy: Option<PolicyView>,
+    pub policy: Option<WafPolicyView>,
     /// What really applies.
     pub effective: EffectiveView,
 }
@@ -1506,7 +1506,7 @@ pub async fn client_start_vuln(
 
 /// An image of the allow-list and what is known about it.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ImageView {
+pub struct SecurityImageView {
     /// The pinned reference (`name@sha256:…`).
     pub reference: String,
     /// The role it plays (`web`, `php`, `db`, …).
@@ -1537,7 +1537,7 @@ pub struct ImageView {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ImageList {
     /// By role.
-    pub items: Vec<ImageView>,
+    pub items: Vec<SecurityImageView>,
 }
 
 /// The worst findings of one image.
@@ -1557,13 +1557,13 @@ pub struct ScanImageRequest {
     pub reference: String,
 }
 
-fn image_view(i: builtpanel_database::images::Image) -> ImageView {
+fn image_view(i: builtpanel_database::images::Image) -> SecurityImageView {
     let pinned = i.reference.split_once('@').map(|(_, d)| d.to_owned());
     let update_available = match (&i.latest_digest, &pinned) {
         (Some(latest), Some(pinned)) => latest != pinned,
         _ => false,
     };
-    ImageView {
+    SecurityImageView {
         reference: i.reference,
         role: i.role,
         tag: i.tag,
@@ -1764,7 +1764,7 @@ async fn store_firewall(
         list_advisories, add_advisory, remove_advisory,
         list_images, image_vulnerabilities, scan_image_now
     ),
-    components(schemas(ImageView, ImageList, ImageVulns, ScanImageRequest, builtpanel_node_protocol::ImageVulnerability, VulnScanView, VulnScanList, VulnIssue, AdvisoryView, AdvisoryList, AddAdvisory, builtpanel_node_protocol::WpInstall, builtpanel_node_protocol::WpComponent, ScanRequest, ScanView, ScanList, builtpanel_node_protocol::Infection, NodeFirewall, builtpanel_node_protocol::FirewallPolicy, builtpanel_node_protocol::PortRule, builtpanel_node_protocol::RateLimit, UserAgentView, UserAgentList, AddUserAgent, PolicyRequest, PolicyView, EffectiveView, PolicyState, DomainWaf, DomainWafList)),
+    components(schemas(SecurityImageView, ImageList, ImageVulns, ScanImageRequest, builtpanel_node_protocol::ImageVulnerability, VulnScanView, VulnScanList, VulnIssue, AdvisoryView, AdvisoryList, AddAdvisory, builtpanel_node_protocol::WpInstall, builtpanel_node_protocol::WpComponent, ScanRequest, ScanView, ScanList, builtpanel_node_protocol::Infection, NodeFirewall, builtpanel_node_protocol::FirewallPolicy, builtpanel_node_protocol::PortRule, builtpanel_node_protocol::RateLimit, UserAgentView, UserAgentList, AddUserAgent, PolicyRequest, WafPolicyView, EffectiveView, PolicyState, DomainWaf, DomainWafList)),
     tags((name = "security", description = "The web application firewall"))
 )]
 pub struct SecurityApi;

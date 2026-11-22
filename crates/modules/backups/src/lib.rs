@@ -706,8 +706,8 @@ pub async fn remove_destination(
         DestinationView, DestinationList, AddDestination, ChangeDestination,
         client::BackupView, client::BackupList, client::PartView, client::StartRestore,
         client::RestoreView, client::RestoreList, client::ScheduleView, client::StartExport,
-        client::ExportView, client::ExportList, import::StartImport,
-        transfer::TransferView, transfer::StartTransfer
+        client::BackupExportView, client::BackupExportList, import::BackupStartImport,
+        transfer::NodeTransferView, transfer::StartTransfer
     )),
     tags((name = "backups", description = "Backups"))
 )]

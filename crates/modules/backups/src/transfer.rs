@@ -546,7 +546,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
 
 /// A transfer of an account to another node.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct TransferView {
+pub struct NodeTransferView {
     /// Id.
     pub id: Uuid,
     /// The account.
@@ -576,8 +576,8 @@ pub struct TransferView {
     pub updated_at: String,
 }
 
-fn view(t: Transfer) -> TransferView {
-    TransferView {
+fn view(t: Transfer) -> NodeTransferView {
+    NodeTransferView {
         id: t.id,
         tenant_id: t.tenant_id,
         from_node: t.from_node,
@@ -625,14 +625,14 @@ pub struct StartTransfer {
     operation_id = "adminListNodeTransfers",
     security(("session" = [])),
     responses(
-        (status = 200, description = "The newest first", body = Vec<TransferView>),
+        (status = 200, description = "The newest first", body = Vec<NodeTransferView>),
         (status = 403, description = "`permission_denied`", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
 pub async fn list(
     State(state): State<BackupsState>,
     _who: Require<BackupsRead>,
-) -> Result<Json<Vec<TransferView>>, AppError> {
+) -> Result<Json<Vec<NodeTransferView>>, AppError> {
     Ok(Json(
         store::list(&state.db, 100)
             .await
@@ -652,7 +652,7 @@ pub async fn list(
     security(("session" = [])),
     params(("id" = Uuid, Path, description = "Transfer id")),
     responses(
-        (status = 200, description = "The transfer", body = TransferView),
+        (status = 200, description = "The transfer", body = NodeTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
@@ -660,7 +660,7 @@ pub async fn show(
     State(state): State<BackupsState>,
     _who: Require<BackupsRead>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -679,7 +679,7 @@ pub async fn show(
     params(("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
     request_body = StartTransfer,
     responses(
-        (status = 201, description = "Started", body = TransferView),
+        (status = 201, description = "Started", body = NodeTransferView),
         (status = 404, description = "No such account, node or destination", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`transfer_active`, `same_node`, `node_unavailable`, `tenant_not_active` or `transfer_unsupported` (the account has what a transfer cannot carry yet)", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -688,7 +688,7 @@ pub async fn start(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
     Json(req): Json<StartTransfer>,
-) -> Result<(StatusCode, Json<TransferView>), AppError> {
+) -> Result<(StatusCode, Json<NodeTransferView>), AppError> {
     let tenant = tenants::get(&state.db, req.tenant_id)
         .await
         .map_err(internal)?
@@ -779,7 +779,7 @@ async fn transition(
     allowed: &[&str],
     to: &str,
     action: &'static str,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     let t = store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -892,7 +892,7 @@ async fn transition(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Going on", body = TransferView),
+        (status = 200, description = "Going on", body = NodeTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`wrong_state`: the first copy is not there yet, or it is over", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -901,7 +901,7 @@ pub async fn cutover(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     transition(
         &state,
         &who.0,
@@ -925,7 +925,7 @@ pub async fn cutover(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Being removed", body = TransferView),
+        (status = 200, description = "Being removed", body = NodeTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`wrong_state`: the account has not been switched", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -934,7 +934,7 @@ pub async fn cleanup(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     transition(
         &state,
         &who.0,
@@ -958,7 +958,7 @@ pub async fn cleanup(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Being cancelled", body = TransferView),
+        (status = 200, description = "Being cancelled", body = NodeTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`wrong_state`: it is switched or over", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -967,7 +967,7 @@ pub async fn cancel(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     transition(
         &state,
         &who.0,

@@ -91,23 +91,36 @@ export async function restoreBackup(backup: BackupItem, p: RestoreBackupPayload)
   });
 }
 
-interface ExportView {
+interface BackupExportView {
   id: string;
+  backup_id: string;
+  /** `queued`, `running`, `ready` or `failed`. */
   status: string;
   error?: string | null;
+  /** The file's name at the destination, once ready. */
+  object?: string | null;
+  size_bytes?: number | null;
 }
 
-/** Packs a backup into one file (an account export that another panel can import) and returns a download link. */
-export async function exportBackup(id: string, passphrase: string, opts: { intervalMs?: number; tries?: number } = {}): Promise<string> {
+/**
+ * Packs a backup into one file (an account export another panel can import), sealed with the
+ * passphrase. The file is kept at the backup destination; this waits until it is there.
+ */
+export async function exportBackup(
+  id: string,
+  passphrase: string,
+  opts: { intervalMs?: number; tries?: number } = {},
+): Promise<BackupExportView> {
   const { intervalMs = 2000, tries = 150 } = opts;
-  let exp = await apiFetch<ExportView>(`${B}/${enc(id)}/export`, { method: "POST", body: JSON.stringify({ passphrase }) });
+  let exp = await apiFetch<BackupExportView>(`${B}/${enc(id)}/export`, { method: "POST", body: JSON.stringify({ passphrase }) });
   for (let i = 0; i < tries && exp.status !== "ready"; i++) {
-    if (exp.status === "failed" || exp.status === "expired") throw new Error(exp.error || `The export ${exp.status}`);
+    if (exp.status === "failed") throw new Error(exp.error || "The export failed");
     await sleep(intervalMs);
-    exp = await apiFetch<ExportView>(`/api/v1/client/exports/${enc(exp.id)}`);
+    const list = await apiFetch<{ items: BackupExportView[] }>("/api/v1/client/backup-exports");
+    exp = list.items.find((e) => e.id === exp.id) ?? exp;
   }
-  if (exp.status !== "ready") throw new Error("The export is taking too long; try again in a moment");
-  return (await apiFetch<{ url: string }>(`/api/v1/client/exports/${enc(exp.id)}/link`, { method: "POST" })).url;
+  if (exp.status !== "ready") throw new Error("The export is taking too long; look at the list of exports in a moment");
+  return exp;
 }
 
 // ---- the account's own schedule

@@ -5560,10 +5560,63 @@ export interface components {
             /** @description Ten single-use codes; store them somewhere safe. */
             backup_codes: string[];
         };
+        /** @description The exports. */
+        BackupExportList: {
+            /** @description Newest first. */
+            items: components["schemas"]["BackupExportView"][];
+        };
+        /** @description An export. */
+        BackupExportView: {
+            /**
+             * Format: uuid
+             * @description The backup it packs.
+             */
+            backup_id: string;
+            /** @description When it was asked for. */
+            created_at: string;
+            /** @description What went wrong. */
+            error?: string | null;
+            /** @description When it ended. */
+            finished_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description The file's name at the destination (once ready). */
+            object?: string | null;
+            /**
+             * Format: int64
+             * @description Its size in bytes (once ready).
+             */
+            size_bytes?: number | null;
+            /** @description `queued`, `running`, `ready` or `failed`. */
+            status: string;
+        };
         /** @description The backups. */
         BackupList: {
             /** @description Newest first. */
             items: components["schemas"]["BackupView"][];
+        };
+        /** @description An export file to turn into a backup. */
+        BackupStartImport: {
+            /**
+             * Format: uuid
+             * @description The destination the file is at (and the backup is made at).
+             */
+            destination_id: string;
+            /**
+             * @description The file's name, `exports/<id>.tar`.
+             * @example exports/0190a1b2c3d4e5f60718293a4b5c6d7e.tar
+             */
+            object: string;
+            /** @description The passphrase the export was made with. */
+            passphrase: string;
+            /**
+             * Format: uuid
+             * @description The hosting account the backup is for.
+             */
+            tenant_id: string;
         };
         /** @description A backup. */
         BackupView: {
@@ -6581,6 +6634,51 @@ export interface components {
              */
             total_bytes: number;
         };
+        /** @description A template to write. */
+        DnsTemplateInput: {
+            /** @description What it is for. */
+            description?: string;
+            /** @description Make it the template new zones start from. */
+            is_default?: boolean;
+            /**
+             * @description Unique name: lower-case letters, digits and `_`, 2-32 characters.
+             * @example web_only
+             */
+            name: string;
+            /** @description The lines (at most 100). */
+            records: components["schemas"]["TemplateLine"][];
+        };
+        /** @description The templates. */
+        DnsTemplateList: {
+            /** @description The default first, then by name. */
+            items: components["schemas"]["DnsTemplateView"][];
+        };
+        /** @description A zone template. */
+        DnsTemplateView: {
+            /** @description Made by the installation: it can be changed but not deleted. */
+            built_in: boolean;
+            /** @description Description. */
+            description: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description New zones start from this one. */
+            is_default: boolean;
+            /**
+             * @description Unique name.
+             * @example default
+             */
+            name: string;
+            /** @description The lines. */
+            records: components["schemas"]["TemplateLine"][];
+            /**
+             * Format: date-time
+             * @description Last change (RFC 3339, UTC).
+             */
+            updated_at: string;
+        };
         /** @description A page of domains. */
         DomainList: {
             /** @description The domains, by name. */
@@ -6666,7 +6764,7 @@ export interface components {
             effective: components["schemas"]["EffectiveView"];
             /** @description Its name. */
             fqdn: string;
-            policy?: components["schemas"]["PolicyView"] | null;
+            policy?: components["schemas"]["WafPolicyView"] | null;
         };
         /** @description The domains of the account. */
         DomainWafList: {
@@ -6989,6 +7087,16 @@ export interface components {
              */
             size: number;
         };
+        /** @description A download link. */
+        FileDownloadLink: {
+            /**
+             * Format: date-time
+             * @description Until when the link works (RFC 3339, UTC).
+             */
+            expires_at: string;
+            /** @description Where to download from (a path on this panel). */
+            url: string;
+        };
         /**
          * @description The node's firewall (T11.06): who may reach which port. Applied by the privileged helper as
          *     one nftables table of its own; IPv4 only.
@@ -7221,7 +7329,7 @@ export interface components {
         /** @description The images of the allow-list. */
         ImageList: {
             /** @description By role. */
-            items: components["schemas"]["ImageView"][];
+            items: components["schemas"]["SecurityImageView"][];
         };
         /** @description An approved image. */
         ImageView: {
@@ -7776,6 +7884,58 @@ export interface components {
             /** @description TOTP is enabled (enrolment confirmed). */
             totp_enabled: boolean;
         };
+        /** @description A transfer. */
+        MigrationTransferView: {
+            /** @description The backup's file name. */
+            backup_file: string;
+            /**
+             * Format: date-time
+             * @description RFC 3339, UTC.
+             */
+            created_at: string;
+            /** @description The step being done. */
+            current_step: string;
+            /** @description Whether it only plans. */
+            dry_run: boolean;
+            /** @description Why it failed. */
+            error_message?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description The log (the last 2000 lines). */
+            logs: string[];
+            /** @description What the import does and what stands in its way (the dry run's answer). */
+            plan?: unknown;
+            /**
+             * Format: int32
+             * @description 0 to 100.
+             */
+            progress_percent: number;
+            /**
+             * Format: int64
+             * @description The backup's size, in bytes.
+             */
+            size_bytes?: number | null;
+            /** @description The server it was fetched from. */
+            source_host?: string | null;
+            /** @description `cpanel`, `cyberpanel`, `openpanel` or `builtpanel_archive`. */
+            source_type: string;
+            /** @description `pending`, `running`, `completed`, `failed` or `cancelled`. */
+            status: string;
+            /** @description The steps, in order. */
+            steps: components["schemas"]["StepView"][];
+            /** @description The main domain here. */
+            target_domain: string;
+            /** @description The account's name here. */
+            tenant_username: string;
+            /**
+             * Format: date-time
+             * @description RFC 3339, UTC.
+             */
+            updated_at: string;
+        };
         /** @description What a switch changed. */
         ModuleChange: {
             /** @description Modules whose routes are being served after the change. */
@@ -7958,6 +8118,60 @@ export interface components {
             since: number;
             /** @description `running`, `stopped`, `unreachable` or `not_installed`. */
             state: string;
+        };
+        /** @description A transfer of an account to another node. */
+        NodeTransferView: {
+            /** @description Whether it goes on to the last pass by itself. */
+            auto_cutover: boolean;
+            /**
+             * Format: date-time
+             * @description When it was asked for (RFC 3339, UTC).
+             */
+            created_at: string;
+            /**
+             * Format: uuid
+             * @description The backup destination the copies pass through.
+             */
+            destination_id: string;
+            /**
+             * Format: int32
+             * @description Seconds the site was off (when it is over).
+             */
+            downtime_secs?: number | null;
+            /** @description What went wrong. */
+            error?: string | null;
+            /**
+             * Format: uuid
+             * @description The node it is leaving.
+             */
+            from_node: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * @description `requested`, `provisioning`, `precopy_backup`, `precopy_restore`, `precopied` (waiting
+             *     for `cutover`), `freezing`, `delta_backup`, `delta_restore`, `switching`, `switched`
+             *     (the old copy is still there), `cleaning`, `done`, `cancelling`, `cancelled` or
+             *     `failed`.
+             */
+            state: string;
+            /**
+             * Format: uuid
+             * @description The account.
+             */
+            tenant_id: string;
+            /**
+             * Format: uuid
+             * @description The node it goes to.
+             */
+            to_node: string;
+            /**
+             * Format: date-time
+             * @description When it last changed (RFC 3339, UTC).
+             */
+            updated_at: string;
         };
         /** @description A node's usage. */
         NodeUsageView: {
@@ -8427,7 +8641,7 @@ export interface components {
         PolicyState: {
             /** @description What really applies (for a domain; for the others the policy or the default). */
             effective: components["schemas"]["EffectiveView"];
-            policy?: components["schemas"]["PolicyView"] | null;
+            policy?: components["schemas"]["WafPolicyView"] | null;
         };
         /** @description A domain's policy. */
         PolicyView: {
@@ -9149,6 +9363,51 @@ export interface components {
              */
             keep_weekly: number;
         };
+        /** @description An image of the allow-list and what is known about it. */
+        SecurityImageView: {
+            /**
+             * Format: int64
+             * @description When the registry was asked (Unix seconds).
+             */
+            checked_at?: number | null;
+            /**
+             * Format: int32
+             * @description Findings by severity (`null`: not scanned).
+             */
+            critical?: number | null;
+            /**
+             * Format: int32
+             * @description Findings by severity.
+             */
+            high?: number | null;
+            /** @description What the registry says the tag is now. */
+            latest_digest?: string | null;
+            /**
+             * Format: int32
+             * @description Findings by severity.
+             */
+            low?: number | null;
+            /**
+             * Format: int32
+             * @description Findings by severity.
+             */
+            medium?: number | null;
+            /** @description What it is. */
+            note: string;
+            /** @description The pinned reference (`name@sha256:…`). */
+            reference: string;
+            /** @description The role it plays (`web`, `php`, `db`, …). */
+            role: string;
+            /**
+             * Format: int64
+             * @description When it was scanned (Unix seconds); `null`: not yet.
+             */
+            scanned_at?: number | null;
+            /** @description The moving tag it was pinned from. */
+            tag?: string | null;
+            /** @description A newer image exists: the tag now has another digest than the pin. */
+            update_available: boolean;
+        };
         /** @description Done. */
         ServerActionView: {
             /** @description Which action. */
@@ -9235,6 +9494,13 @@ export interface components {
             at_ms: number;
             /** @description The line. */
             text: string;
+        };
+        /** @description A restarted service. */
+        ServiceRestarted: {
+            /** @description The container. */
+            name: string;
+            /** @description Its state now. */
+            state: string;
         };
         /** @description One of the account's containers. */
         ServiceView: {
@@ -9779,19 +10045,15 @@ export interface components {
             /** @description Oldest first. */
             items: components["schemas"]["SystemLogLine"][];
         };
-        /** @description A template to write. */
+        /** @description A template to save. */
         TemplateInput: {
-            /** @description What it is for. */
-            description?: string;
-            /** @description Make it the template new zones start from. */
-            is_default?: boolean;
+            /** @description The configuration, up to 32 KiB. */
+            body: string;
             /**
-             * @description Unique name: lower-case letters, digits and `_`, 2-32 characters.
-             * @example web_only
+             * @description Its name: letters, digits, spaces, `.`, `_` and `-`, up to 64.
+             * @example Default
              */
             name: string;
-            /** @description The lines (at most 100). */
-            records: components["schemas"]["TemplateLine"][];
         };
         /** @description One line of a template. */
         TemplateLine: {
@@ -9824,8 +10086,8 @@ export interface components {
         };
         /** @description The templates. */
         TemplateList: {
-            /** @description The default first, then by name. */
-            items: components["schemas"]["TemplateView"][];
+            /** @description By name. */
+            items: components["schemas"]["TemplateSummary"][];
         };
         /** @description A template, without its text (for lists). */
         TemplateSummary: {
@@ -9854,31 +10116,34 @@ export interface components {
              */
             version: number;
         };
-        /** @description A zone template. */
+        /** @description A template with its text. */
         TemplateView: {
-            /** @description Made by the installation: it can be changed but not deleted. */
-            built_in: boolean;
-            /** @description Description. */
-            description: string;
+            /**
+             * @description The configuration with `{{variables}}`: `domain`, `server_names`,
+             *     `docroot`, `php_upstream`, `policy_http`, `policy` and `custom`.
+             */
+            body: string;
             /**
              * Format: uuid
              * @description Id.
              */
             id: string;
-            /** @description New zones start from this one. */
+            /** @description Whether new sites use it. */
             is_default: boolean;
-            /**
-             * @description Unique name.
-             * @example default
-             */
+            /** @description Name. */
             name: string;
-            /** @description The lines. */
-            records: components["schemas"]["TemplateLine"][];
+            /** @description The web server it is for (`nginx`). */
+            server: string;
             /**
              * Format: date-time
              * @description Last change (RFC 3339, UTC).
              */
             updated_at: string;
+            /**
+             * Format: int32
+             * @description Which save it is.
+             */
+            version: number;
         };
         /** @description A user's hosting account on a node. */
         TenantView: {
@@ -10448,6 +10713,13 @@ export interface components {
             source: string;
             /** @description `queued`, `running`, `done` or `failed`. */
             state: string;
+        };
+        /** @description A policy as stored. */
+        WafPolicyView: {
+            /** @description Rule ids that do not apply. */
+            disabled_rules: number[];
+            /** @description `off`, `detect` or `block`. */
+            mode: string;
         };
         /** @description What the webhook answers. */
         WebhookAnswer: {
@@ -11333,7 +11605,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["StartImport"];
+                "application/json": components["schemas"]["BackupStartImport"];
             };
         };
         responses: {
@@ -11693,7 +11965,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TemplateList"];
+                    "application/json": components["schemas"]["DnsTemplateList"];
                 };
             };
             /** @description `permission_denied` (needs admin.domains.read) */
@@ -11719,7 +11991,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TemplateInput"];
+                "application/json": components["schemas"]["DnsTemplateInput"];
             };
         };
         responses: {
@@ -11729,7 +12001,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TemplateView"];
+                    "application/json": components["schemas"]["DnsTemplateView"];
                 };
             };
             /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
@@ -11779,7 +12051,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TemplateView"];
+                    "application/json": components["schemas"]["DnsTemplateView"];
                 };
             };
             /** @description `permission_denied` */
@@ -11817,7 +12089,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TemplateInput"];
+                "application/json": components["schemas"]["DnsTemplateInput"];
             };
         };
         responses: {
@@ -11827,7 +12099,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TemplateView"];
+                    "application/json": components["schemas"]["DnsTemplateView"];
                 };
             };
             /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
@@ -14332,7 +14604,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"][];
+                    "application/json": components["schemas"]["MigrationTransferView"][];
                 };
             };
             /** @description `permission_denied` */
@@ -14365,7 +14637,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"];
+                    "application/json": components["schemas"]["MigrationTransferView"];
                 };
             };
             /** @description `import_unavailable`: this panel cannot run imports */
@@ -14406,7 +14678,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"];
+                    "application/json": components["schemas"]["MigrationTransferView"];
                 };
             };
             /** @description No such transfer */
@@ -14477,7 +14749,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"];
+                    "application/json": components["schemas"]["MigrationTransferView"];
                 };
             };
             /** @description No such transfer */
@@ -14518,7 +14790,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"];
+                    "application/json": components["schemas"]["MigrationTransferView"];
                 };
             };
             /** @description No such transfer */
@@ -14642,7 +14914,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"][];
+                    "application/json": components["schemas"]["NodeTransferView"][];
                 };
             };
             /** @description `permission_denied` */
@@ -14678,7 +14950,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"];
+                    "application/json": components["schemas"]["NodeTransferView"];
                 };
             };
             /** @description No such account, node or destination */
@@ -14719,7 +14991,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"];
+                    "application/json": components["schemas"]["NodeTransferView"];
                 };
             };
             /** @description No such transfer */
@@ -14754,7 +15026,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"];
+                    "application/json": components["schemas"]["NodeTransferView"];
                 };
             };
             /** @description No such transfer */
@@ -14798,7 +15070,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"];
+                    "application/json": components["schemas"]["NodeTransferView"];
                 };
             };
             /** @description No such transfer */
@@ -14842,7 +15114,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferView"];
+                    "application/json": components["schemas"]["NodeTransferView"];
                 };
             };
             /** @description No such transfer */
@@ -15637,13 +15909,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Restarted */
+            /** @description ServiceRestarted */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Restarted"];
+                    "application/json": components["schemas"]["ServiceRestarted"];
                 };
             };
             /** @description The node is slow; the restart goes on */
@@ -19994,7 +20266,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExportList"];
+                    "application/json": components["schemas"]["BackupExportList"];
                 };
             };
         };
@@ -20251,7 +20523,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExportView"];
+                    "application/json": components["schemas"]["BackupExportView"];
                 };
             };
             /** @description No such backup */
@@ -20678,13 +20950,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Restarted */
+            /** @description ServiceRestarted */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Restarted"];
+                    "application/json": components["schemas"]["ServiceRestarted"];
                 };
             };
             /** @description The node is slow; the restart goes on */
@@ -24030,7 +24302,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DownloadLink"];
+                    "application/json": components["schemas"]["FileDownloadLink"];
                 };
             };
             /** @description `not_ready` */

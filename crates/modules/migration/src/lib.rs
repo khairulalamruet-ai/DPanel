@@ -118,7 +118,7 @@ pub struct StepView {
 
 /// A transfer.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct TransferView {
+pub struct MigrationTransferView {
     /// Id.
     pub id: Uuid,
     /// `cpanel`, `cyberpanel`, `openpanel` or `builtpanel_archive`.
@@ -174,8 +174,8 @@ fn steps_of(v: &Value) -> Vec<StepView> {
         .unwrap_or_default()
 }
 
-fn view(t: Transfer) -> TransferView {
-    TransferView {
+fn view(t: Transfer) -> MigrationTransferView {
+    MigrationTransferView {
         id: t.id,
         source_type: t.source_type,
         source_host: t.source_host,
@@ -556,14 +556,14 @@ async fn fetch_then_start(state: MigrationState, t: Transfer, source: remote::So
     get, path = "/api/v1/admin/migration/transfers", tag = "migration",
     operation_id = "listMigrationTransfers", security(("session" = [])),
     responses(
-        (status = 200, description = "The transfers", body = Vec<TransferView>),
+        (status = 200, description = "The transfers", body = Vec<MigrationTransferView>),
         (status = 403, description = "`permission_denied`", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
 pub async fn list(
     State(state): State<MigrationState>,
     Require(_who, _): Require<MigrationRead>,
-) -> Result<Json<Vec<TransferView>>, AppError> {
+) -> Result<Json<Vec<MigrationTransferView>>, AppError> {
     let rows = store::list(&state.db, LIST_LIMIT).await.map_err(internal)?;
     Ok(Json(rows.into_iter().map(view).collect()))
 }
@@ -574,7 +574,7 @@ pub async fn list(
     operation_id = "getMigrationTransfer", security(("session" = [])),
     params(("id" = Uuid, Path, description = "Transfer id")),
     responses(
-        (status = 200, description = "The transfer", body = TransferView),
+        (status = 200, description = "The transfer", body = MigrationTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
@@ -582,7 +582,7 @@ pub async fn show(
     State(state): State<MigrationState>,
     Require(_who, _): Require<MigrationRead>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<MigrationTransferView>, AppError> {
     let t = store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -654,7 +654,7 @@ fn yes() -> bool {
     operation_id = "createMigrationTransfer", security(("session" = [])),
     request_body = CreateTransfer,
     responses(
-        (status = 201, description = "Created and, for a dry run, finished", body = TransferView),
+        (status = 201, description = "Created and, for a dry run, finished", body = MigrationTransferView),
         (status = 409, description = "`import_unavailable`: this panel cannot run imports", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 422, description = "Invalid input", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -663,7 +663,7 @@ pub async fn create(
     State(state): State<MigrationState>,
     Require(who, _): Require<MigrationManage>,
     Json(req): Json<CreateTransfer>,
-) -> Result<(StatusCode, Json<TransferView>), AppError> {
+) -> Result<(StatusCode, Json<MigrationTransferView>), AppError> {
     let mut errors = Vec::new();
     if !matches!(req.source_type.as_str(), "cpanel" | "cyberpanel") {
         errors.push(FieldError::new(
@@ -773,7 +773,7 @@ pub async fn create(
     operation_id = "retryMigrationTransfer", security(("session" = [])),
     params(("id" = Uuid, Path, description = "Transfer id")),
     responses(
-        (status = 200, description = "Run again", body = TransferView),
+        (status = 200, description = "Run again", body = MigrationTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`not_retryable`", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -782,7 +782,7 @@ pub async fn retry(
     State(state): State<MigrationState>,
     Require(who, _): Require<MigrationManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<MigrationTransferView>, AppError> {
     let existing = store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -853,7 +853,7 @@ pub async fn retry(
     operation_id = "cancelMigrationTransfer", security(("session" = [])),
     params(("id" = Uuid, Path, description = "Transfer id")),
     responses(
-        (status = 200, description = "Cancelled", body = TransferView),
+        (status = 200, description = "Cancelled", body = MigrationTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`not_cancellable`", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -862,7 +862,7 @@ pub async fn cancel(
     State(state): State<MigrationState>,
     Require(who, _): Require<MigrationManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<MigrationTransferView>, AppError> {
     store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -919,7 +919,7 @@ pub async fn remove(
 #[derive(OpenApi)]
 #[openapi(
     paths(list, show, create, retry, cancel, remove),
-    components(schemas(TransferView, StepView, CreateTransfer)),
+    components(schemas(MigrationTransferView, StepView, CreateTransfer)),
     tags((name = "migration", description = "Bring an account over from another hosting panel"))
 )]
 pub struct MigrationApi;
