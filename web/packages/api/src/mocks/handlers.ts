@@ -5978,279 +5978,86 @@ export const handlers = [
                 return new HttpResponse(null, { status: 204 });
               }),
 
-              // ===================================              // ADMIN BACKUPS (TODO(api:T09.08))
-              // ===================================
+              // The panel's own backups, destinations and schedule, shaped like `DestinationView`,
+              // `BackupView` and the schedule in openapi.json.
   ...(() => {
-                interface MockAdminDestination {
+                interface MockDestination {
                   id: string;
                   name: string;
-                  type: "local" | "s3" | "sftp";
+                  kind: "local" | "s3" | "sftp";
+                  settings: Record<string, unknown>;
                   is_default: boolean;
-                  status: "connected" | "error" | "untested";
-                  created_at: string;
-                  config: {
-                    local_path?: string;
-                    s3_bucket?: string;
-                    s3_region?: string;
-                    s3_endpoint?: string;
-                    sftp_host?: string;
-                    sftp_port?: number;
-                    sftp_user?: string;
-                    sftp_path?: string;
-                  };
-                }
-
-                interface MockAdminSchedule {
-                  id: string;
-                  name: string;
-                  cron_expression: string;
-                  destination_id: string;
-                  destination_name: string;
-                  scope: "all_tenants" | "system";
                   enabled: boolean;
-                  retention_daily: number;
-                  retention_weekly: number;
-                  retention_monthly: number;
-                  last_run_at: string | null;
-                  next_run_at: string;
+                  has_credentials: boolean;
+                  last_test_ok: boolean | null;
+                  last_tested_at: string | null;
+                  last_test_error: string | null;
                 }
-
-                interface MockAdminJob {
-                  id: string;
-                  name: string;
-                  tenant: string;
-                  scope: "all_tenants" | "system" | "single_tenant";
-                  status: "completed" | "failed" | "in_progress";
-                  started_at: string;
-                  completed_at: string | null;
-                  size_formatted: string;
-                  destination_name: string;
-                  error_message?: string;
-                  notification_sent?: boolean;
-                }
-
-                const mockDestinations: MockAdminDestination[] = [
-                  {
-                    id: "dest_local_01",
-                    name: "Local Panel Storage",
-                    type: "local",
-                    is_default: true,
-                    status: "connected",
-                    created_at: new Date(Date.now() - 86400 * 30 * 1000).toISOString(),
-                    config: { local_path: "/var/backups/builtpanel" },
-                  },
-                  {
-                    id: "dest_s3_01",
-                    name: "Wasabi EU Cloud",
-                    type: "s3",
-                    is_default: false,
-                    status: "connected",
-                    created_at: new Date(Date.now() - 86400 * 15 * 1000).toISOString(),
-                    config: { s3_bucket: "builtpanel-vault", s3_region: "eu-central-1" },
-                  },
-                  {
-                    id: "dest_sftp_01",
-                    name: "Offsite SFTP Vault",
-                    type: "sftp",
-                    is_default: false,
-                    status: "connected",
-                    created_at: new Date(Date.now() - 86400 * 7 * 1000).toISOString(),
-                    config: { sftp_host: "nas.builtpanel.internal", sftp_port: 22, sftp_user: "backupuser" },
-                  },
+                let mockDestinations: MockDestination[] = [
+                  { id: "dest_local", name: "Local Panel Storage", kind: "local", settings: { path: "/var/backups/builtpanel" }, is_default: true, enabled: true, has_credentials: false, last_test_ok: true, last_tested_at: new Date().toISOString(), last_test_error: null },
+                  { id: "dest_s3_01", name: "Wasabi EU Cloud", kind: "s3", settings: { endpoint: "https://s3.eu-central-1.wasabisys.com", bucket: "builtpanel-eu", region: "eu-central-1" }, is_default: false, enabled: true, has_credentials: true, last_test_ok: true, last_tested_at: new Date().toISOString(), last_test_error: null },
                 ];
-
-                const mockSchedules: MockAdminSchedule[] = [
-                  {
-                    id: "sched_01",
-                    name: "Nightly All-Tenant Backup",
-                    cron_expression: "0 2 * * *",
-                    destination_id: "dest_s3_01",
-                    destination_name: "Wasabi EU Cloud",
-                    scope: "all_tenants",
-                    enabled: true,
-                    retention_daily: 7,
-                    retention_weekly: 4,
-                    retention_monthly: 3,
-                    last_run_at: new Date(Date.now() - 28800 * 1000).toISOString(),
-                    next_run_at: new Date(Date.now() + 57600 * 1000).toISOString(),
-                  },
-                  {
-                    id: "sched_02",
-                    name: "System Control Plane Snapshot",
-                    cron_expression: "0 4 * * 0",
-                    destination_id: "dest_local_01",
-                    destination_name: "Local Panel Storage",
-                    scope: "system",
-                    enabled: true,
-                    retention_daily: 14,
-                    retention_weekly: 8,
-                    retention_monthly: 6,
-                    last_run_at: new Date(Date.now() - 86400 * 3 * 1000).toISOString(),
-                    next_run_at: new Date(Date.now() + 86400 * 4 * 1000).toISOString(),
-                  },
+                const mockSystemBackups = [
+                  { id: "job_01", status: "ready", trigger: "schedule", size_bytes: 31 * 1048576, error: null as string | null, created_at: new Date(Date.now() - 86400000).toISOString(), finished_at: new Date(Date.now() - 86400000 + 30000).toISOString(), parts: [] as unknown[] },
+                  { id: "job_02", status: "failed", trigger: "manual", size_bytes: null as number | null, error: "Destination unreachable" as string | null, created_at: new Date(Date.now() - 3600000).toISOString(), finished_at: new Date(Date.now() - 3500000).toISOString(), parts: [] as unknown[] },
                 ];
-
-                const mockJobs: MockAdminJob[] = [
-                  {
-                    id: "job_01",
-                    name: "backup-demo-20261113-full.tar.zst",
-                    tenant: "demo",
-                    scope: "single_tenant",
-                    status: "completed",
-                    started_at: new Date(Date.now() - 7200 * 1000).toISOString(),
-                    completed_at: new Date(Date.now() - 7140 * 1000).toISOString(),
-                    size_formatted: "450.2 MB",
-                    destination_name: "Local Panel Storage",
-                  },
-                  {
-                    id: "job_02",
-                    name: "backup-acme-20261113-full.tar.zst",
-                    tenant: "acme",
-                    scope: "single_tenant",
-                    status: "failed",
-                    started_at: new Date(Date.now() - 14400 * 1000).toISOString(),
-                    completed_at: new Date(Date.now() - 14350 * 1000).toISOString(),
-                    size_formatted: "0 B",
-                    destination_name: "Offsite SFTP Vault",
-                    error_message: "SFTP connection timeout while writing /backups/acme-full.tar.zst",
-                    notification_sent: true,
-                  },
-                  {
-                    id: "job_03",
-                    name: "backup-sys-20261110-snapshot.tar.zst",
-                    tenant: "system",
-                    scope: "system",
-                    status: "completed",
-                    started_at: new Date(Date.now() - 86400 * 3 * 1000).toISOString(),
-                    completed_at: new Date(Date.now() - 86400 * 3 * 1000 + 45000).toISOString(),
-                    size_formatted: "28.4 MB",
-                    destination_name: "Local Panel Storage",
-                  },
-                ];
+                let mockSystemSchedule: { cron: string; enabled: boolean; keep_daily: number; keep_weekly: number } | null = {
+                  cron: "0 2 * * *",
+                  enabled: true,
+                  keep_daily: 7,
+                  keep_weekly: 4,
+                };
 
                 return [
-                  // GET /api/v1/admin/backups/overview (TODO(api:T09.08))
-                  http.get(/\/api\/v1\/admin\/backups\/overview$/, () => {
-                    const failedCount = mockJobs.filter((j) => j.status === "failed").length;
-                    const activeCount = mockJobs.filter((j) => j.status === "in_progress").length;
-                    return HttpResponse.json({
-                      total_jobs: mockJobs.length + 139,
-                      active_jobs: activeCount,
-                      failed_jobs: failedCount,
-                      total_storage_bytes: 42949672960,
-                      total_storage_formatted: "40.0 GB",
-                      system_backup_status: "idle",
-                      last_system_backup_at: new Date(Date.now() - 86400 * 2 * 1000).toISOString(),
-                    });
-                  }),
-
-                  // GET /api/v1/admin/backups/jobs (TODO(api:T09.08))
-                  http.get(/\/api\/v1\/admin\/backups\/jobs$/, () => {
-                    return HttpResponse.json(mockJobs);
-                  }),
-
-                  // GET /api/v1/admin/backups/destinations (TODO(api:T09.08))
-                  http.get(/\/api\/v1\/admin\/backups\/destinations$/, () => {
-                    return HttpResponse.json(mockDestinations);
-                  }),
-
-                  // POST /api/v1/admin/backups/destinations/test (TODO(api:T09.08))
-                  http.post(/\/api\/v1\/admin\/backups\/destinations\/test$/, async () => {
-                    return HttpResponse.json({ success: true, message: "Connection verified successfully" });
-                  }),
-
-                  // POST /api/v1/admin/backups/destinations (TODO(api:T09.08))
-                  http.post(/\/api\/v1\/admin\/backups\/destinations$/, async ({ request }) => {
-                    const body = (await request.json()) as any;
-                    const newDest: MockAdminDestination = {
+                  http.get(/\/api\/v1\/admin\/backup-destinations$/, () => HttpResponse.json({ items: mockDestinations })),
+                  http.post(/\/api\/v1\/admin\/backup-destinations$/, async ({ request }) => {
+                    const body = (await request.json()) as { kind: "local" | "s3" | "sftp"; name: string; settings: Record<string, unknown>; credentials?: unknown };
+                    const dest: MockDestination = {
                       id: `dest_${Date.now()}`,
-                      name: body.name || "Custom Storage",
-                      type: body.type || "s3",
+                      name: body.name,
+                      kind: body.kind,
+                      settings: body.settings,
                       is_default: false,
-                      status: "connected",
-                      created_at: new Date().toISOString(),
-                      config: body.config || {},
-                    };
-                    mockDestinations.push(newDest);
-                    return HttpResponse.json(newDest, { status: 201 });
-                  }),
-
-                  // DELETE /api/v1/admin/backups/destinations/:id (TODO(api:T09.08))
-                  http.delete(/\/api\/v1\/admin\/backups\/destinations\/([^/]+)$/, ({ params }) => {
-                    const id = (params[0] || params.id) as string;
-                    const idx = mockDestinations.findIndex((d) => d.id === id);
-                    if (idx !== -1) {
-                      mockDestinations.splice(idx, 1);
-                    }
-                    return HttpResponse.json({ success: true });
-                  }),
-
-                  // GET /api/v1/admin/backups/schedules (TODO(api:T09.08))
-                  http.get(/\/api\/v1\/admin\/backups\/schedules$/, () => {
-                    return HttpResponse.json(mockSchedules);
-                  }),
-
-                  // POST /api/v1/admin/backups/schedules (TODO(api:T09.08))
-                  http.post(/\/api\/v1\/admin\/backups\/schedules$/, async ({ request }) => {
-                    const body = (await request.json()) as any;
-                    const targetDest = mockDestinations.find((d) => d.id === body.destination_id);
-                    const newSched: MockAdminSchedule = {
-                      id: `sched_${Date.now()}`,
-                      name: body.name || "Custom Schedule",
-                      cron_expression: body.cron_expression || "0 2 * * *",
-                      destination_id: body.destination_id,
-                      destination_name: targetDest?.name || "Local Panel Storage",
-                      scope: body.scope || "all_tenants",
                       enabled: true,
-                      retention_daily: body.retention_daily ?? 7,
-                      retention_weekly: body.retention_weekly ?? 4,
-                      retention_monthly: body.retention_monthly ?? 3,
-                      last_run_at: null,
-                      next_run_at: new Date(Date.now() + 86400 * 1000).toISOString(),
+                      has_credentials: !!body.credentials,
+                      last_test_ok: true,
+                      last_tested_at: new Date().toISOString(),
+                      last_test_error: null,
                     };
-                    mockSchedules.push(newSched);
-                    return HttpResponse.json(newSched, { status: 201 });
+                    mockDestinations = [...mockDestinations, dest];
+                    return HttpResponse.json(dest, { status: 201 });
+                  }),
+                  http.post(/\/api\/v1\/admin\/backup-destinations\/([^/]+)\/default$/, ({ params }) => {
+                    mockDestinations = mockDestinations.map((d) => ({ ...d, is_default: d.id === params[0] }));
+                    return HttpResponse.json(mockDestinations.find((d) => d.id === params[0]) ?? {});
+                  }),
+                  http.delete(/\/api\/v1\/admin\/backup-destinations\/([^/]+)$/, ({ params }) => {
+                    mockDestinations = mockDestinations.filter((d) => d.id !== params[0]);
+                    return new HttpResponse(null, { status: 204 });
                   }),
 
-                  // PUT /api/v1/admin/backups/schedules/:id/toggle (TODO(api:T09.08))
-                  http.put(/\/api\/v1\/admin\/backups\/schedules\/([^/]+)\/toggle$/, ({ params }) => {
-                    const id = (params[0] || params.id) as string;
-                    const sched = mockSchedules.find((s) => s.id === id);
-                    if (sched) {
-                      sched.enabled = !sched.enabled;
-                    }
-                    return HttpResponse.json(sched || { success: true });
+                  http.get(/\/api\/v1\/admin\/system-backups$/, () => HttpResponse.json({ items: mockSystemBackups })),
+                  http.post(/\/api\/v1\/admin\/system-backups$/, () => {
+                    const b = { id: `job_sys_${Date.now()}`, status: "queued", trigger: "manual", size_bytes: null, error: null, created_at: new Date().toISOString(), finished_at: null, parts: [] };
+                    mockSystemBackups.unshift(b as never);
+                    return HttpResponse.json(b, { status: 202 });
+                  }),
+                  http.delete(/\/api\/v1\/admin\/system-backups\/([^/]+)$/, ({ params }) => {
+                    const i = mockSystemBackups.findIndex((b) => b.id === params[0]);
+                    if (i !== -1) mockSystemBackups.splice(i, 1);
+                    return new HttpResponse(null, { status: 204 });
                   }),
 
-                  // DELETE /api/v1/admin/backups/schedules/:id (TODO(api:T09.08))
-                  http.delete(/\/api\/v1\/admin\/backups\/schedules\/([^/]+)$/, ({ params }) => {
-                    const id = (params[0] || params.id) as string;
-                    const idx = mockSchedules.findIndex((s) => s.id === id);
-                    if (idx !== -1) {
-                      mockSchedules.splice(idx, 1);
-                    }
-                    return HttpResponse.json({ success: true });
+                  http.get(/\/api\/v1\/admin\/system-backup-schedule$/, () =>
+                    mockSystemSchedule ? HttpResponse.json(mockSystemSchedule) : problem(404, "not_found", "No schedule"),
+                  ),
+                  http.put(/\/api\/v1\/admin\/system-backup-schedule$/, async ({ request }) => {
+                    mockSystemSchedule = (await request.json()) as typeof mockSystemSchedule;
+                    return HttpResponse.json(mockSystemSchedule);
                   }),
-
-                  // POST /api/v1/admin/backups/system (TODO(api:T09.08))
-                  http.post(/\/api\/v1\/admin\/backups\/system$/, async () => {
-                    const newSystemJob: MockAdminJob = {
-                      id: `job_sys_${Date.now()}`,
-                      name: `backup-sys-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-manual.tar.zst`,
-                      tenant: "system",
-                      scope: "system",
-                      status: "completed",
-                      started_at: new Date().toISOString(),
-                      completed_at: new Date(Date.now() + 30000).toISOString(),
-                      size_formatted: "31.2 MB",
-                      destination_name: "Local Panel Storage",
-                    };
-                    mockJobs.unshift(newSystemJob);
-                    return HttpResponse.json({
-                      success: true,
-                      message: "System backup started successfully",
-                      job_id: newSystemJob.id,
-                    });
+                  http.delete(/\/api\/v1\/admin\/system-backup-schedule$/, () => {
+                    mockSystemSchedule = null;
+                    return new HttpResponse(null, { status: 204 });
                   }),
 
                   // ===================================                  // CRON JOBS (TODO(api:T10.01, T10.02))

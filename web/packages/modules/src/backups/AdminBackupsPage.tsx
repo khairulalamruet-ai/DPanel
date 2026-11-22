@@ -15,7 +15,14 @@ import {
   TableCell,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import {
+  loadAdminBackups,
+  runSystemBackup,
+  saveSystemSchedule,
+  removeSystemSchedule,
+  setDefaultDestination,
+  deleteDestination,
+} from "./adminApi";
 import { useTranslation } from "@builtpanel/i18n";
 import {
   Archive,
@@ -61,12 +68,11 @@ export function AdminBackupsPage() {
   const fetchAdminBackups = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [overRes, jobsRes, destsRes, schedsRes] = await Promise.all([
-        apiFetch<AdminBackupOverview>("/api/v1/admin/backups/overview"),
-        apiFetch<BackupJob[]>("/api/v1/admin/backups/jobs"),
-        apiFetch<BackupDestination[]>("/api/v1/admin/backups/destinations"),
-        apiFetch<BackupSchedule[]>("/api/v1/admin/backups/schedules"),
-      ]);
+      const res = await loadAdminBackups();
+      const overRes = res.overview;
+      const jobsRes = res.jobs;
+      const destsRes = res.destinations;
+      const schedsRes = res.schedules;
       setOverview(overRes);
       setJobs(jobsRes);
       setDestinations(destsRes);
@@ -89,7 +95,7 @@ export function AdminBackupsPage() {
   const handleRunSystemBackup = async () => {
     try {
       setIsSystemBackingUp(true);
-      await apiFetch("/api/v1/admin/backups/system", { method: "POST" });
+      await runSystemBackup();
       toast({
         title: t("common.success"),
         description: t("adminBackups.systemBackupStarted"),
@@ -106,30 +112,23 @@ export function AdminBackupsPage() {
     }
   };
 
-  const handleTestDestination = async (dest: BackupDestination) => {
+  const handleMakeDefault = async (dest: BackupDestination) => {
     try {
-      await apiFetch("/api/v1/admin/backups/destinations/test", {
-        method: "POST",
-        body: JSON.stringify({ destination_id: dest.id }),
-      });
-      toast({
-        title: t("common.success"),
-        description: t("adminBackups.destinationConnected", { name: dest.name }),
-      });
+      await setDefaultDestination(dest.id);
+      toast({ title: t("common.success"), description: t("adminBackups.destinationDefault", "{{name}} is the default destination now", { name: dest.name }) });
       fetchAdminBackups();
     } catch (err: any) {
-      toast({
-        title: t("common.error"),
-        description: err.message || t("adminBackups.connectionTestFailed"),
-        variant: "destructive",
-      });
+      toast({ title: t("common.error"), description: err.message || t("common.unknownError"), variant: "destructive" });
     }
   };
 
   const handleToggleSchedule = async (schedule: BackupSchedule) => {
     try {
-      await apiFetch(`/api/v1/admin/backups/schedules/${encodeURIComponent(schedule.id)}/toggle`, {
-        method: "PUT",
+      await saveSystemSchedule({
+        cron: schedule.cron_expression,
+        enabled: !schedule.enabled,
+        keep_daily: schedule.retention_daily,
+        keep_weekly: schedule.retention_weekly,
       });
       toast({
         title: t("common.success"),
@@ -150,9 +149,7 @@ export function AdminBackupsPage() {
   const handleDeleteDestination = async (dest: BackupDestination) => {
     if (!window.confirm(t("adminBackups.confirmDeleteDest", { name: dest.name }))) return;
     try {
-      await apiFetch(`/api/v1/admin/backups/destinations/${encodeURIComponent(dest.id)}`, {
-        method: "DELETE",
-      });
+      await deleteDestination(dest.id);
       toast({ title: t("common.success"), description: t("adminBackups.destinationDeleted") });
       fetchAdminBackups();
     } catch (err: any) {
@@ -163,9 +160,7 @@ export function AdminBackupsPage() {
   const handleDeleteSchedule = async (sched: BackupSchedule) => {
     if (!window.confirm(t("adminBackups.confirmDeleteSched", { name: sched.name }))) return;
     try {
-      await apiFetch(`/api/v1/admin/backups/schedules/${encodeURIComponent(sched.id)}`, {
-        method: "DELETE",
-      });
+      await removeSystemSchedule();
       toast({ title: t("common.success"), description: t("adminBackups.scheduleDeleted") });
       fetchAdminBackups();
     } catch (err: any) {
@@ -509,11 +504,12 @@ export function AdminBackupsPage() {
                           size="sm"
                           variant="outline"
                           className="h-7 px-2 text-xs gap-1"
-                          onClick={() => handleTestDestination(dest)}
-                          data-testid={`btn-test-dest-${dest.id}`}
+                          onClick={() => handleMakeDefault(dest)}
+                          disabled={dest.is_default}
+                          data-testid={`btn-default-dest-${dest.id}`}
                         >
                           <RefreshCw className="w-3 h-3" />
-                          <span>{t("adminBackups.testConnection")}</span>
+                          <span>{t("adminBackups.makeDefault", "Make default")}</span>
                         </Button>
 
                         <Button
