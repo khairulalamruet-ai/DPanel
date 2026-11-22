@@ -144,7 +144,7 @@ async fn branding(state: &SystemState) -> Result<Branding, AppError> {
 /// The panel's look, for the sign-in page (nobody is signed in yet).
 #[utoipa::path(
     get,
-    path = "/api/v1/branding",
+    path = "/api/v1/public/branding",
     tag = "system",
     responses((status = 200, description = "The name, logo, colour and texts of the panel", body = Branding))
 )]

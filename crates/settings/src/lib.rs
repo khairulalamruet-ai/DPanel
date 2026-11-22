@@ -622,7 +622,7 @@ mod tests {
                 .unwrap();
         let r = SettingsRegistry::build(vec![("system".to_owned(), schema)]).unwrap();
         let system = r.module("system").unwrap();
-        assert_eq!(system.properties.len(), 3);
+        assert_eq!(system.properties.len(), 8);
         assert_eq!(
             system.properties["panel_name"].default,
             json!("Built Panel")

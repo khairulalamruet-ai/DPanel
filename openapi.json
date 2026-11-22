@@ -12667,27 +12667,6 @@
         ]
       }
     },
-    "/api/v1/branding": {
-      "get": {
-        "tags": [
-          "system"
-        ],
-        "summary": "The panel's look, for the sign-in page (nobody is signed in yet).",
-        "operationId": "public_branding",
-        "responses": {
-          "200": {
-            "description": "The name, logo, colour and texts of the panel",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Branding"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/client/activity": {
       "get": {
         "tags": [
@@ -24120,6 +24099,27 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/branding": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "The panel's look, for the sign-in page (nobody is signed in yet).",
+        "operationId": "public_branding",
+        "responses": {
+          "200": {
+            "description": "The name, logo, colour and texts of the panel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Branding"
                 }
               }
             }

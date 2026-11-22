@@ -140,7 +140,7 @@ export function SessionProvider({ children, bootstrapPath = "/api/v1/auth/me" }:
       setError(err instanceof Error ? err : new Error(String(err)));
       // Nobody is signed in: the sign-in page still shows the operator's name, logo and colour.
       try {
-        const look = await apiFetch<any>("/api/v1/branding");
+        const look = await apiFetch<any>("/api/v1/public/branding");
         setPublicBranding(normalizeBootstrap({ user: {}, branding: look }).branding);
       } catch {
         // The plain look is used.

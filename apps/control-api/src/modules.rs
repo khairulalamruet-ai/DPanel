@@ -247,7 +247,6 @@ pub fn mount(
                                 public: Some(
                                     builtpanel_mod_system::public_router().with_state(state),
                                 ),
-                                ..ModuleRoutes::none()
                             }
                         }
                         _ => ModuleRoutes::none(),

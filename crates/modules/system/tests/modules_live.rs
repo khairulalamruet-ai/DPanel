@@ -143,7 +143,6 @@ async fn env(pool: &PgPool) -> Env {
                         admin: Some(router().with_state(state.clone())),
                         client: Some(client_router().with_state(state.clone())),
                         public: Some(public_router().with_state(state)),
-                        ..ModuleRoutes::none()
                     }
                 }
                 None => ModuleRoutes::none(),
@@ -1108,7 +1107,9 @@ async fn the_sign_in_page_can_read_the_look_without_a_session_and_bad_values_are
     pool: PgPool,
 ) {
     let e = env(&pool).await;
-    let root = e.sign_in(account(&pool, "rootuser", &["super_admin"]).await).await;
+    let root = e
+        .sign_in(account(&pool, "rootuser", &["super_admin"]).await)
+        .await;
     let put = |values: serde_json::Value| {
         let (e, root) = (&e, &root);
         async move {
@@ -1123,7 +1124,9 @@ async fn the_sign_in_page_can_read_the_look_without_a_session_and_bad_values_are
         }
     };
 
-    let (status, body) = e.call(None, "GET", "/api/v1/branding", None, false).await;
+    let (status, body) = e
+        .call(None, "GET", "/api/v1/public/branding", None, false)
+        .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["panel_name"], "Built Panel");
     assert_eq!(body["accent_color"], "");
@@ -1145,7 +1148,9 @@ async fn the_sign_in_page_can_read_the_look_without_a_session_and_bad_values_are
     }))
     .await;
     assert_eq!(status, StatusCode::OK, "{saved}");
-    let (_, body) = e.call(None, "GET", "/api/v1/branding", None, false).await;
+    let (_, body) = e
+        .call(None, "GET", "/api/v1/public/branding", None, false)
+        .await;
     assert_eq!(body["panel_name"], "My Hosting");
     assert_eq!(body["accent_color"], "#2563eb");
     assert_eq!(body["logo_url"], "https://example.com/logo.png");

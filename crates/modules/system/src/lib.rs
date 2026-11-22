@@ -4,7 +4,7 @@
 //! |---|---|---|
 //! | GET | `/api/v1/admin/bootstrap` | a signed-in administrator |
 //! | GET | `/api/v1/client/bootstrap` | a signed-in customer |
-//! | GET | `/api/v1/branding` | anyone: the look of the sign-in page |
+//! | GET | `/api/v1/public/branding` | anyone: the look of the sign-in page |
 //! | GET | `/api/v1/search` | a signed-in account: domains and accounts by a few letters |
 //! | GET | `/api/v1/admin/modules` | `admin.modules.read` |
 //! | PUT | `/api/v1/admin/modules/{name}` | `admin.modules.manage`, sudo mode |
@@ -103,7 +103,7 @@ pub fn client_router() -> Router<SystemState> {
 
 /// Routes that need no session: the look of the sign-in page.
 pub fn public_router() -> Router<SystemState> {
-    Router::new().route("/api/v1/branding", get(bootstrap::public_branding))
+    Router::new().route("/api/v1/public/branding", get(bootstrap::public_branding))
 }
 
 /// Which events of the control plane's log.
