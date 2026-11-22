@@ -33,7 +33,7 @@ export function MigrationPage() {
     try {
       setIsLoading(true);
       setIsError(false);
-      const res = await apiFetch<TransferJob[]>("/api/v1/migration/transfers");
+      const res = await apiFetch<TransferJob[]>("/api/v1/admin/migration/transfers");
       setJobs(res);
 
       // Keep active modal in sync if open
@@ -54,7 +54,7 @@ export function MigrationPage() {
 
   // Handlers
   const handleStartTransfer = async (payload: RemoteMigrationPayload) => {
-    const created = await apiFetch<TransferJob>("/api/v1/migration/transfers", {
+    const created = await apiFetch<TransferJob>("/api/v1/admin/migration/transfers", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -71,7 +71,7 @@ export function MigrationPage() {
   };
 
   const handleRetryTransfer = async (id: string) => {
-    await apiFetch(`/api/v1/migration/transfers/${id}/retry`, { method: "POST" });
+    await apiFetch(`/api/v1/admin/migration/transfers/${id}/retry`, { method: "POST" });
     toast({
       title: t("migration.retryingTitle", "Transfer Restarted"),
       variant: "success",
@@ -80,7 +80,7 @@ export function MigrationPage() {
   };
 
   const handleCancelTransfer = async (id: string) => {
-    await apiFetch(`/api/v1/migration/transfers/${id}/cancel`, { method: "POST" });
+    await apiFetch(`/api/v1/admin/migration/transfers/${id}/cancel`, { method: "POST" });
     toast({
       title: t("migration.cancelledTitle", "Transfer Aborted"),
       variant: "success",
@@ -89,7 +89,7 @@ export function MigrationPage() {
   };
 
   const handleDeleteTransfer = async (id: string) => {
-    await apiFetch(`/api/v1/migration/transfers/${id}`, { method: "DELETE" });
+    await apiFetch(`/api/v1/admin/migration/transfers/${id}`, { method: "DELETE" });
     toast({
       title: t("migration.deletedTitle", "Record Deleted"),
       variant: "success",

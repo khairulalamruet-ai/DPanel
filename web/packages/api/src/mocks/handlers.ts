@@ -8857,12 +8857,12 @@ export const handlers = [
 
                                                          return [
                                                            // GET /api/v1/migration/transfers (TODO(api:T15.06))
-                                                           http.get(/\/api\/v1\/migration\/transfers$/, () => {
+                                                           http.get(/\/api\/v1\/admin\/migration\/transfers$/, () => {
                                                              return HttpResponse.json(mockTransferJobs);
                                                            }),
 
                                                            // GET /api/v1/migration/transfers/:id (TODO(api:T15.06))
-                                                           http.get(/\/api\/v1\/migration\/transfers\/([^/]+)$/, ({ params }) => {
+                                                           http.get(/\/api\/v1\/admin\/migration\/transfers\/([^/]+)$/, ({ params }) => {
                                                              const id = String(params[0]);
                                                              const job = mockTransferJobs.find((j) => j.id === id);
                                                              if (!job) return new HttpResponse(null, { status: 404 });
@@ -8870,7 +8870,7 @@ export const handlers = [
                                                            }),
 
                                                            // POST /api/v1/migration/transfers (TODO(api:T15.04), TODO(api:T15.05))
-                                                           http.post(/\/api\/v1\/migration\/transfers$/, async ({ request }) => {
+                                                           http.post(/\/api\/v1\/admin\/migration\/transfers$/, async ({ request }) => {
                                                              const body = (await request.json().catch(() => ({}))) as any;
                                                              const newJob = {
                                                                id: `TRF-${Math.floor(10000 + Math.random() * 90000)}X`,
@@ -8935,7 +8935,7 @@ export const handlers = [
                                                            }),
 
                                                            // POST /api/v1/migration/transfers/:id/retry (TODO(api:T15.06))
-                                                           http.post(/\/api\/v1\/migration\/transfers\/([^/]+)\/retry$/, ({ params }) => {
+                                                           http.post(/\/api\/v1\/admin\/migration\/transfers\/([^/]+)\/retry$/, ({ params }) => {
                                                              const id = String(params[0]);
                                                              const job = mockTransferJobs.find((j) => j.id === id);
                                                              if (job) {
@@ -8948,7 +8948,7 @@ export const handlers = [
                                                            }),
 
                                                            // POST /api/v1/migration/transfers/:id/cancel (TODO(api:T15.06))
-                                                           http.post(/\/api\/v1\/migration\/transfers\/([^/]+)\/cancel$/, ({ params }) => {
+                                                           http.post(/\/api\/v1\/admin\/migration\/transfers\/([^/]+)\/cancel$/, ({ params }) => {
                                                              const id = String(params[0]);
                                                              const job = mockTransferJobs.find((j) => j.id === id);
                                                              if (job) {
@@ -8960,7 +8960,7 @@ export const handlers = [
                                                            }),
 
                                                            // DELETE /api/v1/migration/transfers/:id (TODO(api:T15.06))
-                                                           http.delete(/\/api\/v1\/migration\/transfers\/([^/]+)$/, ({ params }) => {
+                                                           http.delete(/\/api\/v1\/admin\/migration\/transfers\/([^/]+)$/, ({ params }) => {
                                                              const id = String(params[0]);
                                                              mockTransferJobs = mockTransferJobs.filter((j) => j.id !== id);
                                                              return new HttpResponse(null, { status: 204 });
