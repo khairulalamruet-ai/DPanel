@@ -2550,6 +2550,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The panel's look, for the sign-in page (nobody is signed in yet). */
+        get: operations["public_branding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/activity": {
         parameters: {
             query?: never;
@@ -5803,11 +5820,21 @@ export interface components {
         };
         /** @description The panel's look, from the `system` settings. */
         Branding: {
+            /** @description The main colour as `#rrggbb` (empty: the default). */
+            accent_color: string;
             /**
              * @description Language used when the account has no preference (`en` or `bn`).
              * @example en
              */
             default_language: string;
+            /** @description An https address of the tab icon (empty: the default). */
+            favicon_url: string;
+            /** @description A line under the heading of the sign-in page. */
+            login_subtitle: string;
+            /** @description Heading of the sign-in page (empty: the panel name). */
+            login_title: string;
+            /** @description An https address of the logo (empty: none). */
+            logo_url: string;
             /** @description A notice for all users while it is not empty. */
             maintenance_notice: string;
             /**
@@ -19696,6 +19723,26 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    public_branding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The name, logo, colour and texts of the panel */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Branding"];
                 };
             };
         };

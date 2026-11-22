@@ -51,6 +51,89 @@
         "en": "Shown to all users while it is not empty.",
         "bn": "খালি না থাকলে সব ব্যবহারকারীকে দেখানো হয়।"
       }
+    },
+    "logo_url": {
+      "type": "string",
+      "title": "Logo address",
+      "description": "An https address of the logo shown beside the panel name (empty: none).",
+      "maxLength": 512,
+      "pattern": "^$|^https://[^\\s\"'<>]{1,500}$",
+      "default": "",
+      "x-scope": "global",
+      "x-title": {
+        "en": "Logo address",
+        "bn": "লোগোর ঠিকানা"
+      },
+      "x-description": {
+        "en": "An https address of the logo shown beside the panel name (empty: none).",
+        "bn": "প্যানেলের নামের পাশে দেখানো লোগোর https ঠিকানা (খালি: নেই)।"
+      }
+    },
+    "favicon_url": {
+      "type": "string",
+      "title": "Tab icon address",
+      "description": "An https address of the icon shown in the browser tab (empty: the default).",
+      "maxLength": 512,
+      "pattern": "^$|^https://[^\\s\"'<>]{1,500}$",
+      "default": "",
+      "x-scope": "global",
+      "x-title": {
+        "en": "Tab icon address",
+        "bn": "ট্যাব আইকনের ঠিকানা"
+      },
+      "x-description": {
+        "en": "An https address of the icon shown in the browser tab (empty: the default).",
+        "bn": "ব্রাউজার ট্যাবে দেখানো আইকনের https ঠিকানা (খালি: ডিফল্ট)।"
+      }
+    },
+    "accent_color": {
+      "type": "string",
+      "title": "Accent colour",
+      "description": "The main colour of buttons and links, such as #2563eb (empty: the default).",
+      "maxLength": 7,
+      "pattern": "^$|^#[0-9a-fA-F]{6}$",
+      "default": "",
+      "x-scope": "global",
+      "x-title": {
+        "en": "Accent colour",
+        "bn": "প্রধান রং"
+      },
+      "x-description": {
+        "en": "The main colour of buttons and links, such as #2563eb (empty: the default).",
+        "bn": "বোতাম ও লিংকের প্রধান রং, যেমন #2563eb (খালি: ডিফল্ট)।"
+      }
+    },
+    "login_title": {
+      "type": "string",
+      "title": "Sign-in title",
+      "description": "The heading of the sign-in page (empty: the panel name).",
+      "maxLength": 100,
+      "default": "",
+      "x-scope": "global",
+      "x-title": {
+        "en": "Sign-in title",
+        "bn": "লগইনের শিরোনাম"
+      },
+      "x-description": {
+        "en": "The heading of the sign-in page (empty: the panel name).",
+        "bn": "লগইন পেজের শিরোনাম (খালি: প্যানেলের নাম)।"
+      }
+    },
+    "login_subtitle": {
+      "type": "string",
+      "title": "Sign-in text",
+      "description": "A line under the heading of the sign-in page.",
+      "maxLength": 200,
+      "default": "",
+      "x-scope": "global",
+      "x-title": {
+        "en": "Sign-in text",
+        "bn": "লগইনের লেখা"
+      },
+      "x-description": {
+        "en": "A line under the heading of the sign-in page.",
+        "bn": "লগইন পেজের শিরোনামের নিচের একটি লাইন।"
+      }
     }
   },
   "x-title": {

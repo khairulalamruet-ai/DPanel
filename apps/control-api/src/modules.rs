@@ -241,7 +241,11 @@ pub fn mount(
                                     builtpanel_mod_system::router().with_state(state.clone()),
                                 ),
                                 client: Some(
-                                    builtpanel_mod_system::client_router().with_state(state),
+                                    builtpanel_mod_system::client_router()
+                                        .with_state(state.clone()),
+                                ),
+                                public: Some(
+                                    builtpanel_mod_system::public_router().with_state(state),
                                 ),
                                 ..ModuleRoutes::none()
                             }

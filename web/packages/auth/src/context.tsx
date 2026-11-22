@@ -4,6 +4,8 @@ import { BootstrapData } from "./types";
 
 interface SessionContextType {
   data: BootstrapData | null;
+  /** The look of the panel before anybody is signed in (the sign-in page). */
+  publicBranding: BootstrapData["branding"] | null;
   isLoading: boolean;
   error: Error | null;
   hasPermission: (perm: string) => boolean;
@@ -44,11 +46,11 @@ export function normalizeBootstrap(res: any): BootstrapData {
     limits: res.limits ?? {},
     branding: {
       companyName: branding.companyName ?? branding.panel_name ?? "Built Panel",
-      logoUrl: branding.logoUrl,
-      faviconUrl: branding.faviconUrl,
-      accentColor: branding.accentColor,
-      loginTitle: branding.loginTitle,
-      loginSubtitle: branding.loginSubtitle,
+      logoUrl: branding.logoUrl || branding.logo_url || undefined,
+      faviconUrl: branding.faviconUrl || branding.favicon_url || undefined,
+      accentColor: branding.accentColor || branding.accent_color || undefined,
+      loginTitle: branding.loginTitle || branding.login_title || undefined,
+      loginSubtitle: branding.loginSubtitle || branding.login_subtitle || undefined,
       loginFooterText: branding.loginFooterText,
       nameservers: branding.nameservers,
       customCss: branding.customCss,
@@ -60,6 +62,57 @@ export function normalizeBootstrap(res: any): BootstrapData {
   };
 }
 
+/** `#rrggbb` as the "H S% L%" triple the theme variables use, and whether dark text reads better on it. */
+export function hexToHsl(hex: string): { hsl: string; darkText: boolean } | null {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+  }
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return {
+    hsl: `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`,
+    darkText: luminance > 0.6,
+  };
+}
+
+/** Puts the operator's accent colour and tab icon on the page. */
+function applyBranding(branding: { accentColor?: string; faviconUrl?: string } | undefined) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  const accent = branding?.accentColor ? hexToHsl(branding.accentColor) : null;
+  if (accent) {
+    root.style.setProperty("--primary", accent.hsl);
+    root.style.setProperty("--ring", accent.hsl);
+    root.style.setProperty("--primary-foreground", accent.darkText ? "0 0% 9%" : "0 0% 100%");
+  } else {
+    for (const name of ["--primary", "--ring", "--primary-foreground"]) root.style.removeProperty(name);
+  }
+  if (branding?.faviconUrl) {
+    let link = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = branding.faviconUrl;
+  }
+}
+
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export interface SessionProviderProps {
@@ -69,6 +122,7 @@ export interface SessionProviderProps {
 
 export function SessionProvider({ children, bootstrapPath = "/api/v1/auth/me" }: SessionProviderProps) {
   const [data, setData] = useState<BootstrapData | null>(null);
+  const [publicBranding, setPublicBranding] = useState<BootstrapData["branding"] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -84,6 +138,13 @@ export function SessionProvider({ children, bootstrapPath = "/api/v1/auth/me" }:
       }
     } catch (err: any) {
       setError(err instanceof Error ? err : new Error(String(err)));
+      // Nobody is signed in: the sign-in page still shows the operator's name, logo and colour.
+      try {
+        const look = await apiFetch<any>("/api/v1/branding");
+        setPublicBranding(normalizeBootstrap({ user: {}, branding: look }).branding);
+      } catch {
+        // The plain look is used.
+      }
     } finally {
       setIsLoading(false);
     }
@@ -92,6 +153,11 @@ export function SessionProvider({ children, bootstrapPath = "/api/v1/auth/me" }:
   useEffect(() => {
     fetchSession();
   }, [bootstrapPath]);
+
+  useEffect(() => {
+    const look = data?.branding ?? publicBranding ?? undefined;
+    applyBranding(look);
+  }, [data?.branding?.accentColor, data?.branding?.faviconUrl, publicBranding]);
 
   const hasPermission = (perm: string): boolean => {
     if (!data) return false;
@@ -134,6 +200,7 @@ export function SessionProvider({ children, bootstrapPath = "/api/v1/auth/me" }:
     <SessionContext.Provider
       value={{
         data,
+        publicBranding,
         isLoading,
         error,
         hasPermission,

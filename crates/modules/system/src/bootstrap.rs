@@ -52,6 +52,16 @@ pub struct Branding {
     /// Language used when the account has no preference (`en` or `bn`).
     #[schema(example = "en")]
     pub default_language: String,
+    /// An https address of the logo (empty: none).
+    pub logo_url: String,
+    /// An https address of the tab icon (empty: the default).
+    pub favicon_url: String,
+    /// The main colour as `#rrggbb` (empty: the default).
+    pub accent_color: String,
+    /// Heading of the sign-in page (empty: the panel name).
+    pub login_title: String,
+    /// A line under the heading of the sign-in page.
+    pub login_subtitle: String,
 }
 
 impl Default for Branding {
@@ -60,6 +70,11 @@ impl Default for Branding {
             panel_name: "Built Panel".to_owned(),
             maintenance_notice: String::new(),
             default_language: "en".to_owned(),
+            logo_url: String::new(),
+            favicon_url: String::new(),
+            accent_color: String::new(),
+            login_title: String::new(),
+            login_subtitle: String::new(),
         }
     }
 }
@@ -116,9 +131,25 @@ async fn branding(state: &SystemState) -> Result<Branding, AppError> {
         panel_name: text("panel_name", &defaults.panel_name),
         maintenance_notice: text("maintenance_notice", &defaults.maintenance_notice),
         default_language: text("default_language", &defaults.default_language),
+        logo_url: text("logo_url", ""),
+        favicon_url: text("favicon_url", ""),
+        accent_color: text("accent_color", ""),
+        login_title: text("login_title", ""),
+        login_subtitle: text("login_subtitle", ""),
     };
     state.branding.store(&branding);
     Ok(branding)
+}
+
+/// The panel's look, for the sign-in page (nobody is signed in yet).
+#[utoipa::path(
+    get,
+    path = "/api/v1/branding",
+    tag = "system",
+    responses((status = 200, description = "The name, logo, colour and texts of the panel", body = Branding))
+)]
+pub async fn public_branding(State(state): State<SystemState>) -> Result<Json<Branding>, AppError> {
+    Ok(Json(branding(&state).await?))
 }
 
 /// The signed-in account.

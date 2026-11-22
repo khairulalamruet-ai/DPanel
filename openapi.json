@@ -12667,6 +12667,27 @@
         ]
       }
     },
+    "/api/v1/branding": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "The panel's look, for the sign-in page (nobody is signed in yet).",
+        "operationId": "public_branding",
+        "responses": {
+          "200": {
+            "description": "The name, logo, colour and texts of the panel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Branding"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/client/activity": {
       "get": {
         "tags": [
@@ -26189,13 +26210,38 @@
         "required": [
           "panel_name",
           "maintenance_notice",
-          "default_language"
+          "default_language",
+          "logo_url",
+          "favicon_url",
+          "accent_color",
+          "login_title",
+          "login_subtitle"
         ],
         "properties": {
+          "accent_color": {
+            "type": "string",
+            "description": "The main colour as `#rrggbb` (empty: the default)."
+          },
           "default_language": {
             "type": "string",
             "description": "Language used when the account has no preference (`en` or `bn`).",
             "example": "en"
+          },
+          "favicon_url": {
+            "type": "string",
+            "description": "An https address of the tab icon (empty: the default)."
+          },
+          "login_subtitle": {
+            "type": "string",
+            "description": "A line under the heading of the sign-in page."
+          },
+          "login_title": {
+            "type": "string",
+            "description": "Heading of the sign-in page (empty: the panel name)."
+          },
+          "logo_url": {
+            "type": "string",
+            "description": "An https address of the logo (empty: none)."
           },
           "maintenance_notice": {
             "type": "string",

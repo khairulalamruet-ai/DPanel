@@ -14,7 +14,7 @@ use axum::{
 use builtpanel_cache::RedisHandle;
 use builtpanel_database::{modules as db, rbac::assign_role};
 use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use builtpanel_mod_system::{SystemState, client_router, router};
+use builtpanel_mod_system::{SystemState, client_router, public_router, router};
 use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use builtpanel_settings::SettingsRegistry;
 use secrecy::SecretString;
@@ -141,7 +141,8 @@ async fn env(pool: &PgPool) -> Env {
                     };
                     ModuleRoutes {
                         admin: Some(router().with_state(state.clone())),
-                        client: Some(client_router().with_state(state)),
+                        client: Some(client_router().with_state(state.clone())),
+                        public: Some(public_router().with_state(state)),
                         ..ModuleRoutes::none()
                     }
                 }
@@ -1099,4 +1100,54 @@ async fn the_search_finds_domains_and_accounts_and_keeps_a_customer_to_their_own
         .call(Some(&alice), "GET", &format!("{path}?q=bobb"), None, false)
         .await;
     assert_eq!(body.as_array().unwrap().len(), 0);
+}
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn the_sign_in_page_can_read_the_look_without_a_session_and_bad_values_are_refused(
+    pool: PgPool,
+) {
+    let e = env(&pool).await;
+    let root = e.sign_in(account(&pool, "rootuser", &["super_admin"]).await).await;
+    let put = |values: serde_json::Value| {
+        let (e, root) = (&e, &root);
+        async move {
+            e.call(
+                Some(root),
+                "PUT",
+                "/api/v1/admin/settings/system",
+                Some(json!({ "values": values })),
+                true,
+            )
+            .await
+        }
+    };
+
+    let (status, body) = e.call(None, "GET", "/api/v1/branding", None, false).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["panel_name"], "Built Panel");
+    assert_eq!(body["accent_color"], "");
+
+    // A colour that is not `#rrggbb`, and a logo that is not https, are refused.
+    for bad in [
+        json!({"accent_color": "red"}),
+        json!({"logo_url": "http://example.com/logo.png"}),
+        json!({"logo_url": "javascript:alert(1)"}),
+    ] {
+        let (status, _) = put(bad).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+    let (status, saved) = put(json!({
+        "panel_name": "My Hosting",
+        "accent_color": "#2563eb",
+        "logo_url": "https://example.com/logo.png",
+        "login_title": "Welcome"
+    }))
+    .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    let (_, body) = e.call(None, "GET", "/api/v1/branding", None, false).await;
+    assert_eq!(body["panel_name"], "My Hosting");
+    assert_eq!(body["accent_color"], "#2563eb");
+    assert_eq!(body["logo_url"], "https://example.com/logo.png");
+    assert_eq!(body["login_title"], "Welcome");
 }

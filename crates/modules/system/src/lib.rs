@@ -4,6 +4,7 @@
 //! |---|---|---|
 //! | GET | `/api/v1/admin/bootstrap` | a signed-in administrator |
 //! | GET | `/api/v1/client/bootstrap` | a signed-in customer |
+//! | GET | `/api/v1/branding` | anyone: the look of the sign-in page |
 //! | GET | `/api/v1/search` | a signed-in account: domains and accounts by a few letters |
 //! | GET | `/api/v1/admin/modules` | `admin.modules.read` |
 //! | PUT | `/api/v1/admin/modules/{name}` | `admin.modules.manage`, sudo mode |
@@ -98,6 +99,11 @@ pub fn client_router() -> Router<SystemState> {
     Router::new()
         .route("/api/v1/client/bootstrap", get(bootstrap::client_bootstrap))
         .route("/api/v1/search", get(search::search))
+}
+
+/// Routes that need no session: the look of the sign-in page.
+pub fn public_router() -> Router<SystemState> {
+    Router::new().route("/api/v1/branding", get(bootstrap::public_branding))
 }
 
 /// Which events of the control plane's log.
@@ -702,7 +708,7 @@ pub async fn put_settings(
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        bootstrap::admin_bootstrap, bootstrap::client_bootstrap, search::search, system_logs, list_modules, set_module, list_settings, get_settings,
+        bootstrap::admin_bootstrap, bootstrap::client_bootstrap, bootstrap::public_branding, search::search, system_logs, list_modules, set_module, list_settings, get_settings,
         put_settings
     ),
     components(schemas(

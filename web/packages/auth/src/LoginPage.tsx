@@ -21,7 +21,8 @@ export interface LoginPageProps {
 
 export function LoginPage({ title, onSuccess }: LoginPageProps) {
   const { t } = useTranslation();
-  const { refetch, data: session } = useSession();
+  const { refetch, data, publicBranding } = useSession();
+  const session = data ?? (publicBranding ? { branding: publicBranding } : null);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
