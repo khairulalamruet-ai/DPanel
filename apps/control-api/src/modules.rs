@@ -248,6 +248,7 @@ pub fn mount(
                                                     config: std::sync::Arc::new(
                                                         builtpanel_mod_system::update::UpdateConfig::from_env(),
                                                     ),
+                                                    settings: settings.clone(),
                                                 },
                                             ),
                                         ),

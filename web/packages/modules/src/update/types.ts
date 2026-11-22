@@ -32,6 +32,14 @@ export interface UpdateHistoryItem {
   details: string;
 }
 
+/** The automatic update: its settings, and when it will install the release on offer. */
+export interface AutoUpdateView {
+  enabled: boolean;
+  delay_days: number;
+  hour_utc: number;
+  scheduled_for?: string | null;
+}
+
 export interface PanelUpdateStatus {
   current_version: string;
   channel: UpdateChannel;
@@ -42,5 +50,6 @@ export interface PanelUpdateStatus {
   /** This server has the update service; without it the installer is run again to update. */
   can_apply: boolean;
   run?: UpdateRun | null;
+  auto: AutoUpdateView;
   history: UpdateHistoryItem[];
 }

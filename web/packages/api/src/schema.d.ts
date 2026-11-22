@@ -5713,6 +5713,26 @@ export interface components {
             /** @description Pass as `cursor` to get the next (older) page; absent on the last page. */
             next_cursor?: string | null;
         };
+        /** @description The automatic update's settings, and when it will act on the release on offer. */
+        AutoUpdateView: {
+            /**
+             * Format: int64
+             * @description Days a release waits after it appears (`system.auto_update_delay_days`).
+             */
+            delay_days: number;
+            /** @description Switched on (setting `system.auto_update`; on unless an administrator switched it off). */
+            enabled: boolean;
+            /**
+             * Format: int64
+             * @description The hour, UTC, in which it starts (`system.auto_update_hour`); the window is six hours long.
+             */
+            hour_utc: number;
+            /**
+             * @description When it will install the release on offer (RFC 3339, UTC); absent when it is off, nothing is on
+             *     offer, this server cannot update itself, or the attempt has been made.
+             */
+            scheduled_for?: string | null;
+        };
         /** @description An automatic reply to set. */
         AutoresponderRequest: {
             /** @description The text of the reply (up to 5000 characters). */
@@ -10758,6 +10778,8 @@ export interface components {
         };
         /** @description The update page's numbers. */
         UpdateStatus: {
+            /** @description The automatic update. */
+            auto: components["schemas"]["AutoUpdateView"];
             available_update?: components["schemas"]["UpdateOffer"] | null;
             /**
              * @description This server has the update service (installed by the installer from the release that brought it);

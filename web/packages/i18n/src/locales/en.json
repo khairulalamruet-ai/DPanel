@@ -3288,11 +3288,11 @@
     "triggerPlaceholder": "Search..."
   },
   "update": {
-    "nav": "Panel Update",
-    "title": "Built Panel Release & Update Manager",
+    "nav": "Updates",
+    "title": "Built Panel updates",
     "pageTitle": "Panel Update & Releases",
-    "pageSubtitle": "Manage control plane versions, switch update channels, and execute verified releases.",
-    "description": "Automated self-updating control plane backed by Ed25519 signed manifests and atomic rollbacks.",
+    "pageSubtitle": "See which version runs, install a newer release with one click, or let the panel update itself.",
+    "description": "A new release is downloaded, checked against its signed manifest and installed; if it does not start, the old version is put back.",
     "checkNow": "Check for Updates",
     "installedVersion": "Installed Version",
     "lastChecked": "Last checked",
@@ -3344,7 +3344,19 @@
     "confirmPassword": "Your password, to confirm",
     "restartNotice": "The panel restarts for a moment; sign-ins in progress stay open.",
     "confirmUpdate": "Update to",
-    "reload": "Reload the page"
+    "reload": "Reload the page",
+    "auto": {
+      "on": "Automatic updates are on",
+      "off": "Automatic updates are off",
+      "onDesc": "A new release is installed by itself {{days}} day(s) after it appears, at about {{hour}}:00 UTC. You are told when it appears.",
+      "offDesc": "New releases are only announced; you install them with Update Now.",
+      "scheduled": "Version {{version}} will be installed on {{when}}.",
+      "switchOn": "Switch on",
+      "switchOff": "Switch off",
+      "switchedOn": "Automatic updates are on",
+      "switchedOff": "Automatic updates are off",
+      "saveFailed": "The setting could not be saved."
+    }
   },
   "apiTokens": {
     "nav": "API Tokens",

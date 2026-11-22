@@ -26173,6 +26173,38 @@
           }
         }
       },
+      "AutoUpdateView": {
+        "type": "object",
+        "description": "The automatic update's settings, and when it will act on the release on offer.",
+        "required": [
+          "enabled",
+          "delay_days",
+          "hour_utc"
+        ],
+        "properties": {
+          "delay_days": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Days a release waits after it appears (`system.auto_update_delay_days`)."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Switched on (setting `system.auto_update`; on unless an administrator switched it off)."
+          },
+          "hour_utc": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The hour, UTC, in which it starts (`system.auto_update_hour`); the window is six hours long."
+          },
+          "scheduled_for": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When it will install the release on offer (RFC 3339, UTC); absent when it is off, nothing is on\noffer, this server cannot update itself, or the attempt has been made."
+          }
+        }
+      },
       "AutoresponderRequest": {
         "type": "object",
         "description": "An automatic reply to set.",
@@ -36393,9 +36425,14 @@
           "channel",
           "can_rollback",
           "can_apply",
+          "auto",
           "history"
         ],
         "properties": {
+          "auto": {
+            "$ref": "#/components/schemas/AutoUpdateView",
+            "description": "The automatic update."
+          },
           "available_update": {
             "oneOf": [
               {

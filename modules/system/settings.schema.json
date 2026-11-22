@@ -134,6 +134,55 @@
         "en": "A line under the heading of the sign-in page.",
         "bn": "লগইন পেজের শিরোনামের নিচের একটি লাইন।"
       }
+    },
+    "auto_update": {
+      "type": "boolean",
+      "title": "Update the panel automatically",
+      "description": "Install a new release by itself once it has been on offer for the number of days below. Administrators are told when it appears.",
+      "default": true,
+      "x-scope": "global",
+      "x-title": {
+        "en": "Update the panel automatically",
+        "bn": "প্যানেল স্বয়ংক্রিয়ভাবে আপডেট করুন"
+      },
+      "x-description": {
+        "en": "Install a new release by itself once it has been on offer for the number of days below. Administrators are told when it appears.",
+        "bn": "নতুন রিলিজ নিচের দিন-সংখ্যা ধরে প্রস্তাবিত থাকার পর নিজে থেকেই বসানো হবে। রিলিজ আসামাত্র অ্যাডমিনদের জানানো হয়।"
+      }
+    },
+    "auto_update_delay_days": {
+      "type": "integer",
+      "title": "Days before the automatic update",
+      "description": "How long a release waits after it appears (0 installs it at the next update hour).",
+      "minimum": 0,
+      "maximum": 30,
+      "default": 3,
+      "x-scope": "global",
+      "x-title": {
+        "en": "Days before the automatic update",
+        "bn": "স্বয়ংক্রিয় আপডেটের আগে কত দিন অপেক্ষা"
+      },
+      "x-description": {
+        "en": "How long a release waits after it appears (0 installs it at the next update hour).",
+        "bn": "রিলিজ আসার পর কত দিন অপেক্ষা করবে (০ দিলে পরের আপডেট-ঘণ্টায় বসবে)।"
+      }
+    },
+    "auto_update_hour": {
+      "type": "integer",
+      "title": "Hour of the automatic update (UTC)",
+      "description": "The automatic update starts in this hour, 0 to 23, UTC (the panel restarts for a moment).",
+      "minimum": 0,
+      "maximum": 23,
+      "default": 3,
+      "x-scope": "global",
+      "x-title": {
+        "en": "Hour of the automatic update (UTC)",
+        "bn": "স্বয়ংক্রিয় আপডেটের ঘণ্টা (UTC)"
+      },
+      "x-description": {
+        "en": "The automatic update starts in this hour, 0 to 23, UTC (the panel restarts for a moment).",
+        "bn": "স্বয়ংক্রিয় আপডেট এই ঘণ্টায় শুরু হয়, ০ থেকে ২৩, UTC (প্যানেল কয়েক মুহূর্তের জন্য রিস্টার্ট হয়)।"
+      }
     }
   },
   "x-title": {

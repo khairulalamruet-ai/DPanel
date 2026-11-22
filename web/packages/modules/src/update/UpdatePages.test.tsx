@@ -25,6 +25,10 @@ const mockApiFetch = vi.fn(async (url: string, opts?: any) => {
   if (url === "/api/v1/admin/update/status") return status;
   if (url === "/api/v1/admin/update/check") return { checked: true, available: true, update: offer };
   if (url === "/api/v1/auth/sudo") return {};
+  if (url === "/api/v1/admin/settings/system") {
+    status = { ...status, auto: { ...status.auto, enabled: JSON.parse(opts.body).values.auto_update, scheduled_for: null } };
+    return {};
+  }
   if (url === "/api/v1/admin/update/apply") {
     status = {
       ...status,
@@ -65,6 +69,7 @@ describe("Panel update (one click)", () => {
       can_rollback: false,
       can_apply: true,
       run: null,
+      auto: { enabled: true, delay_days: 3, hour_utc: 3, scheduled_for: "2026-11-26T03:00:00Z" },
       history: [],
     };
   });
@@ -108,6 +113,20 @@ describe("Panel update (one click)", () => {
     renderPage();
     await waitFor(() => expect(screen.getByTestId("btn-update-now")).toBeDisabled());
     expect(screen.getByTestId("update-service-state")).toHaveTextContent(/installer|ইনস্টলার/);
+  });
+
+  it("shows the automatic update and switches it off after the password", async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("auto-update-state")).toHaveTextContent(/on|চালু/i));
+    expect(screen.getByTestId("auto-update-scheduled")).toHaveTextContent("0.2.0");
+    fireEvent.click(screen.getByTestId("btn-toggle-auto"));
+    expect(screen.getByTestId("btn-confirm-auto")).toBeDisabled();
+    fireEvent.change(document.getElementById("auto-update-password") as HTMLInputElement, { target: { value: "correct horse" } });
+    fireEvent.click(screen.getByTestId("btn-confirm-auto"));
+    await waitFor(() => expect(calls.some((c) => c.url === "/api/v1/admin/settings/system")).toBe(true));
+    expect(calls.find((c) => c.url === "/api/v1/admin/settings/system")?.body).toEqual({ values: { auto_update: false } });
+    await waitFor(() => expect(screen.getByTestId("auto-update-state")).toHaveTextContent(/off|বন্ধ/i));
+    expect(screen.queryByTestId("auto-update-scheduled")).not.toBeInTheDocument();
   });
 
   it("says the panel is up to date when nothing newer was found", async () => {

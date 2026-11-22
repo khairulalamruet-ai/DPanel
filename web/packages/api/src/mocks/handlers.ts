@@ -8132,6 +8132,7 @@ export const handlers = [
       can_rollback: true,
     };
     let installed = "0.1.0";
+    const autoOn = true;
     return [
       http.get("/api/v1/admin/update/status", () =>
         HttpResponse.json({
@@ -8143,6 +8144,7 @@ export const handlers = [
           can_rollback: false,
           can_apply: true,
           run,
+          auto: { enabled: autoOn, delay_days: 3, hour_utc: 3, scheduled_for: autoOn && lastCheckedAt && installed !== offer.version ? "2026-11-26T03:00:00Z" : null },
           history,
         })
       ),

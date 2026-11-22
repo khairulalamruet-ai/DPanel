@@ -22,6 +22,8 @@ export function UpdateSystemCard({ status, onRefresh }: UpdateSystemCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [password, setPassword] = useState("");
   const [isStarting, setIsStarting] = useState(false);
+  const [autoPassword, setAutoPassword] = useState<string | null>(null);
+  const [isSavingAuto, setIsSavingAuto] = useState(false);
   // The run this page started: the version and when (a status older than the click is a previous run).
   const [watch, setWatch] = useState<{ version: string; since: number } | null>(null);
   const [run, setRun] = useState<UpdateRun | null>(null);
@@ -115,6 +117,34 @@ export function UpdateSystemCard({ status, onRefresh }: UpdateSystemCardProps) {
     }
   };
 
+  // Switch the automatic update on or off: a setting of the system module, which asks for a recent password check.
+  const handleToggleAuto = async () => {
+    if (!autoPassword) return;
+    setIsSavingAuto(true);
+    try {
+      await apiFetch("/api/v1/auth/sudo", { method: "POST", body: JSON.stringify({ password: autoPassword }) });
+      await apiFetch("/api/v1/admin/settings/system", {
+        method: "PUT",
+        body: JSON.stringify({ values: { auto_update: !status.auto.enabled } }),
+      });
+      setAutoPassword(null);
+      toast({
+        title: status.auto.enabled
+          ? t("update.auto.switchedOff", "Automatic updates are off")
+          : t("update.auto.switchedOn", "Automatic updates are on"),
+      });
+      await onRefresh();
+    } catch (err: any) {
+      toast({
+        title: t("common.error", "Error"),
+        description: err?.details?.detail || err?.message || t("update.auto.saveFailed", "The setting could not be saved."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAuto(false);
+    }
+  };
+
   const isUpdating = watch !== null || run?.state === "running";
   const stepText = (r: UpdateRun | null): string => {
     if (!r) return t("update.steps.waiting", "Waiting for the update service to start...");
@@ -184,6 +214,73 @@ export function UpdateSystemCard({ status, onRefresh }: UpdateSystemCardProps) {
                   )}
             </div>
           </div>
+        </div>
+
+
+        <div className="p-4 rounded-lg border bg-muted/10 space-y-3 text-xs" data-testid="auto-update-card">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="space-y-1">
+              <div className="font-semibold text-foreground" data-testid="auto-update-state">
+                {status.auto.enabled
+                  ? t("update.auto.on", "Automatic updates are on")
+                  : t("update.auto.off", "Automatic updates are off")}
+              </div>
+              <p className="text-muted-foreground">
+                {status.auto.enabled
+                  ? t("update.auto.onDesc", {
+                      days: status.auto.delay_days,
+                      hour: String(status.auto.hour_utc).padStart(2, "0"),
+                      defaultValue:
+                        "A new release is installed by itself {{days}} day(s) after it appears, at about {{hour}}:00 UTC. You are told when it appears.",
+                    })
+                  : t("update.auto.offDesc", "New releases are only announced; you install them with Update Now.")}
+              </p>
+              {status.auto.enabled && status.auto.scheduled_for && status.available_update && (
+                <p className="text-foreground" data-testid="auto-update-scheduled">
+                  {t("update.auto.scheduled", "Version {{version}} will be installed on {{when}}.", {
+                    version: status.available_update.version,
+                    when: new Date(status.auto.scheduled_for).toLocaleString(),
+                  })}
+                </p>
+              )}
+            </div>
+            {autoPassword === null && (
+              <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => setAutoPassword("")} data-testid="btn-toggle-auto">
+                {status.auto.enabled ? t("update.auto.switchOff", "Switch off") : t("update.auto.switchOn", "Switch on")}
+              </Button>
+            )}
+          </div>
+          {autoPassword !== null && (
+            <form
+              className="flex flex-col sm:flex-row sm:items-end gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleToggleAuto();
+              }}
+            >
+              <div className="flex-1 space-y-1">
+                <label htmlFor="auto-update-password" className="font-medium">
+                  {t("update.confirmPassword", "Your password, to confirm")}
+                </label>
+                <Input
+                  id="auto-update-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={autoPassword}
+                  onChange={(e) => setAutoPassword(e.target.value)}
+                  className="h-9 text-xs"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" className="h-9 text-xs" disabled={!autoPassword || isSavingAuto} data-testid="btn-confirm-auto">
+                  {t("common.save", "Save")}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="h-9 text-xs" onClick={() => setAutoPassword(null)}>
+                  {t("common.cancel", "Cancel")}
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
 
         {(watch || run) && (

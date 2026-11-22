@@ -47,6 +47,7 @@ pub const ADMIN_EVENTS: &[&str] = &[
     "node_offline",
     "node_service_down",
     "node_service_recovered",
+    "panel_update",
 ];
 
 /// Who is told about an event and how it is worded, or `None` for an event that is nobody's
@@ -208,6 +209,81 @@ pub fn render(event: &Event, ctx: &Context<'_>) -> Option<(Audience, String, Ren
                 },
             ))
         }
+        Event::PanelUpdate {
+            version,
+            stage,
+            auto_in_days,
+        } => {
+            let (severity, subject, body) = match (stage.as_str(), bn) {
+                ("available", false) => {
+                    let auto = match auto_in_days {
+                        Some(0) => " It will be installed automatically at the next update hour unless you switch automatic updates off in Settings.".to_owned(),
+                        Some(d) => format!(" It will be installed automatically in about {d} day(s) unless you do it sooner or switch automatic updates off in Settings."),
+                        None => String::new(),
+                    };
+                    (
+                        "info",
+                        format!("[{panel}] Version {version} is available"),
+                        format!(
+                            "A new version of the panel, {version}, is ready. Open Updates in the admin area and press Update now.{auto}"
+                        ),
+                    )
+                }
+                ("available", true) => {
+                    let auto = match auto_in_days {
+                        Some(0) => " আপডেটের পরের নির্ধারিত ঘণ্টায় এটি নিজে থেকেই বসানো হবে; না চাইলে সেটিংসে স্বয়ংক্রিয় আপডেট বন্ধ করুন।".to_owned(),
+                        Some(d) => format!(" আপনি আগে না করলে প্রায় {d} দিনের মধ্যে এটি নিজে থেকেই বসানো হবে; না চাইলে সেটিংসে স্বয়ংক্রিয় আপডেট বন্ধ করুন।"),
+                        None => String::new(),
+                    };
+                    (
+                        "info",
+                        format!("[{panel}] {version} সংস্করণ এসেছে"),
+                        format!(
+                            "প্যানেলের নতুন সংস্করণ {version} তৈরি। অ্যাডমিন এলাকার আপডেট পেজে গিয়ে \"এখনই আপডেট\" চাপুন।{auto}"
+                        ),
+                    )
+                }
+                ("started", false) => (
+                    "info",
+                    format!("[{panel}] Updating to {version}"),
+                    format!(
+                        "The automatic update to {version} has started. The panel restarts for a moment."
+                    ),
+                ),
+                ("started", true) => (
+                    "info",
+                    format!("[{panel}] {version}-এ আপডেট শুরু"),
+                    format!(
+                        "{version}-এ স্বয়ংক্রিয় আপডেট শুরু হয়েছে। প্যানেল কয়েক মুহূর্তের জন্য রিস্টার্ট হবে।"
+                    ),
+                ),
+                ("failed", false) => (
+                    "critical",
+                    format!("[{panel}] The update to {version} did not work"),
+                    format!(
+                        "The update to {version} failed, so the old version is still running. Open Updates in the admin area to see why."
+                    ),
+                ),
+                ("failed", true) => (
+                    "critical",
+                    format!("[{panel}] {version}-এ আপডেট হয়নি"),
+                    format!(
+                        "{version}-এ আপডেট ব্যর্থ হয়েছে, তাই পুরনো সংস্করণই চলছে। কারণ দেখতে অ্যাডমিন এলাকার আপডেট পেজ খুলুন।"
+                    ),
+                ),
+                _ => return None,
+            };
+            Some((
+                Audience::Admins,
+                format!("panel_update:{version}:{stage}"),
+                Rendered {
+                    severity,
+                    subject,
+                    body,
+                    data: json!({"version": version, "stage": stage}),
+                },
+            ))
+        }
         _ => None,
     }
 }
@@ -290,6 +366,21 @@ mod tests {
             Event::NodeServiceRecovered {
                 node_id: Uuid::from_u128(4),
                 service: "database".into(),
+            },
+            Event::PanelUpdate {
+                version: "0.1.15".into(),
+                stage: "available".into(),
+                auto_in_days: Some(3),
+            },
+            Event::PanelUpdate {
+                version: "0.1.15".into(),
+                stage: "started".into(),
+                auto_in_days: None,
+            },
+            Event::PanelUpdate {
+                version: "0.1.15".into(),
+                stage: "failed".into(),
+                auto_in_days: None,
             },
         ];
         for event in &events {

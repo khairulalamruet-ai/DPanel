@@ -442,6 +442,13 @@ async fn main() -> ExitCode {
             }
         }
     });
+    // The panel's own update: looks for a new release now and then, tells the administrators about
+    // it, and installs it by itself when the settings (system module) say so.
+    tokio::spawn(builtpanel_mod_system::update::run_auto(
+        db.clone(),
+        settings.clone(),
+        std::sync::Arc::new(builtpanel_mod_system::update::UpdateConfig::from_env()),
+    ));
     // What has been in the accounts' trash longer than the setting says goes for good.
     tokio::spawn({
         let (db, settings) = (db.clone(), settings.clone());

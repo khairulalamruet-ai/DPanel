@@ -983,6 +983,14 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.update.manage"],
     },
     adminNav: [
+      {
+        id: "update",
+        labelKey: "update.nav",
+        icon: <ArrowUpCircle className="h-4 w-4" />,
+        href: "/update",
+        order: 97,
+        permission: "admin.settings.read",
+      },
     ],
   },
   {
