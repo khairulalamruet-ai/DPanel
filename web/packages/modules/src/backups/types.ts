@@ -23,6 +23,8 @@ export interface BackupItem {
   files_count?: number;
   databases_count?: number;
   manifest: BackupManifest;
+  /** Why it failed. */
+  error?: string;
 }
 
 export interface CreateBackupPayload {

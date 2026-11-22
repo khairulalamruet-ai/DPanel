@@ -8,7 +8,7 @@ import {
   Button,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { restoreBackup } from "./api";
 import { RotateCcw, ShieldCheck, Database, Folder } from "lucide-react";
 import { useTranslation } from "@builtpanel/i18n";
 import { BackupItem, RestoreBackupPayload } from "./types";
@@ -65,15 +65,12 @@ export function RestoreBackupWizard({
 
     try {
       setIsSubmitting(true);
-      await apiFetch(`/api/v1/client/backups/${encodeURIComponent(backup.id)}/restore`, {
-        method: "POST",
-        body: JSON.stringify({
-          backup_id: backup.id,
-          restore_mode: restoreMode,
-          selected_databases: restoreMode === "selective" ? Array.from(selectedDatabases) : undefined,
-          selected_domains: restoreMode === "selective" ? Array.from(selectedDomains) : undefined,
-          take_snapshot_before_restore: takeSnapshot,
-        } as RestoreBackupPayload),
+      await restoreBackup(backup, {
+        backup_id: backup.id,
+        restore_mode: restoreMode,
+        selected_databases: restoreMode === "selective" ? Array.from(selectedDatabases) : undefined,
+        selected_domains: restoreMode === "selective" ? Array.from(selectedDomains) : undefined,
+        take_snapshot_before_restore: takeSnapshot,
       });
 
       toast({

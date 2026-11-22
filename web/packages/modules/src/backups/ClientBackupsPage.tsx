@@ -15,7 +15,7 @@ import {
   TableCell,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { listBackups, deleteBackup, exportBackup } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import {
   Archive,
@@ -32,6 +32,7 @@ import {
 import { BackupItem } from "./types";
 import { CreateBackupDialog } from "./CreateBackupDialog";
 import { RestoreBackupWizard } from "./RestoreBackupWizard";
+import { BackupScheduleCard } from "./BackupScheduleCard";
 
 export function ClientBackupsPage() {
   const { t } = useTranslation();
@@ -48,7 +49,7 @@ export function ClientBackupsPage() {
   const fetchBackups = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<BackupItem[]>("/api/v1/client/backups");
+      const res = await listBackups();
       setBackups(res);
     } catch (err: any) {
       toast({
@@ -71,9 +72,7 @@ export function ClientBackupsPage() {
     }
 
     try {
-      await apiFetch(`/api/v1/client/backups/${encodeURIComponent(backup.id)}`, {
-        method: "DELETE",
-      });
+      await deleteBackup(backup.id);
 
       toast({
         title: t("common.success"),
@@ -91,15 +90,19 @@ export function ClientBackupsPage() {
 
   const handleDownload = async (backup: BackupItem) => {
     try {
-      const res = await apiFetch<{ download_url: string }>(
-        `/api/v1/client/backups/${encodeURIComponent(backup.id)}/download`
-      );
+      // A download is an account export: one file, sealed with a passphrase, that another panel can import.
+      const passphrase = window.prompt(t("backups.exportPassphrase", "Choose a passphrase for the export file (keep it: it is needed to open the file)"));
+      if (!passphrase) return;
+      toast({
+        title: t("backups.exportPreparing", "Preparing the export"),
+        description: backup.name,
+      });
+      const url = await exportBackup(backup.id, passphrase);
       toast({
         title: t("common.success"),
         description: t("backups.downloadStarted", { name: backup.name }),
       });
-      // Simulate download trigger or window open
-      window.open(res.download_url, "_blank");
+      window.open(url, "_blank");
     } catch (err: any) {
       toast({
         title: t("common.error"),
@@ -194,6 +197,9 @@ export function ClientBackupsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* The account's own schedule */}
+      <BackupScheduleCard />
 
       {/* Backups List Table */}
       <Card>
