@@ -3266,5 +3266,27 @@
     "copiedTitle": "Copied to Clipboard",
     "copiedDesc": "Sanitized diagnostic bundle copied.",
     "downloadStarted": "Download Started"
+  },
+  "tools": {
+    "nav": "Developer tools",
+    "title": "Developer tools",
+    "cache": "Cache servers",
+    "deploys": "Git deploys",
+    "scans": "Security scans",
+    "traffic": "Website traffic",
+    "malware": "Malware scan",
+    "vuln": "WordPress vulnerabilities",
+    "scan": "Scan",
+    "scanQuarantine": "Scan and quarantine",
+    "deployNow": "Deploy now",
+    "newSecret": "New secret",
+    "addDeploy": "Add deploy",
+    "queued": "Queued",
+    "removed": "Removed",
+    "noCache": "No cache server yet.",
+    "limit": "Plan limit",
+    "password": "password",
+    "token": "access token (private repo)",
+    "secretNew": "New webhook secret made"
   }
 }

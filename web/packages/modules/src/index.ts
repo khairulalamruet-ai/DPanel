@@ -53,3 +53,4 @@ export * from "./update";
 export * from "./api-tokens";
 export * from "./support-report";
 export type { SslStatus } from "./domains";
+export * from "./tools";

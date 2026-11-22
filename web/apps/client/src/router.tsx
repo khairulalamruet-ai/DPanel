@@ -9,9 +9,9 @@ import { ThemeProvider, ToastProvider } from "@builtpanel/ui";
 import { SessionProvider, useSession, LoginPage, AccountSecurityPage } from "@builtpanel/auth";
 import { queryClient, QueryClientProvider } from "@builtpanel/api";
 import { AppShell, NotFoundPage, RouteErrorFallback } from "@builtpanel/shell";
-import { ClientDashboardPage, ClientDomainsPage, DnsEditorPage, SslPage, PhpManagementPage, ServicesPage, ClientDatabasesPage, FileManagerPage, DiskUsagePage, FtpAccountsPage, ClientBackupsPage, CronJobsPage, LogViewerPage, ClientUsagePage, ClientProcessesPage, ClientWafPage, ClientFirewallPage, AppsPage, ClientEmailPage, ResellerPortalPage, MigrationPage, NotificationBell, NotificationPreferencesPage, CommandPalette, CommandPaletteTrigger } from "@builtpanel/modules";
+import { ClientDashboardPage, ClientDomainsPage, DnsEditorPage, SslPage, PhpManagementPage, ServicesPage, ClientDatabasesPage, FileManagerPage, DiskUsagePage, FtpAccountsPage, ClientBackupsPage, CronJobsPage, LogViewerPage, ClientUsagePage, ClientProcessesPage, ClientWafPage, ClientFirewallPage, AppsPage, ClientEmailPage, ResellerPortalPage, MigrationPage, NotificationBell, NotificationPreferencesPage, ClientToolsPage, CommandPalette, CommandPaletteTrigger } from "@builtpanel/modules";
 import { useTranslation } from "@builtpanel/i18n";
-import { LayoutDashboard, ShieldCheck, ShieldAlert, Globe, Lock, Database, Folder, Server, Archive, Clock, FileText, Activity, Terminal, Flame, Boxes, Mail, Briefcase, ArrowRightLeft } from "lucide-react";
+import { LayoutDashboard, ShieldCheck, ShieldAlert, Globe, Lock, Database, Folder, Server, Archive, Clock, FileText, Activity, Terminal, Flame, Boxes, Mail, Briefcase, ArrowRightLeft, Wrench } from "lucide-react";
 
 /** The plan feature a menu entry needs; entries that are not listed are always shown. */
 const NAV_FEATURE: Record<string, string> = {
@@ -142,6 +142,12 @@ function AuthenticatedContent() {
       labelKey: "migration.nav",
       icon: <ArrowRightLeft className="h-4 w-4" />,
       href: "/migration",
+    },
+    {
+      id: "tools",
+      labelKey: "tools.nav",
+      icon: <Wrench className="h-4 w-4" />,
+      href: "/tools",
     },
     {
       id: "security",
@@ -279,6 +285,12 @@ const backupsRoute = createRoute({
   component: ClientBackupsPage,
 });
 
+const toolsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/tools",
+  component: ClientToolsPage,
+});
+
 const cronRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/cron",
@@ -371,7 +383,7 @@ const loginRoute = createRoute({
   },
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, domainsRoute, dnsRoute, sslRoute, phpRoute, servicesRoute, databasesRoute, filesRoute, diskUsageRoute, ftpRoute, backupsRoute, cronRoute, logsRoute, usageRoute, processesRoute, wafRoute, firewallRoute, appsRoute, emailRoute, resellerRoute, migrationRoute, securityRoute, notificationsRoute, settingsNotificationsRoute, loginRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, domainsRoute, dnsRoute, sslRoute, phpRoute, servicesRoute, databasesRoute, filesRoute, diskUsageRoute, ftpRoute, backupsRoute, cronRoute, toolsRoute, logsRoute, usageRoute, processesRoute, wafRoute, firewallRoute, appsRoute, emailRoute, resellerRoute, migrationRoute, securityRoute, notificationsRoute, settingsNotificationsRoute, loginRoute]);
 
 export const router = createRouter({
   routeTree,
