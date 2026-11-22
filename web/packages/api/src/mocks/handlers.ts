@@ -3655,6 +3655,16 @@ export const handlers = [
           plan_name: u.plan_name,
           status: u.status === "pending" ? "provisioning" : u.status,
           purge_after: null,
+          // Shares of the plan, from the name, so the rings of the list look alive.
+          usage:
+            u.status === "active"
+              ? {
+                  memory_percent: (u.username.length * 7) % 100,
+                  cpu_percent: (u.username.length * 3) % 40,
+                  disk_percent: (u.username.length * 11) % 100,
+                  inodes_percent: (u.username.length * 5) % 60,
+                }
+              : { memory_percent: 0, cpu_percent: 0, disk_percent: 0, inodes_percent: 0 },
         },
       })),
       total: filtered.length,

@@ -10371,6 +10371,7 @@ export interface components {
              * @example active
              */
             status: string;
+            usage?: components["schemas"]["UsageShares"] | null;
             /**
              * @description System user name on the node.
              * @example alice
@@ -10713,6 +10714,32 @@ export interface components {
              * @description Most processes.
              */
             pids: number;
+        };
+        /**
+         * @description How much of its plan a hosting account uses, in whole percent (above 100 when it is over). A
+         *     field is absent when the plan has no limit for it or nothing was measured lately.
+         */
+        UsageShares: {
+            /**
+             * Format: int32
+             * @description CPU (the newest reading, at most 15 minutes old).
+             */
+            cpu_percent?: number | null;
+            /**
+             * Format: int32
+             * @description Disk space (as the node last measured it).
+             */
+            disk_percent?: number | null;
+            /**
+             * Format: int32
+             * @description Files and folders (as the node last measured them).
+             */
+            inodes_percent?: number | null;
+            /**
+             * Format: int32
+             * @description Memory (the newest reading, at most 15 minutes old).
+             */
+            memory_percent?: number | null;
         };
         /** @description An account's usage. */
         UsageView: {

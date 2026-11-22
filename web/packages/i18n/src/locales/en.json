@@ -786,7 +786,10 @@
       "allStatuses": "All Statuses",
       "allPlans": "All Plans",
       "allNodes": "All Nodes",
-      "reset": "Clear Filters"
+      "reset": "Clear Filters",
+      "status": "Status",
+      "package": "Package",
+      "node": "Node"
     },
     "status": {
       "active": "Active",
@@ -809,7 +812,15 @@
       "status": "Status",
       "diskUsage": "Disk Usage",
       "actions": "Actions",
-      "noUsersFound": "No user accounts match the selected criteria."
+      "noUsersFound": "No user accounts match the selected criteria.",
+      "username": "Username",
+      "package": "Package",
+      "memory": "Memory %",
+      "cpu": "CPU %",
+      "disk": "Disk %",
+      "inodes": "Inodes %",
+      "created": "Created",
+      "login": "Log in"
     },
     "actions": {
       "impersonate": "Log in as user",
@@ -857,7 +868,12 @@
       "impersonateError": "Failed to initiate impersonation",
       "deleteSuccess": "User '{{username}}' has been deleted",
       "deleteError": "Failed to delete user"
-    }
+    },
+    "accountsTitle": "User accounts",
+    "accountsCount": "{{count}} user accounts on this server.",
+    "createNew": "Create new",
+    "showColumns": "Show columns",
+    "loginAsUser": "Log in as user"
   },
   "userWizard": {
     "nav": "New User",

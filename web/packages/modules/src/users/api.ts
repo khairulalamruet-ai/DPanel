@@ -20,6 +20,12 @@ interface UserView {
     /** `provisioning`, `active`, `suspended`, `deleting`, ... */
     status: string;
     purge_after?: string | null;
+    usage?: {
+      memory_percent?: number | null;
+      cpu_percent?: number | null;
+      disk_percent?: number | null;
+      inodes_percent?: number | null;
+    };
   } | null;
 }
 
@@ -45,6 +51,12 @@ export function toUserItem(u: UserView): UserItem {
     bandwidth_limit_bytes: -1,
     domains_count: 0,
     created_at: u.created_at,
+    usage: u.tenant?.usage && {
+      memory_percent: u.tenant.usage.memory_percent ?? null,
+      cpu_percent: u.tenant.usage.cpu_percent ?? null,
+      disk_percent: u.tenant.usage.disk_percent ?? null,
+      inodes_percent: u.tenant.usage.inodes_percent ?? null,
+    },
   };
 }
 

@@ -35534,6 +35534,17 @@
             "description": "`provisioning`, `active`, `suspended`, `deleting` or `failed`.",
             "example": "active"
           },
+          "usage": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UsageShares",
+                "description": "What the account uses of its plan; only in the list of users."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "username": {
             "type": "string",
             "description": "System user name on the node.",
@@ -36164,6 +36175,44 @@
             "type": "integer",
             "format": "int32",
             "description": "Most processes."
+          }
+        }
+      },
+      "UsageShares": {
+        "type": "object",
+        "description": "How much of its plan a hosting account uses, in whole percent (above 100 when it is over). A\nfield is absent when the plan has no limit for it or nothing was measured lately.",
+        "properties": {
+          "cpu_percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "CPU (the newest reading, at most 15 minutes old)."
+          },
+          "disk_percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Disk space (as the node last measured it)."
+          },
+          "inodes_percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Files and folders (as the node last measured them)."
+          },
+          "memory_percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Memory (the newest reading, at most 15 minutes old)."
           }
         }
       },

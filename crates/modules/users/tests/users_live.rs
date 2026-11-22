@@ -599,6 +599,67 @@ async fn users_are_listed_filtered_searched_updated_and_get_new_passwords(pool: 
     let (_, all) = e.call(Some(&root), "GET", USERS, None, false).await;
     assert_eq!(names(&all), ["heidi", "grace", "frank"], "newest first");
     assert_eq!(all["total"], 3);
+    // What each account uses of its plan: nothing measured yet means no numbers, and a reading
+    // of half the plan's limits shows as about half.
+    let frank = &all["items"][2]["tenant"];
+    for field in [
+        "memory_percent",
+        "cpu_percent",
+        "disk_percent",
+        "inodes_percent",
+    ] {
+        assert!(
+            frank["usage"][field].is_null(),
+            "{field}: nothing is measured yet"
+        );
+    }
+    let (tenant_id, mem, cpu, disk, inodes): (
+        Uuid,
+        Option<i64>,
+        Option<i32>,
+        Option<i64>,
+        Option<i64>,
+    ) = sqlx::query_as(
+        "SELECT t.id, p.memory_bytes, p.cpu_millis, p.disk_bytes, p.inodes
+               FROM tenants t JOIN plans p ON p.id = t.plan_id WHERE t.username = 'frank'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO usage_minute (tenant_id, at, cpu_millis, memory_bytes, pids, net_rx_bytes, net_tx_bytes, io_read_bytes, io_write_bytes)
+         VALUES ($1, now(), $2, $3, 1, 0, 0, 0, 0)",
+    )
+    .bind(tenant_id)
+    .bind(cpu.map_or(0, |c| c / 2))
+    .bind(mem.map_or(0, |m| m / 2))
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO tenant_disk_usage (tenant_id, total_bytes, inodes) VALUES ($1, $2, $3)",
+    )
+    .bind(tenant_id)
+    .bind(disk.map_or(0, |d| d / 2))
+    .bind(inodes.map_or(0, |i| i / 2))
+    .execute(&pool)
+    .await
+    .unwrap();
+    let (_, all2) = e.call(Some(&root), "GET", USERS, None, false).await;
+    let usage = &all2["items"][2]["tenant"]["usage"];
+    for (field, limit) in [
+        ("memory_percent", mem.is_some()),
+        ("cpu_percent", cpu.is_some()),
+        ("disk_percent", disk.is_some()),
+        ("inodes_percent", inodes.is_some()),
+    ] {
+        if limit {
+            let n = usage[field].as_i64().unwrap_or(-1);
+            assert!((45..=50).contains(&n), "{field} is about half, not {n}");
+        } else {
+            assert!(usage[field].is_null(), "{field}: the plan has no limit");
+        }
+    }
     let (_, page) = e
         .call(
             Some(&root),

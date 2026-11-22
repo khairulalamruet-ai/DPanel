@@ -20,6 +20,13 @@ export interface UserItem {
   created_at: string;
   suspended_at?: string | null;
   suspended_reason?: string | null;
+  /** Whole percent of the plan limit in use; null where there is no limit or no reading. */
+  usage?: {
+    memory_percent: number | null;
+    cpu_percent: number | null;
+    disk_percent: number | null;
+    inodes_percent: number | null;
+  };
 }
 
 export interface UsersListResponse {

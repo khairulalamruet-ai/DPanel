@@ -837,3 +837,101 @@ mod tests {
         assert_eq!(owner("alice-web", &accounts), None);
     }
 }
+
+/// How much of its plan an account uses, in whole percent; `None` where the plan has no limit
+/// or nothing has been measured (yet).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Shares {
+    /// Memory of the newest reading (not older than [`FRESH_SECONDS`]).
+    pub memory: Option<i32>,
+    /// CPU of the newest reading.
+    pub cpu: Option<i32>,
+    /// Disk space as the node last measured it.
+    pub disk: Option<i32>,
+    /// Files and folders as the node last measured them.
+    pub inodes: Option<i32>,
+}
+
+/// A reading older than this says nothing about the account now (the node reads every minute).
+pub const FRESH_SECONDS: i64 = 900;
+
+fn percent(used: Option<i64>, limit: Option<i64>) -> Option<i32> {
+    let (used, limit) = (used?, limit?);
+    if limit <= 0 || used < 0 {
+        return None;
+    }
+    let share = (i128::from(used) * 100 + i128::from(limit) / 2) / i128::from(limit);
+    Some(i32::try_from(share.min(999)).unwrap_or(999))
+}
+
+/// [`Shares`] of the given accounts (the ones that have no row are left out).
+///
+/// # Errors
+/// Database errors.
+pub async fn shares(
+    pool: &PgPool,
+    tenant_ids: &[Uuid],
+) -> Result<HashMap<Uuid, Shares>, sqlx::Error> {
+    type Row = (
+        Uuid,
+        Option<i32>,
+        Option<i64>,
+        Option<i64>,
+        Option<i64>,
+        Option<i32>,
+        Option<i64>,
+        Option<i64>,
+        Option<i64>,
+    );
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT t.id,
+                (SELECT u.cpu_millis FROM usage_minute u
+                  WHERE u.tenant_id = t.id AND u.at > now() - make_interval(secs => $2)
+                  ORDER BY u.at DESC LIMIT 1),
+                (SELECT u.memory_bytes FROM usage_minute u
+                  WHERE u.tenant_id = t.id AND u.at > now() - make_interval(secs => $2)
+                  ORDER BY u.at DESC LIMIT 1),
+                d.total_bytes, d.inodes,
+                p.cpu_millis, p.memory_bytes, p.disk_bytes, p.inodes
+           FROM tenants t
+           JOIN plans p ON p.id = t.plan_id
+           LEFT JOIN tenant_disk_usage d ON d.tenant_id = t.id
+          WHERE t.id = ANY($1)",
+    )
+    .bind(tenant_ids)
+    .bind(FRESH_SECONDS as f64)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(
+            |(id, cpu, mem, disk, inodes, cpu_cap, mem_cap, disk_cap, inode_cap)| {
+                (
+                    id,
+                    Shares {
+                        cpu: percent(cpu.map(i64::from), cpu_cap.map(i64::from)),
+                        memory: percent(mem, mem_cap),
+                        disk: percent(disk, disk_cap),
+                        inodes: percent(inodes, inode_cap),
+                    },
+                )
+            },
+        )
+        .collect())
+}
+
+#[cfg(test)]
+mod shares_tests {
+    use super::percent;
+
+    #[test]
+    fn percent_rounds_and_ignores_missing_or_unlimited() {
+        assert_eq!(percent(Some(512), Some(1024)), Some(50));
+        assert_eq!(percent(Some(1), Some(3)), Some(33));
+        assert_eq!(percent(Some(2), Some(3)), Some(67));
+        assert_eq!(percent(Some(5), None), None);
+        assert_eq!(percent(None, Some(5)), None);
+        assert_eq!(percent(Some(5), Some(0)), None);
+        assert_eq!(percent(Some(10_000), Some(10)), Some(999));
+    }
+}

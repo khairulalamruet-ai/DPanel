@@ -149,6 +149,23 @@ pub struct TenantView {
     /// When the data will be purged (RFC 3339, UTC); only for deleted users.
     #[schema(format = DateTime)]
     pub purge_after: Option<String>,
+    /// What the account uses of its plan; only in the list of users.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage: Option<UsageShares>,
+}
+
+/// How much of its plan a hosting account uses, in whole percent (above 100 when it is over). A
+/// field is absent when the plan has no limit for it or nothing was measured lately.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct UsageShares {
+    /// Memory (the newest reading, at most 15 minutes old).
+    pub memory_percent: Option<i32>,
+    /// CPU (the newest reading, at most 15 minutes old).
+    pub cpu_percent: Option<i32>,
+    /// Disk space (as the node last measured it).
+    pub disk_percent: Option<i32>,
+    /// Files and folders (as the node last measured them).
+    pub inodes_percent: Option<i32>,
 }
 
 /// A client account.
@@ -188,6 +205,7 @@ fn view(user: User) -> UserView {
             node_id: t.node_id,
             node_name: t.node_name,
             purge_after: t.purge_after.map(rfc3339),
+            usage: None,
         }),
         created_at: rfc3339(user.created_at),
     }
@@ -449,10 +467,30 @@ pub async fn list_users(
     )
     .await
     .map_err(internal)?;
-    Ok(Json(UserList {
-        items: rows.into_iter().map(view).collect(),
-        total,
-    }))
+    let ids: Vec<Uuid> = rows
+        .iter()
+        .filter_map(|u| u.tenant.as_ref().map(|t| t.id))
+        .collect();
+    let shares = builtpanel_database::usage::shares(&state.db, &ids)
+        .await
+        .map_err(internal)?;
+    let items = rows
+        .into_iter()
+        .map(|user| {
+            let mut v = view(user);
+            if let Some(t) = v.tenant.as_mut() {
+                let s = shares.get(&t.id).copied().unwrap_or_default();
+                t.usage = Some(UsageShares {
+                    memory_percent: s.memory,
+                    cpu_percent: s.cpu,
+                    disk_percent: s.disk,
+                    inodes_percent: s.inodes,
+                });
+            }
+            v
+        })
+        .collect();
+    Ok(Json(UserList { items, total }))
 }
 
 /// One user.
@@ -1553,7 +1591,7 @@ pub async fn delete_skeleton_file(
         list_skeleton_files, put_skeleton_file, delete_skeleton_file
     ),
     components(schemas(
-        TenantView, UserView, UserChange, UserList, CreateUser, UpdateUser, ChangePlan,
+        TenantView, UsageShares, UserView, UserChange, UserList, CreateUser, UpdateUser, ChangePlan,
         ResetPassword, ImpersonationToken, SkeletonFileView, SkeletonFileList, PutSkeletonFile
     )),
     tags((name = "users", description = "Client accounts and their hosting"))
