@@ -21,10 +21,10 @@ describe("VhostTemplatesPage (T06.07)", () => {
 
     // Verify seeded templates are loaded in the sidebar
     await waitFor(() => {
-      expect(screen.getByTestId("card-vhost-template-nginx-php-fpm")).toBeInTheDocument();
+      expect(screen.getByTestId("card-vhost-template-nginx-php-fpm-standard")).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("card-vhost-template-nginx-static")).toBeInTheDocument();
+    expect(screen.getByTestId("card-vhost-template-nginx-static-site")).toBeInTheDocument();
     expect(screen.getByTestId("card-vhost-template-caddy-reverse-proxy")).toBeInTheDocument();
 
     // Verify initial editor content
@@ -53,7 +53,7 @@ describe("VhostTemplatesPage (T06.07)", () => {
     renderWithProviders(<VhostTemplatesPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("card-vhost-template-nginx-php-fpm")).toBeInTheDocument();
+      expect(screen.getByTestId("card-vhost-template-nginx-php-fpm-standard")).toBeInTheDocument();
     });
 
     // Switch to Preview tab

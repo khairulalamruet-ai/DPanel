@@ -9,7 +9,7 @@ import {
   Button,
   Badge,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { listVersions, revertTo } from "./api";
 import { History, RotateCcw, User, Calendar, FileCode, Check } from "lucide-react";
 import type { VhostTemplate, VhostTemplateVersion } from "./types";
 
@@ -34,13 +34,11 @@ export function VhostVersionHistoryDialog({
   useEffect(() => {
     if (open && template) {
       setIsLoading(true);
-      apiFetch<{ items: VhostTemplateVersion[] }>(
-        `/api/v1/admin/vhost-templates/${template.id}/versions`
-      )
-        .then((res) => {
-          setVersions(res.items);
-          if (res.items.length > 0) {
-            setSelectedVersion(res.items[0]);
+      listVersions(template.id)
+        .then((items) => {
+          setVersions(items);
+          if (items.length > 0) {
+            setSelectedVersion(items[0]);
           }
         })
         .catch(() => {})
@@ -52,11 +50,8 @@ export function VhostVersionHistoryDialog({
     if (!template) return;
     try {
       setIsReverting(true);
-      const res = await apiFetch<{ success: boolean; template: VhostTemplate }>(
-        `/api/v1/admin/vhost-templates/${template.id}/versions/${ver.id}/revert`,
-        { method: "POST" }
-      );
-      onReverted(res.template);
+      const reverted = await revertTo(template, ver);
+      onReverted(reverted);
       onOpenChange(false);
     } catch {
       // handled

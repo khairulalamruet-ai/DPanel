@@ -4766,189 +4766,78 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // VHost Templates: List all (GET /api/v1/admin/vhost-templates)
-  // TODO(api:T06.07): Replace with real backend vhost templates list endpoint
-  http.get(/\/api\/v1\/admin\/vhost-templates$/, () => {
-    return HttpResponse.json({
-      items: mockVhostTemplates,
-      total: mockVhostTemplates.length,
+  // Web server templates, shaped like `TemplateView` and the version list in openapi.json
+  ...(() => {
+    const view = (t: (typeof mockVhostTemplates)[number]) => ({
+      id: t.id,
+      name: t.name,
+      server: t.server_type,
+      body: t.content,
+      version: t.version,
+      is_default: t.is_default,
+      updated_at: t.updated_at,
     });
-  }),
+    return [
+      http.get(/\/api\/v1\/admin\/vhost-templates$/, () =>
+        HttpResponse.json({
+          items: mockVhostTemplates.map((t) => ({ id: t.id, name: t.name, server: t.server_type, version: t.version, is_default: t.is_default, updated_at: t.updated_at })),
+        }),
+      ),
 
-  // VHost Templates: Get by ID (GET /api/v1/admin/vhost-templates/:id)
-  // TODO(api:T06.07): Replace with real backend vhost template detail endpoint
-  http.get(/\/api\/v1\/admin\/vhost-templates\/([^/]+)$/, ({ params }) => {
-    const key = (params.id || params[0]) as string;
-    const tpl = mockVhostTemplates.find((t) => t.id === key || t.slug === key);
-    if (!tpl) {
-      return HttpResponse.json({ message: "VHost template not found" }, { status: 404 });
-    }
-    return HttpResponse.json(tpl);
-  }),
+      // POST /api/v1/admin/vhost-templates/apply (before the :id routes)
+      http.post(/\/api\/v1\/admin\/vhost-templates\/apply$/, () => HttpResponse.json({ tenants: 4 }, { status: 202 })),
 
-  // VHost Templates: Update template content (PUT /api/v1/admin/vhost-templates/:id)
-  // TODO(api:T06.07): Replace with real backend vhost template update endpoint
-  http.put(/\/api\/v1\/admin\/vhost-templates\/([^/]+)$/, async ({ params, request }) => {
-    const key = (params.id || params[0]) as string;
-    const tpl = mockVhostTemplates.find((t) => t.id === key || t.slug === key);
-    if (!tpl) {
-      return HttpResponse.json({ message: "VHost template not found" }, { status: 404 });
-    }
+      // POST /api/v1/admin/vhost-templates/preview  { body }
+      http.post(/\/api\/v1\/admin\/vhost-templates\/preview$/, async ({ request }) => {
+        const body = (await request.json()) as { body: string };
+        return HttpResponse.json({ rendered: body.body.replace(/\{\{\s*domain\s*\}\}/g, "my-awesome-site.com") });
+      }),
 
-    const body = (await request.json()) as { content?: string; changelog?: string; name?: string };
+      http.get(/\/api\/v1\/admin\/vhost-templates\/([^/]+)$/, ({ params }) => {
+        const tpl = mockVhostTemplates.find((t) => t.id === params[0]);
+        return tpl ? HttpResponse.json(view(tpl)) : problem(404, "not_found", "No such template");
+      }),
 
-    // Check for forbidden directives (T06.06 security rule)
-    if (body.content) {
-      const forbiddenRules = [
-        { pattern: /include\s+\//i, msg: "Forbidden directive: 'include /' is restricted" },
-        { pattern: /alias\s+\/etc/i, msg: "Forbidden directive: 'alias /etc' is restricted" },
-      ];
-      for (const rule of forbiddenRules) {
-        if (rule.pattern.test(body.content)) {
-          return HttpResponse.json(
-            { message: rule.msg, code: "forbidden_directive" },
-            { status: 422 }
-          );
-        }
-      }
-    }
+      // PUT /api/v1/admin/vhost-templates/:id  { name, body }: the next version
+      http.put(/\/api\/v1\/admin\/vhost-templates\/([^/]+)$/, async ({ params, request }) => {
+        const tpl = mockVhostTemplates.find((t) => t.id === params[0]);
+        if (!tpl) return problem(404, "not_found", "No such template");
+        const body = (await request.json()) as { name?: string; body: string };
+        tpl.content = body.body;
+        if (body.name) tpl.name = body.name;
+        tpl.version += 1;
+        tpl.updated_at = new Date().toISOString();
+        mockVhostVersions.unshift({
+          id: `ver_${tpl.id}_${tpl.version}`,
+          template_id: tpl.id,
+          version: tpl.version,
+          content: tpl.content,
+          changelog: tpl.name,
+          created_by: "admin",
+          created_at: tpl.updated_at,
+        });
+        return HttpResponse.json(view(tpl));
+      }),
 
-    if (body.name) tpl.name = body.name;
-    if (body.content !== undefined) {
-      tpl.content = body.content;
-      tpl.version += 1;
-      tpl.updated_at = new Date().toISOString();
+      // GET /api/v1/admin/vhost-templates/:id/versions
+      http.get(/\/api\/v1\/admin\/vhost-templates\/([^/]+)\/versions$/, ({ params }) =>
+        HttpResponse.json({
+          items: mockVhostVersions
+            .filter((v) => v.template_id === params[0])
+            .map((v) => ({ version: v.version, name: v.changelog, body: v.content, changed_by: v.created_by, created_at: v.created_at })),
+        }),
+      ),
 
-      // Add to version history
-      mockVhostVersions.unshift({
-        id: `ver_${Date.now()}`,
-        template_id: tpl.id,
-        version: tpl.version,
-        content: tpl.content,
-        changelog: body.changelog || `Updated template to version ${tpl.version}`,
-        created_by: "admin",
-        created_at: new Date().toISOString(),
-      });
-    }
-
-    return HttpResponse.json(tpl);
-  }),
-
-  // VHost Templates: Get Version History (GET /api/v1/admin/vhost-templates/:id/versions)
-  // TODO(api:T06.07): Replace with real backend vhost versions list endpoint
-  http.get(/\/api\/v1\/admin\/vhost-templates\/([^/]+)\/versions$/, ({ params }) => {
-    const key = (params.id || params[0]) as string;
-    const versions = mockVhostVersions.filter((v) => v.template_id === key);
-    return HttpResponse.json({
-      items: versions,
-      total: versions.length,
-    });
-  }),
-
-  // VHost Templates: Revert to Version (POST /api/v1/admin/vhost-templates/:id/versions/:verId/revert)
-  // TODO(api:T06.07): Replace with real backend vhost revert endpoint
-  http.post(/\/api\/v1\/admin\/vhost-templates\/([^/]+)\/versions\/([^/]+)\/revert$/, ({ params }) => {
-    const tplKey = (params.id || params[0]) as string;
-    const verKey = (params.verId || params[1]) as string;
-
-    const tpl = mockVhostTemplates.find((t) => t.id === tplKey || t.slug === tplKey);
-    if (!tpl) {
-      return HttpResponse.json({ message: "VHost template not found" }, { status: 404 });
-    }
-
-    const targetVer = mockVhostVersions.find((v) => v.id === verKey || String(v.version) === verKey);
-    if (!targetVer) {
-      return HttpResponse.json({ message: "Template version not found" }, { status: 404 });
-    }
-
-    tpl.content = targetVer.content;
-    tpl.version += 1;
-    tpl.updated_at = new Date().toISOString();
-
-    mockVhostVersions.unshift({
-      id: `ver_${Date.now()}`,
-      template_id: tpl.id,
-      version: tpl.version,
-      content: tpl.content,
-      changelog: `Reverted to revision v${targetVer.version}`,
-      created_by: "admin",
-      created_at: new Date().toISOString(),
-    });
-
-    return HttpResponse.json({
-      success: true,
-      message: `Template reverted to v${targetVer.version}`,
-      template: tpl,
-    });
-  }),
-
-  // VHost Templates: Live Preview & Validation (POST /api/v1/admin/vhost-templates/:id/preview)
-  // TODO(api:T06.07): Replace with real backend vhost preview endpoint
-  http.post(/\/api\/v1\/admin\/vhost-templates\/([^/]+)\/preview$/, async ({ request }) => {
-    const body = (await request.json()) as {
-      content: string;
-      sample_variables?: Record<string, string>;
-    };
-
-    const vars: Record<string, string> = {
-      domain: "example.com",
-      docroot: "/home/demo/public_html",
-      php_socket: "/run/php/php8.3-fpm-demo.sock",
-      ssl_cert: "/etc/ssl/certs/example.com.crt",
-      ssl_key: "/etc/ssl/private/example.com.key",
-      port: "80",
-      ...(body.sample_variables || {}),
-    };
-
-    let rendered = body.content || "";
-    for (const [k, v] of Object.entries(vars)) {
-      const reg = new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`, "g");
-      rendered = rendered.replace(reg, v);
-    }
-
-    return HttpResponse.json({
-      rendered,
-      valid: true,
-      errors: [],
-    });
-  }),
-
-  // VHost Templates: Apply to All Domains (POST /api/v1/admin/vhost-templates/:id/apply-all)
-  // TODO(api:T06.07): Replace with real backend vhost apply-all endpoint
-  http.post(/\/api\/v1\/admin\/vhost-templates\/([^/]+)\/apply-all$/, ({ params }) => {
-    const key = (params.id || params[0]) as string;
-    const tpl = mockVhostTemplates.find((t) => t.id === key || t.slug === key);
-    if (!tpl) {
-      return HttpResponse.json({ message: "VHost template not found" }, { status: 404 });
-    }
-
-    const opId = `op_vhost_apply_${Date.now()}`;
-    const targetCount = tpl.domain_count || 4;
-
-    const op: any = {
-      id: opId,
-      idempotency_key: `idemp_${opId}`,
-      op_type: "ApplyVhostTemplateAll",
-      node_id: "node_01",
-      node_name: "node-primary-01",
-      tenant_id: null,
-      status: "succeeded",
-      retries_count: 0,
-      payload: { template_id: tpl.id, target_count: targetCount },
-      output: { applied_domains: targetCount, reloaded_server: tpl.server_type },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    mockOperations.unshift(op);
-
-    return HttpResponse.json({
-      success: true,
-      operation_id: opId,
-      target_count: targetCount,
-      message: `VHost template '${tpl.name}' deployed across all ${targetCount} domains.`,
-    });
-  }),
+      // POST /api/v1/admin/vhost-templates/:id/default
+      http.post(/\/api\/v1\/admin\/vhost-templates\/([^/]+)\/default$/, ({ params }) => {
+        mockVhostTemplates.forEach((t) => {
+          t.is_default = t.id === params[0];
+        });
+        const tpl = mockVhostTemplates.find((t) => t.id === params[0]);
+        return tpl ? HttpResponse.json(view(tpl)) : problem(404, "not_found", "No such template");
+      }),
+    ];
+  })(),
 
   // GET /api/v1/client/php: the account's version and its domains', shaped like `PhpInfo` in openapi.json
   http.get(/\/api\/v1\/client\/php$/, () => {
