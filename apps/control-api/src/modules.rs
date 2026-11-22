@@ -238,7 +238,19 @@ pub fn mount(
                             };
                             ModuleRoutes {
                                 admin: Some(
-                                    builtpanel_mod_system::router().with_state(state.clone()),
+                                    builtpanel_mod_system::router()
+                                        .with_state(state.clone())
+                                        .merge(
+                                            builtpanel_mod_system::update::router().with_state(
+                                                builtpanel_mod_system::update::UpdateState {
+                                                    db: db.clone(),
+                                                    sessions: sessions.clone(),
+                                                    config: std::sync::Arc::new(
+                                                        builtpanel_mod_system::update::UpdateConfig::from_env(),
+                                                    ),
+                                                },
+                                            ),
+                                        ),
                                 ),
                                 client: Some(
                                     builtpanel_mod_system::client_router()

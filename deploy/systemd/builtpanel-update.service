@@ -1,0 +1,12 @@
+# The panel's own update, as root (see builtpanel-update.path and deploy/release/self-update.sh).
+# It restarts the control plane, so it must not be part of it: this is a unit of its own.
+[Unit]
+Description=Built Panel update
+Documentation=https://docs.builtpanel.dev/updates
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/builtpanel-self-update
+TimeoutStartSec=1800

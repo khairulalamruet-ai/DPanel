@@ -3312,24 +3312,39 @@
     "checkSuccess": "Update Check Complete",
     "checkSuccessDesc": "Repository and signatures checked against release manifest.",
     "steps": {
-      "downloading": "Downloading signed package bundle...",
-      "verifying": "Verifying Ed25519 cryptographic signature...",
+      "downloading": "Downloading the release...",
+      "verifying": "Checking the release signature and installing...",
       "snapshot": "Creating pre-update backup snapshot...",
       "migrations": "Applying database schema migrations...",
       "rollbackSuccess": "Update failed. Automatic rollback completed: safely returned to previous version.",
       "completed": "Update successfully applied! Built Panel is running the newest release.",
-      "manualRollback": "Reverting schema and binary to previous version..."
+      "manualRollback": "Reverting schema and binary to previous version...",
+      "waiting": "Waiting for the update service to start..."
     },
-    "rollbackNotice": "Automatic Rollback Triggered",
+    "rollbackNotice": "The old version was put back",
     "rollbackNoticeDesc": "Safety invariant activated: system rolled back to initial version.",
-    "updateSuccess": "Update Applied Successfully",
+    "updateSuccess": "Update applied",
     "rollbackSuccessTitle": "Rollback Successful",
     "rollbackSuccessDesc": "Panel safely returned to previous version.",
     "history": {
       "title": "Release History & Rollback Ledger",
       "desc": "Audit trail of all package upgrades, schema migrations, and emergency rollback events.",
       "empty": "No update history recorded yet."
-    }
+    },
+    "loadError": "The update status could not be loaded.",
+    "updateFailed": "The update failed",
+    "checkFailed": "The release site could not be reached.",
+    "applyFailed": "The update could not be started.",
+    "service": "Update service",
+    "serviceReady": "Ready: Update now installs a release from here.",
+    "serviceMissing": "Not installed on this server. Run the installer once more (it keeps your data) to get one-click updates.",
+    "neverChecked": "not yet",
+    "signedBy": "Signed by",
+    "checkedAgain": "The signature is checked again before anything is installed.",
+    "confirmPassword": "Your password, to confirm",
+    "restartNotice": "The panel restarts for a moment; sign-ins in progress stay open.",
+    "confirmUpdate": "Update to",
+    "reload": "Reload the page"
   },
   "apiTokens": {
     "nav": "API Tokens",

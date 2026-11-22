@@ -8116,191 +8116,56 @@ export const handlers = [
                                               // ===================================                                              // T18.10: Panel Update Handlers
                                               // ===================================
   ...(() => {
-                                                let currentVersion = "0.1.0";
-                                                let previousVersion: string | null = null;
-                                                let channel: "stable" | "beta" = "stable";
-                                                let canRollback = false;
-                                                let lastCheckedAt = new Date().toISOString();
-
-                                                let availableUpdate: any = {
-                                                  version: "0.2.0",
-                                                  release_date: new Date().toISOString(),
-                                                  channel: "stable",
-                                                  ed25519_signature: "e93f820c74198d023afc50193bbd7310...ed25519",
-                                                  key_id: "builtpanel-root-2026",
-                                                  checksum_sha256: "9b3c4f028d716498c005b81ae2409744c8...sha256",
-                                                  changelog: [
-                                                    "Multi-node clustering protocol v2 support",
-                                                    "Dynamic WAF rule updates with zero-restart reload",
-                                                    "Optimized MariaDB connection pool allocation",
-                                                  ],
-                                                  required_migrations: [
-                                                    "000015_cluster_nodes_v2.sql",
-                                                    "000016_waf_realtime_metrics.sql",
-                                                  ],
-                                                  can_rollback: true,
-                                                };
-
-                                                const history: Array<{
-                                                  id: string;
-                                                  from_version: string;
-                                                  to_version: string;
-                                                  channel: "stable" | "beta";
-                                                  status: "success" | "rolled_back" | "failed";
-                                                  timestamp: string;
-                                                  details: string;
-                                                }> = [
-                                                  {
-                                                    id: "upd-001",
-                                                    from_version: "0.0.9",
-                                                    to_version: "0.1.0",
-                                                    channel: "stable",
-                                                    status: "success",
-                                                    timestamp: new Date(Date.now() - 86400000 * 7).toISOString(),
-                                                    details: "Initial release baseline upgrade with auth & audit logging",
-                                                  },
-                                                ];
-
-                                                return [
-                                                  // TODO(api:T18.10): Get panel update status
-                                                  http.get("/api/v1/update/status", () => {
-                                                    return HttpResponse.json({
-                                                      current_version: currentVersion,
-                                                      channel,
-                                                      last_checked_at: lastCheckedAt,
-                                                      available_update: availableUpdate,
-                                                      previous_version: previousVersion,
-                                                      can_rollback: canRollback,
-                                                      history,
-                                                    });
-                                                  }),
-
-                                                  // TODO(api:T18.10): Check for updates
-                                                  http.post("/api/v1/update/check", () => {
-                                                    lastCheckedAt = new Date().toISOString();
-                                                    return HttpResponse.json({
-                                                      checked: true,
-                                                      available: !!availableUpdate,
-                                                      update: availableUpdate,
-                                                    });
-                                                  }),
-
-                                                  // TODO(api:T18.10): Switch update channel
-                                                  http.post("/api/v1/update/channel", async ({ request }) => {
-                                                    const body = (await request.json()) as { channel: "stable" | "beta" };
-                                                    channel = body.channel || "stable";
-                                                    if (channel === "beta") {
-                                                      availableUpdate = {
-                                                        version: "0.3.0-beta.1",
-                                                        release_date: new Date().toISOString(),
-                                                        channel: "beta",
-                                                        ed25519_signature: "77aa01ff4c82...ed25519",
-                                                        key_id: "builtpanel-beta-2026",
-                                                        checksum_sha256: "88cc44bb...sha256",
-                                                        changelog: ["Experimental eBPF network packet filter"],
-                                                        required_migrations: ["000017_ebpf_metrics.sql"],
-                                                        can_rollback: true,
-                                                      };
-                                                    } else {
-                                                      availableUpdate = {
-                                                        version: "0.2.0",
-                                                        release_date: new Date().toISOString(),
-                                                        channel: "stable",
-                                                        ed25519_signature: "e93f820c7419...ed25519",
-                                                        key_id: "builtpanel-root-2026",
-                                                        checksum_sha256: "9b3c4f028d716...sha256",
-                                                        changelog: [
-                                                          "Multi-node clustering protocol v2 support",
-                                                          "Dynamic WAF rule updates with zero-restart reload",
-                                                        ],
-                                                        required_migrations: [
-                                                          "000015_cluster_nodes_v2.sql",
-                                                          "000016_waf_realtime_metrics.sql",
-                                                        ],
-                                                        can_rollback: true,
-                                                      };
-                                                    }
-                                                    return HttpResponse.json({ ok: true, channel });
-                                                  }),
-
-                                                  // TODO(api:T18.10): Apply update with rollback safety invariant
-                                                  http.post("/api/v1/update/apply", async ({ request }) => {
-                                                    const body = (await request.json().catch(() => ({}))) as {
-                                                      version?: string;
-                                                      simulate_failure?: boolean;
-                                                    };
-
-                                                    if (body.simulate_failure) {
-                                                      // DoD requirement: "Update ব্যর্থ হলে আগের version-এ ফিরে যায়।"
-                                                      // Simulate migration error and automatic rollback to previous version
-                                                      history.unshift({
-                                                        id: `upd-${Date.now()}`,
-                                                        from_version: currentVersion,
-                                                        to_version: body.version || "0.2.0",
-                                                        channel,
-                                                        status: "rolled_back",
-                                                        timestamp: new Date().toISOString(),
-                                                        details: "Migration 000016 failed: foreign key constraint violation. Auto-rollback reverted schema and kept v" + currentVersion,
-                                                      });
-
-                                                      return HttpResponse.json({
-                                                        ok: false,
-                                                        status: "rolled_back",
-                                                        rolled_back: true,
-                                                        error: "Migration failed. Invariant protection: safely rolled back to " + currentVersion,
-                                                      });
-                                                    }
-
-                                                    // Successful update
-                                                    previousVersion = currentVersion;
-                                                    currentVersion = body.version || (availableUpdate ? availableUpdate.version : "0.2.0");
-                                                    canRollback = true;
-                                                    availableUpdate = null;
-
-                                                    history.unshift({
-                                                      id: `upd-${Date.now()}`,
-                                                      from_version: previousVersion,
-                                                      to_version: currentVersion,
-                                                      channel,
-                                                      status: "success",
-                                                      timestamp: new Date().toISOString(),
-                                                      details: "Release verified by Ed25519 root signature and schema migrations applied successfully",
-                                                    });
-
-                                                    return HttpResponse.json({
-                                                      ok: true,
-                                                      status: "success",
-                                                      current_version: currentVersion,
-                                                    });
-                                                  }),
-
-                                                  // TODO(api:T18.10): Manual rollback to previous version
-                                                  http.post("/api/v1/update/rollback", () => {
-                                                    if (!previousVersion) {
-                                                      return HttpResponse.json({ error: "No previous version available" }, { status: 400 });
-                                                    }
-                                                    const targetVersion = previousVersion;
-                                                    previousVersion = currentVersion;
-                                                    currentVersion = targetVersion;
-
-                                                    history.unshift({
-                                                      id: `upd-${Date.now()}`,
-                                                      from_version: previousVersion,
-                                                      to_version: currentVersion,
-                                                      channel,
-                                                      status: "rolled_back",
-                                                      timestamp: new Date().toISOString(),
-                                                      details: `Manual rollback triggered by admin. Restored release v${currentVersion}.`,
-                                                    });
-
-                                                    return HttpResponse.json({
-                                                      ok: true,
-                                                      current_version: currentVersion,
-                                                      rolled_back: true,
-                                                    });
-                                                  }),
-                                                ];
-                                              })(),
+    // The panel's own update: what runs, what is on offer, "Update now" (a run that finishes by itself).
+    let lastCheckedAt: string | null = null;
+    let run: Record<string, string> | null = null;
+    const history: Record<string, string>[] = [];
+    const offer = {
+      version: "0.2.0",
+      release_date: "2026-11-20T10:00:00Z",
+      channel: "stable",
+      ed25519_signature: "mock-signature",
+      key_id: "release-1",
+      checksum_sha256: "",
+      changelog: ["Per-domain address blocking", "A one-click update"],
+      required_migrations: [],
+      can_rollback: true,
+    };
+    let installed = "0.1.0";
+    return [
+      http.get("/api/v1/admin/update/status", () =>
+        HttpResponse.json({
+          current_version: installed,
+          channel: "stable",
+          last_checked_at: lastCheckedAt,
+          available_update: lastCheckedAt && installed !== offer.version ? offer : null,
+          previous_version: null,
+          can_rollback: false,
+          can_apply: true,
+          run,
+          history,
+        })
+      ),
+      http.post("/api/v1/admin/update/check", () => {
+        lastCheckedAt = new Date().toISOString();
+        return HttpResponse.json({ checked: true, available: installed !== offer.version, update: installed !== offer.version ? offer : null });
+      }),
+      http.post("/api/v1/admin/update/apply", async ({ request }) => {
+        const body = (await request.json()) as { version?: string };
+        if (body.version !== offer.version) {
+          return HttpResponse.json({ code: "no_such_update", detail: "That is not the version on offer." }, { status: 409 });
+        }
+        const from = installed;
+        run = { state: "running", step: "downloading", version: offer.version, from_version: from, message: "", updated_at: new Date().toISOString() };
+        setTimeout(() => {
+          installed = offer.version;
+          run = { state: "completed", step: "completed", version: offer.version, from_version: from, message: `Updated from ${from} to ${offer.version}.`, updated_at: new Date().toISOString() };
+          history.unshift({ id: `upd-${Date.now()}`, from_version: from, to_version: offer.version, channel: "stable", status: "success", timestamp: new Date().toISOString(), details: "The release was verified against its signed manifest and installed." });
+        }, 3000);
+        return HttpResponse.json({ ok: true, status: "started", version: offer.version }, { status: 202 });
+      }),
+    ];
+  })(),
                                               // ===================================                                              // T18.11: API Tokens & Scoped Execution
                                               // ===================================
   ...(() => {

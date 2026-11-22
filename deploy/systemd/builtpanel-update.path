@@ -1,0 +1,13 @@
+# Starts the panel's own update (builtpanel-update.service) when the control plane leaves a request.
+# The request is one version number in a file only the panel's user can write; what the service does
+# with it is fixed (deploy/release/self-update.sh) and every file it installs is checked against a
+# signed release manifest first.
+[Unit]
+Description=Built Panel update request
+
+[Path]
+PathExists=/var/lib/builtpanel/update-request/request
+Unit=builtpanel-update.service
+
+[Install]
+WantedBy=multi-user.target

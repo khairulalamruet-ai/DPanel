@@ -9854,6 +9854,176 @@
         ]
       }
     },
+    "/api/v1/admin/update/apply": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Update the panel to the version the last check found: the request goes to the update service,\nwhich installs it (follow `run` in the status).",
+        "operationId": "updateApply",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Handed to the update service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyStarted"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.settings.manage), `reauth_required` or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`update_not_available` (this server has no update service), `no_such_update` (not the version on offer) or `update_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`release_site_unavailable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/update/check": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Ask the release site for its newest release.",
+        "operationId": "updateCheck",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Checked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.settings.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`release_site_unavailable`: the release site could not be reached",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/update/status": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "The update page's numbers.",
+        "operationId": "updateStatus",
+        "responses": {
+          "200": {
+            "description": "What runs, what is on offer, what the update service did",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateStatus"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.settings.read) or `mfa_setup_required`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/usage/nodes/{id}": {
       "get": {
         "tags": [
@@ -25853,6 +26023,43 @@
           }
         }
       },
+      "ApplyStarted": {
+        "type": "object",
+        "description": "The update was handed to the update service.",
+        "required": [
+          "ok",
+          "status",
+          "version"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Always true."
+          },
+          "status": {
+            "type": "string",
+            "description": "Always `started`: follow `run` in the status."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version it will install."
+          }
+        }
+      },
+      "ApplyUpdate": {
+        "type": "object",
+        "description": "What to update to.",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The version shown by the last check; any other is refused.",
+            "example": "0.1.15"
+          }
+        }
+      },
       "AuditItem": {
         "type": "object",
         "description": "One audit entry.",
@@ -35982,6 +36189,110 @@
         },
         "additionalProperties": false
       },
+      "UpdateHistoryItem": {
+        "type": "object",
+        "description": "One earlier update.",
+        "required": [
+          "id",
+          "from_version",
+          "to_version",
+          "channel",
+          "status",
+          "timestamp",
+          "details"
+        ],
+        "properties": {
+          "channel": {
+            "type": "string",
+            "description": "Always `stable`."
+          },
+          "details": {
+            "type": "string",
+            "description": "What happened."
+          },
+          "from_version": {
+            "type": "string",
+            "description": "The version before."
+          },
+          "id": {
+            "type": "string",
+            "description": "Id."
+          },
+          "status": {
+            "type": "string",
+            "description": "`success`, `rolled_back` or `failed`."
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "When it ended (RFC 3339, UTC)."
+          },
+          "to_version": {
+            "type": "string",
+            "description": "The version it went to."
+          }
+        }
+      },
+      "UpdateOffer": {
+        "type": "object",
+        "description": "A release that is newer than the installed one.",
+        "required": [
+          "version",
+          "release_date",
+          "channel",
+          "ed25519_signature",
+          "key_id",
+          "checksum_sha256",
+          "changelog",
+          "required_migrations",
+          "can_rollback"
+        ],
+        "properties": {
+          "can_rollback": {
+            "type": "boolean",
+            "description": "A release that does not start is put back by the installation itself."
+          },
+          "changelog": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What changed, one line each."
+          },
+          "channel": {
+            "type": "string",
+            "description": "Always `stable`."
+          },
+          "checksum_sha256": {
+            "type": "string",
+            "description": "SHA-256 of the release archive, when the release site shows it (else empty)."
+          },
+          "ed25519_signature": {
+            "type": "string",
+            "description": "The Ed25519 signature of the release manifest (the installation checks it before installing)."
+          },
+          "key_id": {
+            "type": "string",
+            "description": "The release key that signed it."
+          },
+          "release_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the release was made (RFC 3339, UTC)."
+          },
+          "required_migrations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Database migrations the release brings (not listed ahead of time: empty)."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version, `X.Y.Z`.",
+            "example": "0.1.15"
+          }
+        }
+      },
       "UpdateRecord": {
         "type": "object",
         "description": "Changes to a record (its name and type stay: remove it and add another).",
@@ -36035,6 +36346,116 @@
           }
         },
         "additionalProperties": false
+      },
+      "UpdateRun": {
+        "type": "object",
+        "description": "What the update service is doing, or did last.",
+        "required": [
+          "state",
+          "step",
+          "version",
+          "from_version",
+          "message",
+          "updated_at"
+        ],
+        "properties": {
+          "from_version": {
+            "type": "string",
+            "description": "The version it started from."
+          },
+          "message": {
+            "type": "string",
+            "description": "What happened, in a sentence."
+          },
+          "state": {
+            "type": "string",
+            "description": "`running`, `completed`, `rolled_back` or `failed`."
+          },
+          "step": {
+            "type": "string",
+            "description": "`request`, `downloading`, `verifying`, `completed`, `rolled_back` or `failed`."
+          },
+          "updated_at": {
+            "type": "string",
+            "description": "When this was written (RFC 3339, UTC)."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version it is about."
+          }
+        }
+      },
+      "UpdateStatus": {
+        "type": "object",
+        "description": "The update page's numbers.",
+        "required": [
+          "current_version",
+          "channel",
+          "can_rollback",
+          "can_apply",
+          "history"
+        ],
+        "properties": {
+          "available_update": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UpdateOffer",
+                "description": "The newer release, if the last check found one."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "can_apply": {
+            "type": "boolean",
+            "description": "This server has the update service (installed by the installer from the release that brought it);\nwithout it a new version is installed by running the installer again."
+          },
+          "can_rollback": {
+            "type": "boolean",
+            "description": "Always false (see `previous_version`)."
+          },
+          "channel": {
+            "type": "string",
+            "description": "Always `stable`."
+          },
+          "current_version": {
+            "type": "string",
+            "description": "The version that runs."
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateHistoryItem"
+            },
+            "description": "Earlier updates, newest first."
+          },
+          "last_checked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the release site was last asked (RFC 3339, UTC); absent before the first check."
+          },
+          "previous_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Always absent: a release that does not start is put back at once, there is no later rollback."
+          },
+          "run": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UpdateRun",
+                "description": "What the update service is doing or did last."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
       },
       "UpdateUser": {
         "type": "object",

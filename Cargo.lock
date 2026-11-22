@@ -1428,6 +1428,7 @@ name = "builtpanel-mod-system"
 version = "0.1.14"
 dependencies = [
  "axum",
+ "base64 0.23.1",
  "builtpanel-audit",
  "builtpanel-cache",
  "builtpanel-database",
@@ -1446,6 +1447,7 @@ dependencies = [
  "tower",
  "tracing",
  "tracing-subscriber",
+ "ureq",
  "utoipa",
  "uuid",
 ]

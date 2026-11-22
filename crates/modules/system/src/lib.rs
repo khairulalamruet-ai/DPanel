@@ -26,6 +26,7 @@
 
 pub mod bootstrap;
 pub mod search;
+pub mod update;
 
 use std::{collections::BTreeSet, sync::Arc};
 
@@ -709,12 +710,14 @@ pub async fn put_settings(
 #[openapi(
     paths(
         bootstrap::admin_bootstrap, bootstrap::client_bootstrap, bootstrap::public_branding, search::search, system_logs, list_modules, set_module, list_settings, get_settings,
-        put_settings
+        put_settings, update::status, update::check, update::apply
     ),
     components(schemas(
         ModuleView, ModuleList, SetModule, ModuleChange, SettingsView, SettingsList, PutSettings,
         SettingsChange, SystemLogLine, SystemLogList, bootstrap::Bootstrap, bootstrap::BootstrapUser, bootstrap::BootstrapMfa,
-        bootstrap::BootstrapNav, bootstrap::BootstrapModule, bootstrap::Branding, search::SearchHit
+        bootstrap::BootstrapNav, bootstrap::BootstrapModule, bootstrap::Branding, search::SearchHit,
+        update::UpdateStatus, update::UpdateOffer, update::UpdateRun, update::UpdateHistoryItem,
+        update::CheckResult, update::ApplyUpdate, update::ApplyStarted
     )),
     tags((name = "system", description = "Modules and settings"))
 )]

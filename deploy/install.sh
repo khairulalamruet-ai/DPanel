@@ -415,8 +415,22 @@ if [ "$FAMILY" = rhel ]; then
     install -d -m 0755 /etc/systemd/system/builtpanel-control-api.service.d
     printf '[Unit]\nAfter=%s.service %s.service\nWants=%s.service %s.service\n' "$PG_SERVICE" "$REDIS_SERVICE" "$PG_SERVICE" "$REDIS_SERVICE" > /etc/systemd/system/builtpanel-control-api.service.d/services.conf
 fi
+# The panel's own update ("Update now" in the admin area): a request the panel's user leaves, a root service
+# that checks the signed release and installs it (deploy/release/self-update.sh).
+if [ -f "$HERE/release/self-update.sh" ] && [ -f "$HERE/release/server-deploy.sh" ] && [ -f "$HERE/release/deploy.sh" ] && [ -f "$HERE/release/release-public-keys.txt" ]; then
+    install -d -m 0755 /usr/local/lib/builtpanel
+    install -m 0755 -o root -g root "$HERE/release/self-update.sh" /usr/local/sbin/builtpanel-self-update
+    install -m 0755 -o root -g root "$HERE/release/server-deploy.sh" /usr/local/sbin/builtpanel-deploy
+    install -m 0755 -o root -g root "$HERE/release/deploy.sh" /usr/local/lib/builtpanel/deploy.sh
+    install -m 0644 -o root -g root "$HERE/release/release-public-keys.txt" "$ETC/release-public-keys.txt"
+    install -d -m 0755 -o root -g root /var/lib/builtpanel-update
+    install -d -m 0700 -o builtpanel -g builtpanel "$STATE/update-request"
+    install -m 0644 "$HERE/systemd/builtpanel-update.service" /etc/systemd/system/builtpanel-update.service
+    install -m 0644 "$HERE/systemd/builtpanel-update.path" /etc/systemd/system/builtpanel-update.path
+fi
 systemctl daemon-reload
 systemctl enable builtpanel-control-api > /dev/null 2>&1
+[ ! -f /etc/systemd/system/builtpanel-update.path ] || systemctl enable --now builtpanel-update.path > /dev/null 2>&1
 systemctl restart builtpanel-control-api
 for _ in $(seq 1 40); do curl -fsS http://127.0.0.1:8080/api/v1/public/ready > /dev/null 2>&1 && break; sleep 0.5; done
 curl -fsS http://127.0.0.1:8080/api/v1/public/ready > /dev/null 2>&1 || die "the control plane does not answer (journalctl -u builtpanel-control-api)"

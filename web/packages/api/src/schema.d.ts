@@ -1965,6 +1965,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/update/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update the panel to the version the last check found: the request goes to the update service,
+         *     which installs it (follow `run` in the status).
+         */
+        post: operations["updateApply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/update/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the release site for its newest release. */
+        post: operations["updateCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/update/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The update page's numbers. */
+        get: operations["updateStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/usage/nodes/{id}": {
         parameters: {
             query?: never;
@@ -5585,6 +5639,23 @@ export interface components {
              * @description Accounts with a web server that were put on the list.
              */
             tenants: number;
+        };
+        /** @description The update was handed to the update service. */
+        ApplyStarted: {
+            /** @description Always true. */
+            ok: boolean;
+            /** @description Always `started`: follow `run` in the status. */
+            status: string;
+            /** @description The version it will install. */
+            version: string;
+        };
+        /** @description What to update to. */
+        ApplyUpdate: {
+            /**
+             * @description The version shown by the last check; any other is refused.
+             * @example 0.1.15
+             */
+            version: string;
         };
         /** @description One audit entry. */
         AuditItem: {
@@ -10601,6 +10672,50 @@ export interface components {
              */
             hsts?: boolean | null;
         };
+        /** @description One earlier update. */
+        UpdateHistoryItem: {
+            /** @description Always `stable`. */
+            channel: string;
+            /** @description What happened. */
+            details: string;
+            /** @description The version before. */
+            from_version: string;
+            /** @description Id. */
+            id: string;
+            /** @description `success`, `rolled_back` or `failed`. */
+            status: string;
+            /** @description When it ended (RFC 3339, UTC). */
+            timestamp: string;
+            /** @description The version it went to. */
+            to_version: string;
+        };
+        /** @description A release that is newer than the installed one. */
+        UpdateOffer: {
+            /** @description A release that does not start is put back by the installation itself. */
+            can_rollback: boolean;
+            /** @description What changed, one line each. */
+            changelog: string[];
+            /** @description Always `stable`. */
+            channel: string;
+            /** @description SHA-256 of the release archive, when the release site shows it (else empty). */
+            checksum_sha256: string;
+            /** @description The Ed25519 signature of the release manifest (the installation checks it before installing). */
+            ed25519_signature: string;
+            /** @description The release key that signed it. */
+            key_id: string;
+            /**
+             * Format: date-time
+             * @description When the release was made (RFC 3339, UTC).
+             */
+            release_date: string;
+            /** @description Database migrations the release brings (not listed ahead of time: empty). */
+            required_migrations: string[];
+            /**
+             * @description The version, `X.Y.Z`.
+             * @example 0.1.15
+             */
+            version: string;
+        };
         /** @description Changes to a record (its name and type stay: remove it and add another). */
         UpdateRecord: {
             /** @description New data. */
@@ -10625,6 +10740,43 @@ export interface components {
             code?: number | null;
             /** @description New target. */
             target?: string | null;
+        };
+        /** @description What the update service is doing, or did last. */
+        UpdateRun: {
+            /** @description The version it started from. */
+            from_version: string;
+            /** @description What happened, in a sentence. */
+            message: string;
+            /** @description `running`, `completed`, `rolled_back` or `failed`. */
+            state: string;
+            /** @description `request`, `downloading`, `verifying`, `completed`, `rolled_back` or `failed`. */
+            step: string;
+            /** @description When this was written (RFC 3339, UTC). */
+            updated_at: string;
+            /** @description The version it is about. */
+            version: string;
+        };
+        /** @description The update page's numbers. */
+        UpdateStatus: {
+            available_update?: components["schemas"]["UpdateOffer"] | null;
+            /**
+             * @description This server has the update service (installed by the installer from the release that brought it);
+             *     without it a new version is installed by running the installer again.
+             */
+            can_apply: boolean;
+            /** @description Always false (see `previous_version`). */
+            can_rollback: boolean;
+            /** @description Always `stable`. */
+            channel: string;
+            /** @description The version that runs. */
+            current_version: string;
+            /** @description Earlier updates, newest first. */
+            history: components["schemas"]["UpdateHistoryItem"][];
+            /** @description When the release site was last asked (RFC 3339, UTC); absent before the first check. */
+            last_checked_at?: string | null;
+            /** @description Always absent: a release that does not start is put back at once, there is no later rollback. */
+            previous_version?: string | null;
+            run?: components["schemas"]["UpdateRun"] | null;
         };
         /** @description Changes to a user's account. */
         UpdateUser: {
@@ -17937,6 +18089,130 @@ export interface operations {
             };
             /** @description `scan_under_way` */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateApply: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Handed to the update service */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyStarted"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.settings.manage), `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `update_not_available` (this server has no update service), `no_such_update` (not the version on offer) or `update_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `release_site_unavailable` */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateCheck: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Checked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckResult"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.settings.manage) or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `release_site_unavailable`: the release site could not be reached */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What runs, what is on offer, what the update service did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateStatus"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.settings.read) or `mfa_setup_required` */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

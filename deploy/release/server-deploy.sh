@@ -32,15 +32,17 @@ for f in "$NAME.tar.gz" release-manifest.json; do
 done
 rm -f "$STATE/incoming/$NAME.tar.gz" "$STATE/incoming/release-manifest.json"
 
-# No member may leave the folder it is unpacked into.
-if tar -tzf "$work/$NAME.tar.gz" | grep -Eq '^/|(^|/)\.\.(/|$)'; then die "the archive has unsafe paths"; fi
+# No member may leave the folder it is unpacked into. (The list is read whole and searched without a
+# pipe: `tar | grep -q` can end with tar killed by SIGPIPE, which `pipefail` then reports as "not found".)
+LIST="$(tar -tzf "$work/$NAME.tar.gz")" || die "the archive cannot be read"
+if grep -Eq '^/|(^|/)\.\.(/|$)' <<< "$LIST"; then die "the archive has unsafe paths"; fi
 mkdir "$work/x"
 tar -xzf "$work/$NAME.tar.gz" -C "$work/x" --no-same-owner --no-same-permissions "$NAME/bin"
 BIN="$work/x/$NAME/bin"
 [ -d "$BIN" ] || die "the archive has no bin folder"
 # The web interface comes with a release too (two archives); a release without it is fine.
 WEB=""
-if tar -tzf "$work/$NAME.tar.gz" | grep -q "^$NAME/web/"; then
+if grep -q "^$NAME/web/" <<< "$LIST"; then
     tar -xzf "$work/$NAME.tar.gz" -C "$work/x" --no-same-owner --no-same-permissions "$NAME/web"
     WEB="$work/x/$NAME/web"
 fi
