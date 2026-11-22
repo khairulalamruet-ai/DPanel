@@ -29,6 +29,25 @@ export interface FrontendModule {
 export const registeredFrontendModules: FrontendModule[] = [
   {
     manifest: {
+      name: "admin-tools",
+      title: { en: "System tools", bn: "সিস্টেম টুলস" },
+      category: "core",
+      core: true,
+      permissions: ["admin.settings.manage"],
+    },
+    adminNav: [
+      {
+        id: "admin-tools",
+        labelKey: "adminTools.nav",
+        icon: <Wrench className="h-4 w-4" />,
+        href: "/system-tools",
+        order: 95,
+        permission: "admin.settings.manage",
+      },
+    ],
+  },
+  {
+    manifest: {
       name: "dashboard",
       title: { en: "Dashboard", bn: "ড্যাশবোর্ড" },
       category: "core",

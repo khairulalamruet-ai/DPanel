@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useSession } from "@builtpanel/auth";
+import { useSession, saveLocalePreference } from "@builtpanel/auth";
 import { LanguageSwitcher, useTranslation } from "@builtpanel/i18n";
 import { ThemeToggle } from "./ThemeToggle";
 import {
@@ -94,7 +94,7 @@ export function AppShell({ title, navItems, headerActions, children }: AppShellP
         </div>
         <div className="flex items-center gap-2">
           {headerActions}
-          <LanguageSwitcher />
+          <LanguageSwitcher onChange={(l) => void saveLocalePreference(l)} />
           <ThemeToggle />
         </div>
       </div>
@@ -167,7 +167,7 @@ export function AppShell({ title, navItems, headerActions, children }: AppShellP
             </div>
             <div className="flex items-center gap-3">
               {headerActions}
-              <LanguageSwitcher />
+              <LanguageSwitcher onChange={(l) => void saveLocalePreference(l)} />
               <ThemeToggle />
               <button
                 onClick={() => logout()}

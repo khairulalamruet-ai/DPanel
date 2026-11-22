@@ -70,6 +70,7 @@ import {
   ResellerPortalPage,
   AdminResellersPage,
   AdminSecurityCenterPage,
+  AdminSystemToolsPage,
   filterNavItems,
   registeredFrontendModules,
 } from "@builtpanel/modules";
@@ -604,6 +605,12 @@ const adminFirewallRoute = createRoute({
 });
 
 // 52. Security Center routes (T11.11)
+const systemToolsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/system-tools",
+  component: AdminSystemToolsPage,
+});
+
 const adminSecurityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/security",
@@ -752,6 +759,7 @@ const routeTree = rootRoute.addChildren([
   clientFirewallRoute,
   adminFirewallRoute,
   adminSecurityRoute,
+  systemToolsRoute,
   adminSecurityCenterRoute,
   securityCenterRoute,
   appsRoute,

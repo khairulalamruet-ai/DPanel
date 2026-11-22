@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ onChange }: { onChange?: (locale: string) => void } = {}) {
   const { i18n, t } = useTranslation();
 
   const toggleLanguage = () => {
@@ -10,6 +10,7 @@ export function LanguageSwitcher() {
     if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
       window.localStorage?.setItem?.("builtpanel-locale", nextLng);
     }
+    onChange?.(nextLng);
   };
 
   return (

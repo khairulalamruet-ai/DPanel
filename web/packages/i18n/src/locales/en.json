@@ -3261,5 +3261,25 @@
     "update": "Update",
     "redeploy": "Redeploy",
     "noApps": "No application yet."
+  },
+  "adminTools": {
+    "nav": "System tools",
+    "title": "System tools",
+    "saved": "Saved",
+    "images": "Container images clients may run",
+    "on": "offered",
+    "off": "not offered",
+    "stopOffering": "Stop offering",
+    "offer": "Offer",
+    "note": "note",
+    "approve": "Approve image",
+    "smtp": "Mail server of the panel (SMTP)",
+    "enabled": "Send the panel's mail through this server",
+    "username": "username",
+    "password": "password",
+    "passwordKept": "password (leave empty to keep)",
+    "fromName": "sender name",
+    "sendTest": "Send a test mail",
+    "testSent": "Test mail sent"
   }
 }
