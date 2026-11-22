@@ -100,7 +100,10 @@ pub fn client_router() -> Router<AppsState> {
         .merge(marketplace::client_router())
         .merge(gitdeploy::router())
         .route("/api/v1/client/apps", get(client_list))
-        .route("/api/v1/client/apps/{id}", get(client_get))
+        .route(
+            "/api/v1/client/apps/{id}",
+            get(client_get).delete(client_forget),
+        )
         .route(
             "/api/v1/client/apps/wordpress",
             axum::routing::post(install_wordpress),
@@ -270,6 +273,45 @@ pub async fn client_get(
         .map_err(internal)?
         .map(|a| Json(view(a)))
         .ok_or_else(|| AppError::not_found("app"))
+}
+
+/// Stop tracking an application. Its files and its database stay in the account (they are
+/// removed in Files and Databases); the place becomes free for another installation.
+#[utoipa::path(delete, path = "/api/v1/client/apps/{id}", tag = "apps", operation_id = "clientForgetApp",
+    security(("session" = [])), params(("id" = Uuid, Path, description = "Application id")),
+    responses((status = 204, description = "No longer tracked"),
+              (status = 404, description = "Not the account's", body = ProblemDetails, content_type = "application/problem+json"),
+              (status = 409, description = "`app_installing`: wait until the installation ends", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn client_forget(
+    State(state): State<AppsState>,
+    who: Principal,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, AppError> {
+    let tenant = client_tenant(&state, &who).await?;
+    let app = store::get(&state.db, tenant.id, id)
+        .await
+        .map_err(internal)?
+        .ok_or_else(|| AppError::not_found("app"))?;
+    if app.status == "installing" || app.status == "removing" {
+        return Err(AppError::conflict(
+            "app_installing",
+            "The application is being installed; try again when that is done.",
+        ));
+    }
+    store::remove(&state.db, tenant.id, id)
+        .await
+        .map_err(internal)?;
+    builtpanel_audit::insert(
+        &state.db,
+        &AuditEntry::new("app.removed", Outcome::Success)
+            .actor(who.account_id())
+            .tenant(tenant.id)
+            .target("app", id)
+            .metadata(serde_json::json!({ "kind": app.kind, "name": app.name })),
+    )
+    .await
+    .map_err(internal)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// A hosting account's applications.
@@ -1801,7 +1843,7 @@ pub async fn cache_remove(
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        client_list, client_get, admin_list, install_wordpress, catalog_list, install_app,
+        client_list, client_get, client_forget, admin_list, install_wordpress, catalog_list, install_app,
         cache_list, cache_set, cache_remove, wp_overview, wp_update_plugins,
         wp_update_themes, wp_update_core, wp_maintenance, wp_admin_password, wp_operation, wp_scan,
         wp_harden, runtime::runtimes, runtime::list, runtime::create, runtime::update,

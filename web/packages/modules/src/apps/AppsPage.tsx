@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@builtpanel/i18n";
 import { apiFetch } from "@builtpanel/api";
-import { listCatalog, listInstalled, installApp, loadWordPress, setMaintenance, updatePlugin, scanWordPress, hardenWordPress } from "./api";
+import { listCatalog, listInstalled, installApp, forgetApp, loadWordPress, setMaintenance, updatePlugin, scanWordPress, hardenWordPress } from "./api";
 import { useToast, Button } from "@builtpanel/ui";
 import {
   Boxes,
@@ -217,6 +217,15 @@ export function AppsPage() {
         <InstalledAppsTable
           apps={installedApps}
           onOpenManage={handleOpenManage}
+          onUninstall={async (id) => {
+            try {
+              await forgetApp(id);
+              setInstalledApps((prev) => prev.filter((a) => a.id !== id));
+              toast({ title: t("apps.removed", "Application removed from the list; its files stay in your account") });
+            } catch (e) {
+              toast({ title: e instanceof Error ? e.message : String(e), variant: "destructive" });
+            }
+          }}
         />
       ) : (
         <CatalogGrid

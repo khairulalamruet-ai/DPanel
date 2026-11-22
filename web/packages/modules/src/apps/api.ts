@@ -85,6 +85,11 @@ export async function listInstalled(): Promise<InstalledApp[]> {
   return (await apiFetch<{ items: AppView[] }>(A)).items.map(toInstalled);
 }
 
+/** Stops tracking an application; its files and database stay in the account. */
+export async function forgetApp(appId: string): Promise<void> {
+  await apiFetch(`${A}/${encodeURIComponent(appId)}`, { method: "DELETE" });
+}
+
 /** Starts an install; the app shows as installing until the node is done. */
 export async function installApp(p: InstallAppPayload & { domain_id: string }): Promise<InstalledApp> {
   const common = {

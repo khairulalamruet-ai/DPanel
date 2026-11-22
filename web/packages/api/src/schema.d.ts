@@ -2655,7 +2655,11 @@ export interface paths {
         get: operations["clientGetApp"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Stop tracking an application. Its files and its database stay in the account (they are
+         *     removed in Files and Databases); the place becomes free for another installation.
+         */
+        delete: operations["clientForgetApp"];
         options?: never;
         head?: never;
         patch?: never;
@@ -19942,6 +19946,45 @@ export interface operations {
             };
             /** @description Not the account's */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientForgetApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No longer tracked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the account's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `app_installing`: wait until the installation ends */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

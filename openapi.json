@@ -13049,6 +13049,55 @@
             "session": []
           }
         ]
+      },
+      "delete": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "Stop tracking an application. Its files and its database stay in the account (they are\nremoved in Files and Databases); the place becomes free for another installation.",
+        "operationId": "clientForgetApp",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Application id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No longer tracked"
+          },
+          "404": {
+            "description": "Not the account's",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`app_installing`: wait until the installation ends",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
       }
     },
     "/api/v1/client/apps/{id}/operations/{op}": {

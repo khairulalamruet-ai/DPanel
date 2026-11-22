@@ -335,6 +335,40 @@ async fn what_runs_where_is_tracked_one_application_per_place(pool: PgPool) {
     );
     let (_, theirs) = e.call(&b, "GET", "/api/v1/client/apps", None).await;
     assert_eq!(theirs["items"].as_array().unwrap().len(), 0);
+    // Stopping to track an application: not somebody else's, not while it installs.
+    assert_eq!(
+        e.call(&b, "DELETE", &format!("/api/v1/client/apps/{root}"), None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    let (status, busy) = e
+        .call(&a, "DELETE", &format!("/api/v1/client/apps/{root}"), None)
+        .await;
+    assert_eq!(
+        (status, busy["code"].as_str()),
+        (StatusCode::CONFLICT, Some("app_installing"))
+    );
+    assert_eq!(
+        e.call(&a, "DELETE", &format!("/api/v1/client/apps/{blog}"), None)
+            .await
+            .0,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        e.call(&a, "GET", &format!("/api/v1/client/apps/{blog}"), None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    // The application is gone from the list.
+    assert_eq!(
+        e.call(&a, "GET", "/api/v1/client/apps", None).await.1["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
     // An administrator reads any account's applications; a client may not.
     let root_admin = e.sign_in(admin(&pool).await).await;
     let path = format!("/api/v1/admin/tenants/{alice}/apps");
@@ -345,7 +379,7 @@ async fn what_runs_where_is_tracked_one_application_per_place(pool: PgPool) {
     let (status, all) = e.call(&root_admin, "GET", &path, None).await;
     assert_eq!(
         (status, all["items"].as_array().unwrap().len()),
-        (StatusCode::OK, 4)
+        (StatusCode::OK, 3)
     );
     assert_eq!(
         e.call(

@@ -2463,7 +2463,8 @@
     "installSuccessToastDesc": "{{name}} is now active on {{domain}}",
     "uninstallSuccessTitle": "Application Removed",
     "uninstallSuccessDesc": "The application was completely uninstalled.",
-    "loadError": "Failed to load applications."
+    "loadError": "Failed to load applications.",
+    "removed": "Application removed from the list; its files stay in your account"
   },
   "wpManager": {
     "autoLogin": "Auto-Login",
