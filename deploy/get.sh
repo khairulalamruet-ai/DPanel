@@ -19,14 +19,16 @@
 #   --header 'H: V'      an HTTP header for the download (e.g. 'Authorization: Bearer TOKEN')
 #   --tarball FILE       install from a release archive already on this machine (no download)
 #   --no-agent           the control plane only; nodes are added from other servers
-#   --no-upgrade         do not update the operating system (packages and kernel) first
+#   --no-upgrade         do not update the operating system first (by default every package, the
+#                        kernel included, is brought up to date: apt on Ubuntu/Debian, dnf on
+#                        AlmaLinux/Rocky/RHEL/CentOS Stream; nothing is rebooted for you)
 #   --check              download and verify, then only look at what would be done
 #
 # The first administrator holds the built-in `super_admin` role (every permission, like WHM's
 # root); the generated password is printed once at the end. Anything else is passed to install.sh.
 set -euo pipefail
 
-REPO="khairulalamruet-ai/DPanel"; BASE_URL=""; HEADER=(); VERSION=""; TARBALL=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""
+REPO="khairulalamruet-ai/DPanel"; BASE_URL=""; HEADER=(); VERSION=""; TARBALL=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; UPGRADE=1; CHECK_ONLY=0
 PASS=()
 
 while [ $# -gt 0 ]; do
@@ -38,7 +40,9 @@ while [ $# -gt 0 ]; do
         --tarball) TARBALL="${2:?--tarball needs a file}"; shift 2 ;;
         --hostname) HOSTNAME_FQDN="${2:?--hostname needs a name}"; shift 2 ;;
         --admin-email) ADMIN_EMAIL="${2:?--admin-email needs an address}"; shift 2 ;;
-        -h | --help) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --no-upgrade) UPGRADE=0; shift ;;
+        --check) CHECK_ONLY=1; PASS+=("$1"); shift ;;
+        -h | --help) sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) PASS+=("$1"); shift ;;
     esac
 done
@@ -61,7 +65,7 @@ if ! declare -F ui_init > /dev/null; then
         _ui_end_step() { :; }
     fi
 fi
-UI_TOTAL=6
+UI_TOTAL=$((6 + 2 * (UPGRADE - CHECK_ONLY * UPGRADE)))
 ui_init
 ui_banner "the modern hosting control panel  ·  installer"
 
@@ -152,7 +156,72 @@ if [ -z "$HOSTNAME_FQDN" ]; then
 fi
 [ -n "$ADMIN_EMAIL" ] || ADMIN_EMAIL="admin@$HOSTNAME_FQDN"
 
+# --- the operating system ---------------------------------------------------------------------
+# Brought up to date before anything is installed: the security fixes and the kernel, by the way of the
+# distribution (apt on Ubuntu and Debian, dnf on AlmaLinux, Rocky, RHEL and CentOS Stream). Only on a
+# server the installer accepts (a system it refuses is not touched), and never with --check.
+# Nothing is restarted or rebooted here; a new kernel runs after the next reboot.
+REBOOT_NEEDED=0
+os_family() {
+    local ids
+    # In a subshell: os-release sets VERSION and other names this script uses.
+    ids="$( (. /etc/os-release 2> /dev/null; echo "${ID:-} ${ID_LIKE:-}") )"
+    case " $ids " in
+        *" ubuntu "* | *" debian "*) echo deb ;;
+        *" rhel "* | *" centos "* | *" fedora "* | *" almalinux "* | *" rocky "*) echo rhel ;;
+        *) echo "" ;;
+    esac
+}
+os_update() {
+    local log=/var/log/builtpanel-os-update.log family n newest
+    family="$(os_family)"
+    : > "$log"
+    case "$family" in
+        deb)
+            export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l NEEDRESTART_SUSPEND=1
+            # A new machine often runs its own first update at boot: wait for the package lock (up to 5
+            # minutes). Edited configuration files are kept. full-upgrade, because a new kernel is a new package.
+            local opts=(-o DPkg::Lock::Timeout=300 -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
+            apt-get "${opts[@]}" update -qq >> "$log" 2>&1 && apt-get "${opts[@]}" full-upgrade -y -qq >> "$log" 2>&1 || return 1
+            apt-get "${opts[@]}" autoremove -y -qq >> "$log" 2>&1 || true
+            [ ! -e /run/reboot-required ] || REBOOT_NEEDED=1
+            ;;
+        rhel)
+            for n in 1 2 3; do
+                dnf upgrade -y -q --refresh --setopt=retries=5 --setopt=timeout=60 >> "$log" 2>&1 && break
+                [ "$n" -lt 3 ] || return 1
+                sleep 5
+            done
+            newest="$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' --last 2> /dev/null | head -1)" || newest=""
+            [ -z "$newest" ] || [ "$newest" = "$(uname -r)" ] || REBOOT_NEEDED=1
+            ;;
+        *)
+            echo "get.sh: warning: this Linux is not Debian- or Red Hat-based: its system update is skipped" >&2
+            ;;
+    esac
+}
+if [ "$UPGRADE" -eq 1 ] && [ "$CHECK_ONLY" -eq 0 ]; then
+    say "checking this server"
+    # The installer's own look at the server (system, memory, disk, programs) decides: nothing below runs on a
+    # server it would refuse.
+    if ! "$WORK/release/install.sh" --check --bin-dir "$WORK/release/bin" --hostname "$HOSTNAME_FQDN" --admin-email "$ADMIN_EMAIL" ${PASS[@]+"${PASS[@]}"} > "$WORK/check.log" 2>&1; then
+        _ui_end_step
+        tail -n 8 "$WORK/check.log" >&2
+        die "this server cannot run Built Panel (see above): nothing was changed"
+    fi
+    say "updating the operating system"
+    os_update || die "the system update failed (the end of /var/log/builtpanel-os-update.log: $(tail -n 3 /var/log/builtpanel-os-update.log | tr '\n' ' ')); fix it, or run this again with --no-upgrade"
+    if [ "$REBOOT_NEEDED" = 1 ] && [ "$(os_family)" = rhel ] && ! printf '%s\n' ${PASS[@]+"${PASS[@]}"} | grep -qx -- --no-agent; then
+        # Docker's network modules must match the running kernel: the new one has to run first.
+        _ui_end_step
+        echo "get.sh: the system update installed a newer kernel. Run  reboot  and then this same command again:" >&2
+        echo "        the update is done, the second run goes on with the installation." >&2
+        exit 0
+    fi
+fi
+
 say "starting the installer"
 _ui_end_step
-# The installer goes on with the same look, without drawing the logo again.
-BPINSTALL_BANNER=0 "$WORK/release/install.sh" --bin-dir "$WORK/release/bin" --hostname "$HOSTNAME_FQDN" --admin-email "$ADMIN_EMAIL" ${PASS[@]+"${PASS[@]}"}
+# The installer goes on with the same look, without drawing the logo again. The system update is done here
+# (or was asked not to be), so it does not repeat it; it only needs to know whether a reboot is due.
+BUILTPANEL_REBOOT_NEEDED="$REBOOT_NEEDED" BPINSTALL_BANNER=0 "$WORK/release/install.sh" --no-upgrade --bin-dir "$WORK/release/bin" --hostname "$HOSTNAME_FQDN" --admin-email "$ADMIN_EMAIL" ${PASS[@]+"${PASS[@]}"}

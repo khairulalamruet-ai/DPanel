@@ -35,6 +35,7 @@ set -euo pipefail
 BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; UPGRADE=1; CHECK=0
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ETC=/etc/builtpanel; SECRETS=$ETC/secrets; STATE=/var/lib/builtpanel; AGENT_PORT=8444
+NEED_REBOOT="${BUILTPANEL_REBOOT_NEEDED:-0}"  # get.sh updates the system first and says here whether a reboot is due
 
 while [ $# -gt 0 ]; do
     case "$1" in
