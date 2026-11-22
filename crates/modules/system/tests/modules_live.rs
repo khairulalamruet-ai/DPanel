@@ -935,7 +935,7 @@ async fn client_with_hosting(pool: &PgPool, name: &str) -> Uuid {
         .unwrap();
     sqlx::query(
         "INSERT INTO tenants (owner_account_id, node_id, plan_id, username, uid, status)
-         VALUES ($1, $2, $3, $4, 10000, 'active')",
+         VALUES ($1, $2, $3, $4, 10000 + (SELECT count(*) FROM tenants)::int, 'active')",
     )
     .bind(account)
     .bind(node)
@@ -1027,4 +1027,76 @@ async fn the_customer_bootstrap_has_the_menu_the_plan_features_and_limits(pool: 
     .unwrap();
     let (_, body) = e.call(Some(&alice), "GET", path, None, false).await;
     assert_eq!(body["limits"]["max_domains"], 7);
+}
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn the_search_finds_domains_and_accounts_and_keeps_a_customer_to_their_own(pool: PgPool) {
+    let e = env(&pool).await;
+    let path = "/api/v1/search";
+    let root_id = account(&pool, "rootuser", &["super_admin"]).await;
+    let root = e.sign_in(root_id).await;
+    let alice_id = client_with_hosting(&pool, "alice").await;
+    let alice = e.sign_in(alice_id).await;
+    let bob_id = client_with_hosting(&pool, "bobby").await;
+    for (who, fqdn) in [("alice", "alpha-shop.test"), ("bobby", "bobs-shop.test")] {
+        sqlx::query(
+            "INSERT INTO domains (tenant_id, fqdn, kind) \
+             SELECT id, $2, 'primary' FROM tenants WHERE username = $1",
+        )
+        .bind(who)
+        .bind(fqdn)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    let _ = bob_id;
+
+    assert_eq!(
+        e.call(None, "GET", &format!("{path}?q=shop"), None, false)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    // Too short: nothing.
+    let (status, body) = e
+        .call(Some(&root), "GET", &format!("{path}?q=s"), None, false)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body.as_array().unwrap().len(), 0);
+
+    // An administrator finds both domains.
+    let (status, body) = e
+        .call(Some(&root), "GET", &format!("{path}?q=SHOP"), None, false)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let titles: Vec<&str> = body
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|h| h["title"].as_str().unwrap())
+        .collect();
+    assert_eq!(titles, ["alpha-shop.test", "bobs-shop.test"]);
+    // ... and accounts by name.
+    let (_, body) = e
+        .call(Some(&root), "GET", &format!("{path}?q=bobb"), None, false)
+        .await;
+    assert_eq!(body[0]["category"], "users");
+    assert_eq!(body[0]["title"], "bobby");
+
+    // A customer finds only their own domain, and no accounts.
+    let (_, body) = e
+        .call(Some(&alice), "GET", &format!("{path}?q=shop"), None, false)
+        .await;
+    let titles: Vec<&str> = body
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|h| h["title"].as_str().unwrap())
+        .collect();
+    assert_eq!(titles, ["alpha-shop.test"]);
+    let (_, body) = e
+        .call(Some(&alice), "GET", &format!("{path}?q=bobb"), None, false)
+        .await;
+    assert_eq!(body.as_array().unwrap().len(), 0);
 }

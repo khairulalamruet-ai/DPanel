@@ -4,6 +4,7 @@
 //! |---|---|---|
 //! | GET | `/api/v1/admin/bootstrap` | a signed-in administrator |
 //! | GET | `/api/v1/client/bootstrap` | a signed-in customer |
+//! | GET | `/api/v1/search` | a signed-in account: domains and accounts by a few letters |
 //! | GET | `/api/v1/admin/modules` | `admin.modules.read` |
 //! | PUT | `/api/v1/admin/modules/{name}` | `admin.modules.manage`, sudo mode |
 //! | GET | `/api/v1/admin/settings` | `admin.settings.read` |
@@ -23,6 +24,7 @@
 //!   transaction.
 
 pub mod bootstrap;
+pub mod search;
 
 use std::{collections::BTreeSet, sync::Arc};
 
@@ -93,7 +95,9 @@ pub fn router() -> Router<SystemState> {
 
 /// The customers' routes: their bootstrap.
 pub fn client_router() -> Router<SystemState> {
-    Router::new().route("/api/v1/client/bootstrap", get(bootstrap::client_bootstrap))
+    Router::new()
+        .route("/api/v1/client/bootstrap", get(bootstrap::client_bootstrap))
+        .route("/api/v1/search", get(search::search))
 }
 
 /// Which events of the control plane's log.
@@ -698,13 +702,13 @@ pub async fn put_settings(
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        bootstrap::admin_bootstrap, bootstrap::client_bootstrap, system_logs, list_modules, set_module, list_settings, get_settings,
+        bootstrap::admin_bootstrap, bootstrap::client_bootstrap, search::search, system_logs, list_modules, set_module, list_settings, get_settings,
         put_settings
     ),
     components(schemas(
         ModuleView, ModuleList, SetModule, ModuleChange, SettingsView, SettingsList, PutSettings,
         SettingsChange, SystemLogLine, SystemLogList, bootstrap::Bootstrap, bootstrap::BootstrapUser, bootstrap::BootstrapMfa,
-        bootstrap::BootstrapNav, bootstrap::BootstrapModule, bootstrap::Branding
+        bootstrap::BootstrapNav, bootstrap::BootstrapModule, bootstrap::Branding, search::SearchHit
     )),
     tags((name = "system", description = "Modules and settings"))
 )]

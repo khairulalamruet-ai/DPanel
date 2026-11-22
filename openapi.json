@@ -24709,6 +24709,51 @@
           }
         ]
       }
+    },
+    "/api/v1/search": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Find domains and accounts by a few letters.",
+        "operationId": "search",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "path",
+            "description": "A few letters of a domain name, a username or an email address (two at least).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "At most ten matches of each kind; none when fewer than two letters are given",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SearchHit"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -33307,6 +33352,41 @@
           }
         },
         "additionalProperties": false
+      },
+      "SearchHit": {
+        "type": "object",
+        "description": "One match.",
+        "required": [
+          "id",
+          "title",
+          "category",
+          "href"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "`domains` or `users`."
+          },
+          "href": {
+            "type": "string",
+            "description": "Where it is in the interface."
+          },
+          "id": {
+            "type": "string",
+            "description": "Id of the thing found."
+          },
+          "subtitle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A second line: the owner of a domain, the email of an account."
+          },
+          "title": {
+            "type": "string",
+            "description": "What to show."
+          }
+        }
       },
       "SecurityImageView": {
         "type": "object",
