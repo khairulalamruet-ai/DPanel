@@ -385,6 +385,7 @@ mod tests {
             subuid_file: "/nonexistent".into(),
             agent_gid: gid,
             mountinfo: "/nonexistent".into(),
+            identity: false,
         }
     }
 

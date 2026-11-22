@@ -18,6 +18,10 @@ use uuid::Uuid;
 const NGINX: &str = "nginxinc/nginx-unprivileged@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()

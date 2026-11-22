@@ -20,7 +20,7 @@ use builtpanel_node_protocol::files::{FileErrorCode, FileRequest, FileResult};
 
 use crate::{
     protocol::ErrorCode,
-    tenant::{Failure, TenantEnv, host_uid, subuid_range, valid_tenant_id},
+    tenant::{Failure, TenantEnv, host_uid, valid_tenant_id},
 };
 
 /// Longest a worker may run (a big archive takes a while).
@@ -42,10 +42,7 @@ pub fn run(
     if !valid_tenant_id(tenant_id) {
         return Err((ErrorCode::InvalidArguments, "bad tenant id"));
     }
-    let text = std::fs::read_to_string(&env.subuid_file)
-        .map_err(|_| (ErrorCode::Failed, "cannot read the subordinate ids"))?;
-    let range = subuid_range(&text, &env.agent_name)
-        .ok_or((ErrorCode::Failed, "the agent has no subordinate ids"))?;
+    let range = env.id_range()?;
     let host = host_uid(range, uid)?;
     let root = env.root.join(tenant_id);
     work(&root, host, host, request)
@@ -197,10 +194,7 @@ fn host_ids(
     if !valid_tenant_id(tenant_id) {
         return Err((ErrorCode::InvalidArguments, "bad tenant id"));
     }
-    let text = std::fs::read_to_string(&env.subuid_file)
-        .map_err(|_| (ErrorCode::Failed, "cannot read the subordinate ids"))?;
-    let range = subuid_range(&text, &env.agent_name)
-        .ok_or((ErrorCode::Failed, "the agent has no subordinate ids"))?;
+    let range = env.id_range()?;
     Ok((host_uid(range, uid)?, env.root.join(tenant_id)))
 }
 
@@ -705,6 +699,7 @@ mod tests {
             subuid_file: "/nonexistent".into(),
             agent_gid: 1,
             mountinfo: "/nonexistent".into(),
+            identity: false,
         };
         let request = FileRequest::TrashList;
         assert_eq!(

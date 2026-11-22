@@ -15,7 +15,7 @@ use builtpanel_priv_helper::{
     tenant::TenantEnv,
 };
 
-const USAGE: &str = "usage: builtpanel-priv-helper [--socket PATH] [--tenants-root DIR] [--db-port PORT] [--pg-port PORT] [--transfers-dir DIR] [--agent-user NAME | --agent-uid UID --agent-gid GID]";
+const USAGE: &str = "usage: builtpanel-priv-helper [--socket PATH] [--tenants-root DIR] [--db-port PORT] [--pg-port PORT] [--transfers-dir DIR] [--uid-map subuid|identity] [--agent-user NAME | --agent-uid UID --agent-gid GID]";
 
 #[allow(clippy::print_stdout)]
 fn main() -> ExitCode {
@@ -87,6 +87,9 @@ fn main() -> ExitCode {
     let mut transfers = PathBuf::from("/var/lib/builtpanel-transfers");
     let mut server = builtpanel_priv_helper::servertools::Env::default();
     let mut ssh_port: u16 = 22;
+    // How the containers' ids reach the host: through the agent's subordinate range (a rootless engine,
+    // the default), or as they are (a root engine such as Kiri). The unit can say it with the variable.
+    let mut identity = std::env::var("BUILTPANEL_HELPER_UID_MAP").is_ok_and(|v| v == "identity");
     let (mut uid, mut gid) = (None::<u32>, None::<u32>);
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -95,6 +98,13 @@ fn main() -> ExitCode {
             "--socket" => value().map(|v| socket = v.into()),
             "--agent-user" => value().map(|v| user = v),
             "--tenants-root" => value().map(|v| tenants_root = v.into()),
+            "--uid-map" => value()
+                .and_then(|v| match v.as_str() {
+                    "identity" => Some(true),
+                    "subuid" => Some(false),
+                    _ => None,
+                })
+                .map(|v| identity = v),
             "--transfers-dir" => value().map(|v| transfers = v.into()),
             // For tests: where the server tools find their commands and files.
             "--ssh-port" => value()
@@ -160,6 +170,7 @@ fn main() -> ExitCode {
             subuid_file: "/etc/subuid".into(),
             agent_gid,
             mountinfo: "/proc/self/mountinfo".into(),
+            identity,
         },
         db_port,
         pg_port,

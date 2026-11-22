@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Installs the Built Panel node agent on a Linux server (run as root).
 #
-#   sudo ./install.sh --binary ./builtpanel-agent [--priv-helper PATH | --no-priv-helper] [--rootless-docker] [--check]
+#   sudo ./install.sh --binary ./builtpanel-agent [--priv-helper PATH | --no-priv-helper] [--rootless-docker | --engine kiri] [--check]
 #
 # The root helper is installed (or updated) automatically from the file called
 # builtpanel-priv-helper next to the agent binary; --priv-helper PATH names another,
@@ -17,6 +17,10 @@
 #     changes that need root (its own hardened unit), and the packet filter tool
 #     (nftables) it needs for the database's remote access, if it is missing
 #   * with --rootless-docker: gives the agent its own rootless Docker daemon
+#   * with --engine kiri: uses the Kiri engine (install the package first: install.sh of the panel does)
+#     instead: the agent joins its group, the helper hands tenant files out under their own ids, and
+#     the engine is switched on. Kiri is a root engine: a member of its `kiri` group is root-equivalent.
+#     The engine of a node that already has tenants is not changed (their files belong to the old ids).
 #
 # It does NOT enrol or start the agent: enrol first, with the command the panel
 # shows when you add the node (run as the agent user), then enable the service.
@@ -34,6 +38,7 @@ helper=""
 no_helper=0
 check=0
 rootless=0
+engine=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --binary) binary="${2:?--binary needs a path}"; shift 2 ;;
@@ -41,13 +46,19 @@ while [ $# -gt 0 ]; do
     --no-priv-helper) no_helper=1; shift ;;
     --check) check=1; shift ;;
     --rootless-docker) rootless=1; shift ;;
-    -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --engine) engine="${2:?--engine needs docker or kiri}"; shift 2 ;;
+    -h|--help) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "install.sh: unknown option: $1" >&2; exit 64 ;;
   esac
 done
 
 die() { echo "install.sh: $*" >&2; exit 1; }
 say() { echo "==> $*"; }
+
+[ -z "$engine" ] || [ "$engine" = docker ] || [ "$engine" = kiri ] || die "--engine must be docker or kiri"
+[ "$engine" != kiri ] || [ "$rootless" -eq 0 ] || die "--engine kiri and --rootless-docker exclude each other"
+[ "$engine" = kiri ] || engine=docker
+ENGINE_FILE=/etc/builtpanel/node-engine
 
 if [ "$check" -eq 0 ]; then
   [ "$(id -u)" -eq 0 ] || die "run as root (sudo)"
@@ -77,6 +88,20 @@ if [ "$check" -eq 1 ]; then
   say "nftables:       $(command -v nft || echo 'missing (would be installed)')"
   say "agent user:     $(id "$AGENT_USER" >/dev/null 2>&1 && echo present || echo 'would be created')"
   exit 0
+fi
+
+# --- the engine of this node -------------------------------------------------
+# Tenant files are owned by ids that depend on the engine (a rootless engine's subordinate range, or the
+# ids as they are for Kiri): a node that has tenants cannot change engine without handing every file over.
+if [ "$rootless" -eq 1 ] || [ "$engine" = kiri ]; then
+  now_engine=docker; [ "$engine" != kiri ] || now_engine=kiri
+  had="$(cat "$ENGINE_FILE" 2>/dev/null || true)"
+  if [ -z "$had" ] && [ -d /srv/tenants ] && [ -n "$(ls -A /srv/tenants 2>/dev/null)" ]; then
+    had=docker   # tenants from before this file existed were made under rootless Docker
+  fi
+  if [ -n "$had" ] && [ "$had" != "$now_engine" ] && [ -n "$(ls -A /srv/tenants 2>/dev/null)" ]; then
+    die "this node already has tenants under the $had engine: their files are owned by that engine's ids, so it cannot change to $now_engine (use a new server)"
+  fi
 fi
 
 # --- user and directories ---------------------------------------------------
@@ -133,6 +158,13 @@ if [ -n "$helper" ]; then
   install -m 0755 -o root -g root "$helper" "$HELPER_DST.new"
   mv -f "$HELPER_DST.new" "$HELPER_DST"
   install -m 0644 -o root -g root "$HERE/builtpanel-priv-helper.service" "$HELPER_UNIT"
+  if [ "$engine" = kiri ]; then
+    # Containers of a root engine have no user namespace of their own: a tenant's id N is the host's id N.
+    install -d -m 0755 /etc/systemd/system/builtpanel-priv-helper.service.d
+    printf '[Service]\nEnvironment=BUILTPANEL_HELPER_UID_MAP=identity\n' > /etc/systemd/system/builtpanel-priv-helper.service.d/engine.conf
+  elif [ "$rootless" -eq 1 ]; then
+    rm -f /etc/systemd/system/builtpanel-priv-helper.service.d/engine.conf
+  fi
   systemctl daemon-reload
   # Where tenants live. It must exist before the unit starts (the unit's sandbox
   # lists it as writable); only root may create things in it.
@@ -225,8 +257,34 @@ if [ "$rootless" -eq 1 ]; then
     die "the agent's Docker cannot limit CPU, memory or processes (docker info warns): check the cgroup v2 delegation"
   fi
   say "rootless Docker is up: $(as_agent env DOCKER_HOST="unix:///run/user/${AGENT_UID}/docker.sock" docker version --format '{{.Server.Version}} (rootless={{range .Server.Components}}{{.Name}} {{end}})' 2>/dev/null | cut -c1-80)"
+elif [ "$engine" = kiri ]; then
+  command -v kiri >/dev/null || die "kiri is not installed (install the kiri-lite package, or let the panel's install.sh do it)"
+  getent group kiri >/dev/null || die "the kiri group does not exist: is the kiri package installed?"
+  say "using the Kiri engine for $AGENT_USER (a root engine: the agent is in its root-equivalent group)"
+  # The agent reaches Kiri's Docker API through the kiri group and starts after the engine.
+  install -d -m 0755 /etc/systemd/system/builtpanel-agent.service.d
+  cat > /etc/systemd/system/builtpanel-agent.service.d/engine.conf <<'CONF'
+[Unit]
+After=kiri.service
+Wants=kiri.service
+
+[Service]
+SupplementaryGroups=kiri
+Environment=DOCKER_HOST=unix:///run/kiri/docker.sock
+CONF
+  systemctl daemon-reload
+  systemctl enable --now kiri >/dev/null 2>&1 || die "kiri did not start (journalctl -u kiri)"
+  for _ in $(seq 1 30); do [ -S /run/kiri/docker.sock ] && break; sleep 1; done
+  [ -S /run/kiri/docker.sock ] || die "Kiri's Docker socket did not appear (journalctl -u kiri)"
+  [ "$(curl -fsS --unix-socket /run/kiri/docker.sock http://localhost/_ping 2>/dev/null)" = OK ] || die "Kiri does not answer on its socket (journalctl -u kiri)"
+  say "Kiri is up: $(curl -fsS --unix-socket /run/kiri/docker.sock http://localhost/version 2>/dev/null | sed -n 's/.*"KiriVersion":"\([^"]*\)".*/\1/p')"
 else
   say "skipping rootless Docker (use --rootless-docker to set it up for the agent)"
+fi
+# What engine this node was set up with (checked above on the next run).
+if [ "$rootless" -eq 1 ] || [ "$engine" = kiri ]; then
+  install -d -m 0755 /etc/builtpanel
+  printf '%s\n' "$([ "$engine" = kiri ] && echo kiri || echo docker)" > "$ENGINE_FILE"
 fi
 
 cat <<EOF
