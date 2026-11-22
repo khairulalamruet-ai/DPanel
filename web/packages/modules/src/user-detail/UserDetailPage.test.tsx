@@ -149,6 +149,10 @@ const mockApiFetch = vi.fn();
 vi.mock("@builtpanel/api", () => ({
   apiFetch: (...args: any[]) => mockApiFetch(...args),
 }));
+// The page is made of several calls (see ./api); here it is given what they add up to.
+vi.mock("./api", () => ({
+  loadUserDetail: async () => mockUser,
+}));
 
 describe("UserDetailPage", () => {
   beforeEach(() => {

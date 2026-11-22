@@ -2644,7 +2644,22 @@ export const handlers = [
             },
             last_seen_at: n.last_seen_at,
             created_at: n.enrolled_at,
-          })),
+          })).concat(
+            // The nodes the demo users live on.
+            mockNodesList
+              .filter((n) => !mockNodes.some((m) => m.id === n.id))
+              .map((n) => ({
+                id: n.id,
+                name: n.name,
+                hostname: n.name,
+                public_ip: null as unknown as string,
+                status: n.status,
+                agent_version: "0.1.0",
+                capabilities: {} as any,
+                last_seen_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+              })),
+          ),
         });
       }),
 
@@ -3698,94 +3713,57 @@ export const handlers = [
     return HttpResponse.json({ success: true });
   }),
 
-  // Users: List users with pagination and search/filters (GET /api/v1/admin/users)
-  // TODO(api:T04.12): Replace with real backend users endpoint
+  // Users: list (GET /api/v1/admin/users?limit&offset&q&status&plan_id&node_id), shaped like `UserView`
   http.get(/\/api\/v1\/admin\/users(\?.*)?$/, ({ request }) => {
     const url = new URL(request.url);
-    const search = (url.searchParams.get("search") || "").trim().toLowerCase();
+    const q = (url.searchParams.get("q") || "").trim().toLowerCase();
     const status = url.searchParams.get("status");
     const planId = url.searchParams.get("plan_id");
     const nodeId = url.searchParams.get("node_id");
-    const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
-    const perPage = Math.max(1, parseInt(url.searchParams.get("per_page") || "10", 10));
+    const limit = Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10));
+    const offset = Math.max(0, parseInt(url.searchParams.get("offset") || "0", 10));
 
     let filtered = [...mockUsers];
-
-    if (search) {
-      filtered = filtered.filter(
-        (u) =>
-          u.username.toLowerCase().includes(search) ||
-          u.email.toLowerCase().includes(search) ||
-          (u.primary_domain && u.primary_domain.toLowerCase().includes(search))
-      );
+    if (q) {
+      filtered = filtered.filter((u) => u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
     }
-
-    if (status && status !== "all") {
-      filtered = filtered.filter((u) => u.status === status);
-    }
-
-    if (planId && planId !== "all") {
-      filtered = filtered.filter((u) => u.plan_id === planId);
-    }
-
-    if (nodeId && nodeId !== "all") {
-      filtered = filtered.filter((u) => u.node_id === nodeId);
-    }
-
-    const total = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(total / perPage));
-    const startIndex = (page - 1) * perPage;
-    const items = filtered.slice(startIndex, startIndex + perPage);
+    if (status) filtered = filtered.filter((u) => u.status === (status === "provisioning" ? "pending" : status));
+    if (planId) filtered = filtered.filter((u) => u.plan_id === planId);
+    if (nodeId) filtered = filtered.filter((u) => u.node_id === nodeId);
 
     return HttpResponse.json({
-      items,
-      total,
-      page,
-      per_page: perPage,
-      total_pages: totalPages,
+      items: filtered.slice(offset, offset + limit).map((u) => ({
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        locale: "en",
+        account_status: u.status === "suspended" ? "disabled" : "active",
+        created_at: u.created_at,
+        tenant: {
+          id: `ten_${u.id}`,
+          username: u.username,
+          node_id: u.node_id,
+          node_name: u.node_name,
+          plan_id: u.plan_id,
+          plan_name: u.plan_name,
+          status: u.status === "pending" ? "provisioning" : u.status,
+          purge_after: null,
+        },
+      })),
+      total: filtered.length,
     });
   }),
 
-  // Users: Bulk actions (POST /api/v1/admin/users/bulk)
-  // TODO(api:T04.12): Replace with real backend bulk endpoint
-  http.post(/\/api\/v1\/admin\/users\/bulk$/, async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as any;
-    const { action, user_ids = [], plan_id, reason } = body || {};
-
-    const targetSet = new Set(user_ids);
-
-    if (action === "suspend") {
-      mockUsers.forEach((u) => {
-        if (targetSet.has(u.id)) {
-          u.status = "suspended";
-          u.suspended_at = new Date().toISOString();
-          u.suspended_reason = reason || "Suspended by admin";
-        }
-      });
-    } else if (action === "unsuspend") {
-      mockUsers.forEach((u) => {
-        if (targetSet.has(u.id)) {
-          u.status = "active";
-          u.suspended_at = null;
-          u.suspended_reason = null;
-        }
-      });
-    } else if (action === "change_plan" && plan_id) {
-      const targetPlan = mockPlansList.find((p) => p.id === plan_id);
-      if (targetPlan) {
-        mockUsers.forEach((u) => {
-          if (targetSet.has(u.id)) {
-            u.plan_id = targetPlan.id;
-            u.plan_name = targetPlan.name;
-            u.disk_limit_bytes = targetPlan.disk_limit;
-          }
-        });
-      }
-    } else if (action === "delete") {
-      mockUsers = mockUsers.filter((u) => !targetSet.has(u.id));
-    }
-
-    return HttpResponse.json({ success: true, affected: targetSet.size });
+  // Users: change plan (POST /api/v1/admin/users/:id/plan)
+  http.post(/\/api\/v1\/admin\/users\/([^/]+)\/plan$/, async ({ params, request }) => {
+    const body = (await request.json().catch(() => ({}))) as { plan_id?: string };
+    const user = mockUsers.find((u) => u.id === params[0]);
+    const plan = mockPlansList.find((p) => p.id === body.plan_id);
+    if (!user || !plan) return problem(404, "not_found", "No such user or plan");
+    user.plan_id = plan.id;
+    user.plan_name = plan.name;
+    user.disk_limit_bytes = plan.disk_limit;
+    return HttpResponse.json({ ok: true });
   }),
 
   // Users: Single suspend (POST /api/v1/admin/users/:id/suspend)

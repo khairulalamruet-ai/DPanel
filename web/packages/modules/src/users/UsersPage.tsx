@@ -14,6 +14,7 @@ import {
   useToast,
 } from "@builtpanel/ui";
 import { apiFetch } from "@builtpanel/api";
+import { listUsers, bulkAction } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import {
   Users,
@@ -104,17 +105,13 @@ export function UsersPage() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const queryParams: Record<string, string | number> = {
+      const data = await listUsers({
         page,
-        per_page: perPage,
-      };
-      if (debouncedSearch.trim()) queryParams.search = debouncedSearch.trim();
-      if (statusFilter !== "all") queryParams.status = statusFilter;
-      if (planFilter !== "all") queryParams.plan_id = planFilter;
-      if (nodeFilter !== "all") queryParams.node_id = nodeFilter;
-
-      const data = await apiFetch<UsersListResponse>("/api/v1/admin/users", {
-        params: queryParams,
+        perPage,
+        search: debouncedSearch.trim() || undefined,
+        status: statusFilter,
+        planId: planFilter,
+        nodeId: nodeFilter,
       });
 
       setUsers(data.items || []);
@@ -225,14 +222,7 @@ export function UsersPage() {
     setIsSubmitting(true);
     try {
       const ids = changePlanUsers?.map((u) => u.id) || [];
-      await apiFetch("/api/v1/admin/users/bulk", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "change_plan",
-          user_ids: ids,
-          plan_id: planId,
-        }),
-      });
+      await bulkAction({ action: "change_plan", user_ids: ids, plan_id: planId });
 
       toast({
         title: t("common.appName"),
@@ -262,14 +252,7 @@ export function UsersPage() {
       const { users: targetUsers, action } = suspendDialogData;
       const ids = targetUsers.map((u) => u.id);
 
-      await apiFetch("/api/v1/admin/users/bulk", {
-        method: "POST",
-        body: JSON.stringify({
-          action,
-          user_ids: ids,
-          reason,
-        }),
-      });
+      await bulkAction({ action, user_ids: ids, reason });
 
       toast({
         title: t("common.appName"),
