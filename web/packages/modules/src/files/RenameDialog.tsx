@@ -9,7 +9,7 @@ import {
   Input,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { renameItem } from "./api";
 import { Edit } from "lucide-react";
 import { FileItem, RenamePayload } from "./types";
 import { useTranslation } from "@builtpanel/i18n";
@@ -49,13 +49,7 @@ export function RenameDialog({
 
     try {
       setIsSubmitting(true);
-      await apiFetch("/api/v1/client/files/rename", {
-        method: "PUT",
-        body: JSON.stringify({
-          old_path: file.path,
-          new_name: trimmed,
-        } as RenamePayload),
-      });
+      await renameItem(file.path, trimmed);
 
       toast({
         title: t("common.success"),

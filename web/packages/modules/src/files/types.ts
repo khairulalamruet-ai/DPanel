@@ -104,5 +104,7 @@ export interface DiskUsageResponse {
   inodes_limit: number;
   inodes_usage_pct: number;
   last_scanned_at: string;
+  /** The measurement stopped at its limit, so the figures are a lower bound. */
+  partial?: boolean;
   top_directories: DirectoryUsageItem[];
 }

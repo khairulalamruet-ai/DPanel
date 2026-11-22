@@ -39,12 +39,12 @@ describe("DiskUsagePage (T08.10)", () => {
     }
 
     // Check row #0 details
-    expect(screen.getByTestId("dir-path-0")).toHaveTextContent("/home/demo/public_html/wp-content/uploads");
+    expect(screen.getByTestId("dir-path-0")).toHaveTextContent("/public_html/wp-content/uploads");
     expect(screen.getByTestId("dir-size-0")).toHaveTextContent("450.0 MB");
 
     // Check row #9 details
-    expect(screen.getByTestId("dir-path-9")).toHaveTextContent("/home/demo/tmp");
-    expect(screen.getByTestId("dir-size-9")).toHaveTextContent("5.0 MB");
+    expect(screen.getByTestId("dir-path-9")).toHaveTextContent("/tmp");
+    expect(screen.getByTestId("dir-size-9")).toHaveTextContent("1.0 MB");
   });
 
   it("triggers recalculate disk usage action", async () => {

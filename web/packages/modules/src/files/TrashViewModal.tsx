@@ -8,7 +8,7 @@ import {
   Button,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { listTrash, restoreFromTrash, emptyTrash } from "./api";
 import { Trash2, RotateCcw, File, Folder } from "lucide-react";
 import { FileItem, TrashListResponse, RestoreTrashPayload } from "./types";
 import { useTranslation } from "@builtpanel/i18n";
@@ -33,7 +33,7 @@ export function TrashViewModal({
   const fetchTrash = async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<TrashListResponse>("/api/v1/client/files/trash");
+      const res = await listTrash();
       setItems(res.items || []);
     } catch (err: any) {
       toast({
@@ -55,12 +55,7 @@ export function TrashViewModal({
   const handleRestore = async (item: FileItem) => {
     try {
       setIsActionPending(true);
-      await apiFetch("/api/v1/client/files/trash/restore", {
-        method: "POST",
-        body: JSON.stringify({
-          item_ids: [item.id],
-        } as RestoreTrashPayload),
-      });
+      await restoreFromTrash(item.id);
 
       toast({
         title: t("common.success"),
@@ -82,9 +77,7 @@ export function TrashViewModal({
   const handleEmptyTrash = async () => {
     try {
       setIsActionPending(true);
-      await apiFetch("/api/v1/client/files/trash/empty", {
-        method: "DELETE",
-      });
+      await emptyTrash();
 
       toast({
         title: t("common.success"),

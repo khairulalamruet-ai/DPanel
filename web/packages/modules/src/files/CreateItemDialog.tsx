@@ -9,7 +9,7 @@ import {
   Input,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { createItem } from "./api";
 import { FilePlus, FolderPlus } from "lucide-react";
 import { CreateItemPayload } from "./types";
 import { useTranslation } from "@builtpanel/i18n";
@@ -41,14 +41,7 @@ export function CreateItemDialog({
 
     try {
       setIsSubmitting(true);
-      await apiFetch("/api/v1/client/files/create", {
-        method: "POST",
-        body: JSON.stringify({
-          parent_path: currentPath,
-          name: trimmed,
-          type,
-        } as CreateItemPayload),
-      });
+      await createItem(currentPath, trimmed, type);
 
       toast({
         title: t("common.success"),

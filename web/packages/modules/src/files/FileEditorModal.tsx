@@ -6,7 +6,7 @@ import {
   Badge,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { readFile, writeFile } from "./api";
 import { FileCode, Save } from "lucide-react";
 import { FileItem, ReadFileResponse, WriteFilePayload } from "./types";
 import { useTranslation } from "@builtpanel/i18n";
@@ -30,6 +30,7 @@ export function FileEditorModal({
   const [content, setContent] = useState<string>("");
   const [initialContent, setInitialContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mtime, setMtime] = useState<number | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -37,9 +38,8 @@ export function FileEditorModal({
       const loadContent = async () => {
         try {
           setIsLoading(true);
-          const res = await apiFetch<ReadFileResponse>(
-            `/api/v1/client/files/read?path=${encodeURIComponent(file.path)}`
-          );
+          const res = await readFile(file.path);
+          setMtime(res.mtime);
           setContent(res.content);
           setInitialContent(res.content);
         } catch (err: any) {
@@ -64,15 +64,9 @@ export function FileEditorModal({
     if (!file) return;
     try {
       setIsSaving(true);
-      const payload: WriteFilePayload = {
-        path: file.path,
-        content,
-      };
-
-      await apiFetch<FileItem>("/api/v1/client/files/write", {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
+      await writeFile(file.path, content, mtime);
+      // The next save is checked against what was just written.
+      setMtime((await readFile(file.path)).mtime);
 
       setInitialContent(content);
       toast({

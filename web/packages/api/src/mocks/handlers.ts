@@ -5551,488 +5551,218 @@ export const handlers = [
   }),
 
   // ===================================  // File Manager: T08.09 Handlers
-  // TODO(api:T08.08): Real backend agent file system endpoints
+  // Shaped like `EntryView`, `TrashEntry`, `TransferView` and `DiskUsageView` in openapi.json:
+  // paths are relative to the account's files (`""` is the top).
   // ===================================
   ...(() => {
-    interface MockFsItem {
-      id: string;
-      name: string;
+    interface MockEntry {
       path: string;
-      parent_path: string;
-      type: "file" | "directory";
-      size_bytes: number;
-      size_formatted: string;
-      mime_type?: string;
-      permissions: string;
-      owner: string;
-      group: string;
-      updated_at: string;
+      kind: "file" | "dir";
+      size: number;
+      mode: number;
+      modified_at: string;
       content?: string;
-      original_path?: string;
+    }
+    interface MockTrashEntry {
+      id: string;
+      entry: MockEntry;
+      deleted_at: string;
     }
 
-    const mockFs: MockFsItem[] = [
-      {
-        id: "f_dir_pub",
-        name: "public_html",
-        path: "/home/demo/public_html",
-        parent_path: "/home/demo",
-        type: "directory",
-        size_bytes: 4096,
-        size_formatted: "4.0 KB",
-        permissions: "0755",
-        owner: "demo",
-        group: "demo",
-        updated_at: new Date(Date.now() - 3600 * 1000).toISOString(),
-      },
-      {
-        id: "f_dir_logs",
-        name: "logs",
-        path: "/home/demo/logs",
-        parent_path: "/home/demo",
-        type: "directory",
-        size_bytes: 4096,
-        size_formatted: "4.0 KB",
-        permissions: "0750",
-        owner: "demo",
-        group: "demo",
-        updated_at: new Date(Date.now() - 7200 * 1000).toISOString(),
-      },
-      {
-        id: "f_dir_ssl",
-        name: "ssl",
-        path: "/home/demo/ssl",
-        parent_path: "/home/demo",
-        type: "directory",
-        size_bytes: 4096,
-        size_formatted: "4.0 KB",
-        permissions: "0700",
-        owner: "demo",
-        group: "demo",
-        updated_at: new Date(Date.now() - 86400 * 1000).toISOString(),
-      },
-      {
-        id: "f_index_php",
-        name: "index.php",
-        path: "/home/demo/public_html/index.php",
-        parent_path: "/home/demo/public_html",
-        type: "file",
-        size_bytes: 1240,
-        size_formatted: "1.2 KB",
-        mime_type: "application/x-httpd-php",
-        permissions: "0644",
-        owner: "demo",
-        group: "demo",
-        updated_at: new Date(Date.now() - 1800 * 1000).toISOString(),
-        content: "<?php\necho 'Hello from Built Panel!';\n",
-      },
-      {
-        id: "f_style_css",
-        name: "style.css",
-        path: "/home/demo/public_html/style.css",
-        parent_path: "/home/demo/public_html",
-        type: "file",
-        size_bytes: 850,
-        size_formatted: "850 B",
-        mime_type: "text/css",
-        permissions: "0644",
-        owner: "demo",
-        group: "demo",
-        updated_at: new Date(Date.now() - 3600 * 1000).toISOString(),
-        content: "body {\n  margin: 0;\n  font-family: sans-serif;\n  background: #f8fafc;\n}\n",
-      },
-      {
-        id: "f_htaccess",
-        name: ".htaccess",
-        path: "/home/demo/public_html/.htaccess",
-        parent_path: "/home/demo/public_html",
-        type: "file",
-        size_bytes: 320,
-        size_formatted: "320 B",
-        mime_type: "text/plain",
-        permissions: "0644",
-        owner: "demo",
-        group: "demo",
-        updated_at: new Date(Date.now() - 86400 * 1000).toISOString(),
-        content: "RewriteEngine On\nRewriteRule ^index\\.php$ - [L]\n",
-      },
-      {
-        id: "f_archive_zip",
-        name: "backup.zip",
-        path: "/home/demo/public_html/backup.zip",
-        parent_path: "/home/demo/public_html",
-        type: "file",
-        size_bytes: 1048576,
-        size_formatted: "1.0 MB",
-        mime_type: "application/zip",
-        permissions: "0644",
-        owner: "demo",
-        group: "demo",
-        updated_at: new Date(Date.now() - 86400 * 2000).toISOString(),
-        content: "",
-      },
-      {
-        id: "f_access_log",
-        name: "access.log",
-        path: "/home/demo/logs/access.log",
-        parent_path: "/home/demo/logs",
-        type: "file",
-        size_bytes: 40960,
-        size_formatted: "40.0 KB",
-        mime_type: "text/plain",
-        permissions: "0640",
-        owner: "demo",
-        group: "demo",
-        updated_at: new Date(Date.now() - 600 * 1000).toISOString(),
-        content: "[2026-11-13 06:00:01] 200 GET /index.php\n",
-      },
-    ];
+    const ago = (s: number) => new Date(Date.now() - s * 1000).toISOString();
+    const dir = (path: string, mode = 0o755): MockEntry => ({ path, kind: "dir", size: 4096, mode, modified_at: ago(86400) });
+    const file = (path: string, content: string, mode = 0o644, age = 3600): MockEntry => ({
+      path,
+      kind: "file",
+      size: content.length,
+      mode,
+      modified_at: ago(age),
+      content,
+    });
 
-    let mockTrash: MockFsItem[] = [];
+    const mockFs: MockEntry[] = [
+      dir("public_html"),
+      dir("logs"),
+      dir("ssl", 0o700),
+      file("public_html/index.php", "<?php\necho 'Hello from Built Panel!';\n", 0o644, 1800),
+      file("public_html/style.css", "body {\n  margin: 0;\n  font-family: sans-serif;\n  background: #f8fafc;\n}\n"),
+      file("public_html/.htaccess", "RewriteEngine On\nRewriteRule ^index\\.php$ - [L]\n", 0o644, 86400),
+      { ...file("public_html/backup.zip", "", 0o644, 172800), size: 1048576 },
+      { ...file("logs/access.log", "[2026-11-13 06:00:01] 200 GET /index.php\n", 0o640, 600), size: 40960 },
+    ];
+    let mockTrash: MockTrashEntry[] = [];
+    const parentOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
+    const nameOf = (path: string) => path.slice(path.lastIndexOf("/") + 1);
+    const view = (e: MockEntry) => ({ name: nameOf(e.path), kind: e.kind, size: e.size, mode: e.mode, modified_at: e.modified_at });
+    const q = (request: Request, key: string) => new URL(request.url).searchParams.get(key) ?? "";
+    const done = (count = 1) => HttpResponse.json({ count });
 
     return [
       // GET /api/v1/client/files
       http.get(/\/api\/v1\/client\/files$/, ({ request }) => {
-        const url = new URL(request.url);
-        const reqPath = url.searchParams.get("path") || "/home/demo/public_html";
-        const normalized = reqPath.endsWith("/") && reqPath.length > 1 ? reqPath.slice(0, -1) : reqPath;
-
-        let parent_path: string | null = null;
-        if (normalized !== "/home/demo" && normalized !== "/home") {
-          const lastSlash = normalized.lastIndexOf("/");
-          parent_path = lastSlash > 0 ? normalized.substring(0, lastSlash) : "/home/demo";
+        const path = q(request, "path");
+        if (path !== "" && !mockFs.some((e) => e.path === path && e.kind === "dir")) {
+          return problem(404, "not_found", "No such folder");
         }
-
-        const items = mockFs.filter((it) => it.parent_path === normalized);
-        const dirs = items.filter((it) => it.type === "directory").length;
-        const files = items.filter((it) => it.type === "file").length;
-        const totalBytes = items.reduce((sum, it) => sum + (it.size_bytes || 0), 0);
-
-        return HttpResponse.json({
-          current_path: normalized,
-          parent_path,
-          items,
-          total_dirs: dirs,
-          total_files: files,
-          total_size_bytes: totalBytes,
-          total_size_formatted: totalBytes > 1048576 ? `${(totalBytes / 1048576).toFixed(1)} MB` : `${(totalBytes / 1024).toFixed(1)} KB`,
-        });
+        const items = mockFs.filter((e) => parentOf(e.path) === path);
+        const offset = Number(q(request, "offset") || 0);
+        const limit = Number(q(request, "limit") || 100);
+        return HttpResponse.json({ items: items.slice(offset, offset + limit).map(view), total: items.length, offset, limit });
       }),
 
-      // GET /api/v1/client/files/read
-      http.get(/\/api\/v1\/client\/files\/read$/, ({ request }) => {
-        const url = new URL(request.url);
-        const filePath = url.searchParams.get("path");
-        const found = mockFs.find((it) => it.path === filePath);
-        if (!found) {
-          return new HttpResponse(JSON.stringify({ error: "File not found" }), { status: 404 });
-        }
-        return HttpResponse.json({
-          path: found.path,
-          content: found.content ?? "/* Content */",
-          encoding: "utf-8",
-          size_bytes: found.size_bytes,
-          mime_type: found.mime_type || "text/plain",
-        });
+      // DELETE /api/v1/client/files?path=: to the trash
+      http.delete(/\/api\/v1\/client\/files$/, ({ request }) => {
+        const path = q(request, "path");
+        const idx = mockFs.findIndex((e) => e.path === path);
+        if (idx === -1) return problem(404, "not_found", "No such file");
+        const [removed] = mockFs.splice(idx, 1);
+        mockTrash.push({ id: `trash_${Date.now()}_${mockTrash.length}`, entry: removed, deleted_at: new Date().toISOString() });
+        return done();
       }),
 
-      // PUT /api/v1/client/files/write
-      http.put(/\/api\/v1\/client\/files\/write$/, async ({ request }) => {
-        const body = (await request.json()) as { path: string; content: string };
-        const found = mockFs.find((it) => it.path === body.path);
+      // GET /api/v1/client/files/content, PUT (save)
+      http.get(/\/api\/v1\/client\/files\/content$/, ({ request }) => {
+        const found = mockFs.find((e) => e.path === q(request, "path") && e.kind === "file");
+        if (!found) return problem(404, "not_found", "No such file");
+        return HttpResponse.json({ binary: false, content: found.content ?? "", mtime: Date.parse(found.modified_at) / 1000, size: found.size });
+      }),
+      http.put(/\/api\/v1\/client\/files\/content$/, async ({ request }) => {
+        const body = (await request.json()) as { path: string; content: string; create_only?: boolean };
+        const found = mockFs.find((e) => e.path === body.path);
+        if (found && body.create_only) return problem(409, "exists", "That name is taken");
         if (found) {
           found.content = body.content;
-          found.size_bytes = body.content.length;
-          found.size_formatted = `${body.content.length} B`;
-          found.updated_at = new Date().toISOString();
+          found.size = body.content.length;
+          found.modified_at = new Date().toISOString();
+        } else {
+          mockFs.push(file(body.path, body.content, 0o644, 0));
         }
-        return HttpResponse.json({ success: true, path: body.path });
+        return done();
       }),
 
-      // POST /api/v1/client/files/create
-      http.post(/\/api\/v1\/client\/files\/create$/, async ({ request }) => {
-        const body = (await request.json()) as { parent_path: string; name: string; type: "file" | "directory" };
-        const fullPath = `${body.parent_path.replace(/\/$/, "")}/${body.name}`;
-        const newItem: MockFsItem = {
-          id: `f_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          name: body.name,
-          path: fullPath,
-          parent_path: body.parent_path,
-          type: body.type,
-          size_bytes: body.type === "directory" ? 4096 : 0,
-          size_formatted: body.type === "directory" ? "4.0 KB" : "0 B",
-          permissions: body.type === "directory" ? "0755" : "0644",
-          owner: "demo",
-          group: "demo",
-          updated_at: new Date().toISOString(),
-          content: body.type === "file" ? "" : undefined,
-        };
-        mockFs.push(newItem);
-        return HttpResponse.json(newItem, { status: 201 });
+      // POST /api/v1/client/files/folders
+      http.post(/\/api\/v1\/client\/files\/folders$/, async ({ request }) => {
+        const body = (await request.json()) as { path: string };
+        if (mockFs.some((e) => e.path === body.path)) return problem(409, "exists", "That name is taken");
+        mockFs.push(dir(body.path));
+        return done();
       }),
 
-      // POST /api/v1/client/files/upload
-      http.post(/\/api\/v1\/client\/files\/upload$/, async ({ request }) => {
-        let parentPath = "/home/demo/public_html";
-        let fileName = "uploaded_file.txt";
-        let fileContent = "Uploaded content";
-        let fileSize = 1024;
-
-        try {
-          const formData = await request.formData();
-          const p = formData.get("path");
-          if (p && typeof p === "string") parentPath = p;
-          const f = formData.get("file");
-          if (f && typeof f === "object" && "name" in f) {
-            fileName = (f as File).name;
-            fileSize = (f as File).size || 1024;
-            if ("text" in f) {
-              fileContent = await (f as File).text();
-            }
-          }
-        } catch {
-          // If not form data, fallback
-        }
-
-        const fullPath = `${parentPath.replace(/\/$/, "")}/${fileName}`;
-        const uploadedItem: MockFsItem = {
-          id: `f_upload_${Date.now()}`,
-          name: fileName,
-          path: fullPath,
-          parent_path: parentPath,
-          type: "file",
-          size_bytes: fileSize,
-          size_formatted: fileSize > 1048576 ? `${(fileSize / 1048576).toFixed(1)} MB` : `${(fileSize / 1024).toFixed(1)} KB`,
-          mime_type: "text/plain",
-          permissions: "0644",
-          owner: "demo",
-          group: "demo",
-          updated_at: new Date().toISOString(),
-          content: fileContent,
-        };
-        mockFs.push(uploadedItem);
-        return HttpResponse.json(uploadedItem, { status: 201 });
+      // POST /api/v1/client/files/move (also the rename)
+      http.post(/\/api\/v1\/client\/files\/move$/, async ({ request }) => {
+        const body = (await request.json()) as { from: string; to: string };
+        const found = mockFs.find((e) => e.path === body.from);
+        if (!found) return problem(404, "not_found", "No such file");
+        if (mockFs.some((e) => e.path === body.to)) return problem(409, "exists", "That name is taken");
+        found.path = body.to;
+        return done();
       }),
 
-      // PUT /api/v1/client/files/chmod
-      http.put(/\/api\/v1\/client\/files\/chmod$/, async ({ request }) => {
-        const body = (await request.json()) as { path: string; mode: string };
-        const found = mockFs.find((it) => it.path === body.path);
-        if (found) {
-          found.permissions = body.mode;
-        }
-        return HttpResponse.json({ success: true, path: body.path, permissions: body.mode });
+      // POST /api/v1/client/files/permissions
+      http.post(/\/api\/v1\/client\/files\/permissions$/, async ({ request }) => {
+        const body = (await request.json()) as { path: string; mode: number };
+        const found = mockFs.find((e) => e.path === body.path);
+        if (!found) return problem(404, "not_found", "No such file");
+        found.mode = body.mode;
+        return done();
       }),
 
-      // PUT /api/v1/client/files/rename
-      http.put(/\/api\/v1\/client\/files\/rename$/, async ({ request }) => {
-        const body = (await request.json()) as { old_path: string; new_name: string };
-        const found = mockFs.find((it) => it.path === body.old_path);
-        if (found) {
-          found.name = body.new_name;
-          found.path = `${found.parent_path}/${body.new_name}`;
-        }
-        return HttpResponse.json({ success: true, item: found });
-      }),
-
-      // DELETE /api/v1/client/files (Move to trash)
-      http.delete(/\/api\/v1\/client\/files$/, ({ request }) => {
-        const url = new URL(request.url);
-        const delPath = url.searchParams.get("path");
-        const idx = mockFs.findIndex((it) => it.path === delPath);
-        if (idx !== -1) {
-          const removed = mockFs.splice(idx, 1)[0];
-          mockTrash.push({
-            ...removed,
-            original_path: removed.path,
-          });
-        }
-        return HttpResponse.json({ success: true });
-      }),
-
-      // GET /api/v1/client/files/trash
-      http.get(/\/api\/v1\/client\/files\/trash$/, () => {
-        return HttpResponse.json({
-          items: mockTrash,
-          total_items: mockTrash.length,
-        });
-      }),
-
-      // POST /api/v1/client/files/trash/restore
-      http.post(/\/api\/v1\/client\/files\/trash\/restore$/, async ({ request }) => {
-        const body = (await request.json()) as { item_ids: string[] };
-        const ids = body.item_ids || [];
-        for (const id of ids) {
-          const tIdx = mockTrash.findIndex((it) => it.id === id);
-          if (tIdx !== -1) {
-            const restored = mockTrash.splice(tIdx, 1)[0];
-            mockFs.push(restored);
-          }
-        }
-        return HttpResponse.json({ success: true, restored_count: ids.length });
-      }),
-
-      // DELETE /api/v1/client/files/trash/empty
-      http.delete(/\/api\/v1\/client\/files\/trash\/empty$/, () => {
-        mockTrash = [];
-        return HttpResponse.json({ success: true });
-      }),
-
-      // POST /api/v1/client/files/archive
+      // POST /api/v1/client/files/archive, /extract
       http.post(/\/api\/v1\/client\/files\/archive$/, async ({ request }) => {
-        const body = (await request.json()) as { paths: string[]; archive_name: string; format: "zip" | "tar.gz" };
-        const samplePath = body.paths[0] || "/home/demo/public_html/file.txt";
-        const lastSlash = samplePath.lastIndexOf("/");
-        const parentPath = lastSlash > 0 ? samplePath.substring(0, lastSlash) : "/home/demo/public_html";
+        const body = (await request.json()) as { dest: string; paths: string[]; format: string };
+        mockFs.push({ ...file(body.dest, "", 0o644, 0), size: 524288 });
+        return done(body.paths.length);
+      }),
+      http.post(/\/api\/v1\/client\/files\/extract$/, () => done(3)),
 
-        const newArchive: MockFsItem = {
-          id: `f_arch_${Date.now()}`,
-          name: body.archive_name,
-          path: `${parentPath}/${body.archive_name}`,
-          parent_path: parentPath,
-          type: "file",
-          size_bytes: 524288,
-          size_formatted: "512.0 KB",
-          mime_type: body.format === "zip" ? "application/zip" : "application/gzip",
-          permissions: "0644",
-          owner: "demo",
-          group: "demo",
-          updated_at: new Date().toISOString(),
-        };
-        mockFs.push(newArchive);
-        return HttpResponse.json({ success: true, archive: newArchive });
+      // GET /api/v1/client/files/trash, POST .../:id/restore, DELETE (empty)
+      http.get(/\/api\/v1\/client\/files\/trash$/, () =>
+        HttpResponse.json({
+          items: mockTrash.map((t) => ({ id: t.id, path: t.entry.path, kind: t.entry.kind, size: t.entry.size, deleted_at: t.deleted_at })),
+        }),
+      ),
+      http.post(/\/api\/v1\/client\/files\/trash\/([^/]+)\/restore$/, ({ params }) => {
+        const idx = mockTrash.findIndex((t) => t.id === params[0]);
+        if (idx === -1) return problem(404, "not_found", "Not in the trash");
+        mockFs.push(mockTrash.splice(idx, 1)[0].entry);
+        return done();
+      }),
+      http.delete(/\/api\/v1\/client\/files\/trash$/, () => {
+        const count = mockTrash.length;
+        mockTrash = [];
+        return done(count);
       }),
 
-      // POST /api/v1/client/files/extract
-      http.post(/\/api\/v1\/client\/files\/extract$/, async () => {
-        return HttpResponse.json({ success: true });
+      // Uploads: POST /uploads, PUT /uploads/:id/chunks/:n, POST /uploads/:id/complete, GET /transfers/:id
+      http.post(/\/api\/v1\/client\/files\/uploads$/, async ({ request }) => {
+        const body = (await request.json()) as { path: string; size_bytes: number };
+        return HttpResponse.json(
+          {
+            id: `up_${Date.now()}`,
+            kind: "upload",
+            path: body.path,
+            status: "uploading",
+            size_bytes: body.size_bytes,
+            received_bytes: 0,
+            next_chunk: 0,
+            max_chunk_bytes: 8 * 1024 * 1024,
+            created_at: new Date().toISOString(),
+          },
+          { status: 201 },
+        );
       }),
-
-      // GET /api/v1/client/files/disk-usage (T08.10)
-      // TODO(api:T08.10): Real agent du ionice storage overview
-      http.get(/\/api\/v1\/client\/files\/disk-usage$/, () => {
+      http.put(/\/api\/v1\/client\/files\/uploads\/([^/]+)\/chunks\/([^/]+)$/, async ({ params, request }) => {
+        const bytes = (await request.arrayBuffer()).byteLength;
         return HttpResponse.json({
-          disk_used_bytes: 1258291200,
-          disk_used_formatted: "1.2 GB",
-          disk_limit_bytes: 5368709120,
-          disk_limit_formatted: "5.0 GB",
-          disk_usage_pct: 24,
-          inodes_used: 12450,
-          inodes_limit: 250000,
-          inodes_usage_pct: 5,
-          last_scanned_at: new Date(Date.now() - 1800 * 1000).toISOString(),
-          top_directories: [
-            {
-              path: "/home/demo/public_html/wp-content/uploads",
-              name: "uploads",
-              size_bytes: 471859200,
-              size_formatted: "450.0 MB",
-              percentage_of_total: 37.5,
-              inodes_count: 3200,
-              files_count: 3150,
-              last_calculated_at: new Date().toISOString(),
-            },
-            {
-              path: "/home/demo/public_html/wp-content/plugins",
-              name: "plugins",
-              size_bytes: 209715200,
-              size_formatted: "200.0 MB",
-              percentage_of_total: 16.7,
-              inodes_count: 4500,
-              files_count: 4420,
-              last_calculated_at: new Date().toISOString(),
-            },
-            {
-              path: "/home/demo/logs",
-              name: "logs",
-              size_bytes: 157286400,
-              size_formatted: "150.0 MB",
-              percentage_of_total: 12.5,
-              inodes_count: 120,
-              files_count: 120,
-              last_calculated_at: new Date().toISOString(),
-            },
-            {
-              path: "/home/demo/public_html/wp-content/themes",
-              name: "themes",
-              size_bytes: 83886080,
-              size_formatted: "80.0 MB",
-              percentage_of_total: 6.7,
-              inodes_count: 850,
-              files_count: 810,
-              last_calculated_at: new Date().toISOString(),
-            },
-            {
-              path: "/home/demo/backups",
-              name: "backups",
-              size_bytes: 78643200,
-              size_formatted: "75.0 MB",
-              percentage_of_total: 6.3,
-              inodes_count: 8,
-              files_count: 8,
-              last_calculated_at: new Date().toISOString(),
-            },
-            {
-              path: "/home/demo/public_html/wp-includes",
-              name: "wp-includes",
-              size_bytes: 68157440,
-              size_formatted: "65.0 MB",
-              percentage_of_total: 5.4,
-              inodes_count: 1800,
-              files_count: 1780,
-              last_calculated_at: new Date().toISOString(),
-            },
-            {
-              path: "/home/demo/public_html/wp-admin",
-              name: "wp-admin",
-              size_bytes: 47185920,
-              size_formatted: "45.0 MB",
-              percentage_of_total: 3.8,
-              inodes_count: 750,
-              files_count: 730,
-              last_calculated_at: new Date().toISOString(),
-            },
-            {
-              path: "/home/demo/.trash",
-              name: ".trash",
-              size_bytes: 31457280,
-              size_formatted: "30.0 MB",
-              percentage_of_total: 2.5,
-              inodes_count: 45,
-              files_count: 45,
-              last_calculated_at: new Date().toISOString(),
-            },
-            {
-              path: "/home/demo/ssl",
-              name: "ssl",
-              size_bytes: 10485760,
-              size_formatted: "10.0 MB",
-              percentage_of_total: 0.8,
-              inodes_count: 12,
-              files_count: 12,
-              last_calculated_at: new Date().toISOString(),
-            },
-            {
-              path: "/home/demo/tmp",
-              name: "tmp",
-              size_bytes: 5242880,
-              size_formatted: "5.0 MB",
-              percentage_of_total: 0.4,
-              inodes_count: 35,
-              files_count: 35,
-              last_calculated_at: new Date().toISOString(),
-            },
+          id: params[0],
+          kind: "upload",
+          path: "",
+          status: "uploading",
+          received_bytes: bytes,
+          next_chunk: Number(params[1]) + 1,
+          max_chunk_bytes: 8 * 1024 * 1024,
+          created_at: new Date().toISOString(),
+        });
+      }),
+      http.post(/\/api\/v1\/client\/files\/uploads\/([^/]+)\/complete$/, ({ params }) =>
+        HttpResponse.json(
+          {
+            id: params[0],
+            kind: "upload",
+            path: "",
+            status: "done",
+            received_bytes: 0,
+            next_chunk: 1,
+            max_chunk_bytes: 8 * 1024 * 1024,
+            created_at: new Date().toISOString(),
+          },
+          { status: 202 },
+        ),
+      ),
+
+      // GET /api/v1/client/files/usage, POST (measure now)
+      http.get(/\/api\/v1\/client\/files\/usage$/, () =>
+        HttpResponse.json({
+          total_bytes: 1258291200,
+          inodes: 12450,
+          partial: false,
+          measured_at: ago(1800),
+          // The ten biggest folders, biggest first.
+          folders: [
+            { path: "public_html/wp-content/uploads", bytes: 471859200, inodes: 4200 },
+            { path: "public_html/wp-content/plugins", bytes: 251658240, inodes: 6100 },
+            { path: "backups", bytes: 209715200, inodes: 14 },
+            { path: "public_html/wp-content/themes", bytes: 83886080, inodes: 1500 },
+            { path: "public_html/wp-includes", bytes: 41943040, inodes: 900 },
+            { path: "public_html/wp-admin", bytes: 31457280, inodes: 800 },
+            { path: "logs", bytes: 20971520, inodes: 12 },
+            { path: "public_html/cache", bytes: 10485760, inodes: 300 },
+            { path: "ssl", bytes: 5242880, inodes: 8 },
+            { path: "tmp", bytes: 1048576, inodes: 40 },
           ],
-        });
-      }),
-
-      // POST /api/v1/client/files/disk-usage/recalculate (T08.10)
-      http.post(/\/api\/v1\/client\/files\/disk-usage\/recalculate$/, () => {
-        return HttpResponse.json({
-          success: true,
-          message: "Recalculation scheduled",
-        });
-      }),
+        }),
+      ),
+      http.post(/\/api\/v1\/client\/files\/usage$/, () => HttpResponse.json({ operation_id: "op_usage_1" }, { status: 202 })),
     ];
   })(),
 
