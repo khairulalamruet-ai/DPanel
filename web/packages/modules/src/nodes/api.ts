@@ -74,3 +74,14 @@ export async function pingNode(id: string): Promise<void> {
 export async function revokeNode(id: string): Promise<void> {
   await apiFetch(`/api/v1/admin/nodes/${encodeURIComponent(id)}/revoke`, { method: "POST" });
 }
+
+export interface NodeChoice {
+  id: string;
+  name: string;
+}
+
+/** The nodes an administrator can pick (a revoked one is not offered). */
+export async function listNodeChoices(): Promise<NodeChoice[]> {
+  const res = await apiFetch<{ items: { id: string; name: string; status: string }[] }>("/api/v1/admin/nodes");
+  return res.items.filter((n) => n.status !== "revoked").map((n) => ({ id: n.id, name: n.name }));
+}

@@ -1,336 +1,145 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  Button,
-  Badge,
-  useToast,
-} from "@builtpanel/ui";
-import {
-  ShieldAlert,
-  ShieldCheck,
-  ShieldOff,
-  Globe,
-  RefreshCw,
-  Users,
-} from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
+import { Button, useToast } from "@builtpanel/ui";
 import { useTranslation } from "@builtpanel/i18n";
 import { apiFetch } from "@builtpanel/api";
-import { WafEvent, WafPolicy, DisabledRuleInfo, WafStats, WafMode } from "./types";
-import { WafEventsTable } from "./WafEventsTable";
-import { DisabledRulesList } from "./DisabledRulesList";
-import { WafPolicyCard } from "./WafPolicyCard";
-import { DisableRuleDialog } from "./DisableRuleDialog";
-import { WafEventDetailDialog } from "./WafEventDetailDialog";
+import { RefreshCw, ShieldAlert } from "lucide-react";
+import { PolicyEditor } from "./PolicyEditor";
+import { clearAdminPolicy, getAdminPolicy, setAdminPolicy, type AdminScope, type PolicyAnswer } from "./api";
 
+type Level = "global" | "tenant" | "domain";
+
+interface Choice {
+  id: string;
+  label: string;
+}
+
+/** The firewall policy of the whole panel, of one account or of one domain. */
 export function AdminWafPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [level, setLevel] = useState<Level>("global");
+  const [accounts, setAccounts] = useState<Choice[]>([]);
+  const [domains, setDomains] = useState<Choice[]>([]);
+  const [targetId, setTargetId] = useState("");
+  const [answer, setAnswer] = useState<PolicyAnswer | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [selectedTenant, setSelectedTenant] = useState("all");
-  const [selectedDomain, setSelectedDomain] = useState("all");
-  const [activeTab, setActiveTab] = useState<"events" | "disabled">("events");
-  const [events, setEvents] = useState<WafEvent[]>([]);
-  const [disabledRules, setDisabledRules] = useState<DisabledRuleInfo[]>([]);
-  const [policy, setPolicy] = useState<WafPolicy | null>(null);
-  const [stats, setStats] = useState<WafStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const fail = useCallback(
+    (err: any) => toast({ title: t("common.error"), description: err?.message || t("common.unknownError"), variant: "destructive" }),
+    [t, toast],
+  );
 
-  // Modal states
-  const [selectedEventForDetail, setSelectedEventForDetail] = useState<WafEvent | null>(null);
-  const [disableModalTarget, setDisableModalTarget] = useState<{
-    ruleId: number;
-    domain: string;
-    ruleMessage?: string;
-  } | null>(null);
+  useEffect(() => {
+    apiFetch<{ items: { tenant?: { id: string; username: string } | null }[] }>("/api/v1/admin/users?limit=200")
+      .then((res) => setAccounts(res.items.flatMap((u) => (u.tenant ? [{ id: u.tenant.id, label: u.tenant.username }] : []))))
+      .catch(() => undefined);
+    apiFetch<{ items: { id: string; unicode: string; fqdn: string }[] }>("/api/v1/admin/domains?limit=200")
+      .then((res) => setDomains(res.items.map((d) => ({ id: d.id, label: d.unicode || d.fqdn }))))
+      .catch(() => undefined);
+  }, []);
 
-  const fetchData = useCallback(async () => {
+  const scope: AdminScope | null =
+    level === "global" ? { kind: "global" } : targetId ? { kind: level, id: targetId } : null;
+
+  const load = useCallback(async () => {
+    if (!scope) {
+      setAnswer(null);
+      return;
+    }
     try {
       setIsLoading(true);
-      const [eventsData, disabledData, policyData, statsData] = await Promise.all([
-        apiFetch<WafEvent[]>(`/api/v1/admin/waf/events?tenant=${encodeURIComponent(selectedTenant)}&domain=${encodeURIComponent(selectedDomain)}`),
-        apiFetch<DisabledRuleInfo[]>(`/api/v1/admin/waf/rules/disabled?domain=${encodeURIComponent(selectedDomain)}`),
-        apiFetch<WafPolicy>(`/api/v1/admin/waf/policy?domain=${encodeURIComponent(selectedDomain)}`),
-        apiFetch<WafStats>(`/api/v1/admin/waf/stats?tenant=${encodeURIComponent(selectedTenant)}`),
-      ]);
-      setEvents(eventsData);
-      setDisabledRules(disabledData);
-      setPolicy(policyData);
-      setStats(statsData);
-    } catch (err: any) {
-      toast({
-        title: t("common.error"),
-        description: err.message || t("common.unknownError"),
-        variant: "destructive",
-      });
+      setAnswer(await getAdminPolicy(scope));
+    } catch (err) {
+      fail(err);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedTenant, selectedDomain, toast, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level, targetId, fail]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    void load();
+  }, [load]);
 
-  // DoD: UI থেকে rule বন্ধ করা যায়
-  const handleOpenDisableDialog = (ruleId: number, domain: string, ruleMessage?: string) => {
-    setDisableModalTarget({ ruleId, domain, ruleMessage });
-  };
-
-  const handleConfirmDisableRule = async (ruleId: number, domain: string, reason: string) => {
-    try {
-      await apiFetch("/api/v1/admin/waf/rules/disable", {
-        method: "POST",
-        body: JSON.stringify({ rule_id: ruleId, domain, reason }),
-      });
-      toast({
-        title: t("common.success"),
-        description: t("waf.ruleDisabledSuccess", { ruleId, domain }),
-      });
-      await fetchData();
-    } catch (err: any) {
-      toast({
-        title: t("common.error"),
-        description: err.message || t("common.unknownError"),
-        variant: "destructive",
-      });
-      throw err;
-    }
-  };
-
-  // Re-enable rule
-  const handleEnableRule = async (ruleId: number, domain: string) => {
-    try {
-      await apiFetch("/api/v1/admin/waf/rules/enable", {
-        method: "POST",
-        body: JSON.stringify({ rule_id: ruleId, domain }),
-      });
-      toast({
-        title: t("common.success"),
-        description: t("waf.ruleEnabledSuccess", { ruleId, domain }),
-      });
-      await fetchData();
-    } catch (err: any) {
-      toast({
-        title: t("common.error"),
-        description: err.message || t("common.unknownError"),
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Update policy mode
-  const handleUpdateMode = async (mode: WafMode) => {
-    try {
-      await apiFetch("/api/v1/admin/waf/policy", {
-        method: "POST",
-        body: JSON.stringify({ domain: selectedDomain, mode }),
-      });
-      toast({
-        title: t("common.success"),
-        description: t("waf.modeUpdatedSuccess", { mode }),
-      });
-      await fetchData();
-    } catch (err: any) {
-      toast({
-        title: t("common.error"),
-        description: err.message || t("common.unknownError"),
-        variant: "destructive",
-      });
-    }
-  };
+  const choices = level === "tenant" ? accounts : domains;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6" data-testid="admin-waf-page">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="admin-waf-title">
             <ShieldAlert className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="admin-waf-page-title">
-              {t("waf.adminPageTitle")}
-            </h1>
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-              Cluster WAF Controller
-            </Badge>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("waf.adminPageSubtitle")}
+            {t("waf.adminTitle", "Web Application Firewall policy")}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {t("waf.adminSubtitle", "A domain's policy wins over its account's, which wins over the panel's.")}
           </p>
         </div>
-
-        {/* Tenant & Domain Selectors */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs shadow-sm">
-            <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            <select
-              data-testid="select-admin-waf-tenant"
-              value={selectedTenant}
-              onChange={(e) => setSelectedTenant(e.target.value)}
-              className="bg-transparent font-medium focus:outline-none"
-            >
-              <option value="all">{t("waf.allTenants")}</option>
-              <option value="tenant_demo">tenant_demo (Demo Tenant)</option>
-              <option value="tenant_corp">tenant_corp (Corporate Corp)</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs shadow-sm">
-            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-            <select
-              data-testid="select-admin-waf-domain"
-              value={selectedDomain}
-              onChange={(e) => setSelectedDomain(e.target.value)}
-              className="bg-transparent font-medium focus:outline-none"
-            >
-              <option value="all">{t("waf.allDomains")}</option>
-              <option value="example.com">example.com</option>
-              <option value="shop.example.com">shop.example.com</option>
-            </select>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchData}
-            disabled={isLoading}
-            data-testid="btn-refresh-admin-waf"
-            className="gap-1 text-xs"
+          <select
+            value={level}
+            onChange={(e) => {
+              setLevel(e.target.value as Level);
+              setTargetId("");
+            }}
+            className="h-9 rounded-md border border-input bg-background px-2.5 text-xs"
+            data-testid="select-waf-level"
           >
+            <option value="global">{t("waf.levelGlobal", "The whole panel")}</option>
+            <option value="tenant">{t("waf.levelTenant", "One account")}</option>
+            <option value="domain">{t("waf.levelDomain", "One domain")}</option>
+          </select>
+          {level !== "global" && (
+            <select
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2.5 text-xs font-mono"
+              data-testid="select-waf-target"
+            >
+              <option value="">—</option>
+              {choices.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          )}
+          <Button size="sm" variant="outline" onClick={load} disabled={isLoading} data-testid="btn-refresh-admin-waf">
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
-            {t("common.refresh")}
           </Button>
         </div>
       </div>
 
-      {/* Top Stats Cards & Policy Grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <WafPolicyCard
-          policy={policy}
-          onUpdateMode={handleUpdateMode}
-          isLoading={isLoading}
-        />
-
-        <Card className="flex flex-col justify-between">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium uppercase text-muted-foreground">
-              {t("waf.clusterTrafficEnforcement")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2 text-center">
-            <div className="rounded border bg-destructive/5 p-2" data-testid="card-admin-waf-blocked">
-              <span className="text-[11px] text-muted-foreground">{t("waf.blockedRequests")}</span>
-              <p className="text-2xl font-bold font-mono text-destructive">
-                {stats?.blocked_events ?? 0}
-              </p>
-            </div>
-            <div className="rounded border bg-amber-500/5 p-2" data-testid="card-admin-waf-detected">
-              <span className="text-[11px] text-muted-foreground">{t("waf.detectedAlerts")}</span>
-              <p className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">
-                {stats?.detected_events ?? 0}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="flex flex-col justify-between">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium uppercase text-muted-foreground">
-              {t("waf.attackVectorBreakdown")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-3 gap-1.5 text-center text-xs">
-            <div className="rounded border p-1.5 bg-muted/20">
-              <span className="text-[10px] text-muted-foreground font-mono">SQLi</span>
-              <p className="font-mono font-bold">{stats?.sqli_count ?? 0}</p>
-            </div>
-            <div className="rounded border p-1.5 bg-muted/20">
-              <span className="text-[10px] text-muted-foreground font-mono">XSS</span>
-              <p className="font-mono font-bold">{stats?.xss_count ?? 0}</p>
-            </div>
-            <div className="rounded border p-1.5 bg-muted/20">
-              <span className="text-[10px] text-muted-foreground font-mono">RCE</span>
-              <p className="font-mono font-bold">{stats?.rce_count ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-border">
-        <button
-          type="button"
-          onClick={() => setActiveTab("events")}
-          data-testid="tab-admin-waf-events"
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
-            activeTab === "events"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <ShieldAlert className="h-4 w-4" />
-          <span>{t("waf.eventLogsTab")}</span>
-          <Badge variant="secondary" className="font-mono text-[10px] ml-1">
-            {events.length}
-          </Badge>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("disabled")}
-          data-testid="tab-admin-waf-disabled-rules"
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
-            activeTab === "disabled"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <ShieldOff className="h-4 w-4" />
-          <span>{t("waf.disabledRulesTab")}</span>
-          <Badge variant="secondary" className="font-mono text-[10px] ml-1">
-            {disabledRules.length}
-          </Badge>
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === "events" ? (
-        <WafEventsTable
-          events={events}
-          onInspectEvent={(ev) => setSelectedEventForDetail(ev)}
-          onDisableRule={handleOpenDisableDialog}
-          isLoading={isLoading}
+      {answer && scope ? (
+        <PolicyEditor
+          title={level === "global" ? t("waf.levelGlobal", "The whole panel") : choices.find((c) => c.id === targetId)?.label ?? ""}
+          effective={answer.effective}
+          own={answer.effective.mode_from === level || !!answer.policy}
+          onSave={async (mode, rules) => {
+            try {
+              await setAdminPolicy(scope, mode, rules);
+              toast({ title: t("common.success"), description: t("waf.saved", "Firewall policy saved") });
+              await load();
+            } catch (err) {
+              fail(err);
+            }
+          }}
+          onClear={async () => {
+            try {
+              await clearAdminPolicy(scope);
+              await load();
+            } catch (err) {
+              fail(err);
+            }
+          }}
         />
       ) : (
-        <DisabledRulesList
-          rules={disabledRules}
-          domain={selectedDomain}
-          onEnableRule={handleEnableRule}
-          isLoading={isLoading}
-        />
+        level !== "global" && (
+          <p className="text-sm text-muted-foreground">
+            {t("waf.pickTarget", "Pick an account or a domain.")}
+          </p>
+        )
       )}
-
-      {/* Modals */}
-      <DisableRuleDialog
-        open={disableModalTarget !== null}
-        onOpenChange={(open) => !open && setDisableModalTarget(null)}
-        ruleId={disableModalTarget?.ruleId ?? null}
-        ruleMessage={disableModalTarget?.ruleMessage}
-        domain={disableModalTarget?.domain ?? selectedDomain}
-        onConfirm={handleConfirmDisableRule}
-      />
-
-      <WafEventDetailDialog
-        open={selectedEventForDetail !== null}
-        onOpenChange={(open) => !open && setSelectedEventForDetail(null)}
-        event={selectedEventForDetail}
-        onDisableRule={(ruleId, domain, msg) => {
-          setSelectedEventForDetail(null);
-          handleOpenDisableDialog(ruleId, domain, msg);
-        }}
-      />
     </div>
   );
 }

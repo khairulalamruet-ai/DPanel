@@ -163,9 +163,22 @@ describe("Firewall & IP Access Control UI (T11.08)", () => {
     });
   });
 
-  it("AdminFirewallPage: protects SSH port 22 and allows managing ports, bans, and rate limits", async () => {
-    mockApiFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/v1/admin/firewall/overview")) return Promise.resolve(mockAdminOverview);
+  it("AdminFirewallPage: edits the node's firewall policy (open ports, blocked addresses)", async () => {
+    let policy: any = {
+      open_ports: [
+        { port: 80, proto: "tcp" },
+        { port: 8080, proto: "tcp", from: ["203.0.113.5"] },
+      ],
+      blocked: ["198.51.100.22"],
+    };
+    mockApiFetch.mockImplementation((url: string, opts?: any) => {
+      if (url === "/api/v1/admin/nodes") {
+        return Promise.resolve({ items: [{ id: "node-1", name: "node-1", status: "online" }] });
+      }
+      if (url === "/api/v1/admin/nodes/node-1/firewall") {
+        if (opts?.method === "PUT") policy = JSON.parse(opts.body);
+        return Promise.resolve({ policy });
+      }
       return Promise.resolve({});
     });
 
@@ -174,41 +187,26 @@ describe("Firewall & IP Access Control UI (T11.08)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("admin-firewall-title")).toBeInTheDocument();
       expect(screen.getByTestId("card-admin-firewall-stats")).toBeInTheDocument();
-      expect(screen.getByTestId("port-row-22")).toBeInTheDocument();
+      expect(screen.getByTestId("port-row-80")).toBeInTheDocument();
+      expect(screen.getByTestId("port-row-8080")).toBeInTheDocument();
     });
 
-    // Verify SSH port 22 has lockout protection and no delete button
-    expect(screen.queryByTestId("btn-close-port-22")).not.toBeInTheDocument();
-    expect(screen.getByTestId("btn-close-port-8080")).toBeInTheDocument();
+    // Close a port: the whole policy goes back without it
+    fireEvent.click(screen.getByTestId("btn-close-port-8080"));
+    await waitFor(() => {
+      expect(policy.open_ports).toEqual([{ port: 80, proto: "tcp" }]);
+    });
 
-    // Switch to IP bans tab
-    const bansTab = screen.getByTestId("tab-firewall-bans");
-    fireEvent.click(bansTab);
-
+    // The blocked addresses
+    fireEvent.click(screen.getByTestId("tab-firewall-bans"));
     await waitFor(() => {
       expect(screen.getByTestId("title-global-bans")).toBeInTheDocument();
-      expect(screen.getByTestId("ban-row-ban-1")).toBeInTheDocument();
       expect(screen.getByText("198.51.100.22")).toBeInTheDocument();
     });
 
-    // Unban IP
-    mockApiFetch.mockResolvedValueOnce({ success: true, id: "ban-1" });
-    const unbanBtn = screen.getByTestId("btn-unban-ban-1");
-    fireEvent.click(unbanBtn);
-
+    fireEvent.click(screen.getByTestId("btn-unban-198.51.100.22"));
     await waitFor(() => {
-      expect(mockApiFetch).toHaveBeenCalledWith("/api/v1/admin/firewall/bans/ban-1", expect.objectContaining({
-        method: "DELETE",
-      }));
-    });
-
-    // Switch to rate limit tab
-    const rateLimitTab = screen.getByTestId("tab-firewall-ratelimit");
-    fireEvent.click(rateLimitTab);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("title-rate-limiting")).toBeInTheDocument();
-      expect(screen.getByTestId("btn-save-rate-limit")).toBeInTheDocument();
+      expect(policy.blocked).toEqual([]);
     });
   });
 });

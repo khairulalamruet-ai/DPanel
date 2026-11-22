@@ -14,7 +14,7 @@ import {
   Button,
   Badge,
 } from "@builtpanel/ui";
-import { Ban, ShieldAlert, Zap, Clock, Plus, RotateCcw } from "lucide-react";
+import { Ban, ShieldAlert, Zap, Plus, RotateCcw } from "lucide-react";
 import { useTranslation } from "@builtpanel/i18n";
 import { GlobalIpBan } from "./types";
 import { AddGlobalBanDialog } from "./AddGlobalBanDialog";
@@ -81,9 +81,7 @@ export function AdminBansTable({
                 <TableRow>
                   <TableHead className="text-xs">{t("firewall.bannedIp")}</TableHead>
                   <TableHead className="text-xs">{t("firewall.banSource")}</TableHead>
-                  <TableHead className="text-xs">{t("firewall.banReason")}</TableHead>
-                  <TableHead className="text-xs">{t("firewall.banExpires")}</TableHead>
-                  <TableHead className="text-xs text-right">{t("common.actions")}</TableHead>
+                                    <TableHead className="text-xs text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -103,13 +101,6 @@ export function AdminBansTable({
                           Admin Manual
                         </Badge>
                       )}
-                    </TableCell>
-                    <TableCell className="text-xs max-w-xs truncate">{ban.reason}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{ban.expires_at || "Permanent"}</span>
-                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

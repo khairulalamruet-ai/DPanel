@@ -1,4 +1,5 @@
 import { apiFetch } from "@builtpanel/api";
+export { listNodeChoices, type NodeChoice } from "../nodes/api";
 import type { ServerAuditEvent, ServerOverview, SshConfigInfo } from "./types";
 
 interface NodeServerView {
@@ -18,16 +19,6 @@ interface NodeServerView {
 const MB = 1024 * 1024;
 const N = "/api/v1/admin/nodes";
 const enc = encodeURIComponent;
-
-export interface NodeChoice {
-  id: string;
-  name: string;
-}
-
-export async function listNodeChoices(): Promise<NodeChoice[]> {
-  const res = await apiFetch<{ items: { id: string; name: string; status: string }[] }>(N);
-  return res.items.filter((n) => n.status !== "revoked").map((n) => ({ id: n.id, name: n.name }));
-}
 
 function uptime(seconds: number): string {
   const d = Math.floor(seconds / 86400);
