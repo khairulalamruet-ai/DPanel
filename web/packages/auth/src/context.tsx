@@ -14,6 +14,52 @@ interface SessionContextType {
   setSessionData: (data: BootstrapData | null) => void;
 }
 
+
+/**
+ * Reads what the backend answers at start-up: the administrators' or customers' bootstrap
+ * (user, roles, permissions, modules with menu data, plan features and limits, branding,
+ * locale and the CSRF token), or the plain `GET /api/v1/auth/me`.
+ */
+export function normalizeBootstrap(res: any): BootstrapData {
+  const user = res.user ?? res;
+  const isAdmin = user.kind === "admin";
+  const branding = res.branding ?? {};
+  const modules: string[] | undefined = Array.isArray(res.modules)
+    ? res.modules.map((m: any) => (typeof m === "string" ? m : m.name))
+    : undefined;
+  const features: string[] = Array.isArray(res.features) ? res.features : [];
+  return {
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name ?? user.username,
+      kind: user.kind,
+    },
+    roles: res.roles || [],
+    permissions: res.permissions || [],
+    modules,
+    // Administrators have no plan: every feature is theirs.
+    features: isAdmin ? ["all"] : features,
+    limits: res.limits ?? {},
+    branding: {
+      companyName: branding.companyName ?? branding.panel_name ?? "Built Panel",
+      logoUrl: branding.logoUrl,
+      faviconUrl: branding.faviconUrl,
+      accentColor: branding.accentColor,
+      loginTitle: branding.loginTitle,
+      loginSubtitle: branding.loginSubtitle,
+      loginFooterText: branding.loginFooterText,
+      nameservers: branding.nameservers,
+      customCss: branding.customCss,
+      maintenanceNotice: branding.maintenance_notice || undefined,
+    },
+    locale: res.locale || "en",
+    csrfToken: res.csrfToken ?? res.csrf_token,
+    mfa_enabled: res.mfa_enabled ?? res.mfa?.enabled,
+  };
+}
+
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export interface SessionProviderProps {
@@ -31,26 +77,7 @@ export function SessionProvider({ children, bootstrapPath = "/api/v1/auth/me" }:
       setIsLoading(true);
       setError(null);
       const res = await apiFetch<any>(bootstrapPath);
-      const normalized: BootstrapData = res.user
-        ? res
-        : {
-            user: {
-              id: res.id,
-              username: res.username,
-              email: res.email,
-              name: res.username,
-              kind: res.kind,
-            },
-            roles: res.roles || [],
-            permissions: res.permissions || [],
-            modules: ["dashboard", "domains", "security"],
-            features: ["all"],
-            limits: {},
-            branding: { companyName: "Built Panel" },
-            locale: res.locale || "en",
-            csrfToken: res.csrf_token,
-            mfa_enabled: res.mfa_enabled,
-          };
+      const normalized = normalizeBootstrap(res);
       setData(normalized);
       if (normalized.csrfToken || res.csrf_token) {
         setCsrfToken(normalized.csrfToken || res.csrf_token);
@@ -120,6 +147,11 @@ export function SessionProvider({ children, bootstrapPath = "/api/v1/auth/me" }:
       {children}
     </SessionContext.Provider>
   );
+}
+
+/** The session when there is one (pages that can also be shown without it). */
+export function useOptionalSession() {
+  return useContext(SessionContext);
 }
 
 export function useSession() {

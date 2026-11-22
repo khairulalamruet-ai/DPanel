@@ -2080,45 +2080,48 @@ export const handlers = [
     });
   }),
 
-  // Backward-compatibility: bootstrap endpoints
+  // GET /api/v1/admin/bootstrap and /api/v1/client/bootstrap, shaped like `Bootstrap` in openapi.json
   http.get(/\/api\/v1\/admin\/bootstrap$/, () => {
     return HttpResponse.json({
-      user: {
-        id: mockMe.id,
-        username: mockMe.username,
-        email: mockMe.email,
-        name: "Built Panel Super Admin",
-      },
+      user: { id: mockMe.id, username: mockMe.username, email: mockMe.email, kind: "admin" },
       roles: ["super_admin"],
       permissions: ["*"],
-      modules: ["dashboard", "users", "domains", "settings", "security"],
-      features: ["all"],
+      mfa: { enabled: mfaEnabled, required: false, setup_required: false },
+      modules: mockMe.modules.map((name) => ({
+        name,
+        version: "0.1.0",
+        title: { en: name },
+        category: "core",
+        core: true,
+        nav: { group: "System", order: 10, icon: "blocks" },
+      })),
+      features: [],
       limits: {},
-      branding: {
-        companyName: "Built Panel",
-        logoUrl: "/logo.svg",
-      },
+      branding: { panel_name: "Built Panel", maintenance_notice: "", default_language: "en" },
       locale: "bn",
-      csrfToken: mockMe.csrf_token,
+      csrf_token: mockMe.csrf_token,
     });
   }),
 
   http.get(/\/api\/v1\/client\/bootstrap$/, () => {
     return HttpResponse.json({
-      user: {
-        id: "00000000-0000-0000-0000-000000000002",
-        username: "demo_user",
-        email: "demo@example.com",
-        name: "Demo Tenant User",
-      },
+      user: { id: "00000000-0000-0000-0000-000000000002", username: "demo_user", email: "demo@example.com", kind: "client" },
       roles: ["client"],
-      permissions: ["dashboard.read", "domains.read", "domains.create", "files.read"],
-      modules: ["dashboard", "domains", "files", "security"],
-      features: ["domains", "redirects"],
-      limits: { max_domains: 5, used_domains: 1 },
-      branding: { companyName: "Built Panel" },
+      permissions: [],
+      mfa: { enabled: false, required: false, setup_required: false },
+      modules: ["domains", "files", "databases", "cron", "backups", "logs"].map((name) => ({
+        name,
+        version: "0.1.0",
+        title: { en: name },
+        category: "web",
+        core: false,
+        nav: { group: "Web", order: 10, icon: "globe" },
+      })),
+      features: ["domains", "redirects", "dns", "ssl", "files", "ftp", "databases", "backups", "cron", "logs"],
+      limits: { max_domains: 5, max_databases: 5, max_cron_jobs: 10 },
+      branding: { panel_name: "Built Panel", maintenance_notice: "", default_language: "en" },
       locale: "bn",
-      csrfToken: "mock-csrf-token-client-12345",
+      csrf_token: "mock-csrf-token-client-12345",
     });
   }),
 

@@ -228,18 +228,24 @@ pub fn mount(
                     );
                     let branding = branding.clone();
                     Box::new(move || match (late_mount.get(), late_settings.get()) {
-                        (Some(mount), Some(settings)) => ModuleRoutes {
-                            admin: Some(builtpanel_mod_system::router().with_state(
-                                builtpanel_mod_system::SystemState {
-                                    db: db.clone(),
-                                    sessions: sessions.clone(),
-                                    mount: mount.clone(),
-                                    settings: settings.clone(),
-                                    branding: branding.clone(),
-                                },
-                            )),
-                            ..ModuleRoutes::none()
-                        },
+                        (Some(mount), Some(settings)) => {
+                            let state = builtpanel_mod_system::SystemState {
+                                db: db.clone(),
+                                sessions: sessions.clone(),
+                                mount: mount.clone(),
+                                settings: settings.clone(),
+                                branding: branding.clone(),
+                            };
+                            ModuleRoutes {
+                                admin: Some(
+                                    builtpanel_mod_system::router().with_state(state.clone()),
+                                ),
+                                client: Some(
+                                    builtpanel_mod_system::client_router().with_state(state),
+                                ),
+                                ..ModuleRoutes::none()
+                            }
+                        }
                         _ => ModuleRoutes::none(),
                     })
                 }

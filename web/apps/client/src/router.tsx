@@ -13,8 +13,21 @@ import { ClientDashboardPage, ClientDomainsPage, DnsEditorPage, SslPage, PhpMana
 import { useTranslation } from "@builtpanel/i18n";
 import { LayoutDashboard, ShieldCheck, ShieldAlert, Globe, Lock, Database, Folder, Server, Archive, Clock, FileText, Activity, Terminal, Flame, Boxes, Mail, Briefcase, ArrowRightLeft } from "lucide-react";
 
+/** The plan feature a menu entry needs; entries that are not listed are always shown. */
+const NAV_FEATURE: Record<string, string> = {
+  domains: "domains",
+  dns: "dns",
+  ssl: "ssl",
+  databases: "databases",
+  files: "files",
+  ftp: "ftp",
+  backups: "backups",
+  cron: "cron",
+  logs: "logs",
+};
+
 function AuthenticatedContent() {
-  const { data: session, isLoading } = useSession();
+  const { data: session, isLoading, hasFeature } = useSession();
   const { t } = useTranslation();
   const [commandPaletteOpen, setCommandPaletteOpen] = React.useState(false);
 
@@ -156,7 +169,7 @@ function AuthenticatedContent() {
     <>
       <AppShell
         title={t("common.clientTitle")}
-        navItems={navItems}
+        navItems={navItems.filter((item) => !NAV_FEATURE[item.id] || hasFeature(NAV_FEATURE[item.id]))}
         headerActions={
           <div className="flex items-center gap-2">
             <CommandPaletteTrigger onClick={() => setCommandPaletteOpen(true)} />
@@ -180,7 +193,7 @@ function RootLayout() {
     <ThemeProvider defaultTheme="system" storageKey="builtpanel-client-theme">
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <SessionProvider bootstrapPath="/api/v1/auth/me">
+          <SessionProvider bootstrapPath="/api/v1/client/bootstrap">
             <AuthenticatedContent />
           </SessionProvider>
         </ToastProvider>

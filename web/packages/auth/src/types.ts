@@ -23,6 +23,8 @@ export interface BootstrapData {
     loginFooterText?: string;
     nameservers?: string[];
     customCss?: string;
+    /** A notice for all users, set by an administrator. */
+    maintenanceNotice?: string;
   };
   locale?: string;
   csrfToken?: string;

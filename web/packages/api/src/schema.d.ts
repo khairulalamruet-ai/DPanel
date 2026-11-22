@@ -113,7 +113,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/nodes": {
+    "/api/v1/admin/backup-destinations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The destinations. */
+        get: operations["adminListBackupDestinations"];
+        put?: never;
+        /** Add a destination. */
+        post: operations["adminAddBackupDestination"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/backup-destinations/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -121,6 +139,1025 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** Change a destination. */
+        put: operations["adminChangeBackupDestination"];
+        post?: never;
+        /** Remove a destination nothing uses. */
+        delete: operations["adminRemoveBackupDestination"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/backup-destinations/{id}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make a destination the default. */
+        post: operations["adminDefaultBackupDestination"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/backup-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn an export file into a backup of an account. */
+        post: operations["adminStartBackupImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Everything the admin interface needs after sign-in. */
+        get: operations["adminBootstrap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/container-images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The catalog, with each image's reference. */
+        get: operations["adminListContainerImages"];
+        put?: never;
+        /** Approve an image. */
+        post: operations["adminAddContainerImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/container-images/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change what clients see of an image, or stop offering it (running containers keep running). */
+        put: operations["adminChangeContainerImage"];
+        post?: never;
+        /** Remove an image no container runs. */
+        delete: operations["adminRemoveContainerImage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/databases/biggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The biggest databases of the panel, or of one node. */
+        get: operations["adminBiggestDatabases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/databases/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Databases per node: how many, how big. */
+        get: operations["adminDatabasesOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dns/nameservers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The name servers a domain must point at. */
+        get: operations["adminNameservers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dns/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the zone templates. */
+        get: operations["listDnsTemplates"];
+        put?: never;
+        /** Create a zone template. */
+        post: operations["createDnsTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dns/templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One zone template. */
+        get: operations["getDnsTemplate"];
+        /** Replace a zone template. Zones that already exist are not changed. */
+        put: operations["updateDnsTemplate"];
+        post?: never;
+        /** Delete a zone template. */
+        delete: operations["deleteDnsTemplate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every domain on the panel. */
+        get: operations["adminListDomains"];
+        put?: never;
+        /** Add a domain to a user. */
+        post: operations["adminAddDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One domain. */
+        get: operations["adminGetDomain"];
+        put?: never;
+        post?: never;
+        /** Remove a domain and what hangs off it. */
+        delete: operations["adminDeleteDomain"];
+        options?: never;
+        head?: never;
+        /** Change a domain's document root. */
+        patch: operations["adminUpdateDomain"];
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/dns/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the public DNS which name servers a domain uses and compare them with the panel's. */
+        post: operations["adminCheckDelegation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/dns/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the records of a domain's zone. */
+        get: operations["adminListDnsRecords"];
+        put?: never;
+        /** Add a record to a domain's zone. */
+        post: operations["adminAddDnsRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/dns/records/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a record. */
+        delete: operations["adminDeleteDnsRecord"];
+        options?: never;
+        head?: never;
+        /** Change a record's data, TTL or priority. */
+        patch: operations["adminUpdateDnsRecord"];
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/page-cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a domain's page cache. */
+        get: operations["adminGetDomainPageCache"];
+        /** Switch a domain's page cache on or off, and set how long a page stays fresh. */
+        put: operations["adminSetDomainPageCache"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/page-cache/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Purge a domain's page cache. */
+        post: operations["adminPurgeDomainPageCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/php": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The PHP versions of the account a domain belongs to. */
+        get: operations["adminGetDomainPhp"];
+        /** Change the PHP version of a domain (`null` goes back to its account's). */
+        put: operations["adminSetDomainPhp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/php/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The php.ini options of the account a domain belongs to. */
+        get: operations["adminGetPhpSettings"];
+        /** Replace the php.ini options of the account a domain belongs to. */
+        put: operations["adminSetPhpSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a domain's web server policy. */
+        get: operations["adminGetDomainPolicy"];
+        /** Set a domain's web server policy (replaces it; an empty one removes it). */
+        put: operations["adminSetDomainPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/redirects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a domain's redirects. */
+        get: operations["adminListRedirects"];
+        put?: never;
+        /** Add a redirect to a domain. */
+        post: operations["adminAddRedirect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/redirects/{redirect_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a redirect. */
+        delete: operations["adminDeleteRedirect"];
+        options?: never;
+        head?: never;
+        /** Change a redirect's target or code. */
+        patch: operations["adminUpdateRedirect"];
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/ssl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The certificate of a domain. */
+        get: operations["adminDomainSsl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/ssl/custom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Use an uploaded certificate for a domain. */
+        put: operations["adminUploadCertificate"];
+        post?: never;
+        /** Go back to the web server's own certificate. */
+        delete: operations["adminRemoveCertificate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop serving a domain. */
+        post: operations["adminSuspendDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/unsuspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Serve a suspended domain again. */
+        post: operations["adminUnsuspendDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/domains/{id}/vhost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** See a domain's web server file and its owner's own directives. */
+        get: operations["adminGetDomainVhost"];
+        /** Replace a domain's own directives (an empty text removes them). */
+        put: operations["adminSetDomainVhost"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email/deliverability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How the mail domains stand: their MX, SPF, DKIM and DMARC records against what the mail
+         *     server asks for.
+         */
+        get: operations["adminMailDeliverability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every mail domain. */
+        get: operations["adminListMailDomains"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email/domains/{id}/hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hold a domain's outgoing mail (a limit of one message a day). */
+        post: operations["adminHoldMailDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email/domains/{id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Let a held domain send again. */
+        post: operations["adminReleaseMailDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The outgoing mail queue of every node, as it was last reported. */
+        get: operations["adminMailQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email/queue/flush": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry every queued message now. */
+        post: operations["adminFlushMailQueue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email/queue/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove one queued message. */
+        delete: operations["adminDeleteQueuedMail"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email/servers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The nodes' mail servers. */
+        get: operations["adminListMailServers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email/servers/{node_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Name a node's mail server. */
+        put: operations["adminSetMailServer"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/error-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The pages visitors see, with the installation's own where none was set. */
+        get: operations["listErrorPages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/error-pages/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a page. */
+        put: operations["setErrorPage"];
+        post?: never;
+        /** Go back to the installation's own page. */
+        delete: operations["resetErrorPage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/feature-sets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the feature sets. */
+        get: operations["listFeatureSets"];
+        put?: never;
+        /** Create a feature set. */
+        post: operations["createFeatureSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/feature-sets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One feature set. */
+        get: operations["getFeatureSet"];
+        /** Replace a feature set's contents. */
+        put: operations["updateFeatureSet"];
+        post?: never;
+        /** Delete a feature set that no plan uses. */
+        delete: operations["deleteFeatureSet"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the features the installed modules offer (for the feature set editor). */
+        get: operations["listFeatures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/license": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** This installation's license: its state, plan, features, limits and dates. */
+        get: operations["adminShowLicense"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/license/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enter a license key: this installation takes one place of the license. */
+        post: operations["adminActivateLicense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/license/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Give the place back (to use the license on another installation). */
+        post: operations["adminDeactivateLicense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/license/recovery-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the license authority's people for help (a failed update, a lost machine). */
+        post: operations["adminLicenseRecoveryRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/license/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the authority again now (when the license was changed there, or to check it). */
+        post: operations["adminRefreshLicense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/migration/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The transfers, newest first. */
+        get: operations["listMigrationTransfers"];
+        put?: never;
+        /** Start a transfer: read the backup and plan the import. */
+        post: operations["createMigrationTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/migration/transfers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One transfer, with its steps and log. */
+        get: operations["getMigrationTransfer"];
+        put?: never;
+        post?: never;
+        /** Delete a transfer that has ended. */
+        delete: operations["deleteMigrationTransfer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/migration/transfers/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop a transfer that has not ended. */
+        post: operations["cancelMigrationTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/migration/transfers/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a failed or cancelled transfer again from its first step. */
+        post: operations["retryMigrationTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the modules of this installation. */
+        get: operations["listModules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/modules/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Switch a module on or off. Takes effect at once, without a restart. */
+        put: operations["setModule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/node-transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The newest transfers. */
+        get: operations["adminListNodeTransfers"];
+        put?: never;
+        /** Start moving an account to another node. */
+        post: operations["adminStartNodeTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/node-transfers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One transfer. */
+        get: operations["adminGetNodeTransfer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/node-transfers/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Give up before the switch: the old node keeps the account, the new node's copy is removed. */
+        post: operations["adminCancelNodeTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/node-transfers/{id}/cleanup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remove the account from the old node (after the switch). */
+        post: operations["adminCleanUpNodeTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/node-transfers/{id}/cutover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Go on to the last pass: the account is frozen on the old node, what changed is carried, and
+         *     the account is switched to the new node.
+         */
+        post: operations["adminCutOverNodeTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the enrolled nodes with their live status. */
+        get: operations["listNodes"];
         put?: never;
         /** Add a node: creates a one-time enrollment token. */
         post: operations["createNodeEnrollment"];
@@ -159,6 +1196,1121 @@ export interface paths {
         post?: never;
         /** Cancel a token that has not been used yet. */
         delete: operations["revokeNodeEnrollment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/firewall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A node's firewall policy. */
+        get: operations["adminGetNodeFirewall"];
+        /**
+         * Set a node's firewall policy; the node is told within seconds (or when it connects). A
+         *     policy that denies by default needs an `always_allow` address, so the panel stays reachable.
+         */
+        put: operations["adminSetNodeFirewall"];
+        post?: never;
+        /** Take every rule away from a node's firewall (the panel keeps managing it: an empty policy). */
+        delete: operations["adminResetNodeFirewall"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/ping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask a node to answer a ping (a liveness check that goes through the whole
+         *     pipeline). Each call is a new ping unless an `Idempotency-Key` header says
+         *     it is the same request.
+         */
+        post: operations["pingNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a node: its certificates stop working and its connection is closed.
+         *     Final; the server has to be enrolled again with a new token.
+         */
+        post: operations["revokeNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The node's system, time zone, memory, swap and SSH settings. */
+        get: operations["adminServerInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/server/drop-caches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Drop the node's page cache. */
+        post: operations["adminDropCaches"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/server/reboot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reboot the node. The body must carry the node's name as it is. */
+        post: operations["adminRebootNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/server/swap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make the node's swap file (or take it away with 0). */
+        post: operations["adminSetSwap"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/server/timezone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set the node's time zone. */
+        post: operations["adminSetTimezone"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The core services of a node, as it last reported them. */
+        get: operations["adminNodeServices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/services/{name}/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The end of the log of a core service of a node (`database`, `phpmyadmin` or `sftp`). */
+        get: operations["adminNodeServiceLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/nodes/{id}/services/{name}/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restart a core service of a node (`database`, `phpmyadmin` or `sftp`). */
+        post: operations["adminRestartNodeService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/notifications/smtp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The panel's mail server. */
+        get: operations["getNotificationSmtp"];
+        /** Sets the panel's mail server. */
+        put: operations["putNotificationSmtp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/notifications/smtp/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sends a test mail through the mail server that is set. */
+        post: operations["testNotificationSmtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List recent operations. */
+        get: operations["listOperations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/operations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One operation. */
+        get: operations["getOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/operations/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Try a failed operation again as a new operation. Asking twice returns the
+         *     same new operation.
+         */
+        post: operations["retryOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every permission key the installed modules declare, for the role editor. */
+        get: operations["listPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/plan-limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the numeric limits the installed modules declare (for the plan form). */
+        get: operations["listPlanLimits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the plans. */
+        get: operations["listPlans"];
+        put?: never;
+        /** Create a plan. */
+        post: operations["createPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One plan. */
+        get: operations["getPlan"];
+        /** Replace a plan's contents. */
+        put: operations["updatePlan"];
+        post?: never;
+        /** Delete a plan that no account is on. */
+        delete: operations["deletePlan"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reseller-packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The packages. */
+        get: operations["listResellerPackages"];
+        put?: never;
+        /** Create a package. */
+        post: operations["createResellerPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reseller-packages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a package no reseller uses. */
+        delete: operations["deleteResellerPackage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/resellers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The resellers. */
+        get: operations["listResellers"];
+        put?: never;
+        /** Create a reseller: the account, its role and its standing, in one transaction. */
+        post: operations["createReseller"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/resellers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a reseller that has no hosting accounts (any it had must be deleted and purged
+         *     first). Its plans go; the login is disabled.
+         */
+        delete: operations["deleteReseller"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/resellers/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend or resume a reseller. While it is suspended neither it nor its clients can
+         *     sign in; the clients' sites keep running.
+         */
+        post: operations["setResellerStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The images of the allow-list: what a registry says is newer and what the last scan found. */
+        get: operations["adminListImages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/images/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Scan an image now (a node does it in the next minutes; the first scan fetches the
+         *     vulnerability database, which takes longer).
+         */
+        post: operations["adminScanImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/images/vulnerabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The worst findings of one image. */
+        get: operations["adminImageVulnerabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/user-agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The User-Agent texts the web servers refuse. */
+        get: operations["adminListUserAgents"];
+        put?: never;
+        /** Refuse a User-Agent text on every node (they are told within seconds). */
+        post: operations["adminAddUserAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/user-agents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Stop refusing a User-Agent text. */
+        delete: operations["adminRemoveUserAgent"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/wp-advisories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The advisories the vulnerability scans compare with. */
+        get: operations["adminListWpAdvisories"];
+        put?: never;
+        /** Add an advisory: every version of the component below `fixed_in` is reported. */
+        post: operations["adminAddWpAdvisory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/wp-advisories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Take an advisory away. */
+        delete: operations["adminRemoveWpAdvisory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the settings of every module that has some. */
+        get: operations["listSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings/{module}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One module's settings. */
+        get: operations["getSettings"];
+        /**
+         * Change some settings of a module. All values are checked first; if one is
+         *     not acceptable nothing is changed. The change, with the old and new value
+         *     of every setting that differs, is written to the audit log.
+         */
+        put: operations["putSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/skeleton-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The files every new user's docroot starts with. */
+        get: operations["listSkeletonFiles"];
+        /** Add a default file or replace its content. Existing users keep their files. */
+        put: operations["putSkeletonFile"];
+        post?: never;
+        /** Remove a default file. Existing users keep their files. */
+        delete: operations["deleteSkeletonFile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-backup-schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The panel's own schedule. */
+        get: operations["adminGetSystemBackupSchedule"];
+        /**
+         * Makes or changes the panel's own schedule (at most once an hour; keeps 0-365 days and
+         *     0-520 weeks).
+         */
+        put: operations["adminPutSystemBackupSchedule"];
+        post?: never;
+        /** Removes the panel's own schedule (backups already made stay). */
+        delete: operations["adminDeleteSystemBackupSchedule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The panel's own backups, newest first. */
+        get: operations["adminListSystemBackups"];
+        put?: never;
+        /** Makes a system backup now (queued; the control plane makes it within half a minute). */
+        post: operations["adminStartSystemBackup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-backups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Removes a system backup. */
+        delete: operations["adminDeleteSystemBackup"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The control plane's own log: the newest events this process wrote (it keeps 2000; the
+         *     full log is in the service's journal).
+         */
+        get: operations["adminSystemLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants/{id}/apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A hosting account's applications. */
+        get: operations["adminListApps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants/{id}/malware-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A hosting account's malware scans. */
+        get: operations["adminListMalwareScans"];
+        put?: never;
+        /** Scan a hosting account's files for malware (the node does it in the next seconds). */
+        post: operations["adminStartMalwareScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants/{id}/vulnerability-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A hosting account's WordPress vulnerability scans. */
+        get: operations["adminListVulnerabilityScans"];
+        put?: never;
+        /** Look up the versions of the WordPress installations in a hosting account's files. */
+        post: operations["adminStartVulnerabilityScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/usage/nodes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A node's CPU, memory, load and disk over time (the last 30 days at most). */
+        get: operations["adminNodeUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/usage/top": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The accounts that used most. */
+        get: operations["adminUsageTop"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List users, newest first. */
+        get: operations["listUsers"];
+        put?: never;
+        /**
+         * Create a user: the account, its hosting account and the work that sets it
+         *     up, in one transaction.
+         */
+        post: operations["createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One user. */
+        get: operations["getUser"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a user: the account is disabled and the stack is removed at once; the
+         *     files are kept until `purge_after`, then purged.
+         */
+        delete: operations["deleteUser"];
+        options?: never;
+        head?: never;
+        /** Change a user's email address or language. */
+        patch: operations["updateUser"];
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/impersonate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get a one-time token to sign in to the client app as this user ("login as
+         *     user"). The session it opens shows who is behind it, never counts as
+         *     recently authenticated, and both names are in the audit log.
+         */
+        post: operations["impersonateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set a new password for a user and sign them out everywhere. */
+        post: operations["resetUserPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move a user to another plan; the node's limits are updated. */
+        post: operations["changeUserPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/retry-setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run the set-up of a user whose hosting account is `failed` again. */
+        post: operations["retryUserSetup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend a user: the account cannot log in, the sites stop, the files stay. */
+        post: operations["suspendUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/unsuspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lift a suspension: the account may log in again and the stack starts. */
+        post: operations["unsuspendUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/vhost-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the web server templates. */
+        get: operations["listVhostTemplates"];
+        put?: never;
+        /** Add a template. */
+        post: operations["createVhostTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/vhost-templates/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send every account's web server files again (after templates changed). */
+        post: operations["applyVhostTemplates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/vhost-templates/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fill a template in for a made-up site that uses every part, without saving anything. */
+        post: operations["previewVhostTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/vhost-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One template with its text. */
+        get: operations["getVhostTemplate"];
+        /**
+         * Save a template (its next version). Sites that exist are not changed until
+         *     the templates are applied.
+         */
+        put: operations["updateVhostTemplate"];
+        post?: never;
+        /** Remove a template that is not the default. */
+        delete: operations["deleteVhostTemplate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/vhost-templates/{id}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a template the one new sites use. Sites that exist change when the
+         *     templates are applied.
+         */
+        post: operations["makeVhostTemplateDefault"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/vhost-templates/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A template's earlier saves. */
+        get: operations["listVhostTemplateVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/waf/domains/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One domain's policy. */
+        get: operations["adminGetDomainWafPolicy"];
+        /** Set one domain's policy. */
+        put: operations["adminPutDomainWafPolicy"];
+        post?: never;
+        /** Remove one domain's policy. */
+        delete: operations["adminDeleteDomainWafPolicy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/waf/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The panel-wide policy. */
+        get: operations["adminGetWafPolicy"];
+        /** Set the panel-wide policy. */
+        put: operations["adminPutWafPolicy"];
+        post?: never;
+        /** Remove the panel-wide policy (the default, `detect`, applies). */
+        delete: operations["adminDeleteWafPolicy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/waf/tenants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One account's policy. */
+        get: operations["adminGetTenantWafPolicy"];
+        /** Set one account's policy. */
+        put: operations["adminPutTenantWafPolicy"];
+        post?: never;
+        /** Remove one account's policy. */
+        delete: operations["adminDeleteTenantWafPolicy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -289,6 +2441,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The saved settings. */
+        get: operations["getPreferences"];
+        /** Replace the settings. */
+        put: operations["putPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/sessions": {
         parameters: {
             query?: never;
@@ -363,6 +2533,2306 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What happened in the account, newest first (logins, changes, failures). */
+        get: operations["clientActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's applications. */
+        get: operations["clientListApps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The applications that can be installed. */
+        get: operations["clientAppCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Install an application of the catalog. WordPress goes the way of its own installer; the
+         *     others run the steps of their definition on the node. The answer is the application,
+         *     `installing`.
+         */
+        post: operations["clientInstallApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/wordpress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Install WordPress on a domain (and path) of the account: a database and a user of its own
+         *     are made, then WordPress is downloaded, checked, configured and installed on the node. The
+         *     answer is the application, `installing`; it turns `active` (or `failed`, with the reason)
+         *     within a minute or two.
+         */
+        post: operations["clientInstallWordPress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One of the account's applications. */
+        get: operations["clientGetApp"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}/operations/{op}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The answer of an action that was still running. */
+        get: operations["clientAppOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}/wordpress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The versions of a WordPress site's core, plugins and themes, what has an update, and
+         *     whether maintenance mode is on.
+         */
+        get: operations["clientWordPressOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}/wordpress/admin-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set a WordPress user's password. */
+        post: operations["clientWordPressAdminPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}/wordpress/core/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update WordPress itself (to a version, or the latest). */
+        post: operations["clientWordPressUpdateCore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}/wordpress/harden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Put the safety settings right: debug off, the file editor off, XML-RPC off, permissions. */
+        post: operations["clientWordPressHarden"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}/wordpress/maintenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Switch maintenance mode on or off. */
+        post: operations["clientWordPressMaintenance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}/wordpress/plugins/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update one plugin, or all of them. */
+        post: operations["clientWordPressUpdatePlugins"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}/wordpress/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check the core's files against WordPress's published checksums and look at the settings
+         *     that matter for safety. A changed core file is named.
+         */
+        get: operations["clientWordPressScan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/apps/{id}/wordpress/themes/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update one theme, or all of them. */
+        post: operations["clientWordPressUpdateThemes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/backup-exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The exports of the account. */
+        get: operations["clientListExports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/backup-restores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The restores of the account and how they went. */
+        get: operations["clientListRestores"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/backup-schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's schedule. */
+        get: operations["clientGetBackupSchedule"];
+        /** Makes or changes the account's schedule. */
+        put: operations["clientPutBackupSchedule"];
+        post?: never;
+        /** Removes the account's schedule (backups already made stay). */
+        delete: operations["clientDeleteBackupSchedule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The backups of the account, newest first. */
+        get: operations["clientListBackups"];
+        put?: never;
+        /** Makes a backup now (it is queued; follow `status` until `ready`). */
+        post: operations["clientStartBackup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/backups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Removes a backup (its files at the destination follow shortly). */
+        delete: operations["clientDeleteBackup"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/backups/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Packs a backup into one file (an account export) that another panel can import. */
+        post: operations["clientStartExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/backups/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Puts back a backup, or a part of it. */
+        post: operations["clientStartRestore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything the customer interface needs after sign-in: the same as the
+         *     administrators' bootstrap, with the plan's features and limits.
+         */
+        get: operations["clientBootstrap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's cache servers and how to reach them. */
+        get: operations["clientListCache"];
+        put?: never;
+        /**
+         * Make a cache server of your own (Redis or Memcached), or change its memory. It is
+         *     reachable from the account's own sites only, by the name the answer shows.
+         */
+        post: operations["clientSetCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cache/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a cache server (what it holds is gone). */
+        delete: operations["clientRemoveCache"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/container-apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's containers. */
+        get: operations["clientListContainerApps"];
+        put?: never;
+        /** Run a container from an approved image. */
+        post: operations["clientCreateContainerApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/container-apps/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change a container and run it again with the changes. */
+        put: operations["clientChangeContainerApp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/container-images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The images a client may run. */
+        get: operations["clientListContainerImages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/containers/{name}/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restart one of the account's services. */
+        post: operations["clientRestartContainer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cron-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The cron jobs of the account. */
+        get: operations["clientListCronJobs"];
+        put?: never;
+        /** Make a cron job. */
+        post: operations["clientCreateCronJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cron-jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One job. */
+        get: operations["clientGetCronJob"];
+        /** Change a cron job (all its fields). */
+        put: operations["clientChangeCronJob"];
+        post?: never;
+        /** Remove a cron job. */
+        delete: operations["clientDeleteCronJob"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cron-jobs/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a job now, apart from its schedule. The result shows as the job's last run within
+         *     about a minute.
+         */
+        post: operations["clientRunCronJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/databases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in client's databases. */
+        get: operations["clientListDatabases"];
+        put?: never;
+        /** Make a database. */
+        post: operations["clientCreateDatabase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/databases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a database and everything in it. */
+        delete: operations["clientDeleteDatabase"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/databases/{id}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dump a database to a `.sql.gz` file. */
+        post: operations["clientStartExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/databases/{id}/grants/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Give a user access to a database (replacing the access it had). */
+        put: operations["clientGrantDatabase"];
+        post?: never;
+        /** Take a user's access to a database away. */
+        delete: operations["clientRevokeDatabase"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/databases/{id}/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start an import: say what the file is, then upload it in chunks. */
+        post: operations["clientStartImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/databases/{id}/phpmyadmin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open a database in phpMyAdmin. */
+        post: operations["clientOpenPhpMyAdmin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/db-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in client's database users. */
+        get: operations["clientListDbUsers"];
+        put?: never;
+        /** Make a database user. */
+        post: operations["clientCreateDbUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/db-users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a database user. */
+        delete: operations["clientDeleteDbUser"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/db-users/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change a database user's password. */
+        put: operations["clientChangeDbPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/db-users/{id}/remote-hosts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The addresses a user may connect from besides its own network. */
+        get: operations["clientGetDbRemoteHosts"];
+        /** Replace the addresses a user may connect from (an empty list ends remote access). */
+        put: operations["clientSetDbRemoteHosts"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/dns/nameservers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The name servers to give your registrar. */
+        get: operations["clientNameservers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the signed-in client's domains. */
+        get: operations["clientListDomains"];
+        put?: never;
+        /** Add a domain to the signed-in client's hosting account. */
+        post: operations["clientAddDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One of the signed-in client's domains. */
+        get: operations["clientGetDomain"];
+        put?: never;
+        post?: never;
+        /** Remove one of the signed-in client's domains and what hangs off it. */
+        delete: operations["clientDeleteDomain"];
+        options?: never;
+        head?: never;
+        /** Change the document root of one of the signed-in client's domains. */
+        patch: operations["clientUpdateDomain"];
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/dns/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check whether one of your domains points at the panel's name servers. */
+        post: operations["clientCheckDelegation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/dns/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the records of one of your domains' zones. */
+        get: operations["clientListDnsRecords"];
+        put?: never;
+        /** Add a record to one of your domains' zones. */
+        post: operations["clientAddDnsRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/dns/records/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a record of one of your domains' zones. */
+        delete: operations["clientDeleteDnsRecord"];
+        options?: never;
+        head?: never;
+        /** Change a record of one of your domains' zones. */
+        patch: operations["clientUpdateDnsRecord"];
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/page-cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the page cache of one of your domains. */
+        get: operations["clientGetDomainPageCache"];
+        /** Switch the page cache of one of your domains on or off. */
+        put: operations["clientSetDomainPageCache"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/page-cache/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Purge the page cache of one of your domains. */
+        post: operations["clientPurgeDomainPageCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/php": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change the PHP version of one of your domains (`null` goes back to the account's). */
+        put: operations["clientSetDomainPhp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the web server policy of one of your domains. */
+        get: operations["clientGetDomainPolicy"];
+        /** Set the web server policy of one of your domains (replaces it; an empty one removes it). */
+        put: operations["clientSetDomainPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** See the preview links of one of your domains. */
+        get: operations["clientListPreviews"];
+        put?: never;
+        /** Make a preview link for one of your domains. */
+        post: operations["clientCreatePreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/previews/{preview_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a preview link before it expires. */
+        delete: operations["clientDeletePreview"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/redirects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the redirects of one of your domains. */
+        get: operations["clientListRedirects"];
+        put?: never;
+        /** Add a redirect to one of your domains. */
+        post: operations["clientAddRedirect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/redirects/{redirect_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a redirect of one of your domains. */
+        delete: operations["clientDeleteRedirect"];
+        options?: never;
+        head?: never;
+        /** Change a redirect of one of your domains. */
+        patch: operations["clientUpdateRedirect"];
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/ssl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The certificate of one of your domains. */
+        get: operations["clientDomainSsl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/ssl/custom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Use an uploaded certificate for one of your domains. */
+        put: operations["clientUploadCertificate"];
+        post?: never;
+        /** Go back to the web server's own certificate for one of your domains. */
+        delete: operations["clientRemoveCertificate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/domains/{id}/vhost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** See the web server file of one of your domains and your own directives. */
+        get: operations["clientGetDomainVhost"];
+        /** Replace your own directives for one of your domains (an empty text removes them). */
+        put: operations["clientSetDomainVhost"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The exports of the account. */
+        get: operations["clientListExports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/exports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One export. */
+        get: operations["clientGetExport"];
+        put?: never;
+        post?: never;
+        /** Remove a finished export (or give up one that is being made). */
+        delete: operations["clientDeleteExport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/exports/{id}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A link to download the finished file; it works for five minutes. */
+        post: operations["clientExportLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A page of a folder. */
+        get: operations["clientListFiles"];
+        put?: never;
+        post?: never;
+        /** Delete: the file goes to the trash. */
+        delete: operations["clientDeleteFile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pack files and folders into a zip or tar.gz. */
+        post: operations["clientArchive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A text file, for the editor. */
+        get: operations["clientReadFile"];
+        /** Save a text file (whole, atomically). */
+        put: operations["clientWriteFile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Copy a file or a whole folder (never over something; links are left out). */
+        post: operations["clientCopyFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start a download: the node sends the file here; when the transfer is `ready` ask for a link. */
+        post: operations["clientStartDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unpack an archive; the whole archive is checked first. */
+        post: operations["clientExtract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make a folder. */
+        post: operations["clientMakeFolder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move or rename (never over something). */
+        post: operations["clientMoveFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/operations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The answer to a request that was answered `202`. */
+        get: operations["clientFileOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change permissions. */
+        post: operations["clientChmod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/permissions/fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set sane permissions on a whole tree (folders 755, files 644). */
+        post: operations["clientFixPermissions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/stat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One path. */
+        get: operations["clientStatFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/transfers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Where a transfer stands. */
+        get: operations["clientGetTransfer"];
+        put?: never;
+        post?: never;
+        /** Give up (an upload not yet taken by the node, a download not yet fetched) or remove a finished download. */
+        delete: operations["clientCancelTransfer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/transfers/{id}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A link that downloads the finished file; it works for five minutes. */
+        post: operations["clientTransferLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/trash": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What is in the trash. */
+        get: operations["clientListTrash"];
+        put?: never;
+        post?: never;
+        /** Empty the trash (all of it, one item, or what is old). */
+        delete: operations["clientEmptyTrash"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/trash/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Put something back where it was. */
+        post: operations["clientRestoreFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start an upload: say where the file goes and how big it is, then send its chunks. */
+        post: operations["clientStartUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/uploads/{id}/chunks/{n}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Send the next chunk (the body is the raw bytes). */
+        put: operations["clientPutUploadChunk"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/uploads/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The file is whole: the node is asked to take it. */
+        post: operations["clientCompleteUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/files/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The last measurement of what the account's files use. */
+        get: operations["clientDiskUsage"];
+        put?: never;
+        /**
+         * Measure now (at most once in five minutes); the answer arrives with the next
+         *     `GET` of the usage.
+         */
+        post: operations["clientMeasureDiskUsage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/ftp-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The accounts of the signed-in client. */
+        get: operations["clientListFtpAccounts"];
+        put?: never;
+        /** Make an account. */
+        post: operations["clientCreateFtpAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/ftp-accounts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change an account. */
+        put: operations["clientChangeFtpAccount"];
+        post?: never;
+        /** Remove an account. */
+        delete: operations["clientDeleteFtpAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/ftp-accounts/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change an account's password. */
+        put: operations["clientSetFtpPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/git-deploys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's deploys. */
+        get: operations["clientListGitDeploys"];
+        put?: never;
+        /**
+         * Make a deploy: the repository, the branch, how it is built and where it goes. The answer
+         *     has the webhook's secret, shown only this once.
+         */
+        post: operations["clientCreateGitDeploy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/git-deploys/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a deploy (the releases and the link stay in your files). */
+        delete: operations["clientRemoveGitDeploy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/git-deploys/{id}/deploy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deploy again now. */
+        post: operations["clientRunGitDeploy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/git-deploys/{id}/webhook-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make a new webhook secret (the old one stops working); it is shown once, in the answer. */
+        post: operations["clientRotateGitWebhookSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The imports of the account. */
+        get: operations["clientListImports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/imports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One import: where the upload stands, or how far the node has come. */
+        get: operations["clientGetImport"];
+        put?: never;
+        post?: never;
+        /** Stops an import that the node has not started yet (an upload, or a queued one). */
+        delete: operations["clientCancelImport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/imports/{id}/chunks/{n}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Send the next chunk of the file (the body is the raw bytes). */
+        put: operations["clientPutImportChunk"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/imports/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The file is whole: it is checked and the node is asked to run it. */
+        post: operations["clientCompleteImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the end of one of the account's logs. */
+        get: operations["clientReadLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/malware-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's own malware scans. */
+        get: operations["clientListMalwareScans"];
+        put?: never;
+        /** Scan the account's own files for malware. */
+        post: operations["clientStartMalwareScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/marketplace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The marketplace, with what this account has installed. */
+        get: operations["clientListMarketplace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/marketplace/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an installed software (its container goes). */
+        delete: operations["clientUninstallSoftware"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/marketplace/{slug}/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Install a piece of software. */
+        post: operations["clientInstallSoftware"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/marketplace/{slug}/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run an installed software again from the version on offer. */
+        post: operations["clientUpdateSoftware"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The newest notifications of the signed-in account. */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/notifications/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The channels of the signed-in account. */
+        get: operations["listNotificationChannels"];
+        put?: never;
+        /** Makes a channel. */
+        post: operations["createNotificationChannel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/notifications/channels/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Removes a channel. */
+        delete: operations["deleteNotificationChannel"];
+        options?: never;
+        head?: never;
+        /** Changes a channel. */
+        patch: operations["updateNotificationChannel"];
+        trace?: never;
+    };
+    "/api/v1/client/notifications/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The events the signed-in account may send to a channel. */
+        get: operations["listNotificationEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/notifications/quiet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in account's pause and snooze. */
+        get: operations["getNotificationQuiet"];
+        /** Pauses or snoozes (or ends it). */
+        put: operations["putNotificationQuiet"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marks notifications as read. */
+        post: operations["readNotifications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/php": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The PHP versions of your account and domains. */
+        get: operations["clientGetPhp"];
+        /** Change the PHP version of your account (what its domains use unless they ask for another). */
+        put: operations["clientSetPhp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/php/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The php.ini options you can set, what you chose and what your plan allows. */
+        get: operations["clientGetPhpSettings"];
+        /** Replace your php.ini options (an empty object puts every option back to its default). */
+        put: operations["clientSetPhpSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/processes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The processes inside the account's containers (and only its own). */
+        get: operations["clientListProcesses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/processes/{container}/{pid}/signal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End a process of the account: SIGTERM, or SIGKILL; with `escalate`, SIGTERM and then
+         *     SIGKILL after ten seconds if it stays. Process 1 of a container cannot be signalled
+         *     (restart the service instead).
+         */
+        post: operations["clientSignalProcess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/runtime-apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's applications. */
+        get: operations["clientListRuntimeApps"];
+        put?: never;
+        /**
+         * Make an application: a container of your own that runs your files with a start command and,
+         *     when a domain is given, shows that domain. The answer is `pending` until the node has done it.
+         */
+        post: operations["clientCreateRuntimeApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/runtime-apps/runtimes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The versions of Node.js and Python that can be chosen. */
+        get: operations["clientRuntimeVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/runtime-apps/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change an application's settings (and run it again with them). */
+        put: operations["clientUpdateRuntimeApp"];
+        post?: never;
+        /** Remove an application (its container goes; your files stay). */
+        delete: operations["clientRemoveRuntimeApp"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/runtime-apps/{id}/redeploy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run the application again from its files (after you changed them): the dependencies are
+         *     installed again unless `install` is false.
+         */
+        post: operations["clientRedeployRuntimeApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's containers. */
+        get: operations["clientListServices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/services/{service}/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restart your web server or your PHP. */
+        post: operations["clientRestartService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/traffic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many requests the account's website got: totals, by kind of answer, per hour and the
+         *     most asked pages. Counted from the web server's log, which the node keeps for a while only.
+         */
+        get: operations["clientTraffic"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's CPU, memory, network and disk use over time. */
+        get: operations["clientUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/vulnerability-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's own WordPress vulnerability scans. */
+        get: operations["clientListVulnerabilityScans"];
+        put?: never;
+        /** Look up the versions of the WordPress installations in the account's own files. */
+        post: operations["clientStartVulnerabilityScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/waf/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account's domains with their firewall policy and what applies to each. */
+        get: operations["clientListWaf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/waf/domains/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set the policy of one of the account's domains (`detect` or `block`). */
+        put: operations["clientPutWaf"];
+        post?: never;
+        /** Remove the policy of one of the account's domains (the account's or the panel's applies). */
+        delete: operations["clientDeleteWaf"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/autoresponders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The automatic replies of the account. */
+        get: operations["clientListAutoresponders"];
+        put?: never;
+        /** Set a mailbox's automatic reply. */
+        post: operations["clientSetAutoresponder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/autoresponders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Turn a mailbox's automatic reply off. */
+        delete: operations["clientDeleteAutoresponder"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What to set a mail program to. */
+        get: operations["clientMailConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/forwarders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The forwarders of the account. */
+        get: operations["clientListForwarders"];
+        put?: never;
+        /** Make a forwarder. */
+        post: operations["clientCreateForwarder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/forwarders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a forwarder. */
+        delete: operations["clientDeleteForwarder"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/mailboxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The mailboxes of the account. */
+        get: operations["clientListMailboxes"];
+        put?: never;
+        /** Make a mailbox. */
+        post: operations["clientCreateMailbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/mailboxes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a mailbox with its mail. */
+        delete: operations["clientDeleteMailbox"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/mailboxes/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change a mailbox's password. */
+        post: operations["clientChangeMailboxPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email/mailboxes/{id}/webmail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open webmail as a mailbox, with one click. */
+        post: operations["clientOpenWebmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/auth/impersonate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open a session as a client with an administrator's one-time token. */
+        post: operations["redeemImpersonation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/auth/login": {
         parameters: {
             query?: never;
@@ -397,6 +4867,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/git-webhook/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A push to the repository starts the deploy. Signed with the deploy's secret; a push to
+         *     another branch, a ping, or a deploy that is already running starts nothing.
+         */
+        post: operations["gitWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/health": {
         parameters: {
             query?: never;
@@ -406,6 +4896,23 @@ export interface paths {
         };
         /** Liveness: the process answers HTTP */
         get: operations["getHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/license-proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The authority's domain check: signs a challenge for the panel's own domain. */
+        get: operations["licenseDomainProof"];
         put?: never;
         post?: never;
         delete?: never;
@@ -448,10 +4955,394 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/tls/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** May a certificate be issued for this name? */
+        get: operations["tlsAsk"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reseller/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's own reseller account. */
+        get: operations["getResellerMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reseller/me/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change the branding. */
+        put: operations["putResellerBranding"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reseller/me/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's package. */
+        get: operations["getResellerPackage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reseller/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's plans. */
+        get: operations["listResellerPlans"];
+        put?: never;
+        /** Create a plan of the caller. */
+        post: operations["createResellerPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reseller/plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a plan of the caller that no account uses. */
+        delete: operations["deleteResellerPlan"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reseller/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's clients. */
+        get: operations["listResellerUsers"];
+        put?: never;
+        /** Create a client of the caller. */
+        post: operations["createResellerUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reseller/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete one of the caller's clients (its data is kept for a while, as for any user). */
+        delete: operations["deleteResellerUser"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reseller/users/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend or resume one of the caller's clients. */
+        post: operations["setResellerUserStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description A license key to use. */
+        ActivateRequest: {
+            /** @description The key the license came with (`DHP-XXXXX-XXXXX-XXXXX-XXXXX`). */
+            license_key: string;
+        };
+        /** @description One thing that happened in the account. */
+        ActivityItem: {
+            /** @description What happened, e.g. `database.create`. */
+            action: string;
+            /** @description When (RFC 3339, UTC). */
+            at: string;
+            /** @description Whether the account's own login did it (otherwise staff did, on its behalf). */
+            by_you: boolean;
+            /**
+             * Format: uuid
+             * @description Entry id.
+             */
+            id: string;
+            /** @description Where from: only for what the account did itself. */
+            ip?: string | null;
+            /** @description `success`, `failure` or `denied`. */
+            outcome: string;
+            /** @description Which one. */
+            target_id?: string | null;
+            /** @description What it was done to (`domain`, `database`, ...). */
+            target_type?: string | null;
+        };
+        /** @description A page of the activity. */
+        ActivityPage: {
+            /** @description Newest first. */
+            items: components["schemas"]["ActivityItem"][];
+            /** @description Pass this as `cursor` for the next page (`null`: the end). */
+            next_cursor?: string | null;
+        };
+        /** @description An advisory to add. */
+        AddAdvisory: {
+            /** @description `core`, `plugin` or `theme`. */
+            component: string;
+            /** @description Versions below this are affected. */
+            fixed_in: string;
+            /** @description Where to read more (`https://…`). */
+            reference?: string | null;
+            /** @description `low`, `medium`, `high` or `critical`. */
+            severity: string;
+            /** @description The folder name (`wordpress` for the core). */
+            slug: string;
+            /** @description What it is (1 to 200 characters). */
+            title: string;
+        };
+        /** @description A database to make. */
+        AddDatabase: {
+            /**
+             * @description `mysql` (MariaDB, the default) or `postgres` (needs the `db_postgres` feature).
+             * @example mysql
+             */
+            engine?: string | null;
+            /**
+             * @description The name; the account's prefix is put in front when it is not there.
+             * @example shop
+             */
+            name: string;
+        };
+        /** @description A database user to make. */
+        AddDbUser: {
+            /**
+             * @description `mysql` (MariaDB, the default) or `postgres` (needs the `db_postgres` feature).
+             * @example mysql
+             */
+            engine?: string | null;
+            /**
+             * @description The name; the account's prefix is put in front when it is not there.
+             * @example web
+             */
+            name: string;
+            /** @description The password; a strong one is made (and shown once) when it is left out. */
+            password?: string | null;
+        };
+        /** @description A destination to make. */
+        AddDestination: {
+            /**
+             * @description The secret part: `s3`: `access_key`, `secret_key`; `sftp`: `password` or `private_key`.
+             *     Sealed at once and never shown again.
+             */
+            credentials?: unknown;
+            /**
+             * @description `local`, `s3` or `sftp`.
+             * @example s3
+             */
+            kind: string;
+            /**
+             * @description Its name.
+             * @example Offsite S3
+             */
+            name: string;
+            /**
+             * @description What is not secret: `local`: `path`; `s3`: `endpoint`, `bucket`, `region`, `prefix`,
+             *     `path_style`; `sftp`: `host`, `port`, `user`, `path`, `host_key_sha256`.
+             */
+            settings: unknown;
+        };
+        /** @description A domain to add. */
+        AddDomain: {
+            /** @description Where its files are, relative to the web directory (default: the directory itself). */
+            docroot?: string | null;
+            /**
+             * @description The name; international names may be written in Unicode.
+             * @example example.com
+             */
+            fqdn: string;
+            /**
+             * @description `primary` (the first domain, by default), `addon` (by default after
+             *     that), `sub` or `alias`.
+             */
+            kind?: string | null;
+            /**
+             * Format: uuid
+             * @description The domain a `sub` or `alias` belongs to.
+             */
+            parent_domain_id?: string | null;
+        };
+        /** @description An account to make. */
+        AddFtpAccount: {
+            /** @description Allow FTP without TLS (default no; refused unless the panel allows it). */
+            ftp_plain?: boolean | null;
+            /** @description Allow FTP with TLS (default yes). */
+            ftps?: boolean | null;
+            /** @description The home, relative to the account's files (default: all of them). */
+            home?: string;
+            /**
+             * @description The name; the hosting account's prefix is put in front when it is not there.
+             * @example site
+             */
+            name: string;
+            /** @description The password; a strong one is made (and shown once) when it is left out. */
+            password?: string | null;
+            /**
+             * Format: int64
+             * @description Disk limit in MB.
+             */
+            quota_mb?: number | null;
+            /** @description Only read (default no). */
+            read_only?: boolean;
+            /** @description Allow SFTP (default yes). */
+            sftp?: boolean | null;
+        };
+        /** @description A record to add. */
+        AddRecord: {
+            /**
+             * @description The data: an address for `A` and `AAAA`, a host name for `CNAME`, `MX`
+             *     (the mail server) and `NS`, text for `TXT`, `weight port target` for `SRV`,
+             *     `flags tag "value"` for `CAA`.
+             * @example 192.0.2.10
+             */
+            content: string;
+            /**
+             * @description Relative to the zone; `@` for the zone itself.
+             * @example www
+             */
+            name: string;
+            /**
+             * Format: int32
+             * @description Required for `MX` and `SRV`, refused for the others.
+             */
+            priority?: number | null;
+            /**
+             * Format: int32
+             * @description Seconds, 60 to 604800 (default 3600).
+             */
+            ttl?: number | null;
+            /**
+             * @description `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV`, `CAA` or `NS`.
+             * @example A
+             */
+            type: string;
+        };
+        /** @description A redirect to add. */
+        AddRedirect: {
+            /**
+             * Format: int64
+             * @description 301 (default), 302, 307 or 308.
+             */
+            code?: number | null;
+            /**
+             * @description The exact path it applies to, starting with `/` (`/` is the front page).
+             * @example /old-page
+             */
+            source_path: string;
+            /**
+             * @description A path of the same site or an http(s) address.
+             * @example /new-page
+             */
+            target: string;
+        };
+        /** @description A text to refuse. */
+        AddUserAgent: {
+            /** @description Why (at most 200 characters). */
+            note?: string | null;
+            /**
+             * @description The text (1-100 characters, no control characters): a request whose User-Agent
+             *     contains it, in any case, is answered `403`.
+             * @example badbot
+             */
+            pattern: string;
+        };
+        /** @description A domain to add for a user. */
+        AdminAddDomain: {
+            /** @description Where its files are, relative to the web directory. */
+            docroot?: string | null;
+            /**
+             * @description The name; international names may be written in Unicode.
+             * @example example.com
+             */
+            fqdn: string;
+            /**
+             * @description `primary` (the first domain, by default), `addon` (by default after
+             *     that), `sub` or `alias`.
+             */
+            kind?: string | null;
+            /**
+             * Format: uuid
+             * @description The domain a `sub` or `alias` belongs to.
+             */
+            parent_domain_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The user (account id) it is added for.
+             */
+            user_id: string;
+        };
         /** @description A page of administrators. */
         AdministratorList: {
             /** @description Oldest account first. */
@@ -495,6 +5386,81 @@ export interface components {
             status: string;
             /** @description Login name. */
             username: string;
+        };
+        /** @description The advisories. */
+        AdvisoryList: {
+            /** @description By component and slug. */
+            items: components["schemas"]["AdvisoryView"][];
+        };
+        /** @description A WordPress version known to be vulnerable. */
+        AdvisoryView: {
+            /** @description `core`, `plugin` or `theme`. */
+            component: string;
+            /** @description Versions below this are affected. */
+            fixed_in: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description Where to read more. */
+            reference?: string | null;
+            /** @description `low`, `medium`, `high` or `critical`. */
+            severity: string;
+            /** @description The folder name (`wordpress` for the core). */
+            slug: string;
+            /** @description What it is. */
+            title: string;
+        };
+        /** @description The applications. */
+        AppList: {
+            /** @description Oldest first. */
+            items: components["schemas"]["AppView"][];
+        };
+        /** @description One application. */
+        AppView: {
+            /**
+             * Format: int64
+             * @description Created (Unix seconds).
+             */
+            created_at: number;
+            /**
+             * Format: uuid
+             * @description The database it uses.
+             */
+            database_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The domain it is served on (`null`: the domain was removed).
+             */
+            domain_id?: string | null;
+            /** @description Why an install failed. */
+            error?: string | null;
+            /** @description The domain's name. */
+            fqdn?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description The catalog slug (`wordpress`). */
+            kind: string;
+            /** @description What the owner calls it. */
+            name: string;
+            /** @description The path under the domain (`/`, `/blog`). */
+            path: string;
+            /** @description `installing`, `active`, `failed` or `removing`. */
+            status: string;
+            /** @description The version installed. */
+            version?: string | null;
+        };
+        /** @description How many accounts will send their files again. */
+        Applied: {
+            /**
+             * Format: int64
+             * @description Accounts with a web server that were put on the list.
+             */
+            tenants: number;
         };
         /** @description One audit entry. */
         AuditItem: {
@@ -552,10 +5518,399 @@ export interface components {
             /** @description Pass as `cursor` to get the next (older) page; absent on the last page. */
             next_cursor?: string | null;
         };
+        /** @description An automatic reply to set. */
+        AutoresponderRequest: {
+            /** @description The text of the reply (up to 5000 characters). */
+            body: string;
+            /** @description The domain. */
+            domain: string;
+            /** @description The mailbox. */
+            email: string;
+            /** @description Until when; no end when left out. */
+            end_date?: string | null;
+            /** @description From when (`2026-12-24` or a full time); at once when left out. */
+            start_date?: string | null;
+            /** @description The subject of the reply (up to 200 characters). */
+            subject: string;
+        };
+        /** @description An automatic reply. */
+        AutoresponderView: {
+            /** @description The text of the reply. */
+            body: string;
+            /** @description The domain. */
+            domain: string;
+            /** @description The mailbox. */
+            email: string;
+            /** @description Until when. */
+            end_date?: string | null;
+            /**
+             * Format: uuid
+             * @description Id (the mailbox's).
+             */
+            id: string;
+            /** @description Whether it replies now. */
+            is_active: boolean;
+            /** @description From when. */
+            start_date?: string | null;
+            /** @description The subject of the reply. */
+            subject: string;
+        };
         /** @description Backup codes, shown exactly once. */
         BackupCodes: {
             /** @description Ten single-use codes; store them somewhere safe. */
             backup_codes: string[];
+        };
+        /** @description The backups. */
+        BackupList: {
+            /** @description Newest first. */
+            items: components["schemas"]["BackupView"][];
+        };
+        /** @description A backup. */
+        BackupView: {
+            /** @description When it was asked for. */
+            created_at: string;
+            /** @description What went wrong, for a failed one. */
+            error?: string | null;
+            /** @description When it ended. */
+            finished_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description What it holds (once ready). */
+            parts: components["schemas"]["PartView"][];
+            /**
+             * Format: int64
+             * @description Everything stored, in bytes (once ready).
+             */
+            size_bytes?: number | null;
+            /** @description `queued`, `running`, `ready`, `failed` or `deleting`. */
+            status: string;
+            /** @description `manual` or `schedule`. */
+            trigger: string;
+        };
+        /** @description A database, with whose it is. */
+        BigDatabase: {
+            /** @description The hosting account's system name. */
+            account: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * @description The whole name.
+             * @example alice_shop
+             */
+            name: string;
+            /** @description The node's name. */
+            node: string;
+            /**
+             * Format: uuid
+             * @description The node.
+             */
+            node_id: string;
+            /**
+             * Format: int64
+             * @description Size in bytes, as last measured.
+             */
+            size_bytes: number;
+            /**
+             * Format: date-time
+             * @description When it was measured (RFC 3339, UTC).
+             */
+            size_checked_at?: string | null;
+            /** @description `pending`, `ready`, `failed` or `deleting`. */
+            status: string;
+        };
+        /** @description The biggest databases. */
+        BigDatabaseList: {
+            /** @description Biggest first. */
+            items: components["schemas"]["BigDatabase"][];
+        };
+        /** @description What the admin interface needs to start. */
+        Bootstrap: {
+            /** @description The panel's look. */
+            branding: components["schemas"]["Branding"];
+            /** @description Send as `X-CSRF-Token` on POST/PUT/PATCH/DELETE. Keep it in memory only. */
+            csrf_token: string;
+            /** @description Plan features (the customer bootstrap only; administrators have no plan). */
+            features: string[];
+            /** @description Plan limits by key, `-1` for no limit (the customer bootstrap only). */
+            limits: Record<string, never>;
+            /**
+             * @description The language to use: the account's, else the panel's default.
+             * @example bn
+             */
+            locale: string;
+            /** @description Two-factor authentication. */
+            mfa: components["schemas"]["BootstrapMfa"];
+            /** @description Modules being served right now, in dependency order. */
+            modules: components["schemas"]["BootstrapModule"][];
+            /**
+             * @description Permission grants: exact keys, subtrees (`admin.*`) or `*`. For showing
+             *     or hiding things; the server checks every request.
+             */
+            permissions: string[];
+            /** @description Role names. */
+            roles: string[];
+            /** @description The signed-in account. */
+            user: components["schemas"]["BootstrapUser"];
+        };
+        /** @description Two-factor authentication state. */
+        BootstrapMfa: {
+            /** @description A second factor is set up. */
+            enabled: boolean;
+            /** @description An administrator made it mandatory. */
+            required: boolean;
+            /**
+             * @description Mandatory but not set up: the interface should send the user to the
+             *     security page; protected endpoints answer 403 `mfa_setup_required`.
+             */
+            setup_required: boolean;
+        };
+        /** @description A module that is being served. */
+        BootstrapModule: {
+            /** @description Category. */
+            category: string;
+            /** @description Cannot be switched off. */
+            core: boolean;
+            /** @description Name; also the feature key of its interface module. */
+            name: string;
+            nav?: components["schemas"]["BootstrapNav"] | null;
+            /** @description Display name by language code. */
+            title: Record<string, never>;
+            /** @description Version of the build. */
+            version: string;
+        };
+        /** @description A menu entry. */
+        BootstrapNav: {
+            /** @description Menu group. */
+            group: string;
+            /** @description Icon name. */
+            icon: string;
+            /**
+             * Format: int32
+             * @description Position in the group, lower first.
+             */
+            order: number;
+        };
+        /** @description The signed-in account. */
+        BootstrapUser: {
+            /** @description E-mail address. */
+            email: string;
+            /**
+             * Format: uuid
+             * @description Account id.
+             */
+            id: string;
+            /** @description `admin`, `reseller` or `client`. */
+            kind: string;
+            /** @description Login name. */
+            username: string;
+        };
+        /** @description The panel's look, from the `system` settings. */
+        Branding: {
+            /**
+             * @description Language used when the account has no preference (`en` or `bn`).
+             * @example en
+             */
+            default_language: string;
+            /** @description A notice for all users while it is not empty. */
+            maintenance_notice: string;
+            /**
+             * @description Name shown on the sign-in page and in the browser tab.
+             * @example Built Panel
+             */
+            panel_name: string;
+        };
+        /** @description A reseller's branding. */
+        BrandingView: {
+            /** @description Name shown instead of the panel's. */
+            brand_name: string;
+            /** @description A line shown on the sign-in page. */
+            custom_login_message?: string | null;
+            /** @description Logo address (https). */
+            logo_url?: string | null;
+            /** @description Accent colour, `#rrggbb`. */
+            primary_color: string;
+            /** @description Where clients write for support. */
+            support_email: string;
+        };
+        /** @description The account's cache servers. */
+        CacheList: {
+            /** @description `memcached` before `redis`. */
+            items: components["schemas"]["CacheView"][];
+            /**
+             * Format: int64
+             * @description Memory all of them together may use (MiB; `null`: no limit).
+             */
+            limit_mb?: number | null;
+        };
+        /** @description A cache server of the account, with what its sites need to reach it. */
+        CacheView: {
+            /** @description Why it failed. */
+            error?: string | null;
+            /** @description The name the account's sites reach it by (inside the account's own network). */
+            host?: string | null;
+            /** @description `redis` or `memcached`. */
+            kind: string;
+            /**
+             * Format: int32
+             * @description Memory it may use (MiB).
+             */
+            memory_mb: number;
+            /** @description Redis's password (Memcached has none: only the account's own network reaches it). */
+            password?: string | null;
+            /**
+             * Format: int32
+             * @description Its port.
+             */
+            port?: number | null;
+            /** @description `pending`, `ready`, `failed` or `removing`. */
+            status: string;
+        };
+        /** @description The ceilings of the plan. */
+        CapsView: {
+            /**
+             * Format: int64
+             * @description Most `max_execution_time` and `max_input_time`, in seconds.
+             */
+            max_execution_time: number;
+            /**
+             * Format: int64
+             * @description Most `memory_limit`, in megabytes.
+             */
+            memory_limit_mb: number;
+            /**
+             * Format: int64
+             * @description Most `upload_max_filesize` and `post_max_size`, in megabytes.
+             */
+            upload_max_mb: number;
+        };
+        /** @description An application of the catalog, as people choose it. */
+        CatalogEntry: {
+            /** @description A group, `cms`. */
+            category: string;
+            /** @description A line about it. */
+            description: string;
+            /** @description The folder of the application the domain should be served from (empty: its own). */
+            document_root: string;
+            /** @description What people see. */
+            name: string;
+            /** @description The installer asks for an administrator's login, address and password. */
+            needs_admin: boolean;
+            /** @description It gets a database of its own. */
+            needs_database: boolean;
+            /** @description The catalog name, `joomla`. */
+            slug: string;
+            /** @description The version it installs. */
+            version: string;
+        };
+        /** @description The catalog. */
+        CatalogList: {
+            /** @description By slug. */
+            items: components["schemas"]["CatalogEntry"][];
+        };
+        /** @description Changes to a container (it is run again with them). */
+        ChangeContainer: {
+            /**
+             * Format: uuid
+             * @description The domain that shows it.
+             */
+            domain_id?: string | null;
+            /** @description The environment; when given it replaces the whole environment. */
+            env?: {
+                [key: string]: string;
+            } | null;
+            /**
+             * Format: uuid
+             * @description Another approved image.
+             */
+            image_id?: string | null;
+            /**
+             * Format: int32
+             * @description Memory limit in MiB.
+             */
+            memory_mb?: number | null;
+            /**
+             * Format: int32
+             * @description The port it listens on.
+             */
+            port?: number | null;
+        };
+        /** @description What to change; what is left out stays. */
+        ChangeDestination: {
+            /** @description New credentials (the whole set for its kind), replacing the sealed ones. */
+            credentials?: unknown;
+            /** @description Whether it may receive backups. */
+            enabled?: boolean | null;
+            /** @description A new name. */
+            name?: string | null;
+            /** @description New settings (the whole set for its kind). */
+            settings?: unknown;
+        };
+        /** @description What to change; what is left out stays. */
+        ChangeFtpAccount: {
+            /** @description May log in at all. */
+            enabled?: boolean | null;
+            /** @description Allow FTP without TLS. */
+            ftp_plain?: boolean | null;
+            /** @description Allow FTP with TLS. */
+            ftps?: boolean | null;
+            /** @description The home. */
+            home?: string | null;
+            /**
+             * Format: int64
+             * @description Disk limit in MB (`0` removes it).
+             */
+            quota_mb?: number | null;
+            /** @description Only read. */
+            read_only?: boolean | null;
+            /** @description Allow SFTP. */
+            sftp?: boolean | null;
+        };
+        /** @description The plan to move a user to. */
+        ChangePlan: {
+            /**
+             * Format: uuid
+             * @description The new plan.
+             */
+            plan_id: string;
+        };
+        /** @description What a change did. */
+        Changed: {
+            /**
+             * Format: int32
+             * @description Files and folders touched.
+             */
+            count: number;
+        };
+        /** @description What to change in a channel. */
+        ChannelChange: {
+            /** @description Switch it on or off. */
+            enabled?: boolean | null;
+            /** @description The events that go to it (replaces the list). */
+            events?: string[] | null;
+        };
+        /** @description A channel. */
+        ChannelView: {
+            /** @description Whether it is used. */
+            enabled: boolean;
+            /** @description The events that go to it. */
+            events: string[];
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description `email` or `webhook`. */
+            kind: string;
+            /** @description Its name. */
+            name: string;
+            /** @description The address or the URL. */
+            target: string;
         };
         /** @description Public result for one probe. */
         CheckResult: {
@@ -574,6 +5929,69 @@ export interface components {
          * @enum {string}
          */
         CheckStatus: "ok" | "failed" | "timeout";
+        /** @description What a mail program needs to know. */
+        ClientConfig: {
+            /** @description Always true: the full address and the password. */
+            auth_required: boolean;
+            /**
+             * Format: int32
+             * @description IMAP over TLS.
+             */
+            incoming_imap_port: number;
+            /**
+             * Format: int32
+             * @description POP3 (0: the server does not offer it).
+             */
+            incoming_pop3_port: number;
+            /** @description How the connection is secured. */
+            incoming_security: string;
+            /** @description The server to read mail from. */
+            incoming_server: string;
+            /** @description How the connection is secured. */
+            outgoing_security: string;
+            /** @description The server to send mail through. */
+            outgoing_server: string;
+            /**
+             * Format: int32
+             * @description SMTP over TLS (submission).
+             */
+            outgoing_smtp_port: number;
+            /**
+             * Format: int32
+             * @description Submission with STARTTLS (0: the server does not offer it).
+             */
+            outgoing_submission_port: number;
+        };
+        /** @description A client of a reseller. */
+        ClientView: {
+            /** @description Creation time. */
+            created_at: string;
+            /**
+             * Format: int64
+             * @description Disk in use, MiB.
+             */
+            disk_used_mb: number;
+            /** @description First domain, empty when it has none yet. */
+            domain: string;
+            /** @description Email address. */
+            email: string;
+            /**
+             * Format: uuid
+             * @description Account id.
+             */
+            id: string;
+            /** @description Plan name. */
+            plan_name: string;
+            /**
+             * Format: uuid
+             * @description The reseller.
+             */
+            reseller_id: string;
+            /** @description `active` or `suspended`. */
+            status: string;
+            /** @description Login name. */
+            username: string;
+        };
         /** @description A 6-digit authenticator code. */
         CodeRequest: {
             /**
@@ -581,6 +5999,46 @@ export interface components {
              * @example 123456
              */
             code: string;
+        };
+        /** @description A container of the account. */
+        ContainerView: {
+            /** @description That domain's name. */
+            domain?: string | null;
+            /**
+             * Format: uuid
+             * @description The domain that shows it.
+             */
+            domain_id?: string | null;
+            /** @description The names of its environment variables (the values are never shown). */
+            env_names: string[];
+            /** @description Why it failed. */
+            error?: string | null;
+            /**
+             * Format: uuid
+             * @description Id (the application's).
+             */
+            id: string;
+            /** @description The image's name. */
+            image?: string | null;
+            /**
+             * Format: uuid
+             * @description The image's id.
+             */
+            image_id?: string | null;
+            /**
+             * Format: int32
+             * @description Memory limit, MiB.
+             */
+            memory_mb: number;
+            /** @description Short name. */
+            name: string;
+            /**
+             * Format: int32
+             * @description The port it listens on.
+             */
+            port: number;
+            /** @description `pending`, `ready`, `failed` or `removing`. */
+            status: string;
         };
         /** @description New administrator. */
         CreateAdministrator: {
@@ -604,6 +6062,62 @@ export interface components {
              */
             username: string;
         };
+        /** @description A client to create. */
+        CreateClient: {
+            /**
+             * @description The client's first domain. It is not set up here: the client adds it from its own
+             *     panel.
+             */
+            domain?: string | null;
+            /** @description Email address. */
+            email: string;
+            /**
+             * Format: password
+             * @description Initial password; must satisfy the password policy.
+             */
+            password: string;
+            /**
+             * Format: uuid
+             * @description The plan, by id.
+             */
+            plan_id?: string | null;
+            /** @description The plan, by the name the reseller gave it (or an allowed plan's name). */
+            plan_name?: string | null;
+            /** @description Login name. */
+            username: string;
+        };
+        /**
+         * @description A container to run. Nothing here lets a client widen what the container may do: there is no
+         *     field for it, and an unknown field is refused.
+         */
+        CreateContainer: {
+            /**
+             * Format: uuid
+             * @description The domain that shows it (one of the account's; one application each).
+             */
+            domain_id?: string | null;
+            /** @description The environment, name to value. */
+            env?: {
+                [key: string]: string;
+            } | null;
+            /**
+             * Format: uuid
+             * @description The approved image (see `/container-images`).
+             */
+            image_id: string;
+            /**
+             * Format: int32
+             * @description Memory limit in MiB; the image's own when left out.
+             */
+            memory_mb?: number | null;
+            /** @description Short name (2-32 of a-z, 0-9, `-`). */
+            name: string;
+            /**
+             * Format: int32
+             * @description The port it listens on; the image's own when left out.
+             */
+            port?: number | null;
+        };
         /** @description Request to add a node. */
         CreateEnrollment: {
             /**
@@ -611,6 +6125,208 @@ export interface components {
              * @example eu-west-1
              */
             name: string;
+        };
+        /** @description A deploy to make. */
+        CreateGitDeploy: {
+            /**
+             * Format: uuid
+             * @description One of the account's applications (see `/runtime-apps`) to restart after each deploy.
+             */
+            app_id?: string | null;
+            /** @description The branch (default `main`). */
+            branch?: string | null;
+            /** @description `node` or `python`; needed when there are build steps. */
+            build_kind?: string | null;
+            /**
+             * @description Commands that build the release, one line each, words without a shell
+             *     (for example `npm ci`, `npm run build`). At most 5.
+             */
+            build_steps?: string[] | null;
+            /** @description The runtime's version (the newest when not given). */
+            build_version?: string | null;
+            /** @description Deploy at once (default: yes). */
+            deploy_now?: boolean | null;
+            /**
+             * @description The folder below the web directory that becomes the link to the release in use (it must
+             *     not exist as a real folder yet).
+             */
+            dest: string;
+            /** @description Short name (2-32 of a-z, 0-9, `-`). */
+            name: string;
+            /** @description The repository: `https://…`, without a login. */
+            repo_url: string;
+            /** @description A token for a private repository (`token`, or `user:token`). */
+            token?: string | null;
+        };
+        /** @description A package to create. */
+        CreatePackage: {
+            /** @description Whether the plans may add up to more than the caps. */
+            allow_overselling?: boolean;
+            /** @description Plans of the administrator the reseller may use. */
+            allowed_plans?: string[];
+            /**
+             * Format: int32
+             * @description Most hosting accounts.
+             */
+            max_accounts: number;
+            /**
+             * Format: int32
+             * @description Transfer cap in GiB per month.
+             */
+            max_bandwidth_gb: number;
+            /**
+             * Format: int32
+             * @description Disk cap in GiB.
+             */
+            max_disk_gb: number;
+            /** @description Name (1-100 characters). */
+            name: string;
+        };
+        /** @description A plan to create. */
+        CreatePlan: {
+            /**
+             * Format: int64
+             * @description Transfer per month in MiB.
+             */
+            bandwidth_mb: number;
+            /**
+             * Format: int64
+             * @description Most databases.
+             */
+            databases_limit: number;
+            /**
+             * Format: int64
+             * @description Disk in MiB.
+             */
+            disk_mb: number;
+            /**
+             * Format: int64
+             * @description Most domains.
+             */
+            domains_limit: number;
+            /**
+             * Format: int64
+             * @description Most mailboxes.
+             */
+            mailboxes_limit: number;
+            /** @description Name (1-100 characters). */
+            name: string;
+        };
+        /** @description A reseller to create. */
+        CreateReseller: {
+            /** @description Company name. */
+            company_name: string;
+            /** @description Email address. */
+            email: string;
+            /**
+             * Format: uuid
+             * @description The package.
+             */
+            package_id: string;
+            /**
+             * Format: password
+             * @description Initial password; must satisfy the password policy.
+             */
+            password: string;
+            /** @description Login name. */
+            username: string;
+        };
+        /**
+         * @description A transfer to start. The backup is a file in the import folder (`backup_file`) or is fetched
+         *     from another server over SSH (`remote_host` and what goes with it). The password or key is
+         *     used for that one connection and is kept nowhere.
+         */
+        CreateTransfer: {
+            /** @description `password` or `ssh_key`. */
+            auth_method?: string | null;
+            /** @description The backup's file name in the import folder (not with `remote_host`). */
+            backup_file?: string | null;
+            /**
+             * @description Only plan (default `true`). With `false` the plan is carried out when nothing stands in
+             *     its way.
+             */
+            dry_run?: boolean;
+            /**
+             * @description The server's host key fingerprint (`SHA256:...`). Without it nothing is sent to the
+             *     server: the transfer fails and says which fingerprint the server showed.
+             */
+            host_key_sha256?: string | null;
+            /** @description `fail` (default), `rename` or `skip`. */
+            on_conflict?: string | null;
+            /**
+             * Format: password
+             * @description The password (`auth_method` `password`).
+             */
+            password?: string | null;
+            /** @description The backup's path on the server. */
+            remote_backup_path?: string | null;
+            /** @description Fetch the backup from this server. */
+            remote_host?: string | null;
+            /**
+             * Format: int32
+             * @description Its SSH port (default 22).
+             */
+            remote_ssh_port?: number | null;
+            /** @description The login name on it. */
+            remote_user?: string | null;
+            /** @description `cpanel` or `cyberpanel` (`openpanel` and `builtpanel_archive` are not readable yet). */
+            source_type: string;
+            /**
+             * Format: password
+             * @description The private key (`auth_method` `ssh_key`).
+             */
+            ssh_key?: string | null;
+            /**
+             * Format: password
+             * @description The key's passphrase, when it has one.
+             */
+            ssh_key_passphrase?: string | null;
+            /** @description The main domain here. */
+            target_domain: string;
+            /** @description The account's name here. */
+            tenant_username: string;
+        };
+        /** @description A new user. */
+        CreateUser: {
+            /** @description Contact email address. */
+            email: string;
+            /** @description Interface language, `en` (default) or `bn`. */
+            locale?: string | null;
+            /**
+             * Format: uuid
+             * @description The node; the online node with the fewest users when not given.
+             */
+            node_id?: string | null;
+            /**
+             * Format: password
+             * @description Initial password; must satisfy the password policy.
+             */
+            password: string;
+            /**
+             * Format: uuid
+             * @description The plan; the default plan when not given.
+             */
+            plan_id?: string | null;
+            /**
+             * @description System user name on the node (a-z, 0-9, 3-32 characters); the login name
+             *     without `_` and `-` when not given.
+             */
+            system_username?: string | null;
+            /**
+             * @description Login name: 3-32 characters, a-z, 0-9, `_` or `-`, starting with a letter.
+             * @example alice
+             */
+            username: string;
+        };
+        /** @description A channel that was made. */
+        CreatedChannel: {
+            /** @description The channel. */
+            channel: components["schemas"]["ChannelView"];
+            /**
+             * @description A webhook's signing secret: shown this once (the calls carry `X-BuiltPanel-Signature`, the
+             *     HMAC-SHA256 of the body under it).
+             */
+            secret?: string | null;
         };
         /** @description A newly created enrollment token. **The token is shown only in this response.** */
         CreatedEnrollment: {
@@ -638,6 +6354,351 @@ export interface components {
              * @example dhn_…
              */
             token: string;
+        };
+        /** @description The databases of an account. */
+        DatabaseList: {
+            /** @description By name. */
+            items: components["schemas"]["DatabaseView"][];
+            /**
+             * Format: int64
+             * @description Most databases the plan allows (`null`: no limit).
+             */
+            limit?: number | null;
+            /** @description What every name starts with (`alice_`), or empty when names are as typed. */
+            prefix: string;
+        };
+        /** @description The databases of every node. */
+        DatabaseOverview: {
+            /**
+             * Format: int64
+             * @description Databases on the whole panel.
+             */
+            databases: number;
+            /** @description By node name. */
+            nodes: components["schemas"]["NodeDatabases"][];
+            /**
+             * Format: int64
+             * @description Total size, in bytes.
+             */
+            size_bytes: number;
+            /**
+             * Format: int64
+             * @description Database users on the whole panel.
+             */
+            users: number;
+        };
+        /** @description A database. */
+        DatabaseView: {
+            /**
+             * @description The server it lives on: `mysql` (MariaDB) or `postgres`.
+             * @example mysql
+             */
+            engine: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * @description The whole name.
+             * @example alice_shop
+             */
+            name: string;
+            /**
+             * Format: int64
+             * @description Size as last measured, in bytes (measured every few minutes).
+             */
+            size_bytes: number;
+            /**
+             * Format: date-time
+             * @description When it was measured (RFC 3339, UTC).
+             */
+            size_checked_at?: string | null;
+            /** @description `pending`, `ready`, `failed` or `deleting`. */
+            status: string;
+            /** @description Who may use it. */
+            users: components["schemas"]["GrantView"][];
+        };
+        /** @description A user that was made or whose password was changed. */
+        DbUserCreated: {
+            /** @description The password, shown this once (only when it was made here). */
+            password?: string | null;
+            /** @description The user. */
+            user: components["schemas"]["DbUserView"];
+        };
+        /** @description The database users of an account. */
+        DbUserList: {
+            /** @description By name. */
+            items: components["schemas"]["DbUserView"][];
+            /**
+             * Format: int64
+             * @description Most users the plan allows (`null`: no limit).
+             */
+            limit?: number | null;
+        };
+        /** @description A database user. */
+        DbUserView: {
+            /** @description What it may use. */
+            databases: components["schemas"]["UserGrantView"][];
+            /**
+             * @description The server it lives on: `mysql` (MariaDB) or `postgres`.
+             * @example mysql
+             */
+            engine: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * @description The whole name.
+             * @example alice_web
+             */
+            name: string;
+            /** @description Addresses it may connect from besides its own network. */
+            remote_hosts: string[];
+            /** @description `pending`, `ready`, `failed` or `deleting`. */
+            status: string;
+        };
+        /** @description What a delegation check found. */
+        DelegationView: {
+            /** @description The answer of a check made a moment ago, not a new one. */
+            cached: boolean;
+            /**
+             * Format: date-time
+             * @description When the DNS was asked (RFC 3339, UTC).
+             */
+            checked_at: string;
+            /** @description The panel's name servers. */
+            expected: string[];
+            /** @description What the public DNS says the domain uses. */
+            found: string[];
+            /** @description Panel name servers the domain does not use yet. */
+            missing: string[];
+            /**
+             * @description `ok`, `partial`, `mismatch`, `not_delegated` or `not_configured`.
+             * @example ok
+             */
+            status: string;
+            /** @description Name servers the domain uses that are not the panel's. */
+            unexpected: string[];
+        };
+        /** @description How one domain's mail stands. */
+        DeliverabilityView: {
+            /** @description `pass`, `fail` or `missing`. */
+            dkim_status: string;
+            /** @description `pass`, `fail` or `missing`. */
+            dmarc_status: string;
+            /** @description The domain. */
+            domain: string;
+            /** @description `pass` or `fail`. */
+            mx_status: string;
+            /** @description Whether the mail server's address is on a blacklist (not checked yet: always false). */
+            rbl_blacklisted: boolean;
+            /** @description The blacklists it is on. */
+            rbl_listings: string[];
+            /** @description What to do about what is wrong. */
+            recommendations: string[];
+            /** @description `pass`, `neutral`, `fail` or `missing`. */
+            spf_status: string;
+        };
+        /** @description The destinations. */
+        DestinationList: {
+            /** @description By name. */
+            items: components["schemas"]["DestinationView"][];
+        };
+        /** @description A destination. */
+        DestinationView: {
+            /** @description May receive backups. */
+            enabled: boolean;
+            /** @description Whether credentials are kept (they are never shown). */
+            has_credentials: boolean;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description Where new backups go unless said otherwise. */
+            is_default: boolean;
+            /** @description `local`, `s3` or `sftp`. */
+            kind: string;
+            /** @description What was wrong. */
+            last_test_error?: string | null;
+            /** @description The result of that test. */
+            last_test_ok?: boolean | null;
+            /**
+             * Format: date-time
+             * @description When it was last tested (RFC 3339, UTC).
+             */
+            last_tested_at?: string | null;
+            /**
+             * @description Its name.
+             * @example Offsite S3
+             */
+            name: string;
+            /** @description What is not secret (host, bucket, path, user ...). */
+            settings: unknown;
+        };
+        /** @description A page of a folder. */
+        DirectoryPage: {
+            /** @description Folders first, then by name. */
+            items: components["schemas"]["EntryView"][];
+            /**
+             * Format: int32
+             * @description Entries asked for.
+             */
+            limit: number;
+            /**
+             * Format: int32
+             * @description Entries skipped.
+             */
+            offset: number;
+            /**
+             * Format: int32
+             * @description How many entries the folder has.
+             */
+            total: number;
+        };
+        /** @description What the account's files use. */
+        DiskUsageView: {
+            /** @description The biggest folders, biggest first. */
+            folders: components["schemas"]["FolderUse"][];
+            /**
+             * Format: int64
+             * @description Files, folders and links.
+             */
+            inodes: number;
+            /**
+             * Format: date-time
+             * @description When it was measured (RFC 3339, UTC); the node measures every few hours.
+             */
+            measured_at?: string | null;
+            /** @description Whether the measurement stopped at its limit (the figures are then a lower bound). */
+            partial: boolean;
+            /**
+             * Format: int64
+             * @description Disk used, in bytes.
+             */
+            total_bytes: number;
+        };
+        /** @description A page of domains. */
+        DomainList: {
+            /** @description The domains, by name. */
+            items: components["schemas"]["DomainView"][];
+            /**
+             * Format: int64
+             * @description How many match in all.
+             */
+            total: number;
+        };
+        /** @description A domain and the PHP version it uses. */
+        DomainPhp: {
+            /** @description The version it runs on. */
+            effective_version: string;
+            /** @description The name. */
+            fqdn: string;
+            /**
+             * Format: uuid
+             * @description Domain id.
+             */
+            id: string;
+            /** @description The version the domain asks for; `null` when it uses the account's. */
+            php_version?: string | null;
+        };
+        /** @description A domain. */
+        DomainView: {
+            /**
+             * Format: date-time
+             * @description Creation time (RFC 3339, UTC).
+             */
+            created_at: string;
+            /** @description Where its files are, relative to the web directory (empty: the directory itself). */
+            docroot: string;
+            /** @description Visitors on plain HTTP are sent to HTTPS. */
+            force_https: boolean;
+            /**
+             * @description The name as stored (lower-case ASCII; punycode for international names).
+             * @example example.com
+             */
+            fqdn: string;
+            /** @description Answers over HTTPS carry the HSTS header (one year). Needs `force_https`. */
+            hsts: boolean;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * @description `primary`, `addon`, `sub` or `alias`.
+             * @example addon
+             */
+            kind: string;
+            /**
+             * Format: uuid
+             * @description The domain a `sub` or `alias` belongs to.
+             */
+            parent_domain_id?: string | null;
+            /** @description `active` or `suspended`. */
+            status: string;
+            /**
+             * Format: date-time
+             * @description When it was suspended (RFC 3339, UTC).
+             */
+            suspended_at?: string | null;
+            /**
+             * Format: uuid
+             * @description The hosting account it belongs to.
+             */
+            tenant_id: string;
+            /** @description That account's system name. */
+            tenant_username: string;
+            /** @description The name as a person reads it. */
+            unicode: string;
+        };
+        /** @description A domain with its firewall. */
+        DomainWaf: {
+            /**
+             * Format: uuid
+             * @description The domain's id.
+             */
+            domain_id: string;
+            /** @description What really applies. */
+            effective: components["schemas"]["EffectiveView"];
+            /** @description Its name. */
+            fqdn: string;
+            policy?: components["schemas"]["PolicyView"] | null;
+        };
+        /** @description The domains of the account. */
+        DomainWafList: {
+            /** @description By name. */
+            items: components["schemas"]["DomainWaf"][];
+        };
+        /** @description What a change that needs no answer says. */
+        Done: {
+            /** @description Always true. */
+            success: boolean;
+        };
+        /** @description A download link. */
+        DownloadLink: {
+            /**
+             * Format: date-time
+             * @description Until when the link works (RFC 3339, UTC).
+             */
+            expires_at: string;
+            /**
+             * @description Where to download from (a path on this panel); the file is `<database>.sql.gz`.
+             * @example /api/v1/public/exports/0190.../download?token=...
+             */
+            url: string;
+        };
+        /** @description What applies in the end. */
+        EffectiveView: {
+            /** @description The rules switched off, all policies together. */
+            disabled_rules: number[];
+            /** @description `off`, `detect` or `block`. */
+            mode: string;
+            /** @description Which policy decided the mode: `domain`, `tenant`, `global` or `default`. */
+            mode_from: string;
         };
         /** @description Result of ending sessions. */
         EndedSessions: {
@@ -700,6 +6761,11 @@ export interface components {
              * @description Protocol version the control plane speaks.
              */
             protocol_version: number;
+            /**
+             * @description Where the agent opens its long-lived mutual-TLS connection
+             *     (`https://host:port`), when the control plane has the agent port switched on.
+             */
+            stream_url?: string | null;
         };
         /** @description The most recent enrollment tokens. */
         EnrollmentList: {
@@ -736,6 +6802,166 @@ export interface components {
              */
             status: string;
         };
+        /** @description What a path is. */
+        EntryView: {
+            /**
+             * @description `file`, `dir`, `link` (never followed) or `other`.
+             * @example file
+             */
+            kind: string;
+            /**
+             * Format: int32
+             * @description Permission bits, as the octal number written out (`0o644` is 420).
+             */
+            mode: number;
+            /**
+             * Format: date-time
+             * @description Last change of content (RFC 3339, UTC).
+             */
+            modified_at: string;
+            /**
+             * @description Its name.
+             * @example index.php
+             */
+            name: string;
+            /**
+             * Format: int64
+             * @description Size in bytes.
+             */
+            size: number;
+        };
+        /** @description The events that can be sent to a channel. */
+        EventList: {
+            /** @description Their names. */
+            events: string[];
+        };
+        /** @description The exports of an account. */
+        ExportList: {
+            /** @description Newest first (the last 50). */
+            items: components["schemas"]["ExportView"][];
+        };
+        /** @description An export. */
+        ExportView: {
+            /**
+             * Format: date-time
+             * @description When it was asked for (RFC 3339, UTC).
+             */
+            created_at: string;
+            /**
+             * @description The database's name.
+             * @example alice_shop
+             */
+            database: string;
+            /**
+             * Format: uuid
+             * @description The database dumped.
+             */
+            database_id: string;
+            /** @description Why it failed. */
+            error?: string | null;
+            /**
+             * Format: date-time
+             * @description When the file goes (RFC 3339, UTC); while `ready`.
+             */
+            expires_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * Format: int64
+             * @description While it is being made: bytes of the compressed dump that have arrived.
+             */
+            received_bytes: number;
+            /**
+             * Format: int64
+             * @description Size of the finished `.sql.gz` file, in bytes.
+             */
+            size_bytes?: number | null;
+            /** @description `queued`, `running`, `ready`, `failed` or `expired`. */
+            status: string;
+        };
+        /** @description Every feature of the installed modules. */
+        FeatureList: {
+            /** @description By category, module, then key. */
+            items: components["schemas"]["FeatureView"][];
+        };
+        /** @description What a feature set is made of (create and replace). */
+        FeatureSetInput: {
+            /** @description Every feature of every module. Then `features` must be empty. */
+            all_features?: boolean;
+            /** @description Description (at most 255 characters). */
+            description?: string;
+            /** @description Feature keys (`a-z`, `0-9`, `_`; at most 256). */
+            features?: string[];
+            /**
+             * @description Unique name: 2-32 characters of `a-z`, `0-9` and `_`, starting with a
+             *     letter. Ignored when updating a built-in set.
+             * @example web_only
+             */
+            name: string;
+        };
+        /** @description All feature sets. */
+        FeatureSetList: {
+            /** @description By name. */
+            items: components["schemas"]["FeatureSetView"][];
+        };
+        /** @description A feature set. */
+        FeatureSetView: {
+            /** @description Every feature of every module, including ones added later. */
+            all_features: boolean;
+            /** @description Created by the installation: cannot be renamed or deleted. */
+            built_in: boolean;
+            /**
+             * Format: date-time
+             * @description Creation time (RFC 3339, UTC).
+             */
+            created_at: string;
+            /** @description Description. */
+            description: string;
+            /** @description The feature keys (empty when `all_features`). */
+            features: string[];
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * @description Unique name.
+             * @example basic
+             */
+            name: string;
+            /**
+             * Format: int64
+             * @description Plans that use it.
+             */
+            plans: number;
+            /**
+             * @description Keys in the list that no installed module declares: kept, but they
+             *     enable nothing.
+             */
+            unknown_features: string[];
+            /**
+             * Format: date-time
+             * @description Last change (RFC 3339, UTC).
+             */
+            updated_at: string;
+        };
+        /** @description A feature a module offers. */
+        FeatureView: {
+            /** @description The module's category (`web`, `db`, ...), for grouping. */
+            category: string;
+            /**
+             * @description The key, for example `redirects`.
+             * @example redirects
+             */
+            key: string;
+            /** @description The module that declares it. */
+            module: string;
+            /** @description That module's display name by language code. */
+            module_title: Record<string, never>;
+        };
         /** @description One invalid input field (used with 422). */
         FieldError: {
             /** @description Stable machine code, e.g. `required`, `too_long`, `invalid_format`. */
@@ -744,6 +6970,619 @@ export interface components {
             field: string;
             /** @description Human-readable message (English; the UI translates by `code`). */
             message: string;
+        };
+        /** @description A text file. */
+        FileContent: {
+            /** @description Whether the file is not text. */
+            binary: boolean;
+            /** @description The text; none when the file is not UTF-8 text. */
+            content?: string | null;
+            /**
+             * Format: int64
+             * @description Modification time (Unix seconds): give it back as `expected_mtime` when saving,
+             *     to be told if someone changed the file meanwhile.
+             */
+            mtime: number;
+            /**
+             * Format: int64
+             * @description Size in bytes.
+             */
+            size: number;
+        };
+        /**
+         * @description The node's firewall (T11.06): who may reach which port. Applied by the privileged helper as
+         *     one nftables table of its own; IPv4 only.
+         */
+        FirewallPolicy: {
+            /** @description Addresses allowed to everything (before `blocked` is looked at). */
+            allowed?: string[];
+            /**
+             * @description Addresses that always get in, whatever else is said: the panel's own, an administrator's.
+             *     With `default_deny` at least one is needed (it is what keeps the panel reachable).
+             */
+            always_allow?: string[];
+            /** @description Addresses refused everything. */
+            blocked?: string[];
+            /**
+             * @description Drop whatever is not allowed below (and not SSH, loopback, answers to what the node
+             *     asked for, ICMP and the `always_allow` addresses). Without it only the `blocked`
+             *     addresses and the rate limits act.
+             */
+            default_deny?: boolean;
+            /** @description Ports open to everybody (or to the listed addresses only). */
+            open_ports?: components["schemas"]["PortRule"][];
+            /** @description New connections per minute one address may make to a port. */
+            rate_limits?: components["schemas"]["RateLimit"][];
+        };
+        /** @description What one folder uses. */
+        FolderUse: {
+            /**
+             * Format: int64
+             * @description Disk used below it, in bytes.
+             */
+            bytes: number;
+            /**
+             * Format: int64
+             * @description Files and folders below it.
+             */
+            inodes: number;
+            /**
+             * @description The folder.
+             * @example www/uploads
+             */
+            path: string;
+        };
+        /** @description A forwarder to make. */
+        ForwarderRequest: {
+            /** @description Where it goes: a full address. */
+            destination: string;
+            /** @description The domain. */
+            domain: string;
+            /** @description The address that sends on, `sales@example.com` (`*@example.com` for the catch-all). */
+            source: string;
+        };
+        /** @description A forwarder. */
+        ForwarderView: {
+            /** @description When it was made. */
+            created_at: string;
+            /** @description Where it goes. */
+            destination: string;
+            /** @description The domain. */
+            domain: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description The address that sends on (`*@domain` is the catch-all). */
+            source: string;
+        };
+        /** @description From and to. */
+        FromTo: {
+            /** @description What to move or copy. */
+            from: string;
+            /** @description The new path (not the folder it goes into). */
+            to: string;
+        };
+        /** @description A new account, with the password if one was made. */
+        FtpAccountCreated: {
+            /** @description The account. */
+            account: components["schemas"]["FtpAccountView"];
+            /** @description The password, shown this once (only when it was made here). */
+            password?: string | null;
+        };
+        /** @description The accounts, and how to connect. */
+        FtpAccountList: {
+            /**
+             * Format: int64
+             * @description The FTP port (use TLS: explicit FTPS).
+             */
+            ftp_port: number;
+            /** @description The address to connect to (empty when the panel has not been told). */
+            host: string;
+            /** @description By name. */
+            items: components["schemas"]["FtpAccountView"][];
+            /**
+             * Format: int64
+             * @description Most accounts the plan allows (`null`: no limit).
+             */
+            limit?: number | null;
+            /** @description Whether plain FTP (no TLS) may be allowed to accounts. */
+            plain_allowed: boolean;
+            /** @description What every name starts with (`alice_`). */
+            prefix: string;
+            /**
+             * Format: int64
+             * @description The SFTP port.
+             */
+            sftp_port: number;
+        };
+        /** @description An account. */
+        FtpAccountView: {
+            /** @description May log in at all. */
+            enabled: boolean;
+            /** @description May log in over FTP without TLS. */
+            ftp_plain: boolean;
+            /** @description May log in over FTP with TLS (FTPS). */
+            ftps: boolean;
+            /** @description Its home, relative to the account's files (`""`: all of them). */
+            home: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * @description The whole name (log in with it).
+             * @example alice_site
+             */
+            name: string;
+            /**
+             * Format: int64
+             * @description Disk limit in MB.
+             */
+            quota_mb?: number | null;
+            /** @description May only read. */
+            read_only: boolean;
+            /** @description May log in over SFTP. */
+            sftp: boolean;
+            /** @description `pending`, `ready`, `failed` or `deleting`. */
+            status: string;
+        };
+        /** @description The account's deploys. */
+        GitDeployList: {
+            /** @description The deploys. */
+            items: components["schemas"]["GitDeployView"][];
+            /**
+             * Format: int64
+             * @description How many the plan allows; `None` when unlimited.
+             */
+            limit?: number | null;
+        };
+        /** @description A deploy of the account. */
+        GitDeployView: {
+            /**
+             * Format: uuid
+             * @description The application restarted after a deploy.
+             */
+            app_id?: string | null;
+            /** @description The branch. */
+            branch: string;
+            /** @description The runtime of the build. */
+            build_kind?: string | null;
+            /** @description The build steps. */
+            build_steps: string[];
+            /** @description The runtime's version. */
+            build_version?: string | null;
+            /** @description The folder (below the web directory) that links to the release in use. */
+            dest: string;
+            /** @description Whether a token for a private repository is kept. */
+            has_token: boolean;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description The commit that is live. */
+            last_commit?: string | null;
+            /**
+             * Format: int64
+             * @description When the last deploy went live (Unix seconds).
+             */
+            last_deployed_at?: number | null;
+            /** @description Why the last deploy failed. */
+            last_error?: string | null;
+            /** @description The end of the last deploy's log. */
+            last_log?: string | null;
+            /** @description Short name. */
+            name: string;
+            /** @description The repository. */
+            repo_url: string;
+            /** @description `idle`, `deploying`, `ok`, `failed` or `removing`. */
+            status: string;
+            /** @description The address the repository's host calls on a push. */
+            webhook_path: string;
+            /** @description The webhook's secret: only in the answer that made it (or made a new one). */
+            webhook_secret?: string | null;
+        };
+        /** @description A user's access to a database. */
+        GrantView: {
+            /**
+             * @description `read_only`, `read_write` or `all`.
+             * @example read_write
+             */
+            access: string;
+            /** @description The user's name. */
+            user: string;
+            /**
+             * Format: uuid
+             * @description The user.
+             */
+            user_id: string;
+        };
+        /** @description One response header. */
+        HeaderView: {
+            /**
+             * @description The name.
+             * @example X-Frame-Options
+             */
+            name: string;
+            /**
+             * @description The value: printable ASCII without `"`, `\` and `$`.
+             * @example SAMEORIGIN
+             */
+            value: string;
+        };
+        /** @description Why a domain is held. */
+        HoldRequest: {
+            /** @description The reason, shown to the account (up to 300 characters). */
+            reason: string;
+        };
+        /** @description The images of the allow-list. */
+        ImageList: {
+            /** @description By role. */
+            items: components["schemas"]["ImageView"][];
+        };
+        /** @description An approved image. */
+        ImageView: {
+            /**
+             * Format: int32
+             * @description The memory it starts with (MiB).
+             */
+            default_memory_mb: number;
+            /**
+             * Format: int32
+             * @description The port it listens on.
+             */
+            default_port: number;
+            /** @description Whether clients may choose it. */
+            enabled: boolean;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description What clients see. */
+            name: string;
+            /** @description A note for clients. */
+            note: string;
+            /** @description `repo@sha256:<digest>`; shown to administrators only. */
+            reference?: string | null;
+        };
+        /** @description One vulnerability Trivy found in an image. */
+        ImageVulnerability: {
+            /** @description The first version that fixes it (empty when none does yet). */
+            fixed: string;
+            /** @description `CVE-2025-1234`. */
+            id: string;
+            /** @description The version in the image. */
+            installed: string;
+            /** @description The package. */
+            package: string;
+            /** @description `CRITICAL`, `HIGH`, `MEDIUM` or `LOW`. */
+            severity: string;
+            /** @description A short title (clipped). */
+            title: string;
+        };
+        /** @description The worst findings of one image. */
+        ImageVulns: {
+            /** @description Worst first. */
+            items: components["schemas"]["ImageVulnerability"][];
+            /** @description The image. */
+            reference: string;
+        };
+        /** @description A one-time sign-in token for the client app. */
+        ImpersonationToken: {
+            /**
+             * Format: int64
+             * @description Seconds the token stays valid.
+             */
+            expires_in: number;
+            /** @description Where the client app spends it: `POST` it as `{"token": ...}`. */
+            redeem_path: string;
+            /** @description Give it to the client app; it is shown once and works once. */
+            token: string;
+        };
+        /** @description The administrator behind an impersonated session. */
+        Impersonator: {
+            /**
+             * Format: uuid
+             * @description Administrator's account id.
+             */
+            id: string;
+            /** @description Administrator's username. */
+            username: string;
+        };
+        /** @description The imports of an account. */
+        ImportList: {
+            /** @description Newest first (the last 50). */
+            items: components["schemas"]["ImportView"][];
+            /**
+             * Format: int64
+             * @description The biggest file that is accepted, in MB.
+             */
+            max_size_mb: number;
+        };
+        /** @description An import. */
+        ImportView: {
+            /**
+             * Format: int64
+             * @description While `running`: bytes of the file the node has taken in so far.
+             */
+            bytes_done: number;
+            /**
+             * Format: date-time
+             * @description When it was started (RFC 3339, UTC).
+             */
+            created_at: string;
+            /**
+             * @description The database's name.
+             * @example alice_shop
+             */
+            database: string;
+            /**
+             * Format: uuid
+             * @description The database it fills.
+             */
+            database_id: string;
+            /** @description Why it failed. */
+            error?: string | null;
+            /**
+             * Format: date-time
+             * @description When it ended (RFC 3339, UTC).
+             */
+            finished_at?: string | null;
+            /** @description Whether the file is gzip-compressed. */
+            gzip: boolean;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description The largest chunk that is accepted, in bytes. */
+            max_chunk_bytes: number;
+            /**
+             * Format: int32
+             * @description The chunk to send next (while `uploading`).
+             */
+            next_chunk: number;
+            /**
+             * Format: int64
+             * @description Bytes the panel has received.
+             */
+            received_bytes: number;
+            /**
+             * Format: int64
+             * @description Size of the file in bytes.
+             */
+            size_bytes: number;
+            /** @description While `running`: `downloading`, `checking` or `importing`. */
+            stage?: string | null;
+            /**
+             * Format: int64
+             * @description While `running`: statements run so far.
+             */
+            statements: number;
+            /** @description `uploading`, `queued`, `running`, `done`, `failed` or `cancelled`. */
+            status: string;
+        };
+        /** @description One infected file a scan found. */
+        Infection: {
+            /** @description Where it is, relative to the tenant's files (`www/uploads/x.php`). */
+            path: string;
+            /** @description It was moved to the trash. */
+            quarantined: boolean;
+            /** @description The signature that matched (`Php.Trojan.Agent`). */
+            signature: string;
+        };
+        /** @description An application of the catalog to install. */
+        InstallApp: {
+            /** @description Their email address. */
+            admin_email?: string | null;
+            /** @description Their password (12 to 128 characters). */
+            admin_password?: string | null;
+            /** @description The administrator's login (when the application has one). */
+            admin_user?: string | null;
+            /**
+             * Format: uuid
+             * @description The domain it is served on (one of the account's).
+             */
+            domain_id: string;
+            /** @description The path under the domain (`/` when absent). */
+            path?: string | null;
+            /** @description The catalog name, `joomla`. */
+            slug: string;
+            /** @description The site's title. */
+            title: string;
+        };
+        /** @description What to give for a new installation. */
+        InstallRequest: {
+            /**
+             * Format: uuid
+             * @description The domain that shows it (software that has a web page of its own).
+             */
+            domain_id?: string | null;
+        };
+        /** @description A WordPress site to install. */
+        InstallWordPress: {
+            /** @description Their email address. */
+            admin_email: string;
+            /** @description Their password (12 to 128 characters). */
+            admin_password: string;
+            /** @description The first administrator's login (3 to 60: letters, digits, `_`, `.`, `-`). */
+            admin_user: string;
+            /**
+             * Format: uuid
+             * @description The domain it is served on (one of the account's).
+             */
+            domain_id: string;
+            /** @description A locale such as `bn_BD` (`en_US` when absent). */
+            locale?: string | null;
+            /** @description The path under the domain (`/` when absent, `/blog`). */
+            path?: string | null;
+            /** @description Plugins of wordpress.org to install and switch on (at most 10). */
+            plugins?: string[];
+            /** @description The site's title. */
+            title: string;
+        };
+        /** @description What this account has of a software. */
+        Installed: {
+            /** @description Why it failed. */
+            error?: string | null;
+            /**
+             * Format: uuid
+             * @description The container's id.
+             */
+            id: string;
+            /** @description `pending`, `ready`, `failed` or `removing`. */
+            status: string;
+            /** @description A newer version is on offer. */
+            update_available: boolean;
+            /** @description The version it runs. */
+            version: string;
+        };
+        /** @description The jobs of an account. */
+        JobList: {
+            /** @description By name. */
+            items: components["schemas"]["JobView"][];
+            /**
+             * Format: int64
+             * @description How many the plan allows (`null`: no limit).
+             */
+            limit?: number | null;
+        };
+        /** @description A job as written by the client. */
+        JobRequest: {
+            /**
+             * @description The command line, run as the account's user in its web container.
+             * @example php /var/www/html/artisan schedule:run
+             */
+            command: string;
+            /** @description Whether it runs. Default: true. */
+            enabled?: boolean;
+            /**
+             * @description A name for the job, unique in the account (1-80 characters).
+             * @example Clear the cache
+             */
+            name: string;
+            /**
+             * @description Five fields: minute hour day-of-month month day-of-week (UTC).
+             * @example 0 * * * *
+             */
+            schedule: string;
+            /**
+             * Format: int32
+             * @description Stopped after this many seconds. Default 300.
+             */
+            timeout_seconds?: number;
+        };
+        /** @description A job. */
+        JobView: {
+            /** @description The command line. */
+            command: string;
+            /** @description Whether it runs. */
+            enabled: boolean;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * Format: int32
+             * @description The exit code of the last run.
+             */
+            last_exit_code?: number | null;
+            /** @description The end of the last run's output. */
+            last_output?: string | null;
+            /** @description When it last ran. */
+            last_run_at?: string | null;
+            /** @description `ok`, `failed`, `timeout` or `skipped`. */
+            last_status?: string | null;
+            /** @description Its name. */
+            name: string;
+            /** @description Five-field schedule (UTC). */
+            schedule: string;
+            /**
+             * Format: int32
+             * @description Stopped after this many seconds.
+             */
+            timeout_seconds: number;
+        };
+        /** @description The license, as the license page shows it. */
+        LicenseView: {
+            /** @description Licensing is on (an authority is configured); when it is not nothing is checked. */
+            enforced: boolean;
+            /**
+             * Format: int64
+             * @description When the entitlement in hand ends (Unix seconds).
+             */
+            entitlement_expires_at?: number | null;
+            /** @description What the license switches on. */
+            features: string[];
+            /**
+             * Format: int64
+             * @description When the offline grace ends (Unix seconds), while it runs.
+             */
+            grace_ends_at?: number | null;
+            /**
+             * Format: uuid
+             * @description This installation's id (what the authority knows it by).
+             */
+            installation_id?: string | null;
+            /**
+             * Format: int64
+             * @description When it was last confirmed by the authority (Unix seconds).
+             */
+            last_confirmed_at?: number | null;
+            /** @description What went wrong the last time the authority was asked. */
+            last_error?: string | null;
+            /**
+             * Format: int64
+             * @description When the license ends (Unix seconds).
+             */
+            license_expires_at?: number | null;
+            /** @description `active`, `suspended` or `revoked`, as the authority last said. */
+            license_status?: string | null;
+            /** @description Its numeric limits (`-1`: none). */
+            limits: unknown;
+            /**
+             * @description `unlicensed`, `active`, `grace` (works, but has not been confirmed for a while) or
+             *     `restricted`.
+             */
+            mode: string;
+            /** @description The license's plan. */
+            plan?: string | null;
+            /**
+             * @description Why it is not `active` (a short code such as `offline_grace_exceeded`,
+             *     `license_revoked`, `entitlement_invalid`).
+             */
+            reason?: string | null;
+        };
+        /** @description Every limit of the installed modules. */
+        LimitList: {
+            /** @description By category, module, then key. */
+            items: components["schemas"]["LimitView"][];
+        };
+        /** @description A numeric limit a module declares. */
+        LimitView: {
+            /** @description The module's category. */
+            category: string;
+            /**
+             * Format: int64
+             * @description The value a new plan gets.
+             */
+            default: number;
+            /**
+             * @description The key, for example `max_domains`.
+             * @example max_domains
+             */
+            key: string;
+            /** @description The module that declares it. */
+            module: string;
+            /** @description That module's display name by language code. */
+            module_title: Record<string, never>;
+            /** @description Whether `-1` (unlimited) is allowed. */
+            unlimited_allowed: boolean;
         };
         /** @description Body of `/health`. */
         Liveness: {
@@ -754,6 +7593,23 @@ export interface components {
             status: string;
             /** @description Build version. */
             version: string;
+        };
+        /** @description One line. */
+        LogLineView: {
+            /**
+             * Format: int64
+             * @description When it was written (Unix milliseconds).
+             */
+            at_ms: number;
+            /** @description The line. */
+            text: string;
+        };
+        /** @description The lines. */
+        LogView: {
+            /** @description Oldest first. */
+            lines: components["schemas"]["LogLineView"][];
+            /** @description Older lines were left out. */
+            truncated: boolean;
         };
         /** @description Login request body. */
         LoginRequest: {
@@ -768,6 +7624,88 @@ export interface components {
              */
             password: string;
         };
+        /** @description A mail domain. */
+        MailDomainView: {
+            /** @description Whether the DNS records are in the zone. */
+            dns_applied: boolean;
+            /** @description The domain. */
+            domain: string;
+            /** @description Why the mail server refused the last change. */
+            error?: string | null;
+            /** @description Whether outgoing mail is held. */
+            held: boolean;
+            /** @description Why it is held. */
+            held_reason?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * Format: int32
+             * @description Most messages an hour.
+             */
+            per_hour?: number | null;
+            /** @description `pending`, `active`, `error` or `removing`. */
+            state: string;
+            /**
+             * Format: uuid
+             * @description The hosting account (none once it is deleted).
+             */
+            tenant_id?: string | null;
+        };
+        /** @description A mailbox to make. */
+        MailboxRequest: {
+            /**
+             * @description One of the account's domains.
+             * @example example.com
+             */
+            domain: string;
+            /** @description The password (12 to 128 printable characters, three kinds of them). */
+            password: string;
+            /**
+             * Format: int32
+             * @description Quota in megabytes (the panel's default when left out).
+             */
+            quota_mb?: number | null;
+            /**
+             * @description The part before the `@` (lower-case letters, digits and `. _ -`).
+             * @example info
+             */
+            username: string;
+        };
+        /** @description A mailbox. */
+        MailboxView: {
+            /** @description When it was made. */
+            created_at: string;
+            /** @description The domain. */
+            domain: string;
+            /** @description The whole address. */
+            email: string;
+            /** @description Why the mail server refused the last change. */
+            error?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * Format: int32
+             * @description Quota in megabytes.
+             */
+            quota_mb: number;
+            /** @description `pending` (the mail server is being told), `active` or `error`. */
+            status: string;
+            /**
+             * Format: int64
+             * @description Bytes stored.
+             */
+            used_bytes: number;
+            /** @description The part before the `@`. */
+            username: string;
+            /** @description Where webmail is (empty when there is none). */
+            webmail_url: string;
+        };
         /** @description The signed-in account and its session's CSRF token. */
         Me: {
             /** @description Send as `X-CSRF-Token` on POST/PUT/PATCH/DELETE. Keep in memory only. */
@@ -779,6 +7717,7 @@ export interface components {
              * @description Account id.
              */
             id: string;
+            impersonated_by?: components["schemas"]["Impersonator"] | null;
             /**
              * @description `admin`, `reseller` or `client`.
              * @example admin
@@ -837,6 +7776,738 @@ export interface components {
             /** @description TOTP is enabled (enrolment confirmed). */
             totp_enabled: boolean;
         };
+        /** @description What a switch changed. */
+        ModuleChange: {
+            /** @description Modules whose routes are being served after the change. */
+            active: string[];
+            /**
+             * @description Modules whose switch changed, including the one asked for (empty when
+             *     it already was in the requested state).
+             */
+            changed: string[];
+        };
+        /** @description All modules. */
+        ModuleList: {
+            /** @description By name. */
+            items: components["schemas"]["ModuleView"][];
+        };
+        /** @description A module as shown to administrators. */
+        ModuleView: {
+            /** @description Its routes are being served right now (switched on, with everything it needs). */
+            active: boolean;
+            /** @description `core`, `web`, `db`, `mail`, `files`, `security`, `system` or `apps`. */
+            category: string;
+            /** @description Cannot be switched off. */
+            core: boolean;
+            /** @description Modules that need it, directly or indirectly: switching it off stops these too. */
+            dependents: string[];
+            /** @description Modules it needs, directly. */
+            depends_on: string[];
+            /** @description Switched on by an administrator. */
+            enabled: boolean;
+            /**
+             * @description Module name.
+             * @example domains
+             */
+            name: string;
+            /**
+             * @description Part of the running build. A module that is not is listed for history
+             *     and cannot be switched.
+             */
+            present: boolean;
+            /** @description Display name by language code. */
+            title: Record<string, never>;
+            /** @description Version of the build. */
+            version: string;
+        };
+        /** @description The panel's name servers. */
+        Nameservers: {
+            /**
+             * @description Where a domain's name servers must point at the registrar, in order.
+             * @example [
+             *       "ns1.example.net",
+             *       "ns2.example.net"
+             *     ]
+             */
+            nameservers: string[];
+        };
+        /** @description A channel to make. */
+        NewChannel: {
+            /** @description The events that go to it. */
+            events?: string[];
+            /** @description `email` or `webhook`. */
+            kind: string;
+            /** @description A name (1 to 64 characters). */
+            name: string;
+            /** @description An email address, or an `https` URL. */
+            target: string;
+        };
+        /** @description A new password. */
+        NewFtpPassword: {
+            /** @description The password; a strong one is made (and shown once) when it is left out. */
+            password?: string | null;
+        };
+        /** @description A new password. */
+        NewPassword: {
+            /** @description The password; a strong one is made (and shown once) when it is left out. */
+            password?: string | null;
+        };
+        /** @description One node's databases. */
+        NodeDatabases: {
+            /**
+             * Format: int64
+             * @description Databases on it.
+             */
+            databases: number;
+            /**
+             * Format: date-time
+             * @description When the oldest of those sizes was measured (RFC 3339, UTC); none when a
+             *     database has not been measured yet or there are none.
+             */
+            measured_at?: string | null;
+            /** @description Its name. */
+            node: string;
+            /**
+             * Format: uuid
+             * @description The node.
+             */
+            node_id: string;
+            /**
+             * Format: int64
+             * @description Total size of its databases, in bytes, as last measured.
+             */
+            size_bytes: number;
+            /**
+             * Format: int64
+             * @description Database users on it.
+             */
+            users: number;
+        };
+        /** @description A node's firewall policy. */
+        NodeFirewall: {
+            policy?: components["schemas"]["FirewallPolicy"] | null;
+        };
+        /** @description The nodes. */
+        NodeList: {
+            /** @description Newest first (at most 100). */
+            items: components["schemas"]["NodeView"][];
+        };
+        /** @description One point of a node's usage. */
+        NodePointView: {
+            /**
+             * Format: int64
+             * @description Start of the point (Unix seconds).
+             */
+            at: number;
+            /**
+             * Format: int32
+             * @description Running containers.
+             */
+            containers: number;
+            /**
+             * Format: int32
+             * @description Average thousandths of the node's CPU that were busy.
+             */
+            cpu_busy_millis: number;
+            /**
+             * Format: int64
+             * @description Disk bytes in all.
+             */
+            disk_total_bytes: number;
+            /**
+             * Format: int64
+             * @description Disk bytes in use.
+             */
+            disk_used_bytes: number;
+            /**
+             * Format: int32
+             * @description Average one-minute load times 100.
+             */
+            load1_x100: number;
+            /**
+             * Format: int64
+             * @description Memory of the node, in bytes.
+             */
+            memory_total_bytes: number;
+            /**
+             * Format: int64
+             * @description Average memory in use, in bytes.
+             */
+            memory_used_bytes: number;
+        };
+        /** @description The services of a node. */
+        NodeServiceList: {
+            /** @description By name. */
+            items: components["schemas"]["NodeServiceView"][];
+        };
+        /** @description A core service of a node. */
+        NodeServiceView: {
+            /**
+             * Format: int64
+             * @description When it was last looked at (Unix seconds). A node that is off shows an old time.
+             */
+            checked_at: number;
+            /** @description Docker's words, or what went wrong. */
+            detail: string;
+            /** @description `database`, `phpmyadmin`, `sftp`, `caddy` or `agent`. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Since when it is in this state (Unix seconds).
+             */
+            since: number;
+            /** @description `running`, `stopped`, `unreachable` or `not_installed`. */
+            state: string;
+        };
+        /** @description A node's usage. */
+        NodeUsageView: {
+            /** @description Oldest first. */
+            points: components["schemas"]["NodePointView"][];
+            /**
+             * Format: int64
+             * @description Seconds per point.
+             */
+            step_seconds: number;
+        };
+        /** @description A node as listed. */
+        NodeView: {
+            /** @description Agent build version. */
+            agent_version?: string | null;
+            /**
+             * @description What the server reported about itself: `cpu_cores`, `memory_bytes`,
+             *     `disk_total_bytes`, `disk_free_bytes`, `kernel`, `docker_version`,
+             *     `docker_mode` (`rootless`/`rootful`), `cgroup_v2`, `seccomp`,
+             *     `apparmor`, `user_namespaces`, `agent_version`. Empty until the first
+             *     report, which is requested when the node connects and then hourly.
+             */
+            capabilities: Record<string, never>;
+            /**
+             * Format: date-time
+             * @description When that report arrived (RFC 3339, UTC).
+             */
+            capabilities_at?: string | null;
+            /**
+             * Format: date-time
+             * @description Enrollment time (RFC 3339, UTC).
+             */
+            created_at: string;
+            /** @description Host name the agent reported. */
+            hostname?: string | null;
+            /**
+             * Format: uuid
+             * @description Node id.
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Last heartbeat (RFC 3339, UTC).
+             */
+            last_seen_at?: string | null;
+            /** @description Node name. */
+            name: string;
+            /** @description Address the agent last connected from. */
+            public_ip?: string | null;
+            /**
+             * @description `online`, `offline`, `draining` or `revoked`. `online` means the agent
+             *     answered a heartbeat within the last 45 seconds.
+             * @example online
+             */
+            status: string;
+        };
+        /** @description The inbox. */
+        NotificationList: {
+            /** @description The newest first. */
+            items: components["schemas"]["NotificationView"][];
+            /**
+             * Format: int64
+             * @description How many are not read (all of them, not only these).
+             */
+            unread: number;
+        };
+        /** @description A notification. */
+        NotificationView: {
+            /** @description The text. */
+            body: string;
+            /**
+             * Format: int64
+             * @description When (Unix seconds).
+             */
+            created_at: number;
+            /** @description The ids it is about. */
+            data: unknown;
+            /** @description The event it comes from. */
+            event_type: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description Whether it was read. */
+            read: boolean;
+            /** @description `info`, `warning` or `critical`. */
+            severity: string;
+            /** @description One line. */
+            subject: string;
+        };
+        /** @description One path in a body. */
+        OnePath: {
+            /** @description The path. */
+            path: string;
+        };
+        /** @description Recent operations. */
+        OperationList: {
+            /** @description Newest first (at most 100). */
+            items: components["schemas"]["OperationView"][];
+        };
+        /** @description An operation as shown to administrators. */
+        OperationView: {
+            /**
+             * Format: int32
+             * @description Deliveries so far.
+             */
+            attempts: number;
+            /**
+             * Format: date-time
+             * @description Creation time (RFC 3339, UTC).
+             */
+            created_at: string;
+            /**
+             * Format: uuid
+             * @description Account that asked.
+             */
+            created_by?: string | null;
+            /**
+             * Format: date-time
+             * @description Last delivery (RFC 3339, UTC).
+             */
+            dispatched_at?: string | null;
+            /**
+             * @description Why it failed (`code`, `message`, `retryable`), also the last failure of
+             *     an operation that is being retried.
+             */
+            error?: unknown;
+            /**
+             * Format: date-time
+             * @description Not sent after this (RFC 3339, UTC).
+             */
+            expires_at: string;
+            /**
+             * Format: date-time
+             * @description When it became final (RFC 3339, UTC).
+             */
+            finished_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Ledger id.
+             */
+            id: string;
+            /** @description The key that makes asking again harmless. */
+            idempotency_key: string;
+            /**
+             * @description What it does (`ping`, `report_capabilities`, ...).
+             * @example ping
+             */
+            kind: string;
+            /**
+             * Format: int32
+             * @description Most deliveries.
+             */
+            max_attempts: number;
+            /**
+             * Format: date-time
+             * @description Earliest next delivery (RFC 3339, UTC).
+             */
+            next_attempt_at: string;
+            /**
+             * Format: uuid
+             * @description The node that runs it.
+             */
+            node_id: string;
+            /** @description What the node produced, on success. */
+            output?: unknown;
+            /** @description The operation as sent. */
+            payload: unknown;
+            /**
+             * @description `pending`, `dispatched`, `succeeded`, `failed` or `retryable`.
+             * @example succeeded
+             */
+            status: string;
+            /**
+             * Format: uuid
+             * @description Tenant it is about.
+             */
+            tenant_id?: string | null;
+        };
+        /** @description An option that may be set. */
+        OptionView: {
+            /** @description The texts a `choice` may take. */
+            choices: string[];
+            /** @description What PHP uses when it is not set. */
+            default: string;
+            /**
+             * @description The option, as in php.ini.
+             * @example memory_limit
+             */
+            key: string;
+            /** @description `size` (like 64M), `int`, `flag` (true or false), `choice` or `timezone`. */
+            kind: string;
+        };
+        /** @description What to pack. */
+        PackRequest: {
+            /**
+             * @description The archive to make (never replaced).
+             * @example backup.zip
+             */
+            dest: string;
+            /**
+             * @description `zip` or `tar_gz`.
+             * @example zip
+             */
+            format: string;
+            /** @description Files and folders (1 to 1000). */
+            paths: string[];
+        };
+        /** @description A package. */
+        PackageView: {
+            /** @description Whether the plans may add up to more than the caps. */
+            allow_overselling: boolean;
+            /** @description Plans of the administrator the reseller may use. */
+            allowed_plans: string[];
+            /** @description Creation time. */
+            created_at: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * Format: int32
+             * @description Most hosting accounts.
+             */
+            max_accounts: number;
+            /**
+             * Format: int32
+             * @description Transfer cap in GiB per month.
+             */
+            max_bandwidth_gb: number;
+            /**
+             * Format: int32
+             * @description Disk cap in GiB.
+             */
+            max_disk_gb: number;
+            /** @description Name. */
+            name: string;
+        };
+        /** @description A domain's page cache. */
+        PageCacheView: {
+            /** @description Whether it is on. */
+            enabled: boolean;
+            /**
+             * Format: int64
+             * @description When it was last purged (seconds since 1970); `null` if never.
+             */
+            purged_at?: number | null;
+            /**
+             * Format: int32
+             * @description How many times it was purged (a purge is counted when the web server
+             *     file with it is made).
+             */
+            purges?: number;
+            /**
+             * Format: int32
+             * @description Minutes a page stays fresh, 1 to 1440.
+             * @example 10
+             */
+            ttl_minutes: number;
+        };
+        /** @description A page to keep. */
+        PageInput: {
+            /** @description The HTML. */
+            html: string;
+        };
+        /** @description The pages. */
+        PageList: {
+            /** @description One of each kind. */
+            items: components["schemas"]["PageView"][];
+            /**
+             * @description Longest page, in bytes.
+             * @example 16384
+             */
+            max_bytes: number;
+        };
+        /** @description One page. */
+        PageView: {
+            /** @description The HTML visitors get. */
+            html: string;
+            /** @description Whether an administrator replaced the installation's page. */
+            is_custom: boolean;
+            /**
+             * @description `suspended_domain`, `suspended_account`, `not_found` or `bad_gateway`.
+             * @example not_found
+             */
+            kind: string;
+        };
+        /** @description One stored part of a backup. */
+        PartView: {
+            /** @description The database, for a `database` part. */
+            database?: string | null;
+            /** @description `files`, `database`, `dns` or `meta`. */
+            kind: string;
+            /** @description The part's name at the destination. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Its size as stored (encrypted), in bytes.
+             */
+            stored_bytes: number;
+        };
+        /** @description A new password. */
+        PasswordRequest: {
+            /** @description The password (12 to 128 printable characters, three kinds of them). */
+            password: string;
+        };
+        /** @description Work that is still going on. */
+        Pending: {
+            /**
+             * Format: uuid
+             * @description Ask `GET /api/v1/client/files/operations/{id}` for the answer.
+             */
+            operation_id: string;
+        };
+        /** @description The permission catalogue. */
+        PermissionList: {
+            /** @description By module, then key. */
+            items: components["schemas"]["PermissionView"][];
+        };
+        /** @description A permission key that modules declare. */
+        PermissionView: {
+            /**
+             * @description The key, for example `domains.read`.
+             * @example domains.read
+             */
+            key: string;
+            /** @description The module that declares it. */
+            module: string;
+            /** @description That module's display name by language code. */
+            module_title: Record<string, never>;
+            /**
+             * @description Declared by the running build. A key that is not stays listed, because
+             *     roles may still hold it, but grants nothing that exists.
+             */
+            present: boolean;
+        };
+        /** @description A link into phpMyAdmin. */
+        PhpMyAdminLink: {
+            /**
+             * Format: date-time
+             * @description Until when the link can be opened (RFC 3339, UTC).
+             */
+            expires_at: string;
+            /**
+             * @description Open this address (it works once).
+             * @example https://pma.example.com/index.php?dhsignon=...
+             */
+            url: string;
+        };
+        /** @description The options of an account. */
+        PhpSettingsView: {
+            /** @description The options that can be set. */
+            options: components["schemas"]["OptionView"][];
+            /** @description What the plan allows at most. */
+            plan_limits: components["schemas"]["CapsView"];
+            /** @description What the account chose (option to text; flags are `On` or `Off`). */
+            values: unknown;
+        };
+        /** @description PHP versions of an account. */
+        PhpView: {
+            /**
+             * @description The account's version.
+             * @example 8.4
+             */
+            account_version: string;
+            /** @description Whether the node runs what is set (a change takes a moment to arrive). */
+            applied: boolean;
+            /** @description The versions that may be chosen, the one new accounts start with first. */
+            available: string[];
+            /** @description Its domains (aliases follow their domain and are left out). */
+            domains: components["schemas"]["DomainPhp"][];
+        };
+        /** @description What a plan is made of (create and replace). */
+        PlanInput: {
+            /** @description Description (at most 255 characters). */
+            description?: string;
+            /**
+             * Format: uuid
+             * @description The feature set.
+             */
+            feature_set_id: string;
+            /** @description Make this the default plan for new accounts. */
+            is_default?: boolean;
+            /** @description `standard` or `strict`. */
+            isolation?: string;
+            /**
+             * @description Module limits by key: `-1` (unlimited) or zero and more. Declared limits
+             *     left out get their default.
+             */
+            limits?: Record<string, never>;
+            /**
+             * @description Unique name: 2-32 characters of `a-z`, `0-9` and `_`, starting with a
+             *     letter. Ignored when updating a built-in plan.
+             * @example starter
+             */
+            name: string;
+            /** @description Container resources. */
+            resources: components["schemas"]["Resources"];
+        };
+        /** @description All plans. */
+        PlanList: {
+            /** @description By name. */
+            items: components["schemas"]["PlanView"][];
+        };
+        /** @description A plan. */
+        PlanView: {
+            /** @description Created by the installation: cannot be renamed or deleted. */
+            built_in: boolean;
+            /**
+             * Format: date-time
+             * @description Creation time (RFC 3339, UTC).
+             */
+            created_at: string;
+            /** @description Description. */
+            description: string;
+            /**
+             * Format: uuid
+             * @description The feature set.
+             */
+            feature_set_id: string;
+            /** @description Its name. */
+            feature_set_name: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description New accounts get this plan unless told otherwise. */
+            is_default: boolean;
+            /**
+             * @description `standard` or `strict`.
+             * @example standard
+             */
+            isolation: string;
+            /** @description Module limits by key; `-1` is unlimited. */
+            limits: Record<string, never>;
+            /**
+             * @description Unique name.
+             * @example basic
+             */
+            name: string;
+            /** @description Container resources. */
+            resources: components["schemas"]["Resources"];
+            /** @description Limit keys that no installed module declares: kept, but they limit nothing. */
+            unknown_limits: string[];
+            /**
+             * Format: date-time
+             * @description Last change (RFC 3339, UTC).
+             */
+            updated_at: string;
+            /**
+             * Format: int64
+             * @description Accounts on this plan.
+             */
+            users_count: number;
+        };
+        /** @description A policy as written. */
+        PolicyRequest: {
+            /** @description Rule ids that do not apply (such as `942100`), at most 200. */
+            disabled_rules?: number[];
+            /** @description `off`, `detect` or `block`. */
+            mode: string;
+        };
+        /** @description A policy and what applies. */
+        PolicyState: {
+            /** @description What really applies (for a domain; for the others the policy or the default). */
+            effective: components["schemas"]["EffectiveView"];
+            policy?: components["schemas"]["PolicyView"] | null;
+        };
+        /** @description A domain's policy. */
+        PolicyView: {
+            /** @description Headers added to every answer (at most 10). */
+            headers?: components["schemas"]["HeaderView"][];
+            /**
+             * Format: int32
+             * @description Requests per second one visitor may make; `null` for no limit.
+             * @example 20
+             */
+            rate_limit_per_second?: number | null;
+        };
+        /** @description One open port (or range). */
+        PortRule: {
+            /** @description Only these addresses (empty: everybody). */
+            from?: string[];
+            /**
+             * Format: int32
+             * @description The port (the first of a range).
+             */
+            port: number;
+            /** @description `tcp` or `udp`. */
+            proto: string;
+            /**
+             * Format: int32
+             * @description The last port of a range (`port` to `to`).
+             */
+            to?: number | null;
+        };
+        /** @description An account's settings. */
+        Preferences: {
+            /**
+             * @description Pinned menu entries, in the order the account wants them.
+             * @example [
+             *       "files",
+             *       "domains"
+             *     ]
+             */
+            favorites: string[];
+            /**
+             * @description `en` or `bn` (`null`: none chosen, the interface decides).
+             * @example bn
+             */
+            locale?: string | null;
+        };
+        /** @description What a template makes for a made-up site. */
+        Preview: {
+            /** @description The file. */
+            rendered: string;
+        };
+        /** @description A template to try. */
+        PreviewInput: {
+            /** @description The configuration to fill in. */
+            body: string;
+        };
+        /** @description The links of a domain. */
+        PreviewList: {
+            /** @description Whether the panel offers previews at all. */
+            enabled: boolean;
+            /** @description Newest first; expired ones are gone. */
+            items: components["schemas"]["PreviewView"][];
+        };
+        /** @description A preview link. */
+        PreviewView: {
+            /**
+             * Format: date-time
+             * @description It stops working at this time (RFC 3339, UTC).
+             */
+            expires_at: string;
+            /**
+             * @description The address to open (over http or https).
+             * @example k3j9x0a1b2c3d4e5.preview.example.net
+             */
+            host: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+        };
         /** @description Wire format (RFC 9457 + Built Panel extensions `code`, `correlation_id`, `errors`). */
         ProblemDetails: {
             /** @description Stable machine-readable code. */
@@ -857,6 +8528,146 @@ export interface components {
             /** @description Problem type URI. */
             type: string;
         };
+        /** @description The processes. */
+        ProcessList: {
+            /** @description By container and id. */
+            items: components["schemas"]["ProcessView"][];
+        };
+        /** @description A process inside one of the account's containers. */
+        ProcessView: {
+            /** @description The command line, clipped. */
+            command: string;
+            /** @description The container it runs in. */
+            container: string;
+            /**
+             * Format: int32
+             * @description Its id inside the container.
+             */
+            pid: number;
+            /** @description `R` running, `S` sleeping, `D` waiting for the disk, `Z` zombie, ... */
+            state: string;
+            /**
+             * Format: int32
+             * @description The user id it runs as.
+             */
+            uid: number;
+        };
+        /** @description This installation's signature of the authority's challenge for its domain. */
+        ProofView: {
+            /** @description The domain it is served at. */
+            domain: string;
+            /**
+             * Format: uuid
+             * @description This installation.
+             */
+            installation_id: string;
+            /** @description Ed25519 signature (base64url) over the challenge, the installation and the domain. */
+            signature: string;
+        };
+        /** @description New branding; fields left out stay as they are. */
+        PutBranding: {
+            /** @description Name shown instead of the panel's (1-100 characters). */
+            brand_name?: string | null;
+            /** @description A line for the sign-in page (up to 300 characters). An empty string removes it. */
+            custom_login_message?: string | null;
+            /** @description Logo address; https only. An empty string removes it. */
+            logo_url?: string | null;
+            /** @description Accent colour, `#rrggbb`. */
+            primary_color?: string | null;
+            /** @description Support email address. */
+            support_email?: string | null;
+        };
+        /** @description New values for some settings of a module. */
+        PutSettings: {
+            /**
+             * @description Setting key to new value. Settings not mentioned keep their value;
+             *     writing a setting's default puts it back to the default.
+             */
+            values: Record<string, never>;
+        };
+        /** @description A default file to add or replace. */
+        PutSkeletonFile: {
+            /** @description The text, at most 16 KiB. */
+            content: string;
+            /**
+             * @description Path below the docroot: names of letters, digits, `.`, `_`, `-` separated
+             *     by `/`, at most 6 levels.
+             * @example index.html
+             */
+            path: string;
+        };
+        /** @description What a queue action did. */
+        QueueChanged: {
+            /** @description How many messages it was asked about. */
+            count: number;
+            /** @description Always true. */
+            success: boolean;
+        };
+        /** @description A message in the outgoing queue. */
+        QueueItemView: {
+            /** @description Why the last try failed. */
+            error_message?: string | null;
+            /** @description The queue's id for it. */
+            id: string;
+            /** @description When it was queued. */
+            queued_at: string;
+            /** @description The recipients, separated by commas. */
+            recipient: string;
+            /**
+             * Format: int32
+             * @description How many times it was tried.
+             */
+            retries: number;
+            /** @description The sender. */
+            sender: string;
+            /**
+             * Format: int64
+             * @description Its size in bytes.
+             */
+            size_bytes: number;
+            /** @description `queued` or `deferred`. */
+            status: string;
+        };
+        /** @description Pause and snooze, to set. */
+        QuietRequest: {
+            /** @description Pause everything outside the inbox. */
+            paused: boolean;
+            /**
+             * Format: int32
+             * @description Or for this many minutes (1 to 43200: thirty days); `null` or 0 ends a snooze.
+             */
+            snooze_minutes?: number | null;
+        };
+        /** @description Pause and snooze. */
+        QuietView: {
+            /** @description Nothing leaves the inbox until this is turned off. */
+            paused: boolean;
+            /**
+             * Format: int64
+             * @description Nothing leaves the inbox until this time (Unix seconds).
+             */
+            snoozed_until?: number | null;
+        };
+        /** @description A limit on new connections. */
+        RateLimit: {
+            /**
+             * Format: int32
+             * @description New connections a minute per source address (1 to 100000).
+             */
+            per_minute: number;
+            /**
+             * Format: int32
+             * @description The port.
+             */
+            port: number;
+            /** @description `tcp` or `udp`. */
+            proto: string;
+        };
+        /** @description Which notifications to mark read. */
+        ReadRequest: {
+            /** @description These ones; all of them when it is left out. */
+            ids?: string[] | null;
+        };
         /** @description Body of `/ready`. */
         ReadinessReport: {
             /** @description One entry per registered probe, sorted by name. */
@@ -867,6 +8678,303 @@ export interface components {
              */
             status: string;
         };
+        /** @description A reboot has to be confirmed with the node's name. */
+        RebootRequest: {
+            /** @description The node's name, typed as it is. */
+            confirm: string;
+        };
+        /** @description A zone with its records. */
+        RecordList: {
+            /** @description The records, by name and type. */
+            items: components["schemas"]["RecordView"][];
+            /** @description The zone. */
+            zone: components["schemas"]["ZoneView"];
+        };
+        /** @description A DNS record. */
+        RecordView: {
+            /**
+             * @description The data (for an `MX`, the mail server; the priority is separate).
+             * @example 192.0.2.10
+             */
+            content: string;
+            /**
+             * @description The full name, `www.example.com`.
+             * @example www.example.com
+             */
+            fqdn: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * @description Relative to the zone: `@`, `www`, `_dmarc`, ...
+             * @example www
+             */
+            name: string;
+            /**
+             * Format: int32
+             * @description For `MX` and `SRV`.
+             */
+            priority?: number | null;
+            /**
+             * Format: int32
+             * @description Seconds a resolver may keep the answer.
+             * @example 3600
+             */
+            ttl: number;
+            /**
+             * @description `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV`, `CAA` or `NS`.
+             * @example A
+             */
+            type: string;
+        };
+        /** @description What to tell the authority. */
+        RecoveryRequest: {
+            /** @description What happened (at most 2000 characters). */
+            note: string;
+        };
+        /** @description The token from the administrator. */
+        RedeemRequest: {
+            /** @description The one-time token. */
+            token: string;
+        };
+        /** @description Whether to install the dependencies again when redeploying. */
+        Redeploy: {
+            /** @description Install the dependencies first (default: yes). */
+            install?: boolean | null;
+        };
+        /** @description The redirects of a domain. */
+        RedirectList: {
+            /** @description By path. */
+            items: components["schemas"]["RedirectView"][];
+        };
+        /** @description A redirect. */
+        RedirectView: {
+            /**
+             * Format: int32
+             * @description 301, 302, 307 or 308.
+             * @example 301
+             */
+            code: number;
+            /**
+             * Format: date-time
+             * @description Creation time (RFC 3339, UTC).
+             */
+            created_at: string;
+            /**
+             * Format: uuid
+             * @description The domain it belongs to.
+             */
+            domain_id: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * @description The exact path it applies to.
+             * @example /old-page
+             */
+            source_path: string;
+            /**
+             * @description A path of the same site or an http(s) address.
+             * @example https://example.org/new-page
+             */
+            target: string;
+        };
+        /** @description Where a user may connect from. */
+        RemoteHosts: {
+            /**
+             * @description IPv4 addresses or ranges, `203.0.113.7/32` or `198.51.100.0/24` (at most 20,
+             *     none wider than a /8).
+             */
+            cidrs: string[];
+        };
+        /** @description A plan of a reseller. */
+        ResellerPlanView: {
+            /**
+             * Format: int64
+             * @description Transfer per month, MiB.
+             */
+            bandwidth_mb: number;
+            /** @description Creation time. */
+            created_at: string;
+            /**
+             * Format: int64
+             * @description Most databases.
+             */
+            databases_limit: number;
+            /**
+             * Format: int64
+             * @description Disk, MiB.
+             */
+            disk_mb: number;
+            /**
+             * Format: int64
+             * @description Most domains.
+             */
+            domains_limit: number;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * Format: int64
+             * @description Most mailboxes.
+             */
+            mailboxes_limit: number;
+            /** @description Name. */
+            name: string;
+            /**
+             * Format: uuid
+             * @description The reseller.
+             */
+            reseller_id: string;
+        };
+        /** @description A reseller. */
+        ResellerView: {
+            /**
+             * Format: int64
+             * @description Hosting accounts of its clients.
+             */
+            accounts_count: number;
+            /**
+             * Format: double
+             * @description Data sent this month, GiB.
+             */
+            bandwidth_used_gb: number;
+            /** @description Branding. */
+            branding: components["schemas"]["BrandingView"];
+            /** @description Company name. */
+            company_name: string;
+            /** @description Creation time. */
+            created_at: string;
+            /**
+             * Format: double
+             * @description Disk in use, GiB.
+             */
+            disk_used_gb: number;
+            /** @description Email address. */
+            email: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Package id.
+             */
+            package_id: string;
+            /** @description Package name. */
+            package_name: string;
+            /** @description `active` or `suspended`. */
+            status: string;
+            /** @description Login name. */
+            username: string;
+        };
+        /** @description A new password for a user. */
+        ResetPassword: {
+            /**
+             * Format: password
+             * @description The new password; must satisfy the password policy.
+             */
+            password: string;
+        };
+        /** @description The resources of a plan's containers. `-1` means unlimited. */
+        Resources: {
+            /**
+             * Format: int64
+             * @description Transfer per month in megabytes; 0 or more.
+             */
+            bandwidth_mb?: number;
+            /**
+             * Format: int64
+             * @description CPU in thousandths of a core (1000 = one core); 10 to 256000.
+             * @example 1000
+             */
+            cpu_millis: number;
+            /**
+             * Format: int64
+             * @description Disk space in megabytes; 1 or more.
+             * @example 5120
+             */
+            disk_mb: number;
+            /**
+             * Format: int64
+             * @description Most files and folders; 1000 to 1000000000.
+             */
+            inodes?: number;
+            /**
+             * Format: int64
+             * @description Memory in megabytes; 6 to 1048576.
+             * @example 512
+             */
+            memory_mb: number;
+            /**
+             * Format: int64
+             * @description Most processes; 1 to 32768.
+             * @example 128
+             */
+            pids: number;
+        };
+        /** @description A restart that was queued. */
+        Restarted: {
+            /**
+             * Format: uuid
+             * @description The operation that does it.
+             */
+            operation_id: string;
+        };
+        /** @description The restores. */
+        RestoreList: {
+            /** @description Newest first. */
+            items: components["schemas"]["RestoreView"][];
+        };
+        /** @description A restore. */
+        RestoreView: {
+            /**
+             * Format: uuid
+             * @description The backup it reads.
+             */
+            backup_id: string;
+            /** @description When it was asked for. */
+            created_at: string;
+            /** @description Databases put back. */
+            databases: string[];
+            /** @description Whether the DNS records were asked for. */
+            dns: boolean;
+            /**
+             * @description What putting the DNS records back did, once it was done: `zones_restored`,
+             *     `zones_missing`, `records_added`, `records_removed`, `records_skipped` and `replaced`
+             *     (every zone with the records it had before).
+             */
+            dns_summary?: unknown;
+            /** @description What went wrong. */
+            error?: string | null;
+            /** @description Files put back. */
+            files: boolean;
+            /** @description When it ended. */
+            finished_at?: string | null;
+            /** @description Only this folder. */
+            folder?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description `queued`, `running`, `done` or `failed`. */
+            status: string;
+            /**
+             * Format: int64
+             * @description How many parts were read and found whole (once done).
+             */
+            verified_parts?: number | null;
+            /** @description Whether it was only a check. */
+            verify_only: boolean;
+        };
         /** @description Result of a bulk revocation. */
         RevokedCount: {
             /**
@@ -874,6 +8982,277 @@ export interface components {
              * @description Number of sessions ended.
              */
             revoked: number;
+        };
+        /** @description What revoking a node did. */
+        RevokedNode: {
+            /**
+             * Format: int64
+             * @description Certificates revoked with it.
+             */
+            certificates_revoked: number;
+            /**
+             * Format: uuid
+             * @description The node.
+             */
+            node_id: string;
+            /** @description Whether an open connection was closed. */
+            session_closed: boolean;
+        };
+        /** @description The account's applications. */
+        RuntimeAppList: {
+            /** @description The applications. */
+            items: components["schemas"]["RuntimeAppView"][];
+            /**
+             * Format: int64
+             * @description How many the plan allows; `None` when unlimited.
+             */
+            limit?: number | null;
+        };
+        /** @description An application of the account. */
+        RuntimeAppView: {
+            /** @description The folder below the web directory. */
+            dir: string;
+            /** @description That domain's name. */
+            domain?: string | null;
+            /**
+             * Format: uuid
+             * @description The domain that shows it.
+             */
+            domain_id?: string | null;
+            /** @description The names of its environment variables (the values are never shown). */
+            env_names: string[];
+            /** @description Why it failed. */
+            error?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description Whether dependencies are installed before it starts. */
+            install: boolean;
+            /** @description `node` or `python`. */
+            kind: string;
+            /**
+             * Format: int32
+             * @description Memory limit, MiB.
+             */
+            memory_mb: number;
+            /** @description Short name. */
+            name: string;
+            /**
+             * Format: int32
+             * @description The port it listens on (given to it as `PORT`).
+             */
+            port: number;
+            /** @description What starts it. */
+            start_command: string;
+            /** @description `pending`, `ready`, `failed` or `removing`. */
+            status: string;
+            /** @description The runtime's version. */
+            version: string;
+        };
+        /** @description What the account's applications may be, per kind. */
+        Runtimes: {
+            /** @description Node.js versions, the newest first. */
+            node: string[];
+            /** @description Python versions, the newest first. */
+            python: string[];
+        };
+        /** @description A file to save. */
+        SaveFile: {
+            /** @description What to write (the whole file). */
+            content: string;
+            /** @description Refuse (409) when the file already exists. */
+            create_only?: boolean;
+            /**
+             * Format: int64
+             * @description The `mtime` the editor opened it with; refused (409) when it changed since.
+             */
+            expected_mtime?: number | null;
+            /**
+             * @description The file.
+             * @example www/index.php
+             */
+            path: string;
+        };
+        /** @description Which image to scan. */
+        ScanImageRequest: {
+            /** @description The pinned reference, as the list shows it. */
+            reference: string;
+        };
+        /** @description A tenant's scans, newest first. */
+        ScanList: {
+            /** @description The scans. */
+            items: components["schemas"]["ScanView"][];
+        };
+        /** @description What to scan. */
+        ScanRequest: {
+            /** @description Only this folder of the files (relative to `www`; `wp-content/uploads`); all when absent. */
+            folder?: string | null;
+            /** @description Move what is found to the trash (the file manager puts it back). */
+            quarantine?: boolean;
+        };
+        /** @description One scan. */
+        ScanView: {
+            /** @description Why it failed. */
+            error?: string | null;
+            /** @description What was found. */
+            findings: components["schemas"]["Infection"][];
+            /**
+             * Format: int64
+             * @description When it ended (Unix seconds).
+             */
+            finished_at?: number | null;
+            /** @description The folder scanned (`null`: everything). */
+            folder?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description More was found than listed. */
+            more: boolean;
+            /** @description Infected files were moved to the trash. */
+            quarantine: boolean;
+            /**
+             * Format: int64
+             * @description When it was asked for (Unix seconds).
+             */
+            requested_at: number;
+            /**
+             * Format: int64
+             * @description Files looked at.
+             */
+            scanned?: number | null;
+            /** @description `admin`, `client` or `schedule`. */
+            source: string;
+            /** @description `queued`, `running`, `done` or `failed`. */
+            state: string;
+        };
+        /** @description When backups are made and how many are kept. */
+        ScheduleView: {
+            /**
+             * @description Five fields (minute hour day-of-month month day-of-week), UTC. At most once an hour.
+             * @example 30 2 * * *
+             */
+            cron: string;
+            /** @description Whether it runs. */
+            enabled: boolean;
+            /**
+             * Format: int32
+             * @description How many recent days keep their newest backup (0-14).
+             */
+            keep_daily: number;
+            /**
+             * Format: int32
+             * @description How many recent weeks keep their newest backup (0-8).
+             */
+            keep_weekly: number;
+        };
+        /** @description Done. */
+        ServerActionView: {
+            /** @description Which action. */
+            action: string;
+        };
+        /** @description What a node says about itself. */
+        ServerInfoView: {
+            /** @description The machine's name. */
+            hostname: string;
+            /** @description The kernel release. */
+            kernel: string;
+            /**
+             * Format: int64
+             * @description Memory programs could still use, in bytes.
+             */
+            memory_available_bytes: number;
+            /**
+             * Format: int64
+             * @description Memory of the machine, in bytes.
+             */
+            memory_total_bytes: number;
+            /** @description The distribution. */
+            os: string;
+            /** @description The SSH server's safety settings as it will use them (name, value); read-only. */
+            ssh: components["schemas"]["SshSetting"][];
+            /**
+             * Format: int64
+             * @description Swap in all, in bytes.
+             */
+            swap_total_bytes: number;
+            /**
+             * Format: int64
+             * @description Swap in use, in bytes.
+             */
+            swap_used_bytes: number;
+            /** @description The time zone (`Area/City`). */
+            timezone: string;
+            /**
+             * Format: int64
+             * @description Seconds since boot.
+             */
+            uptime_seconds: number;
+        };
+        /** @description A name for a node's mail server. */
+        ServerRequest: {
+            /**
+             * @description The name (it must point at the node).
+             * @example mail.example.com
+             */
+            hostname: string;
+        };
+        /** @description A node's mail server. */
+        ServerView: {
+            /** @description The name it has been told. */
+            applied_hostname?: string | null;
+            /** @description Why the node refused. */
+            error?: string | null;
+            /** @description The name it should say it is. */
+            hostname: string;
+            /**
+             * Format: uuid
+             * @description The node.
+             */
+            node_id: string;
+        };
+        /** @description The services. */
+        ServiceList: {
+            /** @description By name. */
+            items: components["schemas"]["ServiceView"][];
+        };
+        /** @description The end of a service's log. */
+        ServiceLog: {
+            /** @description Oldest first. */
+            lines: components["schemas"]["ServiceLogLine"][];
+            /** @description Older lines were left out. */
+            truncated: boolean;
+        };
+        /** @description One line of a service's log. */
+        ServiceLogLine: {
+            /**
+             * Format: int64
+             * @description When (Unix milliseconds).
+             */
+            at_ms: number;
+            /** @description The line. */
+            text: string;
+        };
+        /** @description One of the account's containers. */
+        ServiceView: {
+            /**
+             * Format: int64
+             * @description When it was made (Unix seconds).
+             */
+            created: number;
+            /** @description The image it runs. */
+            image: string;
+            /** @description Its name (`bp-<account>-<role>`). */
+            name: string;
+            /** @description What it is for (`web`, `php`). */
+            role: string;
+            /** @description `running`, `exited`, `restarting`, `created`, ... */
+            state: string;
+            /** @description Docker's words ("Up 3 hours"). */
+            status: string;
         };
         /** @description Live sessions. */
         SessionList: {
@@ -910,11 +9289,448 @@ export interface components {
             /** @description Browser user agent at login. */
             user_agent?: string | null;
         };
+        /** @description An access level. */
+        SetAccess: {
+            /**
+             * @description `read_only`, `read_write` or `all`.
+             * @example read_write
+             */
+            access: string;
+        };
+        /** @description A cache server to make (or to change the memory of). */
+        SetCache: {
+            /** @description `redis` or `memcached`. */
+            kind: string;
+            /**
+             * Format: int32
+             * @description Memory it may use, in MiB (64 when absent).
+             */
+            memory_mb?: number | null;
+        };
+        /** @description An image to approve, or the changes to one. */
+        SetImage: {
+            /**
+             * Format: int32
+             * @description The memory it starts with, MiB (32-4096; default 256).
+             */
+            default_memory_mb?: number | null;
+            /**
+             * Format: int32
+             * @description The port it listens on (1024-65535).
+             */
+            default_port: number;
+            /** @description Whether clients may choose it (default yes). */
+            enabled?: boolean | null;
+            /** @description What clients see (1-61 characters: letters, digits, space, `.`, `_`, `-`). */
+            name: string;
+            /** @description A note for clients (at most 500 characters). */
+            note?: string | null;
+            /** @description `repo@sha256:<digest>`: pinned by digest. Not changeable: add another image instead. */
+            reference?: string | null;
+        };
+        /** @description New permission bits. */
+        SetMode: {
+            /**
+             * Format: int32
+             * @description The bits, as the number (`0o755` is 493); at most 0o777: no setuid, setgid
+             *     or sticky bit, and the owner keeps read and write.
+             */
+            mode: number;
+            /** @description The path. */
+            path: string;
+            /** @description For a folder: everything below it too. */
+            recursive?: boolean;
+        };
+        /** @description A change of a module's switch. */
+        SetModule: {
+            /**
+             * @description Also switch what has to change with it: when switching off, the modules
+             *     that need this one; when switching on, the modules this one needs.
+             */
+            cascade?: boolean;
+            /** @description On or off. */
+            enabled: boolean;
+        };
+        /** @description What a person sends to change the cache. */
+        SetPageCache: {
+            /** @description Whether it is on. */
+            enabled: boolean;
+            /**
+             * Format: int32
+             * @description Minutes a page stays fresh, 1 to 1440 (10 when left out).
+             * @example 10
+             */
+            ttl_minutes?: number | null;
+        };
+        /** @description The options to keep. */
+        SetPhpSettings: {
+            /**
+             * @description Option to value: sizes as text (`"64M"`), numbers as numbers, flags as
+             *     true or false. Everything not given goes back to its default.
+             */
+            values: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description The settings a person gives for an application. */
+        SetRuntimeApp: {
+            /** @description The folder of the application below the web directory (empty: the directory itself). */
+            dir?: string | null;
+            /**
+             * Format: uuid
+             * @description The domain that shows the application (one of the account's; one application each).
+             */
+            domain_id?: string | null;
+            /**
+             * @description The environment, name to value. When given it replaces the whole environment; when left
+             *     out the environment stays as it is.
+             */
+            env?: {
+                [key: string]: string;
+            } | null;
+            /** @description Install the dependencies first (default: yes). */
+            install?: boolean | null;
+            /** @description `node` or `python`; needed when making one, not changeable. */
+            kind?: string | null;
+            /**
+             * Format: int32
+             * @description Memory limit in MiB (default 256).
+             */
+            memory_mb?: number | null;
+            /** @description Short name (2-32 of a-z, 0-9, `-`); needed when making one, not changeable. */
+            name?: string | null;
+            /**
+             * Format: int32
+             * @description The port it listens on (default 3000).
+             */
+            port?: number | null;
+            /**
+             * @description What starts it, for example `node server.js` or
+             *     `python -m gunicorn app:app -b 0.0.0.0:$PORT`.
+             */
+            start_command: string;
+            /** @description The runtime's version (see `/runtimes`); the newest when not given. */
+            version?: string | null;
+        };
+        /** @description A new status for a reseller. */
+        SetStatus: {
+            /** @description `active` or `suspended`. */
+            status: string;
+        };
+        /** @description The version to use. */
+        SetVersion: {
+            /**
+             * @description A version from `available`; for a domain, `null` goes back to the account's.
+             * @example 8.3
+             */
+            version?: string | null;
+        };
+        /** @description The owner's own directives. */
+        SetVhost: {
+            /** @description The directives; an empty text removes the block. */
+            custom_block: string;
+        };
+        /** @description The outcome of a change. */
+        SettingsChange: {
+            /** @description Keys whose value actually changed (empty if nothing did). */
+            changed: string[];
+            /** @description Current values of the module, by key. */
+            values: Record<string, never>;
+        };
+        /** @description All modules that have settings. */
+        SettingsList: {
+            /** @description By module name. */
+            items: components["schemas"]["SettingsView"][];
+        };
+        /** @description A module's global settings: what they are and what they are now. */
+        SettingsView: {
+            /** @description Short description by language code. */
+            description: Record<string, never>;
+            /**
+             * @description Module name.
+             * @example system
+             */
+            module: string;
+            /**
+             * @description The settings as a JSON Schema: each property has `type`, `default`,
+             *     optional `enum`, limits, `title` / `x-title` and `description` /
+             *     `x-description`. Only the settings that apply to the whole panel.
+             */
+            schema: Record<string, never>;
+            /** @description Display name by language code (falls back to the English `title`). */
+            title: Record<string, never>;
+            /** @description Current values (the default where nothing was changed), by setting key. */
+            values: Record<string, never>;
+        };
+        /** @description What to send. */
+        SignalRequest: {
+            /** @description After `term`: wait up to ten seconds and `kill` what is still there. */
+            escalate?: boolean;
+            /** @description `term` (ask it to end; default) or `kill` (end it at once). */
+            signal?: string;
+        };
+        /** @description How it went. */
+        Signalled: {
+            /** @description `exited`, `killed`, `not_found` or `still_running`. */
+            outcome: string;
+            /**
+             * Format: int32
+             * @description The process.
+             */
+            pid: number;
+        };
+        /** @description The default files. */
+        SkeletonFileList: {
+            /** @description By path. */
+            items: components["schemas"]["SkeletonFileView"][];
+            /** @description Bytes in all files (the limit is 24576). */
+            total_bytes: number;
+        };
+        /** @description A default file of new users. */
+        SkeletonFileView: {
+            /** @description The file's text. */
+            content: string;
+            /** @description Path below the docroot, for example `index.html` or `css/site.css`. */
+            path: string;
+            /** @description Size in bytes. */
+            size: number;
+            /**
+             * Format: date-time
+             * @description Last change (RFC 3339, UTC).
+             */
+            updated_at: string;
+        };
+        /** @description The mail server, to set. */
+        SmtpRequest: {
+            /** @description Whether mail is sent. */
+            enabled: boolean;
+            /** @description The address mail comes from. */
+            from_address: string;
+            /** @description The name mail comes from. */
+            from_name?: string | null;
+            /** @description Host name. */
+            host: string;
+            /** @description The password; left out, the one there is stays. */
+            password?: string | null;
+            /**
+             * Format: int32
+             * @description Port.
+             */
+            port: number;
+            /** @description `starttls`, `tls` or `none`. */
+            security: string;
+            /** @description The login, if any. */
+            username?: string | null;
+        };
+        /** @description Where to send a test mail. */
+        SmtpTest: {
+            /** @description The address. */
+            to: string;
+        };
+        /** @description The mail server (without its password). */
+        SmtpView: {
+            /** @description Whether mail is sent. */
+            enabled: boolean;
+            /** @description The address mail comes from. */
+            from_address: string;
+            /** @description The name mail comes from. */
+            from_name?: string | null;
+            /** @description Whether a password is set. */
+            has_password: boolean;
+            /** @description Host name. */
+            host: string;
+            /**
+             * Format: int32
+             * @description Port.
+             */
+            port: number;
+            /** @description `starttls`, `tls` or `none`. */
+            security: string;
+            /** @description The login, if any. */
+            username?: string | null;
+        };
+        /** @description One piece of software of the marketplace. */
+        SoftwareView: {
+            /** @description The group (`databases`, `web_servers`, ...). */
+            category: string;
+            /** @description The group's name. */
+            category_name: string;
+            /** @description The Webuzo names this entry stands for. */
+            covers: string[];
+            /** @description What it is. */
+            description: string;
+            /** @description Project page. */
+            homepage: string;
+            installed?: components["schemas"]["Installed"] | null;
+            /** @description `container` (install here), `builtin` (the panel has it) or `unavailable`. */
+            kind: string;
+            /** @description SPDX license. */
+            license: string;
+            /**
+             * Format: int32
+             * @description `container`: the memory it gets, MiB.
+             */
+            memory_mb: number;
+            /** @description Name. */
+            name: string;
+            /**
+             * Format: int32
+             * @description `container`: the port inside the account's network.
+             */
+            port: number;
+            /** @description `builtin`: where in the panel. */
+            provided_by: string;
+            /** @description `unavailable`: why. */
+            reason: string;
+            /** @description Identifier. */
+            slug: string;
+            /** @description `container`: how to reach it from the account's other applications. */
+            usage: string;
+            /** @description The version on offer. */
+            version: string;
+        };
+        /** @description One SSH server setting. */
+        SshSetting: {
+            /** @description The setting (lower case). */
+            name: string;
+            /** @description Its value. */
+            value: string;
+        };
+        /** @description A domain's certificate. */
+        SslView: {
+            /**
+             * Format: int64
+             * @description Whole days until it ends (negative once it has).
+             */
+            days_left?: number | null;
+            /**
+             * @description Who issued it.
+             * @example R11
+             */
+            issuer?: string | null;
+            /** @description `acme` (obtained by the web server) or `custom` (uploaded). */
+            kind?: string | null;
+            /**
+             * Format: date-time
+             * @description When a node last reported it (RFC 3339, UTC).
+             */
+            last_seen_at?: string | null;
+            /**
+             * Format: date-time
+             * @description Valid until (RFC 3339, UTC).
+             */
+            not_after?: string | null;
+            /**
+             * Format: date-time
+             * @description Valid from (RFC 3339, UTC).
+             */
+            not_before?: string | null;
+            /**
+             * @description `none` (no certificate yet), `valid`, `expiring` (ends within 14 days) or `expired`.
+             * @example valid
+             */
+            state: string;
+        };
+        /** @description A file to download. */
+        StartDownload: {
+            /**
+             * @description The file in the account's files.
+             * @example www/backup.zip
+             */
+            path: string;
+        };
+        /** @description How to wrap the key of an export. */
+        StartExport: {
+            /**
+             * @description A passphrase of at least 12 characters. The file's key is wrapped with it; it is not
+             *     stored, and without it the file cannot be opened.
+             */
+            passphrase: string;
+        };
+        /** @description A dump to import. */
+        StartImport: {
+            /** @description Whether the file is gzip-compressed (`.sql.gz`). */
+            gzip?: boolean;
+            /** @description The file's SHA-256, 64 hex digits. */
+            sha256: string;
+            /**
+             * Format: int64
+             * @description Size of the file in bytes (as uploaded: compressed, if it is).
+             */
+            size_bytes: number;
+        };
+        /** @description What to put back. */
+        StartRestore: {
+            /** @description The databases to put back (their whole names). */
+            databases?: string[];
+            /**
+             * @description Put the DNS records of the account's domains back: in each zone that is still the
+             *     account's, the present records are replaced by the ones in the backup (they are kept in
+             *     the restore's `dns_summary`). Default: false.
+             */
+            dns?: boolean;
+            /** @description Put the files back. */
+            files?: boolean;
+            /** @description Only this folder of the files (relative, such as `www/blog`). */
+            folder?: string | null;
+            /** @description Keep the present state first, so that the restore can be undone. Default: true. */
+            snapshot?: boolean;
+            /** @description Only check that the backup is whole; change nothing. */
+            verify_only?: boolean;
+        };
+        /** @description What to move, and where. */
+        StartTransfer: {
+            /** @description Go on to the last pass (and the switch) as soon as the first copy is there. */
+            auto_cutover?: boolean;
+            /**
+             * Format: uuid
+             * @description The backup destination to pass the copies through (the default one when left out).
+             */
+            destination_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The hosting account.
+             */
+            tenant_id: string;
+            /**
+             * Format: uuid
+             * @description The node it goes to.
+             */
+            to_node_id: string;
+        };
+        /** @description A file to upload. */
+        StartUpload: {
+            /** @description Replace a file that is already there. */
+            overwrite?: boolean;
+            /**
+             * @description Where it goes in the account's files (the folders are made if missing).
+             * @example www/backup.zip
+             */
+            path: string;
+            /** @description The file's SHA-256 (64 hex digits), if the browser has it: checked at the end. */
+            sha256?: string | null;
+            /**
+             * Format: int64
+             * @description Its size in bytes.
+             */
+            size_bytes: number;
+        };
         /**
          * @description Status an administrator can be set to.
          * @enum {string}
          */
         StatusInput: "active" | "suspended" | "disabled";
+        /** @description One step of a transfer. */
+        StepView: {
+            /** @description What it did or why it failed. */
+            details?: string | null;
+            /** @description Id, `step-<n>`. */
+            id: string;
+            /** @description What it does. */
+            name: string;
+            /** @description `pending`, `running`, `completed` or `failed`. */
+            status: string;
+        };
         /** @description Re-authentication to enter sudo mode. */
         SudoRequest: {
             /**
@@ -936,12 +9752,371 @@ export interface components {
              */
             sudo_expires_in: number;
         };
+        /** @description How big the swap file is to be. */
+        SwapRequest: {
+            /**
+             * Format: int32
+             * @description MiB, 0 to 32768; 0 takes the swap file away.
+             */
+            megabytes: number;
+        };
+        /** @description One event of the control plane's log. */
+        SystemLogLine: {
+            /**
+             * Format: int64
+             * @description When (Unix milliseconds).
+             */
+            at_ms: number;
+            /** @description `ERROR`, `WARN`, `INFO`, `DEBUG` or `TRACE`. */
+            level: string;
+            /** @description The module that wrote it. */
+            target: string;
+            /** @description The message and its fields. */
+            text: string;
+        };
+        /** @description The events. */
+        SystemLogList: {
+            /** @description Oldest first. */
+            items: components["schemas"]["SystemLogLine"][];
+        };
+        /** @description A template to write. */
+        TemplateInput: {
+            /** @description What it is for. */
+            description?: string;
+            /** @description Make it the template new zones start from. */
+            is_default?: boolean;
+            /**
+             * @description Unique name: lower-case letters, digits and `_`, 2-32 characters.
+             * @example web_only
+             */
+            name: string;
+            /** @description The lines (at most 100). */
+            records: components["schemas"]["TemplateLine"][];
+        };
+        /** @description One line of a template. */
+        TemplateLine: {
+            /**
+             * @description The data. May use `{{domain}}`, `{{ipv4}}` and `{{ipv6}}`; a line whose
+             *     address the server does not have is left out.
+             * @example {{domain}}.
+             */
+            content: string;
+            /**
+             * @description Relative to the zone: `@` for the zone itself, `www`, `_dmarc`, ...
+             * @example www
+             */
+            name: string;
+            /**
+             * Format: int32
+             * @description For `MX` and `SRV`.
+             */
+            priority?: number | null;
+            /**
+             * Format: int32
+             * @description Seconds (60 to 604800; default 3600).
+             */
+            ttl?: number | null;
+            /**
+             * @description `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV`, `CAA` or `NS`.
+             * @example CNAME
+             */
+            type: string;
+        };
+        /** @description The templates. */
+        TemplateList: {
+            /** @description The default first, then by name. */
+            items: components["schemas"]["TemplateView"][];
+        };
+        /** @description A template, without its text (for lists). */
+        TemplateSummary: {
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description Whether new sites use it. */
+            is_default: boolean;
+            /**
+             * @description Name.
+             * @example Default
+             */
+            name: string;
+            /** @description The web server it is for (`nginx`). */
+            server: string;
+            /**
+             * Format: date-time
+             * @description Last change (RFC 3339, UTC).
+             */
+            updated_at: string;
+            /**
+             * Format: int32
+             * @description Which save it is (1 for the first).
+             */
+            version: number;
+        };
+        /** @description A zone template. */
+        TemplateView: {
+            /** @description Made by the installation: it can be changed but not deleted. */
+            built_in: boolean;
+            /** @description Description. */
+            description: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description New zones start from this one. */
+            is_default: boolean;
+            /**
+             * @description Unique name.
+             * @example default
+             */
+            name: string;
+            /** @description The lines. */
+            records: components["schemas"]["TemplateLine"][];
+            /**
+             * Format: date-time
+             * @description Last change (RFC 3339, UTC).
+             */
+            updated_at: string;
+        };
+        /** @description A user's hosting account on a node. */
+        TenantView: {
+            /**
+             * Format: uuid
+             * @description Tenant id.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Node id.
+             */
+            node_id: string;
+            /** @description Node name. */
+            node_name: string;
+            /**
+             * Format: uuid
+             * @description Plan id.
+             */
+            plan_id: string;
+            /** @description Plan name. */
+            plan_name: string;
+            /**
+             * Format: date-time
+             * @description When the data will be purged (RFC 3339, UTC); only for deleted users.
+             */
+            purge_after?: string | null;
+            /**
+             * @description `provisioning`, `active`, `suspended`, `deleting` or `failed`.
+             * @example active
+             */
+            status: string;
+            /**
+             * @description System user name on the node.
+             * @example alice
+             */
+            username: string;
+        };
+        /** @description Which time zone. */
+        TimezoneRequest: {
+            /** @description `Area/City`, such as `Asia/Dhaka` or `UTC`. */
+            zone: string;
+        };
+        /** @description One ranked account. */
+        TopItem: {
+            /**
+             * Format: int64
+             * @description Average thousandths of a CPU over the range.
+             */
+            cpu_millis: number;
+            /**
+             * Format: int64
+             * @description Disk bytes (read and written) over the range.
+             */
+            io_bytes: number;
+            /**
+             * Format: int64
+             * @description Average memory in bytes over the range.
+             */
+            memory_bytes: number;
+            /**
+             * Format: int64
+             * @description Network bytes (in and out) over the range.
+             */
+            net_bytes: number;
+            /**
+             * Format: uuid
+             * @description The account.
+             */
+            tenant_id: string;
+            /** @description Its system name. */
+            username: string;
+        };
+        /** @description The ranking. */
+        TopList: {
+            /** @description Most first. */
+            items: components["schemas"]["TopItem"][];
+        };
         /** @description A new, not yet confirmed TOTP secret. */
         TotpEnrollment: {
             /** @description `otpauth://` URI; render it as a QR code for the authenticator app. */
             otpauth_uri: string;
             /** @description Base32 secret for manual entry. */
             secret: string;
+        };
+        /** @description One hour of traffic. */
+        TrafficHourView: {
+            /**
+             * Format: int64
+             * @description The start of the hour (Unix milliseconds, UTC).
+             */
+            at_ms: number;
+            /**
+             * Format: int64
+             * @description Bytes sent in it.
+             */
+            bytes: number;
+            /**
+             * Format: int64
+             * @description Requests in it.
+             */
+            requests: number;
+        };
+        /** @description A page and its requests. */
+        TrafficPathView: {
+            /** @description The path (no query string). */
+            path: string;
+            /**
+             * Format: int64
+             * @description Requests for it.
+             */
+            requests: number;
+        };
+        /** @description An account's web traffic. */
+        TrafficView: {
+            /**
+             * Format: int64
+             * @description Requests from robots (by their User-Agent).
+             */
+            bots: number;
+            /**
+             * Format: int64
+             * @description Bytes sent.
+             */
+            bytes: number;
+            /** @description Per hour, oldest first (hours without a request are left out). */
+            hours: components["schemas"]["TrafficHourView"][];
+            /** @description The log held less than the range (the numbers are a lower bound). */
+            partial: boolean;
+            /** @description The range asked for. */
+            range: string;
+            /**
+             * Format: int64
+             * @description Requests counted.
+             */
+            requests: number;
+            /**
+             * Format: int64
+             * @description Answers 200-299.
+             */
+            status_2xx: number;
+            /**
+             * Format: int64
+             * @description Answers 300-399.
+             */
+            status_3xx: number;
+            /**
+             * Format: int64
+             * @description Answers 400-499.
+             */
+            status_4xx: number;
+            /**
+             * Format: int64
+             * @description Answers 500-599.
+             */
+            status_5xx: number;
+            /** @description The most asked pages, most first. */
+            top_paths: components["schemas"]["TrafficPathView"][];
+        };
+        /** @description A transfer. */
+        TransferView: {
+            /**
+             * Format: date-time
+             * @description When it was started (RFC 3339, UTC).
+             */
+            created_at: string;
+            /** @description Why it failed. */
+            error?: string | null;
+            /**
+             * Format: date-time
+             * @description When a finished download goes (RFC 3339, UTC).
+             */
+            expires_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description `upload` or `download`. */
+            kind: string;
+            /** @description The largest chunk accepted, in bytes. */
+            max_chunk_bytes: number;
+            /**
+             * Format: int32
+             * @description The chunk to send next (an upload that is `uploading`).
+             */
+            next_chunk: number;
+            /**
+             * @description The file in the account's files.
+             * @example www/backup.zip
+             */
+            path: string;
+            /**
+             * Format: int64
+             * @description Bytes the panel has received.
+             */
+            received_bytes: number;
+            /**
+             * Format: int64
+             * @description Size in bytes (a download: known when it is `ready`).
+             */
+            size_bytes?: number | null;
+            /**
+             * @description `uploading`, `queued`, `running`, `ready` (a download), `done` (an upload),
+             *     `failed`, `cancelled` or `expired`.
+             */
+            status: string;
+        };
+        /** @description Something in the trash. */
+        TrashEntry: {
+            /**
+             * Format: date-time
+             * @description When it was deleted (RFC 3339, UTC).
+             */
+            deleted_at: string;
+            /** @description Its id. */
+            id: string;
+            /** @description `file`, `dir`, `link` or `other`. */
+            kind: string;
+            /** @description Where it was. */
+            path: string;
+            /**
+             * Format: int64
+             * @description Size in bytes.
+             */
+            size: number;
+        };
+        /** @description The trash. */
+        TrashList: {
+            /** @description Newest first. */
+            items: components["schemas"]["TrashEntry"][];
+        };
+        /** @description What to unpack. */
+        UnpackRequest: {
+            /** @description The folder to unpack into (made when missing). */
+            dest: string;
+            /** @description The archive (`.zip`, `.tar.gz`, `.tgz`). */
+            path: string;
         };
         /** @description Changes to an administrator; omitted fields stay as they are. */
         UpdateAdministrator: {
@@ -950,6 +10125,476 @@ export interface components {
             /** @description Make two-factor authentication mandatory (or not). */
             require_mfa?: boolean | null;
             status?: components["schemas"]["StatusInput"] | null;
+        };
+        /** @description Changes to a domain. */
+        UpdateDomain: {
+            /** @description The new document root, relative to the web directory (empty: the directory itself). */
+            docroot?: string | null;
+            /** @description Send visitors who arrive over plain HTTP to HTTPS. */
+            force_https?: boolean | null;
+            /**
+             * @description Tell browsers to use HTTPS for this name for a year (the
+             *     `Strict-Transport-Security` header on HTTPS answers). Only with `force_https`;
+             *     it cannot be turned on without it, nor can forced HTTPS be turned off while
+             *     it is on.
+             */
+            hsts?: boolean | null;
+        };
+        /** @description Changes to a record (its name and type stay: remove it and add another). */
+        UpdateRecord: {
+            /** @description New data. */
+            content?: string | null;
+            /**
+             * Format: int32
+             * @description New priority (`MX` and `SRV`).
+             */
+            priority?: number | null;
+            /**
+             * Format: int32
+             * @description New TTL.
+             */
+            ttl?: number | null;
+        };
+        /** @description Changes to a redirect (the path it applies to cannot change: remove it and add another). */
+        UpdateRedirect: {
+            /**
+             * Format: int64
+             * @description New code.
+             */
+            code?: number | null;
+            /** @description New target. */
+            target?: string | null;
+        };
+        /** @description Changes to a user's account. */
+        UpdateUser: {
+            /** @description New email address. */
+            email?: string | null;
+            /** @description New interface language, `en` or `bn`. */
+            locale?: string | null;
+        };
+        /** @description How many changed. */
+        Updated: {
+            /**
+             * Format: int64
+             * @description How many.
+             */
+            updated: number;
+        };
+        /** @description A certificate to use for a domain. */
+        UploadCertificate: {
+            /**
+             * @description The site's certificate, then the certificates that vouch for it, as PEM
+             *     (`-----BEGIN CERTIFICATE-----` blocks). At most 5.
+             */
+            certificate: string;
+            /**
+             * Format: password
+             * @description Its private key, as an unprotected PKCS#8 PEM (`-----BEGIN PRIVATE KEY-----`).
+             */
+            private_key: string;
+        };
+        /** @description What the plan allows (to draw the limit line). */
+        UsageLimits: {
+            /**
+             * Format: int32
+             * @description Thousandths of a CPU (`null`: no limit).
+             */
+            cpu_millis?: number | null;
+            /**
+             * Format: int64
+             * @description Memory in bytes (`null`: no limit).
+             */
+            memory_bytes?: number | null;
+            /**
+             * Format: int32
+             * @description Processes (`null`: no limit).
+             */
+            pids?: number | null;
+        };
+        /** @description One point of an account's usage. */
+        UsagePoint: {
+            /**
+             * Format: int64
+             * @description Start of the point (Unix seconds).
+             */
+            at: number;
+            /**
+             * Format: int32
+             * @description Average thousandths of a CPU.
+             */
+            cpu_millis: number;
+            /**
+             * Format: int64
+             * @description Bytes read from disk in the point.
+             */
+            io_read_bytes: number;
+            /**
+             * Format: int64
+             * @description Bytes written to disk in the point.
+             */
+            io_write_bytes: number;
+            /**
+             * Format: int64
+             * @description Average memory in use, in bytes.
+             */
+            memory_bytes: number;
+            /**
+             * Format: int64
+             * @description Bytes received in the point.
+             */
+            net_rx_bytes: number;
+            /**
+             * Format: int64
+             * @description Bytes sent in the point.
+             */
+            net_tx_bytes: number;
+            /**
+             * Format: int32
+             * @description Most processes.
+             */
+            pids: number;
+        };
+        /** @description An account's usage. */
+        UsageView: {
+            /** @description The plan's limits. */
+            limits: components["schemas"]["UsageLimits"];
+            /** @description Oldest first (points with no reading are left out). */
+            points: components["schemas"]["UsagePoint"][];
+            /** @description The range asked for. */
+            range: string;
+            /**
+             * Format: int64
+             * @description Seconds per point.
+             */
+            step_seconds: number;
+        };
+        /** @description The list. */
+        UserAgentList: {
+            /** @description Oldest first. */
+            items: components["schemas"]["UserAgentView"][];
+        };
+        /** @description A User-Agent text that is refused. */
+        UserAgentView: {
+            /**
+             * Format: int64
+             * @description When it was added (Unix seconds).
+             */
+            created_at: number;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description Why it is listed. */
+            note?: string | null;
+            /** @description The text a User-Agent contains (any case). */
+            pattern: string;
+        };
+        /**
+         * @description What a change answers: the user as it is now and, when the node has work to
+         *     do, the operation to follow.
+         */
+        UserChange: {
+            /**
+             * Format: uuid
+             * @description The queued work; follow it in the operations ledger. `None` when nothing
+             *     had to be sent to a node.
+             */
+            operation_id?: string | null;
+            /** @description The user. */
+            user: components["schemas"]["UserView"];
+        };
+        /** @description A database user's access to one database. */
+        UserGrantView: {
+            /** @description The access level. */
+            access: string;
+            /** @description The database's name. */
+            database: string;
+            /**
+             * Format: uuid
+             * @description The database.
+             */
+            database_id: string;
+        };
+        /** @description A page of users. */
+        UserList: {
+            /** @description The users, newest first. */
+            items: components["schemas"]["UserView"][];
+            /**
+             * Format: int64
+             * @description How many users match in all.
+             */
+            total: number;
+        };
+        /** @description A client account. */
+        UserView: {
+            /** @description `active` (may log in), `suspended` or `disabled`. */
+            account_status: string;
+            /**
+             * Format: date-time
+             * @description Creation time (RFC 3339, UTC).
+             */
+            created_at: string;
+            /** @description Email address. */
+            email: string;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description Interface language (`en` or `bn`). */
+            locale: string;
+            tenant?: components["schemas"]["TenantView"] | null;
+            /**
+             * @description Login name.
+             * @example alice
+             */
+            username: string;
+        };
+        /** @description A template's history. */
+        VersionList: {
+            /** @description Newest first (at most 50). */
+            items: components["schemas"]["VersionView"][];
+        };
+        /** @description One saved version. */
+        VersionView: {
+            /** @description The text then. */
+            body: string;
+            /**
+             * Format: uuid
+             * @description Who saved it, if that account still exists.
+             */
+            changed_by?: string | null;
+            /**
+             * Format: date-time
+             * @description When (RFC 3339, UTC).
+             */
+            created_at: string;
+            /** @description The name then. */
+            name: string;
+            /**
+             * Format: int32
+             * @description Which save.
+             */
+            version: number;
+        };
+        /** @description A domain's web server file. */
+        VhostView: {
+            /**
+             * @description The file the site runs on, as the panel makes it from the template, the
+             *     domain's settings and the block below. `null` while the account has no
+             *     web server yet (it is being set up or removed).
+             */
+            config?: string | null;
+            /** @description The owner's own directives (empty for none). */
+            custom_block: string;
+            /**
+             * @description Longest block, in bytes.
+             * @example 8192
+             */
+            max_custom_bytes: number;
+        };
+        /** @description One problem a vulnerability scan found: a version below the one an advisory says is safe. */
+        VulnIssue: {
+            /** @description `core`, `plugin` or `theme`. */
+            component: string;
+            /** @description The first safe version. */
+            fixed_in: string;
+            /** @description The installation's folder. */
+            path: string;
+            /** @description Where to read more. */
+            reference?: string | null;
+            /** @description `low`, `medium`, `high` or `critical`. */
+            severity: string;
+            /** @description The folder name (`wordpress` for the core). */
+            slug: string;
+            /** @description What it is. */
+            title: string;
+            /** @description The version found. */
+            version: string;
+        };
+        /** @description A tenant's vulnerability scans, newest first. */
+        VulnScanList: {
+            /** @description The scans. */
+            items: components["schemas"]["VulnScanView"][];
+        };
+        /** @description A WordPress vulnerability scan. */
+        VulnScanView: {
+            /** @description Why it failed. */
+            error?: string | null;
+            /**
+             * Format: int64
+             * @description When it ended (Unix seconds).
+             */
+            finished_at?: number | null;
+            /**
+             * Format: uuid
+             * @description Id.
+             */
+            id: string;
+            /** @description The installations found, with their versions. */
+            installs: components["schemas"]["WpInstall"][];
+            /**
+             * @description What is out of date or known vulnerable, worst first (judged by the advisories now in
+             *     force, not those of the day of the scan).
+             */
+            issues: components["schemas"]["VulnIssue"][];
+            /**
+             * Format: int64
+             * @description When it was asked for (Unix seconds).
+             */
+            requested_at: number;
+            /** @description `admin`, `client` or `schedule`. */
+            source: string;
+            /** @description `queued`, `running`, `done` or `failed`. */
+            state: string;
+        };
+        /** @description What the webhook answers. */
+        WebhookAnswer: {
+            /** @description Whether a deploy was started. */
+            deployed: boolean;
+            /** @description Why not, when not. */
+            reason?: string | null;
+        };
+        /** @description A link into webmail. */
+        WebmailLink: {
+            /**
+             * Format: date-time
+             * @description Until when the link can be opened (RFC 3339, UTC).
+             */
+            expires_at: string;
+            /**
+             * @description Open this address (it works once).
+             * @example https://webmail.example.com/?_dhsignon=...
+             */
+            url: string;
+        };
+        /** @description The answer of a WordPress action. */
+        WpAnswer: {
+            /** @description Why it failed. */
+            error?: string | null;
+            /** @description What WP-CLI said (for the other actions). */
+            output?: string | null;
+            overview?: components["schemas"]["WpOverview"] | null;
+            scan?: components["schemas"]["WpScan"] | null;
+            /** @description `running`, `done` or `failed`. */
+            state: string;
+        };
+        /** @description A WordPress plugin or theme and the version it says it is. */
+        WpComponent: {
+            /** @description Its folder name (`woocommerce`). */
+            slug: string;
+            /** @description Its version (empty when it does not say). */
+            version: string;
+        };
+        /** @description What hardening to apply. */
+        WpHarden: {
+            /** @description Turn debug mode off. */
+            debug_off?: boolean;
+            /** @description Forbid editing plugin and theme files from the admin area. */
+            file_edit_off?: boolean;
+            /** @description Take away write permission from everybody but the owner and group. */
+            fix_permissions?: boolean;
+            /** @description Switch XML-RPC off. */
+            xmlrpc_off?: boolean;
+        };
+        /** @description One WordPress installation in a tenant's files. */
+        WpInstall: {
+            /** @description The core's version (empty when unreadable). */
+            core: string;
+            /** @description Its folder, relative to the tenant's files (`www`, `www/blog`). */
+            path: string;
+            /** @description The plugins. */
+            plugins: components["schemas"]["WpComponent"][];
+            /** @description The themes. */
+            themes: components["schemas"]["WpComponent"][];
+        };
+        /** @description A plugin or theme of a site. */
+        WpItem: {
+            /** @description Its folder name. */
+            name: string;
+            /** @description `active`, `inactive`, `must-use`, ... */
+            status: string;
+            /** @description A newer version exists. */
+            update_available: boolean;
+            /** @description That version. */
+            update_version: string;
+            /** @description The version installed. */
+            version: string;
+        };
+        /** @description Maintenance mode on or off. */
+        WpMaintenance: {
+            /** @description On or off. */
+            on: boolean;
+        };
+        /** @description A new password for a WordPress user. */
+        WpNewPassword: {
+            /** @description The new password (12 to 128 characters). */
+            password: string;
+            /** @description The user's login. */
+            user: string;
+        };
+        /** @description What a WordPress site is made of. */
+        WpOverview: {
+            /** @description The core's version. */
+            core: string;
+            /** @description The version the core can be updated to, when there is one. */
+            core_update?: string | null;
+            /** @description Maintenance mode is on. */
+            maintenance: boolean;
+            /** @description The plugins. */
+            plugins: components["schemas"]["WpItem"][];
+            /** @description The themes. */
+            themes: components["schemas"]["WpItem"][];
+        };
+        /** @description What a scan of a WordPress site found. */
+        WpScan: {
+            /** @description Every core file is as WordPress published it (and none is missing or extra). */
+            checksums_ok: boolean;
+            /** @description The permission bits of `wp-config.php` (`640`). */
+            config_mode: string;
+            /** @description `WP_DEBUG` is on. */
+            debug: boolean;
+            /** @description Files in the core's folders that WordPress does not ship (at most 100). */
+            extra: string[];
+            /** @description Plugin and theme files can be edited from the admin area. */
+            file_edit_allowed: boolean;
+            /** @description Core files that are gone (at most 100). */
+            missing: string[];
+            /** @description Core files whose content is not the published one (at most 100). */
+            modified: string[];
+            /**
+             * Format: int32
+             * @description Files and folders anybody may write to.
+             */
+            world_writable: number;
+            /** @description XML-RPC was switched off by the panel. */
+            xmlrpc_disabled: boolean;
+        };
+        /** @description A plugin or theme to update (all when absent). */
+        WpSlug: {
+            /** @description Its folder name. */
+            slug?: string | null;
+        };
+        /** @description A WordPress version to update to (the latest when absent). */
+        WpVersion: {
+            /** @description Such as `6.8.2`. */
+            version?: string | null;
+        };
+        /** @description How far the zone has got on the DNS server. */
+        ZoneView: {
+            /** @description Why the last push was refused. */
+            last_error?: string | null;
+            /**
+             * @description The zone's name.
+             * @example example.com
+             */
+            name: string;
+            /**
+             * @description `pending` (changes not on the server yet), `active` or `error`.
+             * @example active
+             */
+            status: string;
         };
     };
     responses: never;
@@ -1477,6 +11122,3778 @@ export interface operations {
             };
         };
     };
+    adminListBackupDestinations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The destinations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DestinationList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.backups.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminAddBackupDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDestination"];
+            };
+        };
+        responses: {
+            /** @description Made (the first one is the default) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DestinationView"];
+                };
+            };
+            /** @description `name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A setting or the credentials are not acceptable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminChangeBackupDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Destination id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeDestination"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DestinationView"];
+                };
+            };
+            /** @description No such destination */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `name_taken` or `is_default` (the default cannot be switched off) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminRemoveBackupDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Destination id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such destination */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `in_use` (backups or schedules use it) or `is_default` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDefaultBackupDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Destination id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Now the default */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DestinationView"];
+                };
+            };
+            /** @description No such (enabled) destination */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminStartBackupImport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartImport"];
+            };
+        };
+        responses: {
+            /** @description Queued; the backup is `ready` when the node has unpacked it */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupView"];
+                };
+            };
+            /** @description No such account, destination or file */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `backup_exists` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_an_export`, `wrong_passphrase` or `account_mismatch` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminBootstrap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller, their permissions, the modules being served, branding and the CSRF token. Never cached. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bootstrap"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_an_administrator`: customer accounts use the customer bootstrap */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListContainerImages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageView"][];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminAddContainerImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetImage"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageView"];
+                };
+            };
+            /** @description `image_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminChangeContainerImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Image id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetImage"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageView"];
+                };
+            };
+            /** @description No such image */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `image_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminRemoveContainerImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Image id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such image */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `image_in_use` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminBiggestDatabases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Only this node's. */
+                node_id: string | null;
+                /** @description How many (1..=200, default 20). */
+                limit: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The biggest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BigDatabaseList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.databases.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_limit` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDatabasesOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every node's figures */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatabaseOverview"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.databases.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminNameservers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The panel's name servers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Nameservers"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listDnsTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.domains.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createDnsTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `template_name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid name or records (the message names the record) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getDnsTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateView"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateDnsTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateInput"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `template_name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid name or records */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteDnsTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `template_built_in` or `template_is_default` (make another one the default first) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListDomains: {
+        parameters: {
+            query?: {
+                /** @description Entries per page, 1..=200 (default 50). */
+                limit?: string;
+                /** @description Entries to skip (default 0). */
+                offset?: string;
+                /** @description Only this kind: `primary`, `addon`, `sub` or `alias`. */
+                kind?: string;
+                /** @description Only this status: `active` or `suspended`. */
+                status?: string;
+                /** @description Text to find in the name. */
+                q?: string;
+                /** @description Only this user's domains (administrators only; clients always see their own). */
+                user_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of domains */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.domains.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid paging or filter */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminAddDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminAddDomain"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `domain_taken`, `domain_owned_by_other`, `primary_exists`, `limit_reached`, `no_hosting` or `tenant_unavailable` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description An invalid or blocked name, kind, parent or document root */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The domain */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainView"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDeleteDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `primary_has_domains` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminUpdateDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDomain"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid document root */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminCheckDelegation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What was found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DelegationView"];
+                };
+            };
+            /** @description `permission_denied` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone`: a subdomain uses its parent's name servers */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `dns_lookup_failed`: the public DNS could not be asked */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListDnsRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The zone and its records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordList"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone`: a subdomain's records are in its parent's zone */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminAddDnsRecord: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddRecord"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone`, `cname_conflict`, `duplicate_record` or `limit_reached` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The record is not valid: one error with the field and what is wrong */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDeleteDnsRecord: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Record id */
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain or record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminUpdateDnsRecord: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Record id */
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRecord"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain or record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone`, `cname_conflict` or `duplicate_record` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Nothing to change, or the record would not be valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetDomainPageCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cache (off when never set) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageCacheView"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSetDomainPageCache: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPageCache"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageCacheView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_cache_ttl` or `alias_has_no_cache` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminPurgeDomainPageCache: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purged (the web server file is sent to the node) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageCacheView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `cache_never_on` or `alias_has_no_cache` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetDomainPhp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpView"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSetDomainPhp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetVersion"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `too_many_php_versions` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `unavailable_version` or `alias_follows_domain` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetPhpSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpSettingsView"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSetPhpSettings: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPhpSettings"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpSettingsView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description As for the account's own change */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetDomainPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policy (empty when none is set) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyView"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSetDomainPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyView"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_rate_limit`, `too_many_headers`, `invalid_header_name`, `invalid_header_value`, `reserved_header` or `duplicate_header` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListRedirects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The redirects */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedirectList"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminAddRedirect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddRedirect"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedirectView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `redirect_exists` or `limit_reached` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid path, target or code; `redirect_loop`; `redirect_chain_too_long` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDeleteRedirect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Redirect id */
+                redirect_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain or redirect */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminUpdateRedirect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Redirect id */
+                redirect_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRedirect"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedirectView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain or redirect */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Nothing to change, invalid target or code, `redirect_loop` or `redirect_chain_too_long` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDomainSsl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The certificate, or `none` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SslView"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminUploadCertificate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadCertificate"];
+            };
+        };
+        responses: {
+            /** @description Saved; the certificate as it will be shown */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SslView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The upload is not usable: the field and a code such as `key_mismatch`, `name_mismatch`, `certificate_expired`, `broken_chain`, `key_encrypted` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminRemoveCertificate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain, or no uploaded certificate */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSuspendDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suspended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminUnsuspendDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active again */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetDomainVhost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file and the block */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VhostView"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSetDomainVhost: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetVhost"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VhostView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `forbidden_directive` (naming it), `reserved_header`, `custom_too_large`, `custom_characters`, `template_syntax`, `template_braces` or `alias_has_no_file` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminMailDeliverability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per mail domain */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliverabilityView"][];
+                };
+            };
+        };
+    };
+    adminListMailDomains: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mail domains */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailDomainView"][];
+                };
+            };
+        };
+    };
+    adminHoldMailDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Mail domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoldRequest"];
+            };
+        };
+        responses: {
+            /** @description Held */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailDomainView"];
+                };
+            };
+            /** @description No such mail domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminReleaseMailDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Mail domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Released */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailDomainView"];
+                };
+            };
+            /** @description No such mail domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminMailQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The queue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueItemView"][];
+                };
+            };
+        };
+    };
+    adminFlushMailQueue: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueChanged"];
+                };
+            };
+        };
+    };
+    adminDeleteQueuedMail: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description The queue's id for the message */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such message */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListMailServers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The servers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerView"][];
+                };
+            };
+        };
+    };
+    adminSetMailServer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Node id */
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServerRequest"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerView"];
+                };
+            };
+            /** @description Not a name */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listErrorPages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The four pages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageList"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setErrorPage: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description `suspended_domain`, `suspended_account`, `not_found` or `bad_gateway` */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageInput"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageList"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `page_empty`, `page_too_large` or `page_characters` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    resetErrorPage: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description The kind of page */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done (also when it already was the plain page) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listFeatureSets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All feature sets, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureSetList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.plans.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createFeatureSet: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureSetInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureSetView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `feature_set_name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getFeatureSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Feature set id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The feature set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureSetView"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.plans.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such feature set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateFeatureSet: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Feature set id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureSetInput"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureSetView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such feature set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `feature_set_name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteFeatureSet: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Feature set id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such feature set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `feature_set_built_in` or `feature_set_in_use` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listFeatures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The feature catalogue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.plans.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminShowLicense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The license */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseView"];
+                };
+            };
+        };
+    };
+    adminActivateLicense: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateRequest"];
+            };
+        };
+        responses: {
+            /** @description Activated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseView"];
+                };
+            };
+            /** @description `license_refused` or `licensing_off` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not a license key */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The authority could not be reached */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDeactivateLicense: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Let go */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseView"];
+                };
+            };
+            /** @description `licensing_off` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The authority could not be reached */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminLicenseRecoveryRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoveryRequest"];
+            };
+        };
+        responses: {
+            /** @description Sent */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `licensing_off` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The authority could not be reached */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminRefreshLicense: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Confirmed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseView"];
+                };
+            };
+            /** @description `license_refused` (the license is no longer good) or `licensing_off` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The authority could not be reached */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listMigrationTransfers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The transfers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"][];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createMigrationTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTransfer"];
+            };
+        };
+        responses: {
+            /** @description Created and, for a dry run, finished */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description `import_unavailable`: this panel cannot run imports */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getMigrationTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description No such transfer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteMigrationTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such transfer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `still_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    cancelMigrationTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description No such transfer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_cancellable` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    retryMigrationTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Run again */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description No such transfer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_retryable` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All modules, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.modules.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setModule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Module name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetModule"];
+            };
+        };
+        responses: {
+            /** @description Done (also when nothing had to change) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleChange"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.modules.manage), `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such module in this build */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `module_is_core`; `module_has_dependents` (switching off: the detail names the modules that need it); `module_needs_dependencies` (switching on: the detail names the modules it needs). Repeat with `cascade` to switch those too. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListNodeTransfers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"][];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminStartNodeTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartTransfer"];
+            };
+        };
+        responses: {
+            /** @description Started */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description No such account, node or destination */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `transfer_active`, `same_node`, `node_unavailable`, `tenant_not_active` or `transfer_unsupported` (the account has what a transfer cannot carry yet) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetNodeTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description No such transfer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminCancelNodeTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Being cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description No such transfer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `wrong_state`: it is switched or over */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminCleanUpNodeTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Being removed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description No such transfer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `wrong_state`: the account has not been switched */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminCutOverNodeTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Going on */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description No such transfer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `wrong_state`: the first copy is not there yet, or it is over */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listNodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Nodes, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.nodes.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     createNodeEnrollment: {
         parameters: {
             query?: never;
@@ -1602,6 +15019,3806 @@ export interface operations {
             };
             /** @description `enrollment_not_pending`: already used, cancelled or expired */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetNodeFirewall: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeFirewall"];
+                };
+            };
+            /** @description No such node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSetNodeFirewall: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FirewallPolicy"];
+            };
+        };
+        responses: {
+            /** @description Stored (the checked form: addresses written plainly) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeFirewall"];
+                };
+            };
+            /** @description No such node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A policy that is not valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminResetNodeFirewall: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Emptied */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeFirewall"];
+                };
+            };
+            /** @description No such node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    pingNode: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+                /** @description Same key, same ping */
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued; follow it with GET /api/v1/admin/operations/{id} */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationView"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.nodes.manage) or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `node_revoked` or `idempotency_key_reused` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    revokeNode: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokedNode"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.nodes.manage), `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `node_already_revoked` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminServerInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The node */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerInfoView"];
+                };
+            };
+            /** @description The node is slow; ask again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.server.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDropCaches: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerActionView"];
+                };
+            };
+            /** @description The node is slow; it goes on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminRebootNode: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RebootRequest"];
+            };
+        };
+        responses: {
+            /** @description The reboot starts in a few seconds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerActionView"];
+                };
+            };
+            /** @description The node is slow; it goes on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `confirm` is not the node's name */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSetSwap: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwapRequest"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerActionView"];
+                };
+            };
+            /** @description The node is slow; it goes on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A size out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSetTimezone: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TimezoneRequest"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerActionView"];
+                };
+            };
+            /** @description The node is slow; it goes on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not a time zone of the node */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminNodeServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Node id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeServiceList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.nodes.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminNodeServiceLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Node id */
+                id: string;
+                /** @description `database`, `phpmyadmin` or `sftp` */
+                name: string;
+                /** @description How many of the newest lines (1-2000, default 200). */
+                lines: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceLog"];
+                };
+            };
+            /** @description The node is slow; ask again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description No such node or service */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A count out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminRestartNodeService: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Node id */
+                id: string;
+                /** @description `database`, `phpmyadmin` or `sftp` */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restarted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Restarted"];
+                };
+            };
+            /** @description The node is slow; the restart goes on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description No such node, service, or it is not installed there */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `node_unavailable` */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getNotificationSmtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mail server (`null` when none is set) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmtpView"] | null;
+                };
+            };
+            /** @description `permission_denied` (needs admin.settings.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    putNotificationSmtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmtpRequest"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied` (needs admin.settings.manage) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A host, port, security or address that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    testNotificationSmtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmtpTest"];
+            };
+        };
+        responses: {
+            /** @description Sent */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `smtp_failed` (the reason is in the message) or `smtp_not_set` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description An address that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Only this node. */
+                node_id: string | null;
+                /** @description Only this status. */
+                status: string | null;
+                /** @description Only this kind (`ping`, ...). */
+                kind: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.nodes.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unknown status */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Operation id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationView"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.nodes.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such operation */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    retryOperation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description The failed operation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new operation */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such operation or node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `operation_not_retryable` (only failed operations) or `node_revoked` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The catalogue, grouped by module */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PermissionList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.roles.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listPlanLimits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The limit catalogue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LimitList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.plans.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All plans, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.plans.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `plan_name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid fields, an unknown feature set, or `exceeds_node_capacity` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Plan id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanView"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.plans.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such plan */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updatePlan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Plan id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanInput"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such plan */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `plan_name_taken` or `plan_is_default` (the default plan cannot stop being the default; make another plan the default instead) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid fields, an unknown feature set, or `exceeds_node_capacity` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deletePlan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Plan id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such plan */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `plan_built_in`, `plan_is_default` or `plan_in_use` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listResellerPackages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The packages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageView"][];
+                };
+            };
+        };
+    };
+    createResellerPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePackage"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageView"];
+                };
+            };
+            /** @description `package_name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteResellerPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Package id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such package */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `package_in_use` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listResellers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The resellers, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResellerView"][];
+                };
+            };
+        };
+    };
+    createReseller: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReseller"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResellerView"];
+                };
+            };
+            /** @description `username_taken` or `email_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input or an unknown package */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteReseller: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Reseller id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such reseller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `reseller_has_accounts` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setResellerStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Reseller id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetStatus"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResellerView"];
+                };
+            };
+            /** @description No such reseller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListImages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The images */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageList"];
+                };
+            };
+        };
+    };
+    adminScanImage: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScanImageRequest"];
+            };
+        };
+        responses: {
+            /** @description Asked for */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not on the list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminImageVulnerabilities: {
+        parameters: {
+            query: {
+                /** @description The pinned reference */
+                reference: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The findings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageVulns"];
+                };
+            };
+            /** @description Not on the list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListUserAgents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAgentList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.security.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminAddUserAgent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddUserAgent"];
+            };
+        };
+        responses: {
+            /** @description Listed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAgentView"];
+                };
+            };
+            /** @description `already_listed` or `list_full` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A text that is empty, too long or has a control character */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminRemoveUserAgent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not listed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListWpAdvisories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The advisories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdvisoryList"];
+                };
+            };
+        };
+    };
+    adminAddWpAdvisory: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddAdvisory"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdvisoryView"];
+                };
+            };
+            /** @description `already_listed` or `list_full` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A field that is not valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminRemoveWpAdvisory: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not listed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Modules with settings, their schemas and current values */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.settings.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module name */
+                module: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schema and current values */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsView"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.settings.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The module has no settings */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    putSettings: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Module name */
+                module: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutSettings"];
+            };
+        };
+        responses: {
+            /** @description Saved (also when nothing differed) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsChange"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.settings.manage), `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The module has no settings */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unknown setting, wrong scope, or a value that breaks the schema (one entry per problem, `values.<key>`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listSkeletonFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The default files */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkeletonFileList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.users.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    putSkeletonFile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutSkeletonFile"];
+            };
+        };
+        responses: {
+            /** @description Saved; the whole list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkeletonFileList"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A bad path, or the files would be too many or too large */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteSkeletonFile: {
+        parameters: {
+            query: {
+                /** @description The file's path. */
+                path: string;
+            };
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such file */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetSystemBackupSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleView"];
+                };
+            };
+            /** @description There is none */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminPutSystemBackupSchedule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleView"];
+            };
+        };
+        responses: {
+            /** @description The schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleView"];
+                };
+            };
+            /** @description A cron expression that is not usable or too frequent, or counts out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDeleteSystemBackupSchedule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description There is none */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListSystemBackups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The system backups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.backups.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminStartSystemBackup: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupView"];
+                };
+            };
+            /** @description `backup_active` or `no_destination` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDeleteSystemBackup: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Backup id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Being removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such backup */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `backup_busy` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminSystemLogs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The worst level wanted: `error`, `warn`, `info` (default) or `debug`. */
+                level: string | null;
+                /** @description Only events after this time (Unix milliseconds). */
+                since_ms: number;
+                /** @description Only events whose text or module contains this (case-insensitive). */
+                search: string | null;
+                /** @description The newest this many (1-1000, default 200). */
+                lines: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemLogList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.logs.read) or the caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A level or count that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListApps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Hosting account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The applications */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppList"];
+                };
+            };
+            /** @description No such hosting account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListMalwareScans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Hosting account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanList"];
+                };
+            };
+            /** @description No such hosting account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminStartMalwareScan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Hosting account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScanRequest"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanView"];
+                };
+            };
+            /** @description No such hosting account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `scan_under_way` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A folder that is not inside the files */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListVulnerabilityScans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Hosting account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VulnScanList"];
+                };
+            };
+            /** @description No such hosting account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminStartVulnerabilityScan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Hosting account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VulnScanView"];
+                };
+            };
+            /** @description No such hosting account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `scan_under_way` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminNodeUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Node id */
+                id: string;
+                /** @description `1h`, `24h` (default), `7d` or `30d`. */
+                range: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The usage */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeUsageView"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.nodes.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A range that is not one of the four */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminUsageTop: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `cpu` (default), `memory`, `network` or `io`. */
+                by: string | null;
+                /** @description `1h`, `24h` (default), `7d` or `30d`. */
+                range: string | null;
+                /** @description How many (1-100, default 10). */
+                limit: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ranking */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.users.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A ranking, range or count that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: {
+                /** @description Entries per page, 1..=100 (default 50). */
+                limit?: string;
+                /** @description Entries to skip (default 0). */
+                offset?: string;
+                /** @description Hosting status: `provisioning`, `active`, `suspended`, `deleting`, `failed`. */
+                status?: string;
+                /** @description Only users on this plan. */
+                plan_id?: string;
+                /** @description Only users on this node. */
+                node_id?: string;
+                /** @description Text to find in the login name, email address or system name. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserList"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.users.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid paging or filter */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUser"];
+            };
+        };
+        responses: {
+            /** @description Created; the hosting account is `provisioning` until the operation succeeds */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserChange"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `username_taken`, `email_taken`, `system_username_taken`, `no_node_available` or `node_unavailable` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input (one error per field) or an unknown plan */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserView"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.users.read) or `mfa_setup_required` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted (soft); `operation_id` follows the removal of the stack */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserChange"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_busy` (already being deleted) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUser"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `email_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Nothing to change, or invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    impersonateUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The token */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpersonationToken"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.users.impersonate), `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `user_unavailable`: only an active user can be signed in as */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    resetUserPassword: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPassword"];
+            };
+        };
+        responses: {
+            /** @description Changed; every session of the user ended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The password breaks the policy */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    changeUserPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePlan"];
+            };
+        };
+        responses: {
+            /** @description The plan was changed; `operation_id` follows the update of the limits */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserChange"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_tenant` or `tenant_busy` (only active or suspended users can change plan) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `unknown_plan` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    retryUserSetup: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued again; the hosting account is `provisioning` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserChange"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_tenant` or `tenant_busy` (only a failed set-up can be retried) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    suspendUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suspended; `operation_id` follows the stopping of the stack */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserChange"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_tenant` or `tenant_busy` (only an active user can be suspended) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    unsuspendUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumed; `operation_id` follows the starting of the stack */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserChange"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_tenant` or `tenant_busy` (only a suspended user can be resumed) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listVhostTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateList"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createVhostTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `template_name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid name or text (the code says what is wrong with the text) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    applyVhostTemplates: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accounts with a web server are on the list; the files go out a few at a time */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Applied"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    previewVhostTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewInput"];
+            };
+        };
+        responses: {
+            /** @description What it makes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preview"];
+                };
+            };
+            /** @description `permission_denied` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The text does not pass the checks */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getVhostTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateView"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateVhostTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateInput"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `template_name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid name or text */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteVhostTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `template_is_default`: make another the default first */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    makeVhostTemplateDefault: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateView"];
+                };
+            };
+            /** @description `permission_denied`, `reauth_required` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listVhostTemplateVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionList"];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetDomainWafPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policy and what applies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyState"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminPutDomainWafPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyState"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A mode or rule that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDeleteDomainWafPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such domain or no policy */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetWafPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policy and what applies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyState"];
+                };
+            };
+            /** @description `permission_denied` (needs admin.security.read) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminPutWafPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyState"];
+                };
+            };
+            /** @description A mode or rule that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDeleteWafPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description There is none */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminGetTenantWafPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policy and what applies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyState"];
+                };
+            };
+            /** @description No such account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminPutTenantWafPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyState"];
+                };
+            };
+            /** @description No such account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A mode or rule that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminDeleteTenantWafPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such account or no policy */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1854,6 +19071,80 @@ export interface operations {
             };
         };
     };
+    getPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preferences"];
+                };
+            };
+            /** @description Not logged in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    putPreferences: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Preferences"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preferences"];
+                };
+            };
+            /** @description Not logged in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A language or entry that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     listSessions: {
         parameters: {
             query?: never;
@@ -2002,6 +19293,7669 @@ export interface operations {
             };
         };
     };
+    clientActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description How many entries (1-200, default 50). */
+                limit: number | null;
+                /** @description `next_cursor` of the page before. */
+                cursor: string | null;
+                /** @description Only actions that start with this (`login`, `database`, ...). */
+                action: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityPage"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A count or cursor that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListApps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Only those served on this domain. */
+                domain_id: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The applications */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientAppCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientInstallApp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallApp"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppView"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not in the catalog */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `place_taken`, `limit_reached` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A value that is not valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientInstallWordPress: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallWordPress"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppView"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `place_taken`, `limit_reached` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A value that is not valid, or a domain that is not the account's */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The application */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppView"];
+                };
+            };
+            /** @description Not the account's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientAppOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Application id */
+                id: string;
+                /** @description Operation id */
+                op: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Its state and answer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WpAnswer"];
+                };
+            };
+            /** @description Not the account's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWordPressOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The overview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WpAnswer"];
+                };
+            };
+            /** @description The node is slow: ask `operations/{operation_id}` */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description Not the account's WordPress */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `app_not_ready` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWordPressAdminPassword: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WpNewPassword"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WpAnswer"];
+                };
+            };
+            /** @description Still running */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description Not the account's WordPress */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A user or password that is not valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWordPressUpdateCore: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WpVersion"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WpAnswer"];
+                };
+            };
+            /** @description Still running */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description Not the account's WordPress */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWordPressHarden: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WpHarden"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WpAnswer"];
+                };
+            };
+            /** @description Still running */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description Not the account's WordPress */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Nothing was asked for */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWordPressMaintenance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WpMaintenance"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WpAnswer"];
+                };
+            };
+            /** @description Still running */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description Not the account's WordPress */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWordPressUpdatePlugins: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WpSlug"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WpAnswer"];
+                };
+            };
+            /** @description Still running */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description Not the account's WordPress */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWordPressScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WpAnswer"];
+                };
+            };
+            /** @description Still running */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description Not the account's WordPress */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWordPressUpdateThemes: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WpSlug"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WpAnswer"];
+                };
+            };
+            /** @description Still running */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description Not the account's WordPress */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListExports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The exports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportList"];
+                };
+            };
+        };
+    };
+    clientListRestores: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restores */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoreList"];
+                };
+            };
+        };
+    };
+    clientGetBackupSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleView"];
+                };
+            };
+            /** @description There is none */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientPutBackupSchedule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleView"];
+            };
+        };
+        responses: {
+            /** @description The schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleView"];
+                };
+            };
+            /** @description A cron expression that is not usable or runs more than hourly, or counts out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteBackupSchedule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description There is none */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListBackups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The backups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupList"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientStartBackup: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `backup_active`, `no_destination` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteBackup: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Backup id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Being removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such backup */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `backup_busy`: it is not ready or failed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientStartExport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Backup id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartExport"];
+            };
+        };
+        responses: {
+            /** @description Queued; follow the export until `ready` */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportView"];
+                };
+            };
+            /** @description No such backup */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `backup_not_ready` or `export_active` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The passphrase is too short */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientStartRestore: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Backup id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartRestore"];
+            };
+        };
+        responses: {
+            /** @description Queued; follow the restore until `done` */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoreView"];
+                };
+            };
+            /** @description No such backup */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `backup_not_ready`, `restore_active` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Nothing to restore, a folder that is not usable, or something the backup does not have */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientBootstrap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller, their permissions, the modules with a customer menu entry, the plan's features and limits, branding and the CSRF token. Never cached. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bootstrap"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_a_customer`: administrators use the administrators' bootstrap */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cache servers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CacheList"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSetCache: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCache"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CacheView"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `limit_reached` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A kind or memory that is not valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRemoveCache: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description redis or memcached */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description There is none */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListContainerApps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The containers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerView"][];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCreateContainerApp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateContainer"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerView"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `limit_reached`, `app_taken` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input, or a field that is not allowed (for example `privileged` or a mount) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientChangeContainerApp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Container id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeContainer"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerView"];
+                };
+            };
+            /** @description No such container */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `limit_reached`, `app_taken` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListContainerImages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The approved images */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageView"][];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRestartContainer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description The container's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restarted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Restarted"];
+                };
+            };
+            /** @description The node is slow; the restart goes on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description The account has no such service */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `node_unavailable` */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListCronJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The jobs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobList"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCreateCronJob: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobRequest"];
+            };
+        };
+        responses: {
+            /** @description Made */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `name_taken` or `limit_reached` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The schedule, command or timeout break the rules (`too_often`, `too_long`, ...) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetCronJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobView"];
+                };
+            };
+            /** @description No such job */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientChangeCronJob: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Job id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobRequest"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobView"];
+                };
+            };
+            /** @description No such job */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The schedule, command or timeout break the rules */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteCronJob: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Job id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such job */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRunCronJob: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Job id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asked for */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such job */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListDatabases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The databases */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatabaseList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCreateDatabase: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDatabase"];
+            };
+        };
+        responses: {
+            /** @description Queued; `status` becomes `ready` when the node has made it */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatabaseView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `limit_reached`, `name_taken` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_db_name`, `db_name_too_long` or `reserved_db_name` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteDatabase: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Database id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued; the database disappears from the list when the node has removed it */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such database (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientStartExport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Database id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued; follow `status` until `ready` */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such database */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `export_active`, `database_not_ready`, `imports_unavailable` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGrantDatabase: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Database id */
+                id: string;
+                /** @description User id */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAccess"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatabaseView"];
+                };
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such database or user (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_ready` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `unknown_access` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRevokeDatabase: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Database id */
+                id: string;
+                /** @description User id */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such database, user or grant */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientStartImport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Database id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartImport"];
+            };
+        };
+        responses: {
+            /** @description Upload the chunks next */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such database */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `import_active`, `database_not_ready`, `imports_unavailable` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_checksum`, `empty_file` or `file_too_big` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientOpenPhpMyAdmin: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Database id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpMyAdminLink"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such database */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `phpmyadmin_unavailable`, `database_not_ready` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too many sign-ins in a short time */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `phpmyadmin_failed` (the node could not start it) or `node_busy` (it is not ready yet; try again) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListDbUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DbUserList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCreateDbUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDbUser"];
+            };
+        };
+        responses: {
+            /** @description Queued; the password is shown this once if it was made here */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DbUserCreated"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `limit_reached`, `name_taken` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A bad name or password (`password_length`, `password_weak`, ...) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteDbUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientChangeDbPassword: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewPassword"];
+            };
+        };
+        responses: {
+            /** @description Queued; the password is shown this once if it was made here */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DbUserCreated"];
+                };
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_ready` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A bad password */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetDbRemoteHosts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The addresses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemoteHosts"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSetDbRemoteHosts: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description User id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemoteHosts"];
+            };
+        };
+        responses: {
+            /** @description Saved and queued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemoteHosts"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such user (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_ready` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_cidr` or `too_many_hosts` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientNameservers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tell the registrar these name servers; empty until the administrator sets them */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Nameservers"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListDomains: {
+        parameters: {
+            query?: {
+                /** @description Entries per page, 1..=200 (default 50). */
+                limit?: string;
+                /** @description Entries to skip (default 0). */
+                offset?: string;
+                /** @description Only this kind: `primary`, `addon`, `sub` or `alias`. */
+                kind?: string;
+                /** @description Only this status: `active` or `suspended`. */
+                status?: string;
+                /** @description Text to find in the name. */
+                q?: string;
+                /** @description Only this user's domains (administrators only; clients always see their own). */
+                user_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of domains */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_hosting` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid paging or filter */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientAddDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDomain"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `domain_taken`, `domain_owned_by_other`, `primary_exists`, `limit_reached`, `no_hosting` or `tenant_unavailable` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description An invalid or blocked name, kind, parent or document root */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The domain */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainView"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `primary_has_domains` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientUpdateDomain: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDomain"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainView"];
+                };
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid document root */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCheckDelegation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What was found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DelegationView"];
+                };
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone`: a subdomain uses its parent's name servers */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `dns_lookup_failed`: the public DNS could not be asked */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListDnsRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The zone and its records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone`: a subdomain's records are in its parent's zone */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientAddDnsRecord: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddRecord"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone`, `cname_conflict`, `duplicate_record` or `limit_reached` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The record is not valid: one error with the field and what is wrong */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteDnsRecord: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Record id */
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain or record (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientUpdateDnsRecord: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Record id */
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRecord"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain or record (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `no_zone`, `cname_conflict` or `duplicate_record` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Nothing to change, or the record would not be valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetDomainPageCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cache (off when never set) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageCacheView"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSetDomainPageCache: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPageCache"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageCacheView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_cache_ttl` or `alias_has_no_cache` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientPurgeDomainPageCache: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purged (the web server file is sent to the node) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageCacheView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `cache_never_on` or `alias_has_no_cache` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSetDomainPhp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetVersion"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `too_many_php_versions` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `unavailable_version` or `alias_follows_domain` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetDomainPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policy (empty when none is set) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyView"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSetDomainPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyView"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_rate_limit`, `too_many_headers`, `invalid_header_name`, `invalid_header_value`, `reserved_header` or `duplicate_header` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListPreviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The links that still work */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCreatePreview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Made; it works until `expires_at` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewView"];
+                };
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `previews_off`, `preview_domain_invalid`, `limit_reached`, `no_preview_for_alias` or `domain_suspended` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeletePreview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Link id */
+                preview_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain or link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListRedirects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The redirects */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedirectList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientAddRedirect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddRedirect"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedirectView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `redirect_exists` or `limit_reached` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid path, target or code; `redirect_loop`; `redirect_chain_too_long` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteRedirect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Redirect id */
+                redirect_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain or redirect (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientUpdateRedirect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+                /** @description Redirect id */
+                redirect_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRedirect"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedirectView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain or redirect (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Nothing to change, invalid target or code, `redirect_loop` or `redirect_chain_too_long` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDomainSsl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The certificate, or `none` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SslView"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientUploadCertificate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadCertificate"];
+            };
+        };
+        responses: {
+            /** @description Saved; the certificate as it will be shown */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SslView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The upload is not usable: the field and a code such as `key_mismatch`, `name_mismatch`, `certificate_expired`, `broken_chain`, `key_encrypted` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRemoveCertificate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours), or no uploaded certificate */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetDomainVhost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file and the block */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VhostView"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSetDomainVhost: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetVhost"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VhostView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such domain (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `forbidden_directive` (naming it), `reserved_header`, `custom_too_large`, `custom_characters`, `template_syntax`, `template_braces` or `alias_has_no_file` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListExports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The exports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Export id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The export */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportView"];
+                };
+            };
+            /** @description No such export (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteExport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Export id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed; the file goes at once */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such export */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `already_ended` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientExportLink: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Export id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link (a new one replaces the last) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadLink"];
+                };
+            };
+            /** @description No such export */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_ready` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Relative to the account's files (`""`: the top). */
+                path: string;
+                /** @description Entries to skip. */
+                offset: number | null;
+                /** @description Entries to give (at most the panel's page size setting). */
+                limit: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Folders first, then by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryPage"];
+                };
+            };
+            /** @description Still going */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `not_found` */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_path` or `link_in_path` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteFile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Relative to the account's files (`""`: the top). */
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description In the trash */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description `not_found` */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientArchive: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackRequest"];
+            };
+        };
+        responses: {
+            /** @description Packed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description Still going */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `too_large` */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientReadFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Relative to the account's files (`""`: the top). */
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The text */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileContent"];
+                };
+            };
+            /** @description `not_found` */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `too_large`: bigger than the editor's limit */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientWriteFile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveFile"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description `exists` or `changed_meanwhile` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `too_large` */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCopyFile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FromTo"];
+            };
+        };
+        responses: {
+            /** @description Copied */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description Still going */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `exists` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientStartDownload: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartDownload"];
+            };
+        };
+        responses: {
+            /** @description Queued; follow `status` until `ready` */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description `transfers_unavailable` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_path` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientExtract: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnpackRequest"];
+            };
+        };
+        responses: {
+            /** @description Unpacked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description Still going */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `too_large` */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `bad_archive`, `too_many` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientMakeFolder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnePath"];
+            };
+        };
+        responses: {
+            /** @description Made */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description `exists` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientMoveFile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FromTo"];
+            };
+        };
+        responses: {
+            /** @description Moved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description `exists` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientFileOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The operation id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done: the answer the request would have given */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description Still going */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description No such operation (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientChmod: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMode"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description `invalid_mode` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientFixPermissions: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnePath"];
+            };
+        };
+        responses: {
+            /** @description Fixed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description Still going */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+        };
+    };
+    clientStatFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Relative to the account's files (`""`: the top). */
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What it is */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryView"];
+                };
+            };
+            /** @description `not_found` */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The transfer (for an upload: where to go on from) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description No such transfer (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCancelTransfer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gone; the spooled data is removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `transfer_running` or `already_ended` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientTransferLink: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link (a new one replaces the last) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadLink"];
+                };
+            };
+            /** @description `not_ready` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListTrash: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrashList"];
+                };
+            };
+        };
+    };
+    clientEmptyTrash: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Only this item. */
+                id: string | null;
+                /** @description Only items deleted more than this many days ago. */
+                older_than_days: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description How many items went */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+        };
+    };
+    clientRestoreFile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description The trash id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Back */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description `exists`: something is there now */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientStartUpload: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartUpload"];
+            };
+        };
+        responses: {
+            /** @description Send the chunks next */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description `transfers_unavailable` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `too_large` */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_path`, `empty_file` or `invalid_checksum` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientPutUploadChunk: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Transfer id */
+                id: string;
+                /** @description Chunk number, from 0; the one the transfer expects */
+                n: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": number[];
+            };
+        };
+        responses: {
+            /** @description Kept; `next_chunk` is the one to send now */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description `not_uploading` or `wrong_chunk` (ask for the transfer to see which is expected) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bigger than `max_chunk_bytes` */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `empty_chunk` or `too_much_data` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCompleteUpload: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Transfer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued; follow `status` (`queued`, `running`, `done`) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferView"];
+                };
+            };
+            /** @description `not_uploading` or `incomplete` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `checksum_mismatch`: the transfer has ended; start again */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDiskUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Zeros and no `measured_at` until the first measurement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiskUsageView"];
+                };
+            };
+        };
+    };
+    clientMeasureDiskUsage: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+        };
+    };
+    clientListFtpAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FtpAccountList"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCreateFtpAccount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddFtpAccount"];
+            };
+        };
+        responses: {
+            /** @description Queued; `status` becomes `ready` when the node has made it */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FtpAccountCreated"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `limit_reached`, `name_taken` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_name`, `invalid_path`, `plain_ftp_disabled`, a bad password or quota */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientChangeFtpAccount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeFtpAccount"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FtpAccountView"];
+                };
+            };
+            /** @description No such account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `invalid_path`, `plain_ftp_disabled`, `no_protocol` or a bad quota */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteFtpAccount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued; the account disappears from the list when the node has removed it */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSetFtpPassword: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewFtpPassword"];
+            };
+        };
+        responses: {
+            /** @description Queued; the new password if it was made here */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FtpAccountCreated"];
+                };
+            };
+            /** @description No such account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListGitDeploys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deploys */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitDeployList"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCreateGitDeploy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGitDeploy"];
+            };
+        };
+        responses: {
+            /** @description Made (and queued unless `deploy_now` is false) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitDeployView"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `limit_reached`, `deploy_taken` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRemoveGitDeploy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Deploy id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such deploy */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRunGitDeploy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Deploy id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitDeployView"];
+                };
+            };
+            /** @description No such deploy */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `deploy_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRotateGitWebhookSecret: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Deploy id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deploy with its new secret */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitDeployView"];
+                };
+            };
+            /** @description No such deploy */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListImports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The imports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Import id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The import */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportView"];
+                };
+            };
+            /** @description No such import (or it is not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCancelImport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Import id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled; the uploaded data is removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such import */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `import_running` (the node is at it) or `already_ended` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientPutImportChunk: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Import id */
+                id: string;
+                /** @description Chunk number, from 0; must be the one the import expects */
+                n: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": number[];
+            };
+        };
+        responses: {
+            /** @description Kept; `next_chunk` is the one to send now */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportView"];
+                };
+            };
+            /** @description No such import */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_uploading` or `wrong_chunk` (ask for the import to see which one is expected) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The chunk is bigger than `max_chunk_bytes` */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `empty_chunk` or `too_much_data` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCompleteImport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Import id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued; follow `status`, `stage` and `bytes_done` */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportView"];
+                };
+            };
+            /** @description No such import */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_uploading`, `incomplete` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `checksum_mismatch`: the import has ended; start again */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientReadLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `web_access`, `web_error` or `php_error`. */
+                source: string;
+                /** @description Only lines after this time (Unix milliseconds). Default: any. */
+                since_ms: number;
+                /** @description How many of the newest lines (1-2000). Default 200. */
+                lines: number | null;
+                /** @description Only lines that contain this text (case-insensitive, up to 200 characters). */
+                search: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogView"];
+                };
+            };
+            /** @description The node is slow; ask again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A source, count or search that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `node_unavailable`, or the account has no such log yet */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListMalwareScans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientStartMalwareScan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScanRequest"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanView"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `scan_under_way` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A folder that is not inside the files */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListMarketplace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The software, grouped by category order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoftwareView"][];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientUninstallSoftware: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Software */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such software, or it is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientInstallSoftware: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Software */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallRequest"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerView"];
+                };
+            };
+            /** @description No such software */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `already_installed`, `builtin`, `unavailable`, `limit_reached` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientUpdateSoftware: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Software */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContainerView"];
+                };
+            };
+            /** @description No such software, or it is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `up_to_date`, `limit_reached` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Only the ones not read. */
+                unread: boolean | null;
+                /** @description How many (1 to 100, default 30). */
+                limit: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The inbox */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            /** @description A limit that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listNotificationChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The channels */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelView"][];
+                };
+            };
+        };
+    };
+    createNotificationChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewChannel"];
+            };
+        };
+        responses: {
+            /** @description Made */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedChannel"];
+                };
+            };
+            /** @description `channel_exists` or `too_many_channels` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A kind, name, target or event that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteNotificationChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The channel */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such channel */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateNotificationChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The channel */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChannelChange"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such channel */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description An event that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listNotificationEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventList"];
+                };
+            };
+        };
+    };
+    getNotificationQuiet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pause and snooze */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuietView"];
+                };
+            };
+        };
+    };
+    putNotificationQuiet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuietRequest"];
+            };
+        };
+        responses: {
+            /** @description Pause and snooze */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuietView"];
+                };
+            };
+            /** @description A snooze that is too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    readNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadRequest"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Updated"];
+                };
+            };
+        };
+    };
+    clientGetPhp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versions on offer, the account's version, and each domain's */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpView"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSetPhp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetVersion"];
+            };
+        };
+        responses: {
+            /** @description Saved; `applied` turns true when the node runs it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `too_many_php_versions` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `unavailable_version` or `version_required` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientGetPhpSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpSettingsView"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSetPhpSettings: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPhpSettings"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhpSettingsView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `unknown_option`, `invalid_value`, `out_of_range`, `above_plan_limit` or `post_smaller_than_upload` (the message names the option) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListProcesses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The processes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessList"];
+                };
+            };
+            /** @description The node is slow; ask again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientSignalProcess: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description The container's name */
+                container: string;
+                /** @description The process id inside it (2 or more) */
+                pid: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalRequest"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Signalled"];
+                };
+            };
+            /** @description The node is slow; the signal goes on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description The account has no such container */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A signal that is not `term` or `kill`, or process 1 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListRuntimeApps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The applications */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeAppList"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCreateRuntimeApp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetRuntimeApp"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeAppView"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `limit_reached`, `app_taken` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRuntimeVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The versions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Runtimes"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientUpdateRuntimeApp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetRuntimeApp"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeAppView"];
+                };
+            };
+            /** @description No such application */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `limit_reached`, `app_taken` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRemoveRuntimeApp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such application */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRedeployRuntimeApp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description Optional */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Redeploy"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeAppView"];
+                };
+            };
+            /** @description No such application */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceList"];
+                };
+            };
+            /** @description The node is slow; ask again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `node_unavailable` */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientRestartService: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description `web` or `php` */
+                service: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Restarted"];
+                };
+            };
+            /** @description `client_only` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `unknown_service` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Three restarts a minute, with Retry-After */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientTraffic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `24h` (default), `7d` or `30d`. */
+                range: string | null;
+                /** @description How many of the most asked pages (1-50, default 10). */
+                top: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrafficView"];
+                };
+            };
+            /** @description The node is slow; ask again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pending"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A range or count that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `node_unavailable` */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `1h`, `24h` (default), `7d` or `30d`. */
+                range: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The usage */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageView"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A range that is not one of the four */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListVulnerabilityScans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VulnScanList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientStartVulnerabilityScan: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VulnScanView"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `scan_under_way` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListWaf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The domains */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainWafList"];
+                };
+            };
+            /** @description `client_only` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientPutWaf: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyState"];
+                };
+            };
+            /** @description Not one of the account's domains */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `off`, a mode or a rule that is not usable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteWaf: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Domain id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not one of the account's domains, or no policy */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListAutoresponders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Only this domain. */
+                domain: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The replies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoresponderView"][];
+                };
+            };
+        };
+    };
+    clientSetAutoresponder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutoresponderRequest"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoresponderView"];
+                };
+            };
+            /** @description No such mailbox */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A field is not valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteAutoresponder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description The mailbox's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Off */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such reply */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientMailConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Only this domain. */
+                domain: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientConfig"];
+                };
+            };
+        };
+    };
+    clientListForwarders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Only this domain. */
+                domain: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The forwarders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForwarderView"][];
+                };
+            };
+        };
+    };
+    clientCreateForwarder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForwarderRequest"];
+            };
+        };
+        responses: {
+            /** @description Made */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForwarderView"];
+                };
+            };
+            /** @description `address_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description An address is not valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteForwarder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Forwarder id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such forwarder */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientListMailboxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Only this domain. */
+                domain: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mailboxes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailboxView"][];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientCreateMailbox: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailboxRequest"];
+            };
+        };
+        responses: {
+            /** @description Made */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailboxView"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `address_taken`, `limit_reached` or `not_configured` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The name, domain, password or size are not valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDeleteMailbox: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Mailbox id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Being removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such mailbox */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientChangeMailboxPassword: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Mailbox id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Done"];
+                };
+            };
+            /** @description No such mailbox */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The password is not strong enough */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientOpenWebmail: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Mailbox id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebmailLink"];
+                };
+            };
+            /** @description `client_only` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such mailbox */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `not_configured` or `mailbox_not_ready` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `too_many_signins` */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The node is busy or webmail could not start */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    redeemImpersonation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RedeemRequest"];
+            };
+        };
+        responses: {
+            /** @description Session cookie set; `impersonated_by` names the administrator */
+            200: {
+                headers: {
+                    /** @description __Host-bp_session=…; Path=/; Secure; HttpOnly; SameSite=Strict */
+                    "set-cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description `invalid_token`: unknown, expired or already used */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `account_unavailable`: the account cannot be signed in to now */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Malformed body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too many invalid tokens from this address */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     login: {
         parameters: {
             query?: never;
@@ -2073,6 +27027,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
+            /** @description `root` with the server's root password: the root login helper is not reachable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
         };
     };
     loginMfa: {
@@ -2119,6 +27082,47 @@ export interface operations {
             };
         };
     };
+    gitWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Deploy id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Answered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAnswer"];
+                };
+            };
+            /** @description A deploy was started */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAnswer"];
+                };
+            };
+            /** @description `bad_signature` */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -2135,6 +27139,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Liveness"];
+                };
+            };
+        };
+    };
+    licenseDomainProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The authority's challenge: 16 to 64 letters, digits, `-` or `_`. */
+                nonce: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The signed proof */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProofView"];
+                };
+            };
+            /** @description Licensing is off or no domain is configured */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description A challenge that is not valid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };
@@ -2236,6 +27281,350 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ReadinessReport"];
                 };
+            };
+        };
+    };
+    tlsAsk: {
+        parameters: {
+            query: {
+                /** @description The host name a visitor asked for. */
+                domain: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The name is an active domain of this panel: a certificate may be issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a host name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not a domain of this panel, or not active: no certificate */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This address asks too often */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getResellerMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reseller */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResellerView"];
+                };
+            };
+            /** @description `not_a_reseller` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putResellerBranding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutBranding"];
+            };
+        };
+        responses: {
+            /** @description The branding now */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandingView"];
+                };
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getResellerPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The package */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageView"];
+                };
+            };
+            /** @description `not_a_reseller` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listResellerPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResellerPlanView"][];
+                };
+            };
+        };
+    };
+    createResellerPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlan"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResellerPlanView"];
+                };
+            };
+            /** @description `plan_name_taken` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteResellerPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Plan id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not one of the caller's plans */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `plan_in_use` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listResellerUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The clients, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientView"][];
+                };
+            };
+        };
+    };
+    createResellerUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateClient"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientView"];
+                };
+            };
+            /** @description `reseller_limit` (the package is used up), `username_taken`, `email_taken`... */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input or a plan that is not the caller's */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteResellerUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Client id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not one of the caller's clients */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setResellerUserStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Client id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetStatus"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserChange"];
+                };
+            };
+            /** @description Not one of the caller's clients */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

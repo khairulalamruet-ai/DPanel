@@ -127,7 +127,7 @@ function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="system">
         <ToastProvider>
-          <SessionProvider>
+          <SessionProvider bootstrapPath="/api/v1/admin/bootstrap">
             <AuthenticatedContent />
           </SessionProvider>
         </ToastProvider>

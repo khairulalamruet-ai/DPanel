@@ -14136,6 +14136,52 @@
         ]
       }
     },
+    "/api/v1/client/bootstrap": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Everything the customer interface needs after sign-in: the same as the\nadministrators' bootstrap, with the plan's features and limits.",
+        "operationId": "clientBootstrap",
+        "responses": {
+          "200": {
+            "description": "The caller, their permissions, the modules with a customer menu entry, the plan's features and limits, branding and the CSRF token. Never cached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bootstrap"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_customer`: administrators use the administrators' bootstrap",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/client/cache": {
       "get": {
         "tags": [
@@ -25686,11 +25732,11 @@
             "items": {
               "type": "string"
             },
-            "description": "Plan features. Administrators have no plan, so this is empty; the\ncustomer bootstrap fills it."
+            "description": "Plan features (the customer bootstrap only; administrators have no plan)."
           },
           "limits": {
             "type": "object",
-            "description": "Plan limits and usage, by key. Empty for administrators."
+            "description": "Plan limits by key, `-1` for no limit (the customer bootstrap only)."
           },
           "locale": {
             "type": "string",
@@ -25778,7 +25824,7 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/BootstrapNav",
-                "description": "Entry in the administrator's menu, if it has one."
+                "description": "Entry in the menu of whoever asked, if it has one."
               },
               {
                 "type": "null"

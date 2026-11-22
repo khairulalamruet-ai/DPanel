@@ -14,7 +14,7 @@ use axum::{
 use builtpanel_cache::RedisHandle;
 use builtpanel_database::{modules as db, rbac::assign_role};
 use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use builtpanel_mod_system::{SystemState, router};
+use builtpanel_mod_system::{SystemState, client_router, router};
 use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use builtpanel_settings::SettingsRegistry;
 use secrecy::SecretString;
@@ -47,10 +47,18 @@ fn manifest(name: &str, core: bool, deps: &[&str]) -> Manifest {
         .collect::<Vec<_>>()
         .join(", ");
     let category = if core { "core" } else { "web" };
+    // Feature modules have a customer menu entry; the core ones do not.
+    let ui = if core {
+        String::new()
+    } else {
+        format!(
+            "[ui]\nclient_nav = {{ group = \"Web\", order = 10, icon = \"globe\" }}\n[features]\nkeys = [\"{name}_feature\"]\n"
+        )
+    };
     Manifest::parse(
         name,
         &format!(
-            "[module]\nname = \"{name}\"\nversion = \"1.0.0\"\ntitle = {{ en = \"{name} title\" }}\ncategory = \"{category}\"\ncore = {core}\ndepends_on = [{deps}]\n"
+            "[module]\nname = \"{name}\"\nversion = \"1.0.0\"\ntitle = {{ en = \"{name} title\" }}\ncategory = \"{category}\"\ncore = {core}\ndepends_on = [{deps}]\n{ui}"
         ),
     )
     .unwrap()
@@ -123,16 +131,20 @@ async fn env(pool: &PgPool) -> Env {
             let settings = settings.clone();
             let branding = branding.clone();
             move || match late.get() {
-                Some(mount) => ModuleRoutes {
-                    admin: Some(router().with_state(SystemState {
+                Some(mount) => {
+                    let state = SystemState {
                         db: pool.clone(),
                         sessions: sessions.clone(),
                         mount: mount.clone(),
                         settings: settings.clone(),
                         branding: branding.clone(),
-                    })),
-                    ..ModuleRoutes::none()
-                },
+                    };
+                    ModuleRoutes {
+                        admin: Some(router().with_state(state.clone())),
+                        client: Some(client_router().with_state(state)),
+                        ..ModuleRoutes::none()
+                    }
+                }
                 None => ModuleRoutes::none(),
             }
         }),
@@ -899,4 +911,120 @@ async fn the_control_planes_own_log_is_for_administrators_with_the_permission_on
             .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{q}");
     }
+}
+
+async fn client_with_hosting(pool: &PgPool, name: &str) -> Uuid {
+    let account: Uuid = sqlx::query_scalar(
+        "INSERT INTO accounts (kind, username, email, password_hash)
+         VALUES ('client', $1, $1 || '@example.com', $2) RETURNING id",
+    )
+    .bind(name)
+    .bind(HASH)
+    .fetch_one(pool)
+    .await
+    .unwrap();
+    let node: Uuid = sqlx::query_scalar(
+        "INSERT INTO nodes (name) VALUES ('node1') ON CONFLICT (name) DO UPDATE SET name = 'node1' RETURNING id",
+    )
+    .fetch_one(pool)
+    .await
+    .unwrap();
+    let plan: Uuid = sqlx::query_scalar("SELECT id FROM plans WHERE is_default")
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO tenants (owner_account_id, node_id, plan_id, username, uid, status)
+         VALUES ($1, $2, $3, $4, 10000, 'active')",
+    )
+    .bind(account)
+    .bind(node)
+    .bind(plan)
+    .bind(name)
+    .execute(pool)
+    .await
+    .unwrap();
+    account
+}
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn the_customer_bootstrap_has_the_menu_the_plan_features_and_limits(pool: PgPool) {
+    let e = env(&pool).await;
+    let path = "/api/v1/client/bootstrap";
+    let root_id = account(&pool, "rootuser", &["super_admin"]).await;
+    let root = e.sign_in(root_id).await;
+    let alice_id = client_with_hosting(&pool, "alice").await;
+    let alice = e.sign_in(alice_id).await;
+
+    assert_eq!(
+        e.call(None, "GET", path, None, false).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    // Each kind has its own bootstrap.
+    let (status, body) = e.call(Some(&root), "GET", path, None, false).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body["code"], "not_a_customer");
+    let (status, body) = e
+        .call(Some(&alice), "GET", "/api/v1/admin/bootstrap", None, false)
+        .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body["code"], "not_an_administrator");
+
+    let (status, body) = e.call(Some(&alice), "GET", path, None, false).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["user"]["username"], "alice");
+    assert_eq!(body["user"]["kind"], "client");
+    assert_eq!(body["csrf_token"], alice.csrf.as_str());
+    // Only what has a customer menu entry (system has none).
+    let names: Vec<&str> = body["modules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["dns", "domains", "ssl"]);
+    assert_eq!(body["modules"][1]["nav"]["group"], "Web");
+    // The default plan: its feature set and its limits.
+    let features: Vec<&str> = body["features"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f.as_str().unwrap())
+        .collect();
+    let in_plan: Vec<String> = sqlx::query_scalar(
+        "SELECT unnest(f.features::text[]) FROM plans p JOIN feature_sets f ON f.id = p.feature_set_id WHERE p.is_default",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    let all: bool = sqlx::query_scalar(
+        "SELECT f.all_features FROM plans p JOIN feature_sets f ON f.id = p.feature_set_id WHERE p.is_default",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    if all {
+        assert_eq!(
+            features,
+            ["dns_feature", "domains_feature", "ssl_feature"],
+            "a plan with every feature gets what the served modules declare"
+        );
+    } else {
+        assert_eq!(
+            features,
+            in_plan.iter().map(String::as_str).collect::<Vec<_>>()
+        );
+    }
+    assert!(body["limits"].is_object());
+
+    // A plan change shows in the next bootstrap.
+    sqlx::query(
+        "UPDATE plans SET limits = jsonb_set(limits, '{max_domains}', '7') WHERE is_default",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let (_, body) = e.call(Some(&alice), "GET", path, None, false).await;
+    assert_eq!(body["limits"]["max_domains"], 7);
 }

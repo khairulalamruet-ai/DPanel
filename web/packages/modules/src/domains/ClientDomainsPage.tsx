@@ -22,6 +22,7 @@ import {
   useToast,
 } from "@builtpanel/ui";
 import { useTranslation } from "@builtpanel/i18n";
+import { useOptionalSession } from "@builtpanel/auth";
 import { loadClientDomains, createDomain, updateDocroot, setRedirect, deleteDomain } from "./api";
 import {
   Globe,
@@ -61,10 +62,10 @@ export function ClientDomainsPage() {
   const { toast } = useToast();
 
   const [domains, setDomains] = useState<ClientDomainItem[]>([]);
-  const [limits, setLimits] = useState<{ max_domains: number; used_domains: number }>({
-    max_domains: -1,
-    used_domains: 0,
-  });
+  // How many domains the plan allows comes with the customer bootstrap (`-1`: no limit).
+  const maxDomains = useOptionalSession()?.data?.limits?.max_domains ?? -1;
+  const [usedDomains, setUsedDomains] = useState(0);
+  const limits = { max_domains: maxDomains, used_domains: usedDomains };
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,7 +87,7 @@ export function ClientDomainsPage() {
       setError(null);
       const res = await loadClientDomains();
       setDomains(res.items);
-      setLimits((prev) => ({ ...prev, used_domains: res.total }));
+      setUsedDomains(res.total);
     } catch (err: any) {
       setError(err?.message || t("domains.errors.loadFailed", "Failed to load domains"));
     } finally {
