@@ -3,9 +3,9 @@
 #
 #   curl -fsSL https://github.com/khairulalamruet-ai/DPanel/releases/latest/download/get.sh | sudo bash
 #
-# That is all that is needed on a new Ubuntu 22.04+/Debian 12+ server: the panel is then served
-# under <ip>.sslip.io (no DNS to set up) and the first administrator is `owner`. Options go after
-# `-s --`:
+# That is all that is needed on a new Ubuntu 22.04+/Debian 12+ or AlmaLinux/Rocky/RHEL/CentOS Stream
+# 9+ server: the panel is then served under <ip>.sslip.io (no DNS to set up) and the first
+# administrator is `owner`. Options go after `-s --`:
 #
 #   curl -fsSL .../get.sh | sudo bash -s -- --hostname panel.example.com --admin-email me@example.com
 #
@@ -19,6 +19,7 @@
 #   --header 'H: V'      an HTTP header for the download (e.g. 'Authorization: Bearer TOKEN')
 #   --tarball FILE       install from a release archive already on this machine (no download)
 #   --no-agent           the control plane only; nodes are added from other servers
+#   --no-upgrade         do not update the operating system (packages and kernel) first
 #   --check              download and verify, then only look at what would be done
 #
 # The first administrator holds the built-in `super_admin` role (every permission, like WHM's
@@ -37,7 +38,7 @@ while [ $# -gt 0 ]; do
         --tarball) TARBALL="${2:?--tarball needs a file}"; shift 2 ;;
         --hostname) HOSTNAME_FQDN="${2:?--hostname needs a name}"; shift 2 ;;
         --admin-email) ADMIN_EMAIL="${2:?--admin-email needs an address}"; shift 2 ;;
-        -h | --help) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) PASS+=("$1"); shift ;;
     esac
 done

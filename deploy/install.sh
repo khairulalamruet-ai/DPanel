@@ -19,6 +19,8 @@
 #   --no-agent           install the control plane only (nodes are added from other servers)
 #   --no-root-login      do not let `root` log in to the panel with this server's root password
 #                        (on by default, like WHM; the helper builtpanel-root-auth checks it)
+#   --no-upgrade         do not update the operating system first (by default every installed package,
+#                        the kernel included, is brought up to date before anything is installed)
 #   --check              only look: what is there, what would be done; changes nothing
 #
 # Safe to run again: every step looks at what is already there, secrets and the CA are never
@@ -30,7 +32,7 @@
 # of the node channel, and with the local node: rootless Docker, the agent and the root helper.
 set -euo pipefail
 
-BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; CHECK=0
+BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; UPGRADE=1; CHECK=0
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ETC=/etc/builtpanel; SECRETS=$ETC/secrets; STATE=/var/lib/builtpanel; AGENT_PORT=8444
 
@@ -44,8 +46,9 @@ while [ $# -gt 0 ]; do
         --admin-username) ADMIN_USER="${2:?--admin-username needs a name}"; shift 2 ;;
         --no-agent) WITH_AGENT=0; shift ;;
         --no-root-login) ROOT_LOGIN=0; shift ;;
+        --no-upgrade) UPGRADE=0; shift ;;
         --check) CHECK=1; shift ;;
-        -h | --help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "install.sh: unknown option: $1 (see --help)" >&2; exit 64 ;;
     esac
 done
@@ -128,6 +131,7 @@ mem_mb=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo); [ "$mem_mb" -ge 1
 if [ "$CHECK" -eq 1 ]; then
     echo "==> check only: nothing is changed"
     echo "    system:        ${PRETTY_NAME} ($(uname -m)), ${mem_mb} MB memory, ${free_gb} GB free"
+    echo "    system update: $([ "$UPGRADE" -eq 1 ] && echo 'every package and the kernel would be brought up to date first (--no-upgrade skips it)' || echo 'skipped (--no-upgrade)')"
     echo "    binaries:      ${need[*]} found and runnable"
     echo "    postgresql 18: $(command -v $PG_BIN/postgres > /dev/null && echo present || echo 'would be installed')"
     echo "    redis:         $(command -v redis-server || echo 'would be installed')"
@@ -156,6 +160,33 @@ dnf_install() {
 }
 MAJOR="${VERSION_ID%%.*}"
 ARCH_RPM="$(uname -m)"
+
+# --- the operating system ------------------------------------------------------------------------
+# Brought up to date first: security fixes, and the kernel the rootless containers rely on. Nothing is
+# restarted or rebooted here (needrestart only lists); a new kernel is used after the next reboot,
+# which the last message asks for.
+if [ "$UPGRADE" -eq 1 ]; then
+    say "system update"
+    if [ "$FAMILY" = rhel ]; then
+        for n in 1 2 3; do
+            dnf upgrade -y -q --refresh --setopt=retries=5 --setopt=timeout=60 > /dev/null && break
+            [ "$n" -lt 3 ] || die "dnf upgrade failed three times (see the log); fix the repositories, or run again with --no-upgrade"
+            sleep 5
+        done
+        # A newer kernel than the running one is installed: a reboot brings it in.
+        newest_kernel=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' --last 2> /dev/null | head -1) || newest_kernel=""
+        [ -z "$newest_kernel" ] || [ "$newest_kernel" = "$(uname -r)" ] || NEED_REBOOT=1
+    else
+        # A new machine often runs its own first update at boot: wait for the package lock (up to 5 minutes).
+        # The files the administrator edited are kept; full-upgrade, because a new kernel is a new package.
+        export NEEDRESTART_MODE=l NEEDRESTART_SUSPEND=1
+        apt_opts=(-o DPkg::Lock::Timeout=300 -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
+        apt-get "${apt_opts[@]}" update -qq > /dev/null
+        apt-get "${apt_opts[@]}" full-upgrade -y -qq > /dev/null
+        apt-get "${apt_opts[@]}" autoremove -y -qq > /dev/null || true
+        [ ! -e /run/reboot-required ] || NEED_REBOOT=1
+    fi
+fi
 
 # --- packages --------------------------------------------------------------------------------
 say "base packages"
@@ -583,5 +614,6 @@ $([ -z "$ADMIN_PASSWORD" ] && [ "$ROOT_LOGIN" -eq 0 ] && echo '  (an administrat
 
 $([ "$CPU_LIMITS" = no ] && printf 'Note: this server does not hand the CPU controller to the agent, so hosting plans cannot limit CPU here.\n\n')Keep a copy of $SECRETS/master_key somewhere else: without it a lost server cannot be restored
 (deploy/runbooks/system-restore.md).
+$([ "${NEED_REBOOT:-0}" = 1 ] && printf '\nThe system update needs a reboot (a newer kernel or core libraries): run  reboot  when it suits you.\n')
 $([ "$WITH_AGENT" -eq 1 ] && printf '\nThe local node is installed but not enrolled: add a node in the panel, then run the enrol command it\nshows as the agent user, then `systemctl enable --now builtpanel-agent` (see deploy/agent/install.sh).\n')
 EOF
