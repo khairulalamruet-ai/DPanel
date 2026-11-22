@@ -36,7 +36,8 @@ import { InstalledApp } from "./types";
 interface InstalledAppsTableProps {
   apps: InstalledApp[];
   onOpenManage: (app: InstalledApp) => void;
-  onUninstall: (appId: string) => Promise<void>;
+  /** An application cannot be removed from the panel yet; the button shows when this is given. */
+  onUninstall?: (appId: string) => Promise<void>;
 }
 
 export function InstalledAppsTable({
@@ -104,7 +105,7 @@ export function InstalledAppsTable({
     if (!appToUninstall) return;
     setIsDeleting(true);
     try {
-      await onUninstall(appToUninstall.id);
+      await onUninstall?.(appToUninstall.id);
       setAppToUninstall(null);
     } catch {
       // handled
@@ -226,6 +227,7 @@ export function InstalledAppsTable({
                         <span>{t("apps.manage", "Manage")}</span>
                       </Button>
 
+                      {onUninstall && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -235,6 +237,7 @@ export function InstalledAppsTable({
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
+                    )}
                     </div>
                   </TableCell>
                 </TableRow>

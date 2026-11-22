@@ -7400,325 +7400,75 @@ export const handlers = [
                                                    })(),
 
                                                    ...(() => {
-                                                     const mockCatalogApps = [
-                                                       {
-                                                         id: "wordpress",
-                                                         name: "WordPress",
-                                                         category: "cms" as const,
-                                                         version: "6.7.1",
-                                                         description: "World's most popular web publishing platform and CMS, powering over 40% of the web.",
-                                                         description_bn: "বিশ্বের সর্বাধিক জনপ্রিয় কন্টেন্ট ম্যানেজমেন্ট সিস্টেম ও ব্লগিং প্ল্যাটফর্ম।",
-                                                         icon: "wordpress",
-                                                         requires_db: true,
-                                                         requires_php: true,
-                                                         min_php_version: "8.1",
-                                                         documentation_url: "https://wordpress.org",
-                                                       },
-                                                       {
-                                                         id: "joomla",
-                                                         name: "Joomla",
-                                                         category: "cms" as const,
-                                                         version: "5.2.1",
-                                                         description: "Powerful open-source CMS for corporate websites, news portals, and intranets.",
-                                                         description_bn: "শক্তিশালী ওপেন-সোর্স সিএমএস যা জটিল কর্পোরেট ও নিউজ পোর্টালের জন্য আদর্শ।",
-                                                         icon: "joomla",
-                                                         requires_db: true,
-                                                         requires_php: true,
-                                                         min_php_version: "8.2",
-                                                         documentation_url: "https://joomla.org",
-                                                       },
-                                                       {
-                                                         id: "drupal",
-                                                         name: "Drupal",
-                                                         category: "cms" as const,
-                                                         version: "11.0.6",
-                                                         description: "Enterprise-grade digital experience and modular content management framework.",
-                                                         description_bn: "এন্টারপ্রাইজ গ্রেড ডিজিটাল এক্সপেরিয়েন্স ও মডুলার কনটেন্ট ম্যানেজমেন্ট প্ল্যাটফর্ম।",
-                                                         icon: "drupal",
-                                                         requires_db: true,
-                                                         requires_php: true,
-                                                         min_php_version: "8.3",
-                                                         documentation_url: "https://drupal.org",
-                                                       },
-                                                       {
-                                                         id: "laravel",
-                                                         name: "Laravel Skeleton",
-                                                         category: "framework" as const,
-                                                         version: "11.31.0",
-                                                         description: "The PHP framework for Web Artisans with expressive, elegant syntax and modern toolchain.",
-                                                         description_bn: "আধুনিক ওয়েব অ্যাপ তৈরির জন্য মার্জিত ও শক্তিশালী পিএইচপি ফ্রেমওয়ার্ক।",
-                                                         icon: "laravel",
-                                                         requires_db: true,
-                                                         requires_php: true,
-                                                         min_php_version: "8.2",
-                                                         documentation_url: "https://laravel.com",
-                                                       },
-                                                       {
-                                                         id: "static",
-                                                         name: "Static HTML5 Starter",
-                                                         category: "static" as const,
-                                                         version: "1.0.0",
-                                                         description: "Blazing fast responsive HTML5/CSS3 template optimized for high-performance static hosting.",
-                                                         description_bn: "হাই-পারফরম্যান্স স্ট্যাটিক সাইটের জন্য অপ্টিমাইজড এইচটিএমএল৫ ও সিএসএস৩ টেমপ্লেট।",
-                                                         icon: "static",
-                                                         requires_db: false,
-                                                         requires_php: false,
-                                                       },
+                                                     // Applications, shaped like `CatalogEntry`, `AppView` and the WordPress state in openapi.json
+                                                     const catalog = [
+                                                       { slug: "wordpress", name: "WordPress", category: "cms", version: "6.7.1", description: "World's most popular web publishing platform and CMS.", document_root: "", needs_database: true, needs_admin: true },
+                                                       { slug: "joomla", name: "Joomla", category: "cms", version: "5.2.1", description: "Powerful open-source CMS for corporate websites and portals.", document_root: "", needs_database: true, needs_admin: true },
+                                                       { slug: "laravel", name: "Laravel Skeleton", category: "framework", version: "11.31.0", description: "The PHP framework for web artisans.", document_root: "public", needs_database: true, needs_admin: false },
+                                                       { slug: "static", name: "Static HTML5 Starter", category: "static", version: "1.0.0", description: "A fast responsive HTML5/CSS3 starter.", document_root: "", needs_database: false, needs_admin: false },
                                                      ];
-
-                                                     let mockInstalledApps: Array<{
-                                                       id: string;
-                                                       catalog_app_id: string;
-                                                       name: string;
-                                                       domain: string;
-                                                       path: string;
-                                                       url: string;
-                                                       admin_url?: string;
-                                                       version: string;
-                                                       latest_version: string;
-                                                       has_update: boolean;
-                                                       status: "running" | "maintenance" | "installing" | "error";
-                                                       db_name?: string;
-                                                       db_user?: string;
-                                                       installed_at: string;
-                                                       auto_update: boolean;
-                                                     }> = [
-                                                       {
-                                                         id: "app-wp-01",
-                                                         catalog_app_id: "wordpress",
-                                                         name: "WordPress",
-                                                         domain: "client-site.com",
-                                                         path: "/",
-                                                         url: "https://client-site.com",
-                                                         admin_url: "https://client-site.com/wp-admin",
-                                                         version: "6.7.0",
-                                                         latest_version: "6.7.1",
-                                                         has_update: true,
-                                                         status: "running" as const,
-                                                         db_name: "wp_clientsite",
-                                                         db_user: "wp_user",
-                                                         installed_at: "2026-11-10 12:00:00",
-                                                         auto_update: true,
-                                                       },
-                                                       {
-                                                         id: "app-laravel-02",
-                                                         catalog_app_id: "laravel",
-                                                         name: "Laravel Skeleton",
-                                                         domain: "myblog.net",
-                                                         path: "/",
-                                                         url: "https://myblog.net",
-                                                         version: "11.31.0",
-                                                         latest_version: "11.31.0",
-                                                         has_update: false,
-                                                         status: "running" as const,
-                                                         db_name: "lar_myblog",
-                                                         db_user: "lar_user",
-                                                         installed_at: "2026-11-12 09:30:00",
-                                                         auto_update: false,
-                                                       },
+                                                     let apps = [
+                                                       { id: "app_wp_01", kind: "wordpress", name: "My Awesome Site", path: "/", fqdn: "alpha-hosting.com", domain_id: "dom_01", database_id: "db_01" as string | null, version: "6.7.1" as string | null, status: "active", error: null as string | null, created_at: Math.floor(Date.now() / 1000) - 86400 * 5 },
+                                                       { id: "app_joomla_01", kind: "joomla", name: "Company Portal", path: "/portal", fqdn: "alpha-hosting.com", domain_id: "dom_01", database_id: "db_02", version: "5.2.1", status: "active", error: null as string | null, created_at: Math.floor(Date.now() / 1000) - 86400 * 2 },
                                                      ];
-
-                                                     const mockWordPressDetails: Record<string, any> = {
-                                                       "app-wp-01": {
-                                                         app_id: "app-wp-01",
-                                                         core_version: "6.7.0",
-                                                         latest_core_version: "6.7.1",
-                                                         maintenance_mode: false,
-                                                         xmlrpc_disabled: true,
-                                                         debug_mode: false,
-                                                         plugins: [
-                                                           {
-                                                             slug: "woocommerce",
-                                                             name: "WooCommerce",
-                                                             version: "8.5.1",
-                                                             latest_version: "8.6.0",
-                                                             has_update: true,
-                                                             active: true,
-                                                             author: "Automattic",
-                                                           },
-                                                           {
-                                                             slug: "wordpress-seo",
-                                                             name: "Yoast SEO",
-                                                             version: "22.0",
-                                                             latest_version: "22.0",
-                                                             has_update: false,
-                                                             active: true,
-                                                             author: "Team Yoast",
-                                                           },
-                                                           {
-                                                             slug: "wordfence",
-                                                             name: "Wordfence Security",
-                                                             version: "7.11.0",
-                                                             latest_version: "7.11.2",
-                                                             has_update: true,
-                                                             active: true,
-                                                             author: "Defiant",
-                                                           },
-                                                         ],
-                                                         themes: [
-                                                           {
-                                                             slug: "twentytwentyfour",
-                                                             name: "Twenty Twenty-Four",
-                                                             version: "1.0",
-                                                             active: true,
-                                                           },
-                                                           {
-                                                             slug: "astra",
-                                                             name: "Astra",
-                                                             version: "4.6.0",
-                                                             active: false,
-                                                           },
-                                                         ],
+                                                     let maintenance = false;
+                                                     let plugins = [
+                                                       { name: "woocommerce", status: "active", version: "8.5.1", update_available: true, update_version: "8.6.0" },
+                                                       { name: "wordpress-seo", status: "active", version: "22.0", update_available: false, update_version: null as string | null },
+                                                     ];
+                                                     let scan: Record<string, unknown> | null = null;
+                                                     const overview = () => ({
+                                                       state: "done",
+                                                       overview: {
+                                                         core: "6.7.1",
+                                                         core_update: null,
+                                                         maintenance,
+                                                         plugins,
+                                                         themes: [{ name: "twentytwentyfour", status: "active", version: "1.0", update_available: false, update_version: null }],
                                                        },
+                                                       scan,
+                                                     });
+                                                     const makeApp = async (request: Request) => {
+                                                       const body = (await request.json()) as { slug?: string; domain_id: string; path?: string; title: string };
+                                                       const kind = body.slug ?? "wordpress";
+                                                       const created = {
+                                                         id: `app_${Date.now()}`,
+                                                         kind,
+                                                         name: body.title,
+                                                         path: body.path ?? "/",
+                                                         fqdn: "alpha-hosting.com",
+                                                         domain_id: body.domain_id,
+                                                         database_id: null,
+                                                         version: catalog.find((c) => c.slug === kind)?.version ?? null,
+                                                         status: "installing",
+                                                         error: null,
+                                                         created_at: Math.floor(Date.now() / 1000),
+                                                       };
+                                                       apps = [created, ...apps];
+                                                       return HttpResponse.json(created, { status: 202 });
                                                      };
-
                                                      return [
-                                                       // GET /api/v1/apps/catalog (TODO(api:T12.05))
-                                                       http.get(/\/api\/v1\/apps\/catalog$/, () => {
-                                                         return HttpResponse.json(mockCatalogApps);
+                                                       http.get(/\/api\/v1\/client\/apps\/catalog$/, () => HttpResponse.json({ items: catalog })),
+                                                       http.get(/\/api\/v1\/client\/apps$/, () => HttpResponse.json({ items: apps })),
+                                                       http.post(/\/api\/v1\/client\/apps\/install$/, ({ request }) => makeApp(request)),
+                                                       http.post(/\/api\/v1\/client\/apps\/wordpress$/, ({ request }) => makeApp(request)),
+                                                       http.get(/\/api\/v1\/client\/apps\/([^/]+)\/wordpress$/, () => HttpResponse.json(overview())),
+                                                       http.get(/\/api\/v1\/client\/apps\/([^/]+)\/wordpress\/scan$/, () => {
+                                                         scan = { checksums_ok: true, config_mode: "0640", debug: false, extra: [], file_edit_allowed: true, missing: [], modified: [], world_writable: 0, xmlrpc_disabled: false };
+                                                         return HttpResponse.json({ state: "done", scan });
                                                        }),
-
-                                                       // GET /api/v1/apps/installed (TODO(api:T12.01))
-                                                       http.get(/\/api\/v1\/apps\/installed$/, () => {
-                                                         return HttpResponse.json(mockInstalledApps);
+                                                       http.post(/\/api\/v1\/client\/apps\/([^/]+)\/wordpress\/maintenance$/, async ({ request }) => {
+                                                         maintenance = ((await request.json()) as { on: boolean }).on;
+                                                         return HttpResponse.json({ state: "done" });
                                                        }),
-
-                                                       // POST /api/v1/apps/install (TODO(api:T12.02))
-                                                       http.post(/\/api\/v1\/apps\/install$/, async ({ request }) => {
-                                                         const body = (await request.json().catch(() => ({}))) as any;
-                                                         const catalogApp = mockCatalogApps.find((c) => c.id === body.catalog_app_id) || mockCatalogApps[0];
-                                                         const proto = body.protocol || "https";
-                                                         const cleanPath = body.path === "/" ? "" : body.path;
-                                                         const fullUrl = `${proto}://${body.domain}${cleanPath}`;
-
-                                                         const newApp = {
-                                                           id: `app-${body.catalog_app_id}-${Date.now()}`,
-                                                           catalog_app_id: body.catalog_app_id,
-                                                           name: catalogApp.name,
-                                                           domain: body.domain,
-                                                           path: body.path || "/",
-                                                           url: fullUrl,
-                                                           admin_url: body.catalog_app_id === "wordpress" ? `${fullUrl}/wp-admin` : undefined,
-                                                           version: catalogApp.version,
-                                                           latest_version: catalogApp.version,
-                                                           has_update: false,
-                                                           status: "running" as const,
-                                                           db_name: catalogApp.requires_db ? `db_${body.catalog_app_id}` : undefined,
-                                                           db_user: catalogApp.requires_db ? `usr_${body.catalog_app_id}` : undefined,
-                                                           installed_at: new Date().toISOString().slice(0, 19).replace("T", " "),
-                                                           auto_update: Boolean(body.auto_update),
-                                                         };
-
-                                                         mockInstalledApps.unshift(newApp);
-
-                                                         if (body.catalog_app_id === "wordpress") {
-                                                           mockWordPressDetails[newApp.id] = {
-                                                             app_id: newApp.id,
-                                                             core_version: newApp.version,
-                                                             latest_core_version: newApp.latest_version,
-                                                             maintenance_mode: false,
-                                                             xmlrpc_disabled: true,
-                                                             debug_mode: false,
-                                                             plugins: [
-                                                               {
-                                                                 slug: "wordpress-seo",
-                                                                 name: "Yoast SEO",
-                                                                 version: "22.0",
-                                                                 latest_version: "22.0",
-                                                                 has_update: false,
-                                                                 active: true,
-                                                                 author: "Team Yoast",
-                                                               },
-                                                             ],
-                                                             themes: [
-                                                               {
-                                                                 slug: "twentytwentyfour",
-                                                                 name: "Twenty Twenty-Four",
-                                                                 version: "1.0",
-                                                                 active: true,
-                                                               },
-                                                             ],
-                                                           };
-                                                         }
-
-                                                         return HttpResponse.json({ success: true, app: newApp });
+                                                       http.post(/\/api\/v1\/client\/apps\/([^/]+)\/wordpress\/plugins\/update$/, async ({ request }) => {
+                                                         const { slug } = (await request.json()) as { slug?: string | null };
+                                                         plugins = plugins.map((p) => (!slug || p.name === slug ? { ...p, version: p.update_version ?? p.version, update_available: false } : p));
+                                                         return HttpResponse.json({ state: "done" });
                                                        }),
-
-                                                       // DELETE /api/v1/apps/installed/:id (TODO(api:T12.01))
-                                                       http.delete(/\/api\/v1\/apps\/installed\/([^/]+)$/, ({ params }) => {
-                                                         const id = String(params[0] || params.id);
-                                                         mockInstalledApps = mockInstalledApps.filter((a) => a.id !== id);
-                                                         delete mockWordPressDetails[id];
-                                                         return HttpResponse.json({ success: true, id });
-                                                       }),
-
-                                                       // GET /api/v1/apps/wordpress/:id (TODO(api:T12.03))
-                                                       http.get(/\/api\/v1\/apps\/wordpress\/([^/]+)$/, ({ params }) => {
-                                                         const id = String(params[0] || params.id);
-                                                         const details = mockWordPressDetails[id] || {
-                                                           app_id: id,
-                                                           core_version: "6.7.1",
-                                                           latest_core_version: "6.7.1",
-                                                           maintenance_mode: false,
-                                                           xmlrpc_disabled: true,
-                                                           debug_mode: false,
-                                                           plugins: [],
-                                                           themes: [],
-                                                         };
-                                                         return HttpResponse.json(details);
-                                                       }),
-
-                                                       // POST /api/v1/apps/wordpress/:id/plugins/:slug/update (TODO(api:T12.03))
-                                                       http.post(/\/api\/v1\/apps\/wordpress\/([^/]+)\/plugins\/([^/]+)\/update$/, ({ params }) => {
-                                                         const id = String(params[0]);
-                                                         const slug = String(params[1]);
-                                                         const details = mockWordPressDetails[id];
-                                                         if (details) {
-                                                           const plugin = details.plugins.find((p: any) => p.slug === slug);
-                                                           if (plugin) {
-                                                             plugin.version = plugin.latest_version;
-                                                             plugin.has_update = false;
-                                                           }
-                                                         }
-                                                         return HttpResponse.json({ success: true, slug });
-                                                       }),
-
-                                                       // POST /api/v1/apps/wordpress/:id/plugins/:slug/toggle (TODO(api:T12.03))
-                                                       http.post(/\/api\/v1\/apps\/wordpress\/([^/]+)\/plugins\/([^/]+)\/toggle$/, ({ params }) => {
-                                                         const id = String(params[0]);
-                                                         const slug = String(params[1]);
-                                                         const details = mockWordPressDetails[id];
-                                                         let active = true;
-                                                         if (details) {
-                                                           const plugin = details.plugins.find((p: any) => p.slug === slug);
-                                                           if (plugin) {
-                                                             plugin.active = !plugin.active;
-                                                             active = plugin.active;
-                                                           }
-                                                         }
-                                                         return HttpResponse.json({ success: true, slug, active });
-                                                       }),
-
-                                                       // POST /api/v1/apps/wordpress/:id/maintenance (TODO(api:T12.03))
-                                                       http.post(/\/api\/v1\/apps\/wordpress\/([^/]+)\/maintenance$/, async ({ params, request }) => {
-                                                         const id = String(params[0]);
-                                                         const body = (await request.json().catch(() => ({}))) as any;
-                                                         const details = mockWordPressDetails[id];
-                                                         if (details) {
-                                                           details.maintenance_mode = Boolean(body.enabled);
-                                                         }
-                                                         return HttpResponse.json({ success: true, enabled: body.enabled });
-                                                       }),
-
-                                                       // POST /api/v1/apps/wordpress/:id/staging (TODO(api:T12.03))
-                                                       http.post(/\/api\/v1\/apps\/wordpress\/([^/]+)\/staging$/, ({ params }) => {
-                                                         const id = String(params[0]);
-                                                         const stagingUrl = "https://staging.client-site.com";
-                                                         const details = mockWordPressDetails[id];
-                                                         if (details) {
-                                                           details.staging_url = stagingUrl;
-                                                         }
-                                                         return HttpResponse.json({ success: true, staging_url: stagingUrl });
+                                                       http.post(/\/api\/v1\/client\/apps\/([^/]+)\/wordpress\/harden$/, () => {
+                                                         scan = { checksums_ok: true, config_mode: "0640", debug: false, extra: [], file_edit_allowed: false, missing: [], modified: [], world_writable: 0, xmlrpc_disabled: true };
+                                                         return HttpResponse.json({ state: "done" });
                                                        }),
 ...(() => {
                                                          // Email Handlers (T13.12, T13.05, T13.06, T13.10, T13.11)

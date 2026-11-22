@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@builtpanel/i18n";
 import { apiFetch } from "@builtpanel/api";
+import { listCatalog, listInstalled, installApp, loadWordPress, setMaintenance, updatePlugin, scanWordPress, hardenWordPress } from "./api";
 import { useToast, Button } from "@builtpanel/ui";
 import {
   Boxes,
@@ -23,6 +24,7 @@ export function AppsPage() {
   const [activeTab, setActiveTab] = useState<"installed" | "catalog">("installed");
   const [catalog, setCatalog] = useState<CatalogApp[]>([]);
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([]);
+  const [domainChoices, setDomainChoices] = useState<{ id: string; name: string }[]>([]);
   const [domains, setDomains] = useState<string[]>(["client-site.com", "myblog.net"]);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
@@ -37,19 +39,16 @@ export function AppsPage() {
       setIsLoading(true);
       setIsError(false);
 
-      const [catalogRes, installedRes] = await Promise.all([
-        apiFetch<CatalogApp[]>("/api/v1/apps/catalog"),
-        apiFetch<InstalledApp[]>("/api/v1/apps/installed"),
+      const [catalogRes, installedRes, domainRes] = await Promise.all([
+        listCatalog(),
+        listInstalled(),
+        apiFetch<{ items: { id: string; fqdn: string; unicode: string }[] }>("/api/v1/client/domains").catch(() => ({ items: [] })),
       ]);
-
+      setDomainChoices(domainRes.items.map((d) => ({ id: d.id, name: d.unicode || d.fqdn })));
       setCatalog(catalogRes);
       setInstalledApps(installedRes);
 
-      // Extract unique domains if available
-      const doms = Array.from(new Set(installedRes.map((a) => a.domain)));
-      if (doms.length > 0) {
-        setDomains(doms);
-      }
+      setDomains(domainRes.items.map((d) => d.unicode || d.fqdn));
     } catch {
       setIsError(true);
     } finally {
@@ -63,10 +62,10 @@ export function AppsPage() {
 
   // Handle Install Application
   const handleInstallApp = async (payload: InstallAppPayload): Promise<InstalledApp> => {
-    const res = await apiFetch<{ success: boolean; app: InstalledApp }>("/api/v1/apps/install", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const domain = domainChoices.find((d) => d.name === payload.domain);
+    if (!domain) throw new Error("Pick one of your domains");
+    const app = await installApp({ ...payload, domain_id: domain.id });
+    const res = { app };
 
     setInstalledApps((prev) => [res.app, ...prev]);
 
@@ -81,64 +80,18 @@ export function AppsPage() {
     return res.app;
   };
 
-  // Handle Uninstall Application
-  const handleUninstallApp = async (appId: string) => {
-    await apiFetch(`/api/v1/apps/installed/${appId}`, {
-      method: "DELETE",
-    });
-
-    setInstalledApps((prev) => prev.filter((a) => a.id !== appId));
-
-    toast({
-      title: t("apps.uninstallSuccessTitle", "Application Removed"),
-      description: t("apps.uninstallSuccessDesc", "The application was completely uninstalled."),
-    });
-  };
-
   // Open Manage dialog
   const handleOpenManage = async (app: InstalledApp) => {
     setManagingApp(app);
     if (app.catalog_app_id === "wordpress") {
       try {
-        const details = await apiFetch<WordPressDetails>(`/api/v1/apps/wordpress/${app.id}`);
-        setWpDetails(details);
-      } catch {
-        // Fallback mock details if fetch fails
-        setWpDetails({
-          app_id: app.id,
-          core_version: app.version,
-          latest_core_version: app.latest_version,
-          maintenance_mode: app.status === "maintenance",
-          xmlrpc_disabled: true,
-          debug_mode: false,
-          plugins: [
-            {
-              slug: "woocommerce",
-              name: "WooCommerce",
-              version: "8.5.1",
-              latest_version: "8.6.0",
-              has_update: true,
-              active: true,
-              author: "Automattic",
-            },
-            {
-              slug: "wordpress-seo",
-              name: "Yoast SEO",
-              version: "22.0",
-              latest_version: "22.0",
-              has_update: false,
-              active: true,
-              author: "Team Yoast",
-            },
-          ],
-          themes: [
-            {
-              slug: "twentytwentyfour",
-              name: "Twenty Twenty-Four",
-              version: "1.0",
-              active: true,
-            },
-          ],
+        setWpDetails(await loadWordPress(app.id));
+      } catch (err: any) {
+        setWpDetails(null);
+        toast({
+          title: t("common.error"),
+          description: err?.message || t("common.unknownError"),
+          variant: "destructive",
         });
       }
     }
@@ -146,19 +99,7 @@ export function AppsPage() {
 
   // Update WordPress Plugin (T12.03)
   const handleUpdatePlugin = async (appId: string, slug: string) => {
-    await apiFetch(`/api/v1/apps/wordpress/${appId}/plugins/${slug}/update`, {
-      method: "POST",
-    });
-
-    setWpDetails((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        plugins: prev.plugins.map((p) =>
-          p.slug === slug ? { ...p, version: p.latest_version, has_update: false } : p
-        ),
-      };
-    });
+    setWpDetails(await updatePlugin(appId, slug, wpDetails));
 
     toast({
       title: t("wpManager.pluginUpdatedTitle", "Plugin Updated"),
@@ -166,31 +107,9 @@ export function AppsPage() {
     });
   };
 
-  // Toggle WordPress Plugin
-  const handleTogglePlugin = async (appId: string, slug: string) => {
-    await apiFetch(`/api/v1/apps/wordpress/${appId}/plugins/${slug}/toggle`, {
-      method: "POST",
-    });
-
-    setWpDetails((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        plugins: prev.plugins.map((p) =>
-          p.slug === slug ? { ...p, active: !p.active } : p
-        ),
-      };
-    });
-  };
-
   // Toggle Maintenance Mode
   const handleToggleMaintenance = async (appId: string, enabled: boolean) => {
-    await apiFetch(`/api/v1/apps/wordpress/${appId}/maintenance`, {
-      method: "POST",
-      body: JSON.stringify({ enabled }),
-    });
-
-    setWpDetails((prev) => (prev ? { ...prev, maintenance_mode: enabled } : prev));
+    setWpDetails(await setMaintenance(appId, enabled, wpDetails));
     setInstalledApps((prev) =>
       prev.map((a) => (a.id === appId ? { ...a, status: enabled ? "maintenance" : "running" } : a))
     );
@@ -200,18 +119,13 @@ export function AppsPage() {
     });
   };
 
-  // Clone to Staging
-  const handleCloneStaging = async (appId: string) => {
-    const res = await apiFetch<{ staging_url: string }>(`/api/v1/apps/wordpress/${appId}/staging`, {
-      method: "POST",
-    });
+  const handleScan = async (appId: string) => {
+    setWpDetails(await scanWordPress(appId, wpDetails));
+  };
 
-    setWpDetails((prev) => (prev ? { ...prev, staging_url: res.staging_url } : prev));
-
-    toast({
-      title: t("wpManager.stagingCreatedTitle", "Staging Environment Ready"),
-      description: t("wpManager.stagingCreatedDesc", "Clone was created at {{url}}", { url: res.staging_url }),
-    });
+  const handleHarden = async (appId: string) => {
+    setWpDetails(await hardenWordPress(appId, wpDetails));
+    toast({ title: t("wpManager.hardened", "The safety settings were put right") });
   };
 
   if (isLoading) {
@@ -303,7 +217,6 @@ export function AppsPage() {
         <InstalledAppsTable
           apps={installedApps}
           onOpenManage={handleOpenManage}
-          onUninstall={handleUninstallApp}
         />
       ) : (
         <CatalogGrid
@@ -334,9 +247,9 @@ export function AppsPage() {
           setWpDetails(null);
         }}
         onUpdatePlugin={handleUpdatePlugin}
-        onTogglePlugin={handleTogglePlugin}
         onToggleMaintenance={handleToggleMaintenance}
-        onCloneStaging={handleCloneStaging}
+        onScan={handleScan}
+        onHarden={handleHarden}
       />
     </div>
   );
