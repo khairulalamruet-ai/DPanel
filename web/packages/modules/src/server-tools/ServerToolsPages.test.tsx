@@ -93,9 +93,32 @@ describe("Server Tools & Maintenance UI (T10.15)", () => {
 
   it("renders AdminServerToolsPage and displays server health overview and cards", async () => {
     mockApiFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/v1/admin/server/overview")) return Promise.resolve(mockOverview);
-      if (url.includes("/api/v1/admin/server/ssh-config")) return Promise.resolve(mockSshConfig);
-      if (url.includes("/api/v1/admin/server/audit-events")) return Promise.resolve(mockAuditEvents);
+      if (url === "/api/v1/admin/nodes") {
+        return Promise.resolve({ items: [{ id: "node-1", name: "node-1", status: "online" }] });
+      }
+      if (url === "/api/v1/admin/nodes/node-1/server") {
+        return Promise.resolve({
+          hostname: mockOverview.hostname,
+          os: mockOverview.os,
+          kernel: mockOverview.kernel,
+          uptime_seconds: mockOverview.uptime_seconds,
+          timezone: mockOverview.timezone,
+          memory_total_bytes: mockOverview.memory.total_mb * 1048576,
+          memory_available_bytes: mockOverview.memory.available_mb * 1048576,
+          swap_total_bytes: mockOverview.swap.total_mb * 1048576,
+          swap_used_bytes: mockOverview.swap.used_mb * 1048576,
+          ssh: [
+            { name: "Port", value: "22" },
+            { name: "PermitRootLogin", value: "no" },
+            { name: "PasswordAuthentication", value: "no" },
+          ],
+        });
+      }
+      if (url.startsWith("/api/v1/admin/audit-logs")) {
+        return Promise.resolve({
+          items: mockAuditEvents.map((e) => ({ id: e.id, action: e.action, at: e.created_at, outcome: "success", metadata: {} })),
+        });
+      }
       return Promise.resolve({});
     });
 

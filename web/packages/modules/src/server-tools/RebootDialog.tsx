@@ -15,6 +15,8 @@ interface RebootDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   nodeHostname: string;
+  /** What has to be typed to confirm: the backend wants the node's name as it is. */
+  confirmWord?: string;
   onConfirm: (sudoPassword: string) => Promise<void>;
 }
 
@@ -22,6 +24,7 @@ export function RebootDialog({
   open,
   onOpenChange,
   nodeHostname,
+  confirmWord = "REBOOT",
   onConfirm,
 }: RebootDialogProps) {
   const { t } = useTranslation();
@@ -36,7 +39,7 @@ export function RebootDialog({
     }
   }, [open]);
 
-  const isValid = confirmText.trim().toUpperCase() === "REBOOT" && sudoPassword.trim().length > 0;
+  const isValid = confirmText.trim() === confirmWord && sudoPassword.trim().length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +80,7 @@ export function RebootDialog({
                 data-testid="input-reboot-confirm"
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
-                placeholder="REBOOT"
+                placeholder={confirmWord}
                 className="mt-1 font-mono text-sm uppercase"
                 autoComplete="off"
               />
