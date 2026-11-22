@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { apiFetch, getCsrfToken } from "@builtpanel/api";
+import { apiFetch } from "@builtpanel/api";
+import { retryOperation, toOperation } from "./api";
 import type { OperationItem } from "./types";
 
 export interface UseOperationOptions {
@@ -27,7 +28,7 @@ export function useOperation(opId: string | null | undefined, options: UseOperat
   const fetchOperation = useCallback(async () => {
     if (!opId) return null;
     try {
-      const data = await apiFetch<OperationItem>(`/api/v1/admin/operations/${opId}`);
+      const data = toOperation(await apiFetch<Parameters<typeof toOperation>[0]>(`/api/v1/admin/operations/${opId}`));
       setOperation(data);
       return data;
     } catch (err) {
@@ -42,17 +43,9 @@ export function useOperation(opId: string | null | undefined, options: UseOperat
     if (!opId) return null;
     try {
       setIsLoading(true);
-      const res = await apiFetch<{ success: boolean; operation: OperationItem }>(
-        `/api/v1/admin/operations/${opId}/retry`,
-        {
-          method: "POST",
-          headers: {
-            "X-CSRF-Token": getCsrfToken() || "",
-          },
-        }
-      );
-      setOperation(res.operation);
-      return res.operation;
+      const operation = await retryOperation(opId);
+      setOperation(operation);
+      return operation;
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setError(e);

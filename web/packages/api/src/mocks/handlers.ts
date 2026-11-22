@@ -2057,6 +2057,26 @@ const mockMe = {
   csrf_token: "mock-csrf-token-admin-12345",
 };
 
+// An operation as the backend's `OperationView` has it.
+const operationView = (o: (typeof mockOperations)[number]) => ({
+  id: o.id,
+  idempotency_key: o.idempotency_key,
+  kind: o.op_type,
+  node_id: o.node_id,
+  tenant_id: o.tenant_id ?? null,
+  status: o.status,
+  attempts: o.retries_count + 1,
+  max_attempts: 5,
+  payload: o.payload,
+  output: o.output ?? null,
+  error: o.error ? { code: o.error.code, message: o.error.message, retryable: true } : null,
+  created_at: o.created_at,
+  dispatched_at: null,
+  finished_at: o.status === "succeeded" || o.status === "failed" ? o.updated_at : null,
+  next_attempt_at: o.updated_at,
+  expires_at: o.updated_at,
+});
+
 export const handlers = [
   // Health
   http.get(/\/api\/v1\/public\/health$/, () => {
@@ -3026,71 +3046,60 @@ export const handlers = [
       }),
     ];
   })(),
-  // Operations Ledger (T02.10, T02.11, T02.17) TODO(api:T02.17)
-  // List operations (GET /api/v1/admin/operations)
+  // GET /api/v1/admin/operations?status&kind&node_id
   http.get(/\/api\/v1\/admin\/operations$/, ({ request }) => {
     const url = new URL(request.url);
     const status = url.searchParams.get("status");
-    const opType = url.searchParams.get("op_type");
+    const kind = url.searchParams.get("kind");
     const nodeId = url.searchParams.get("node_id");
 
     let items = [...mockOperations];
-    if (status && status !== "all") {
-      items = items.filter((op) => op.status === status);
-    }
-    if (opType) {
-      items = items.filter((op) => op.op_type.toLowerCase().includes(opType.toLowerCase()));
-    }
-    if (nodeId) {
-      items = items.filter((op) => op.node_id === nodeId || op.node_name === nodeId);
-    }
+    if (status) items = items.filter((op) => op.status === status);
+    if (kind) items = items.filter((op) => op.op_type.toLowerCase().includes(kind.toLowerCase()));
+    if (nodeId) items = items.filter((op) => op.node_id === nodeId || op.node_name === nodeId);
 
-    return HttpResponse.json({
-      items,
-      total: items.length,
-    });
+    return HttpResponse.json({ items: items.map(operationView) });
   }),
 
-  // Get single operation (GET /api/v1/admin/operations/:id)
+  // GET /api/v1/admin/operations/:id
   http.get(/\/api\/v1\/admin\/operations\/([^/]+)$/, ({ params }) => {
     const id = (params.id || (params as any)[0] || (params as any)["0"]) as string;
     const op = mockOperations.find((o) => o.id === id);
-    if (op) {
-      return HttpResponse.json(op);
-    }
-    // Fallback for mock tenant creation or other generic mock operations
+    if (op) return HttpResponse.json(operationView(op));
+    // Operations other mocks make (a tenant being set up, ...)
     return HttpResponse.json({
       id,
+      idempotency_key: id,
+      kind: "create_tenant",
+      node_id: "node_1",
       status: "succeeded",
-      op_type: "GenericOperation",
-      action: "tenant.create",
-      progress_pct: 100,
-      container_status: "running",
-      completed_at: new Date().toISOString(),
+      attempts: 1,
+      max_attempts: 5,
+      payload: {},
+      output: null,
+      error: null,
+      created_at: new Date().toISOString(),
+      dispatched_at: null,
+      finished_at: new Date().toISOString(),
+      next_attempt_at: new Date().toISOString(),
+      expires_at: new Date().toISOString(),
     });
   }),
 
-  // Retry operation (POST /api/v1/admin/operations/:id/retry)
+  // POST /api/v1/admin/operations/:id/retry (202)
   http.post(/\/api\/v1\/admin\/operations\/([^/]+)\/retry$/, ({ params }) => {
     const { 0: id } = params as any;
     const opIndex = mockOperations.findIndex((o) => o.id === id);
-    if (opIndex === -1) {
-      return HttpResponse.json({ error: "not_found", message: "Operation not found" }, { status: 404 });
-    }
-
+    if (opIndex === -1) return problem(404, "not_found", "No such operation");
     const updated = {
       ...mockOperations[opIndex],
-      status: "pending",
+      status: "pending" as const,
       retries_count: mockOperations[opIndex].retries_count + 1,
       error: null,
       updated_at: new Date().toISOString(),
     };
     mockOperations[opIndex] = updated;
-
-    return HttpResponse.json({
-      success: true,
-      operation: updated,
-    });
+    return HttpResponse.json(operationView(updated), { status: 202 });
   }),
 
   // Apply-to-all Operation across cluster nodes (POST /api/v1/admin/cluster/apply-all) TODO(api:T16.06)

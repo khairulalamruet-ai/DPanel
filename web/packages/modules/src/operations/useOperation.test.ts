@@ -17,26 +17,26 @@ describe("useOperation hook", () => {
           return {
             id: "op_123",
             idempotency_key: "idemp_123",
-            op_type: "Ping",
+            kind: "ping",
             node_id: "node_1",
             status: "pending",
-            retries_count: 0,
+            attempts: 1,
             payload: {},
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            
           };
         }
         return {
           id: "op_123",
           idempotency_key: "idemp_123",
-          op_type: "Ping",
+          kind: "ping",
           node_id: "node_1",
           status: "succeeded",
-          retries_count: 0,
+          attempts: 1,
           payload: {},
           output: { pong: true },
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          
         };
       }
       return {};
@@ -63,32 +63,28 @@ describe("useOperation hook", () => {
     vi.spyOn(builtpanelApi, "apiFetch").mockImplementation(async (url: string, opts?: any) => {
       if (opts?.method === "POST" && url.includes("/retry")) {
         return {
-          success: true,
-          operation: {
-            id: "op_failed",
-            idempotency_key: "idemp_failed",
-            op_type: "PullImage",
-            node_id: "node_1",
-            status: "pending",
-            retries_count: 1,
-            payload: {},
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
+          id: "op_failed",
+          idempotency_key: "idemp_failed",
+          kind: "pull_image",
+          node_id: "node_1",
+          status: "pending",
+          attempts: 2,
+          payload: {},
+          created_at: new Date().toISOString(),
         };
       }
       if (url.includes("/api/v1/admin/operations/op_failed")) {
         return {
           id: "op_failed",
           idempotency_key: "idemp_failed",
-          op_type: "PullImage",
+          kind: "pull_image",
           node_id: "node_1",
           status: "failed",
-          retries_count: 0,
+          attempts: 1,
           payload: {},
           error: { code: "timeout", message: "timed out" },
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          
         };
       }
       return {};
