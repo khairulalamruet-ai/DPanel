@@ -9,22 +9,22 @@ import {
   Input,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { createFtp } from "./api";
 import { UserPlus, RefreshCw } from "lucide-react";
 import { useTranslation } from "@builtpanel/i18n";
-import { CreateFtpAccountPayload } from "./types";
 
 interface CreateFtpAccountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tenantUsername?: string;
+  /** What every account name starts with (`alice_`). */
+  prefix?: string;
   onCreated: () => void;
 }
 
 export function CreateFtpAccountDialog({
   open,
   onOpenChange,
-  tenantUsername = "demo",
+  prefix = "",
   onCreated,
 }: CreateFtpAccountDialogProps) {
   const { t } = useTranslation();
@@ -32,7 +32,7 @@ export function CreateFtpAccountDialog({
 
   const [usernameSuffix, setUsernameSuffix] = useState("");
   const [password, setPassword] = useState("");
-  const [homeDir, setHomeDir] = useState(`/home/${tenantUsername}/public_html`);
+  const [homeDir, setHomeDir] = useState("");
   const [quotaUnlimited, setQuotaUnlimited] = useState(true);
   const [quotaMb, setQuotaMb] = useState<number>(500);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,18 +51,15 @@ export function CreateFtpAccountDialog({
     const cleanSuffix = usernameSuffix.trim().toLowerCase();
     if (!cleanSuffix || !password) return;
 
-    const fullUsername = `${tenantUsername}_${cleanSuffix}`;
+    const fullUsername = `${prefix}${cleanSuffix}`;
 
     try {
       setIsSubmitting(true);
-      await apiFetch("/api/v1/client/ftp/accounts", {
-        method: "POST",
-        body: JSON.stringify({
-          username: fullUsername,
-          password,
-          home_directory: homeDir.trim(),
-          quota_mb: quotaUnlimited ? -1 : Number(quotaMb),
-        } as CreateFtpAccountPayload),
+      await createFtp({
+        name: fullUsername,
+        password,
+        home: homeDir.trim().replace(/^\/+/, ""),
+        quotaMb: quotaUnlimited ? null : Number(quotaMb),
       });
 
       toast({
@@ -107,7 +104,7 @@ export function CreateFtpAccountDialog({
             </label>
             <div className="flex items-center">
               <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm font-mono h-9">
-                {tenantUsername}_
+                {prefix}
               </span>
               <Input
                 value={usernameSuffix}
@@ -119,7 +116,7 @@ export function CreateFtpAccountDialog({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {t("ftp.fullUsername")}: {tenantUsername}_{usernameSuffix || "..."}
+              {t("ftp.fullUsername")}: {prefix}{usernameSuffix || "..."}
             </p>
           </div>
 
@@ -157,7 +154,7 @@ export function CreateFtpAccountDialog({
             <Input
               value={homeDir}
               onChange={(e) => setHomeDir(e.target.value)}
-              placeholder={`/home/${tenantUsername}/public_html`}
+              placeholder="public_html"
               className="font-mono text-xs"
               data-testid="input-ftp-homedir"
             />

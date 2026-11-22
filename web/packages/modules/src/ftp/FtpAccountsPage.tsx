@@ -14,7 +14,7 @@ import {
   TableCell,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { listFtp, deleteFtp } from "./api";
 import { useTranslation } from "@builtpanel/i18n";
 import {
   UserPlus,
@@ -38,6 +38,7 @@ export function FtpAccountsPage() {
 
   const [accounts, setAccounts] = useState<FtpAccount[]>([]);
   const [connectionInfo, setConnectionInfo] = useState<FtpConnectionInfo | null>(null);
+  const [prefix, setPrefix] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -49,12 +50,10 @@ export function FtpAccountsPage() {
   const fetchFtpData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [accsRes, infoRes] = await Promise.all([
-        apiFetch<FtpAccount[]>("/api/v1/client/ftp/accounts"),
-        apiFetch<FtpConnectionInfo>("/api/v1/client/ftp/connection-info"),
-      ]);
-      setAccounts(accsRes);
-      setConnectionInfo(infoRes);
+      const res = await listFtp();
+      setAccounts(res.accounts);
+      setConnectionInfo(res.info);
+      setPrefix(res.prefix);
     } catch (err: any) {
       toast({
         title: t("common.error"),
@@ -76,9 +75,7 @@ export function FtpAccountsPage() {
     }
 
     try {
-      await apiFetch(`/api/v1/client/ftp/accounts/${encodeURIComponent(account.id)}`, {
-        method: "DELETE",
-      });
+      await deleteFtp(account.id);
 
       toast({
         title: t("common.success"),
@@ -173,7 +170,7 @@ export function FtpAccountsPage() {
                 <TableHead>{t("ftp.homeDirectory")}</TableHead>
                 <TableHead className="w-48">{t("ftp.quota")}</TableHead>
                 <TableHead className="w-24 text-center">{t("common.status")}</TableHead>
-                <TableHead className="w-32">{t("ftp.created")}</TableHead>
+                <TableHead className="w-40">{t("ftp.access")}</TableHead>
                 <TableHead className="w-36 text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -241,16 +238,16 @@ export function FtpAccountsPage() {
 
                       <TableCell className="text-center">
                         <Badge
-                          variant={acc.status === "active" ? "success" : "secondary"}
+                          variant={acc.status === "active" ? "success" : acc.status === "failed" ? "destructive" : "secondary"}
                           className="text-xs"
                           data-testid={`ftp-status-${acc.username}`}
                         >
-                          {acc.status === "active" ? t("common.active") : t("common.suspended")}
+                          {acc.status === "active" ? t("common.active") : acc.status === "suspended" ? t("common.suspended") : acc.status}
                         </Badge>
                       </TableCell>
 
                       <TableCell className="text-xs text-muted-foreground">
-                        {new Date(acc.created_at).toLocaleDateString()}
+                        {acc.access}
                       </TableCell>
 
                       <TableCell className="text-right">
@@ -302,7 +299,7 @@ export function FtpAccountsPage() {
       <CreateFtpAccountDialog
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        tenantUsername="demo"
+        prefix={prefix}
         onCreated={fetchFtpData}
       />
 

@@ -9,10 +9,10 @@ import {
   Input,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { changeFtpPassword } from "./api";
 import { Key, RefreshCw } from "lucide-react";
 import { useTranslation } from "@builtpanel/i18n";
-import { FtpAccount, ChangeFtpPasswordPayload } from "./types";
+import { FtpAccount } from "./types";
 
 interface ChangeFtpPasswordDialogProps {
   open: boolean;
@@ -48,12 +48,7 @@ export function ChangeFtpPasswordDialog({
 
     try {
       setIsSubmitting(true);
-      await apiFetch(`/api/v1/client/ftp/accounts/${encodeURIComponent(account.id)}/password`, {
-        method: "PUT",
-        body: JSON.stringify({
-          password,
-        } as ChangeFtpPasswordPayload),
-      });
+      await changeFtpPassword(account.id, password);
 
       toast({
         title: t("common.success"),

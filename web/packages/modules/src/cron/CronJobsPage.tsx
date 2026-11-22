@@ -15,7 +15,6 @@ import {
   TableCell,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
 import { useTranslation } from "@builtpanel/i18n";
 import {
   Clock,
@@ -31,7 +30,8 @@ import {
   Calendar,
   Layers,
 } from "lucide-react";
-import { CronJob, RunCronResult } from "./types";
+import { CronJob } from "./types";
+import { listCronJobs, setCronEnabled, runCronJob, deleteCronJob } from "./api";
 import { CreateCronJobDialog } from "./CreateCronJobDialog";
 import { CronOutputModal } from "./CronOutputModal";
 
@@ -52,7 +52,7 @@ export function CronJobsPage() {
   const fetchJobs = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<CronJob[]>("/api/v1/client/cron");
+      const { jobs: res } = await listCronJobs();
       setJobs(res);
       // update selected job if open
       if (selectedJobForOutput) {
@@ -76,9 +76,7 @@ export function CronJobsPage() {
 
   const handleToggleJob = async (job: CronJob) => {
     try {
-      const updated = await apiFetch<CronJob>(`/api/v1/client/cron/${encodeURIComponent(job.id)}/toggle`, {
-        method: "PUT",
-      });
+      const updated = await setCronEnabled(job, !job.enabled);
       toast({
         title: t("common.success"),
         description: updated.enabled
@@ -98,19 +96,16 @@ export function CronJobsPage() {
   const handleRunNow = async (job: CronJob) => {
     try {
       setRunningJobId(job.id);
-      const result = await apiFetch<RunCronResult>(`/api/v1/client/cron/${encodeURIComponent(job.id)}/run`, {
-        method: "POST",
-      });
+      await runCronJob(job.id);
 
       toast({
-        title: result.status === "success" ? t("common.success") : t("common.error"),
-        description:
-          result.status === "success"
-            ? t("cron.jobRunSuccess", { duration: result.duration_ms })
-            : t("cron.jobRunFailed", { code: result.exit_code }),
-        variant: result.status === "success" ? "default" : "destructive",
+        title: t("common.success"),
+        description: t("cron.jobRunQueued"),
       });
 
+      // The result shows as the job's last run within about a minute.
+      setTimeout(() => void fetchJobs(), 5000);
+      setTimeout(() => void fetchJobs(), 30000);
       await fetchJobs();
     } catch (err: any) {
       toast({
@@ -127,9 +122,7 @@ export function CronJobsPage() {
     if (!window.confirm(t("cron.confirmDelete", { name: job.name }))) return;
 
     try {
-      await apiFetch(`/api/v1/client/cron/${encodeURIComponent(job.id)}`, {
-        method: "DELETE",
-      });
+      await deleteCronJob(job.id);
       toast({
         title: t("common.success"),
         description: t("cron.jobDeletedSuccess"),
@@ -155,7 +148,7 @@ export function CronJobsPage() {
   const failedJobs = jobs.filter((j) => j.last_status === "failed" || (j.last_exit_code != null && j.last_exit_code > 0)).length;
   const nextScheduled = jobs
     .filter((j) => j.enabled && j.next_run_at)
-    .sort((a, b) => new Date(a.next_run_at).getTime() - new Date(b.next_run_at).getTime())[0];
+    .sort((a, b) => new Date(a.next_run_at as string).getTime() - new Date(b.next_run_at as string).getTime())[0];
 
   const filteredJobs = jobs.filter((j) => {
     if (!searchQuery.trim()) return true;
@@ -163,7 +156,6 @@ export function CronJobsPage() {
     return (
       j.name.toLowerCase().includes(q) ||
       j.command.toLowerCase().includes(q) ||
-      (j.description && j.description.toLowerCase().includes(q)) ||
       j.schedule.includes(q)
     );
   });
@@ -267,7 +259,7 @@ export function CronJobsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-sm font-semibold truncate" data-testid="metric-next-cron-time">
-              {nextScheduled ? new Date(nextScheduled.next_run_at).toLocaleTimeString() : "—"}
+              {nextScheduled ? new Date(nextScheduled.next_run_at as string).toLocaleTimeString() : "—"}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 truncate" data-testid="metric-next-cron-name">
               {nextScheduled ? nextScheduled.name : t("cron.noneScheduled")}

@@ -1803,6 +1803,7 @@
     "noDirectoriesFound": "No directory usage metrics available"
   },
   "ftp": {
+    "access": "Access",
     "nav": "FTP Accounts",
     "title": "FTP Accounts",
     "description": "Manage secure FTPS/SFTP accounts, home directories, and quota limits",
@@ -2005,6 +2006,7 @@
     "viewOutput": "Output",
     "jobEnabledSuccess": "Cron job enabled",
     "jobDisabledSuccess": "Cron job disabled",
+    "jobRunQueued": "Cron job queued; its result shows as the last run within a minute",
     "jobRunSuccess": "Cron job executed successfully in {{duration}} ms",
     "jobRunFailed": "Cron job failed with exit code {{code}}",
     "confirmDelete": "Are you sure you want to delete cron job \"{{name}}\"?",

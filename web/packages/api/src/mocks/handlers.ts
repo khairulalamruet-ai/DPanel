@@ -1,5 +1,12 @@
 import { http, HttpResponse } from "msw";
 
+/** An error answer in the backend's problem-details shape (`code` is the stable machine code). */
+export const problem = (status: number, code: string, detail: string) =>
+  HttpResponse.json(
+    { type: "about:blank", title: detail, status, detail, code },
+    { status, headers: { "Content-Type": "application/problem+json" } },
+  );
+
 /**
  * MSW Mock Handlers
  * Real backend paths from repo-root openapi.json.
@@ -6343,121 +6350,112 @@ export const handlers = [
       // TODO(api:T08.12): Real FTPS account management endpoints
       // ===================================
   ...(() => {
+        // The shape of `FtpAccountView` in openapi.json.
         interface MockFtpAccount {
           id: string;
-          username: string;
-          password?: string;
-          home_directory: string;
-          quota_bytes: number;
-          quota_formatted: string;
-          used_bytes: number;
-          used_formatted: string;
-          status: "active" | "suspended";
-          created_at: string;
+          name: string;
+          home: string;
+          quota_mb: number | null;
+          enabled: boolean;
+          status: "pending" | "ready" | "failed" | "deleting";
+          sftp: boolean;
+          ftps: boolean;
+          ftp_plain: boolean;
+          read_only: boolean;
         }
 
         const mockFtpAccounts: MockFtpAccount[] = [
           {
             id: "ftp_01",
-            username: "demo_deploy",
-            home_directory: "/home/demo/public_html",
-            quota_bytes: 1073741824,
-            quota_formatted: "1.0 GB",
-            used_bytes: 125829120,
-            used_formatted: "120.0 MB",
-            status: "active",
-            created_at: new Date(Date.now() - 86400 * 7 * 1000).toISOString(),
+            name: "demo_deploy",
+            home: "public_html",
+            quota_mb: 1024,
+            enabled: true,
+            status: "ready",
+            sftp: true,
+            ftps: true,
+            ftp_plain: false,
+            read_only: false,
           },
           {
             id: "ftp_02",
-            username: "demo_backup",
-            home_directory: "/home/demo/backups",
-            quota_bytes: -1,
-            quota_formatted: "Unlimited",
-            used_bytes: 78643200,
-            used_formatted: "75.0 MB",
-            status: "active",
-            created_at: new Date(Date.now() - 86400 * 14 * 1000).toISOString(),
+            name: "demo_backup",
+            home: "backups",
+            quota_mb: null,
+            enabled: true,
+            status: "ready",
+            sftp: true,
+            ftps: true,
+            ftp_plain: false,
+            read_only: false,
           },
         ];
 
         return [
-          // GET /api/v1/client/ftp/connection-info
-          http.get(/\/api\/v1\/client\/ftp\/connection-info$/, () => {
+          // GET /api/v1/client/ftp-accounts
+          http.get(/\/api\/v1\/client\/ftp-accounts$/, () => {
             return HttpResponse.json({
+              items: mockFtpAccounts,
               host: "ftp.demo.builtpanel.test",
-              port: 21,
-              protocol: "FTPS (FTP over TLS/SSL)",
-              encryption: "Explicit TLS",
+              ftp_port: 21,
               sftp_port: 2222,
+              prefix: "demo_",
+              limit: 5,
+              plain_allowed: false,
             });
           }),
 
-          // GET /api/v1/client/ftp/accounts
-          http.get(/\/api\/v1\/client\/ftp\/accounts$/, () => {
-            return HttpResponse.json(mockFtpAccounts);
-          }),
-
-          // POST /api/v1/client/ftp/accounts
-          http.post(/\/api\/v1\/client\/ftp\/accounts$/, async ({ request }) => {
+          // POST /api/v1/client/ftp-accounts
+          http.post(/\/api\/v1\/client\/ftp-accounts$/, async ({ request }) => {
             const body = (await request.json()) as {
-              username: string;
-              password: string;
-              home_directory: string;
-              quota_mb: number;
+              name: string;
+              password?: string;
+              home?: string;
+              quota_mb?: number;
             };
-
-            const quotaBytes = body.quota_mb === -1 ? -1 : body.quota_mb * 1024 * 1024;
-            const quotaFormatted = body.quota_mb === -1 ? "Unlimited" : `${body.quota_mb}.0 MB`;
-
-            const newAcc: MockFtpAccount = {
+            const name = body.name.startsWith("demo_") ? body.name : `demo_${body.name}`;
+            if (mockFtpAccounts.some((a) => a.name === name)) {
+              return problem(409, "name_taken", "An account with this name exists");
+            }
+            const account: MockFtpAccount = {
               id: `ftp_${Date.now()}`,
-              username: body.username,
-              password: body.password,
-              home_directory: body.home_directory,
-              quota_bytes: quotaBytes,
-              quota_formatted: quotaFormatted,
-              used_bytes: 0,
-              used_formatted: "0 B",
-              status: "active",
-              created_at: new Date().toISOString(),
+              name,
+              home: body.home ?? "",
+              quota_mb: body.quota_mb ?? null,
+              enabled: true,
+              status: "ready",
+              sftp: true,
+              ftps: true,
+              ftp_plain: false,
+              read_only: false,
             };
-
-            mockFtpAccounts.push(newAcc);
-            return HttpResponse.json(newAcc, { status: 201 });
+            mockFtpAccounts.push(account);
+            return HttpResponse.json({ account, password: body.password ? null : "Generated-Once-1" }, { status: 201 });
           }),
 
-          // PUT /api/v1/client/ftp/accounts/:id/password
-          http.put(/\/api\/v1\/client\/ftp\/accounts\/([^/]+)\/password$/, async ({ params, request }) => {
-            const id = (params[0] || params.id) as string;
-            const body = (await request.json()) as { password: string };
-            const found = mockFtpAccounts.find((a) => a.id === id);
-            if (found) {
-              found.password = body.password;
-            }
-            return HttpResponse.json({ success: true });
+          // PUT /api/v1/client/ftp-accounts/:id/password
+          http.put(/\/api\/v1\/client\/ftp-accounts\/([^/]+)\/password$/, ({ params }) => {
+            const found = mockFtpAccounts.find((a) => a.id === ((params[0] || params.id) as string));
+            if (!found) return problem(404, "not_found", "No such account");
+            return HttpResponse.json({ account: found, password: null });
           }),
 
-          // PUT /api/v1/client/ftp/accounts/:id/quota
-          http.put(/\/api\/v1\/client\/ftp\/accounts\/([^/]+)\/quota$/, async ({ params, request }) => {
-            const id = (params[0] || params.id) as string;
-            const body = (await request.json()) as { quota_mb: number };
-            const found = mockFtpAccounts.find((a) => a.id === id);
-            if (found) {
-              found.quota_bytes = body.quota_mb === -1 ? -1 : body.quota_mb * 1024 * 1024;
-              found.quota_formatted = body.quota_mb === -1 ? "Unlimited" : `${body.quota_mb}.0 MB`;
-            }
-            return HttpResponse.json({ success: true, account: found });
+          // PUT /api/v1/client/ftp-accounts/:id (quota: 0 removes the limit)
+          http.put(/\/api\/v1\/client\/ftp-accounts\/([^/]+)$/, async ({ params, request }) => {
+            const found = mockFtpAccounts.find((a) => a.id === ((params[0] || params.id) as string));
+            if (!found) return problem(404, "not_found", "No such account");
+            const body = (await request.json()) as { quota_mb?: number; enabled?: boolean };
+            if (body.quota_mb !== undefined) found.quota_mb = body.quota_mb === 0 ? null : body.quota_mb;
+            if (body.enabled !== undefined) found.enabled = body.enabled;
+            return HttpResponse.json(found);
           }),
 
-          // DELETE /api/v1/client/ftp/accounts/:id
-          http.delete(/\/api\/v1\/client\/ftp\/accounts\/([^/]+)$/, ({ params }) => {
-            const id = (params[0] || params.id) as string;
-            const idx = mockFtpAccounts.findIndex((a) => a.id === id);
-            if (idx !== -1) {
-              mockFtpAccounts.splice(idx, 1);
-            }
-            return HttpResponse.json({ success: true });
+          // DELETE /api/v1/client/ftp-accounts/:id (202: removed when the node is done)
+          http.delete(/\/api\/v1\/client\/ftp-accounts\/([^/]+)$/, ({ params }) => {
+            const idx = mockFtpAccounts.findIndex((a) => a.id === ((params[0] || params.id) as string));
+            if (idx === -1) return problem(404, "not_found", "No such account");
+            mockFtpAccounts.splice(idx, 1);
+            return new HttpResponse(null, { status: 202 });
           }),
 
           // ===================================          // Backup & Restore: T09.09 Handlers
@@ -6872,22 +6870,18 @@ export const handlers = [
                   // ===================================                  // CRON JOBS (TODO(api:T10.01, T10.02))
                   // ===================================
   ...(() => {
+                    // The shape of `JobView` in openapi.json.
                     interface MockCronJob {
                       id: string;
                       name: string;
                       command: string;
                       schedule: string;
-                      schedule_human?: string;
                       enabled: boolean;
-                      description?: string;
                       timeout_seconds: number;
-                      created_at: string;
                       last_run_at: string | null;
-                      next_run_at: string;
-                      last_status: "success" | "failed" | "running" | "idle";
+                      last_status: "ok" | "failed" | "timeout" | "skipped" | null;
                       last_exit_code: number | null;
                       last_output: string | null;
-                      last_duration_ms: number | null;
                     }
 
                     const mockCronJobs: MockCronJob[] = [
@@ -6896,78 +6890,56 @@ export const handlers = [
                         name: "Laravel Artisan Scheduler",
                         command: "php /home/demo/artisan schedule:run",
                         schedule: "0 * * * *",
-                        schedule_human: "Hourly",
                         enabled: true,
-                        description: "Dispatches scheduled artisan commands, notifications and cache pruning",
                         timeout_seconds: 300,
-                        created_at: new Date(Date.now() - 86400 * 20 * 1000).toISOString(),
                         last_run_at: new Date(Date.now() - 1800 * 1000).toISOString(),
-                        next_run_at: new Date(Date.now() + 1800 * 1000).toISOString(),
-                        last_status: "success",
+                        last_status: "ok",
                         last_exit_code: 0,
                         last_output: "Running scheduled command: 'cache:prune-stale-tags' [OK]\nRunning scheduled command: 'queue:restart' [OK]\nExecution completed with status 0.",
-                        last_duration_ms: 320,
                       },
                       {
                         id: "cron_02",
                         name: "Daily Database Optimization",
                         command: "mariadb-dump-optimize --user=demo --silent",
                         schedule: "0 2 * * *",
-                        schedule_human: "Daily at 02:00 AM",
                         enabled: true,
-                        description: "Nightly OPTIMIZE TABLE on all MySQL databases",
                         timeout_seconds: 600,
-                        created_at: new Date(Date.now() - 86400 * 10 * 1000).toISOString(),
                         last_run_at: new Date(Date.now() - 25200 * 1000).toISOString(),
-                        next_run_at: new Date(Date.now() + 61200 * 1000).toISOString(),
-                        last_status: "success",
+                        last_status: "ok",
                         last_exit_code: 0,
                         last_output: "[2026-11-13 02:00:01] Optimizing 2 databases for user 'demo'...\nTable demo_wordpress.wp_posts: OK\nTable demo_wordpress.wp_postmeta: OK\nOptimization finished.",
-                        last_duration_ms: 1850,
                       },
                       {
                         id: "cron_03",
                         name: "External Webhook Sync",
                         command: "curl -f -s https://api.partner.example/v1/webhooks/poll",
                         schedule: "*/15 * * * *",
-                        schedule_human: "Every 15 minutes",
                         enabled: false,
-                        description: "Polls partner API for queued billing callbacks",
                         timeout_seconds: 60,
-                        created_at: new Date(Date.now() - 86400 * 5 * 1000).toISOString(),
                         last_run_at: new Date(Date.now() - 86400 * 1000).toISOString(),
-                        next_run_at: new Date(Date.now() + 900 * 1000).toISOString(),
                         last_status: "failed",
                         last_exit_code: 22,
                         last_output: "curl: (22) The requested URL returned error: 503 Service Unavailable\nSync aborted with exit code 22.",
-                        last_duration_ms: 5040,
                       },
                     ];
 
                     return [
-                      // GET /api/v1/client/cron (TODO(api:T10.01))
-                      http.get(/\/api\/v1\/client\/cron$/, () => {
-                        return HttpResponse.json(mockCronJobs);
+                      // GET /api/v1/client/cron-jobs
+                      http.get(/\/api\/v1\/client\/cron-jobs$/, () => {
+                        return HttpResponse.json({ items: mockCronJobs, limit: 10 });
                       }),
 
-                      // POST /api/v1/client/cron (TODO(api:T10.01))
-                      http.post(/\/api\/v1\/client\/cron$/, async ({ request }) => {
+                      // POST /api/v1/client/cron-jobs
+                      http.post(/\/api\/v1\/client\/cron-jobs$/, async ({ request }) => {
                         const body = (await request.json()) as any;
-                        const schedule = (body.schedule || "").trim();
-                        const parts = schedule.split(/\s+/);
+                        const parts = String(body.schedule || "").trim().split(/\s+/);
 
-                        // T10.01 DoD: * * * * * or intervals < 5 mins are rejected
-                        if (
-                          parts[0] === "*" ||
-                          parts[0] === "*/1" ||
-                          parts[0] === "*/2" ||
-                          parts[0] === "*/3" ||
-                          parts[0] === "*/4"
-                        ) {
-                          return HttpResponse.json(
-                            { error: "Execution interval cannot be less than 5 minutes" },
-                            { status: 400 }
-                          );
+                        // The backend refuses schedules that fire more often than every 5 minutes.
+                        if (["*", "*/1", "*/2", "*/3", "*/4"].includes(parts[0])) {
+                          return problem(422, "too_often", "The schedule may not run more often than every 5 minutes");
+                        }
+                        if (mockCronJobs.some((j) => j.name === body.name)) {
+                          return problem(409, "name_taken", "A job with this name exists");
                         }
 
                         const newJob: MockCronJob = {
@@ -6975,70 +6947,51 @@ export const handlers = [
                           name: body.name || "Custom Job",
                           command: body.command,
                           schedule: body.schedule || "0 * * * *",
-                          schedule_human: body.schedule === "0 * * * *" ? "Hourly" : "Custom",
-                          enabled: true,
-                          description: body.description,
+                          enabled: body.enabled ?? true,
                           timeout_seconds: body.timeout_seconds || 300,
-                          created_at: new Date().toISOString(),
                           last_run_at: null,
-                          next_run_at: new Date(Date.now() + 3600 * 1000).toISOString(),
-                          last_status: "idle",
+                          last_status: null,
                           last_exit_code: null,
                           last_output: null,
-                          last_duration_ms: null,
                         };
-
                         mockCronJobs.unshift(newJob);
                         return HttpResponse.json(newJob, { status: 201 });
                       }),
 
-                      // PUT /api/v1/client/cron/:id/toggle (TODO(api:T10.01))
-                      http.put(/\/api\/v1\/client\/cron\/([^/]+)\/toggle$/, ({ params }) => {
+                      // PUT /api/v1/client/cron-jobs/:id (replaces every field)
+                      http.put(/\/api\/v1\/client\/cron-jobs\/([^/]+)$/, async ({ params, request }) => {
                         const id = (params[0] || params.id) as string;
                         const job = mockCronJobs.find((j) => j.id === id);
-                        if (job) {
-                          job.enabled = !job.enabled;
-                          return HttpResponse.json(job);
-                        }
-                        return HttpResponse.json({ error: "Job not found" }, { status: 404 });
-                      }),
-
-                      // POST /api/v1/client/cron/:id/run (TODO(api:T10.02))
-                      http.post(/\/api\/v1\/client\/cron\/([^/]+)\/run$/, ({ params }) => {
-                        const id = (params[0] || params.id) as string;
-                        const job = mockCronJobs.find((j) => j.id === id);
-                        if (!job) {
-                          return HttpResponse.json({ error: "Job not found" }, { status: 404 });
-                        }
-
-                        const now = new Date().toISOString();
-                        const duration = Math.floor(Math.random() * 200) + 120;
-                        const output = `[${now}] Executing in tenant container '${job.name}':\n$ ${job.command}\nExecution completed successfully with exit code 0.`;
-
-                        job.last_run_at = now;
-                        job.last_status = "success";
-                        job.last_exit_code = 0;
-                        job.last_output = output;
-                        job.last_duration_ms = duration;
-
-                        return HttpResponse.json({
-                          job_id: job.id,
-                          status: "success",
-                          exit_code: 0,
-                          output,
-                          duration_ms: duration,
-                          executed_at: now,
+                        if (!job) return problem(404, "not_found", "No such job");
+                        const body = (await request.json()) as any;
+                        Object.assign(job, {
+                          name: body.name,
+                          command: body.command,
+                          schedule: body.schedule,
+                          enabled: body.enabled,
+                          timeout_seconds: body.timeout_seconds,
                         });
+                        return HttpResponse.json(job);
                       }),
 
-                      // DELETE /api/v1/client/cron/:id (TODO(api:T10.01))
-                      http.delete(/\/api\/v1\/client\/cron\/([^/]+)$/, ({ params }) => {
+                      // POST /api/v1/client/cron-jobs/:id/run (202, no body)
+                      http.post(/\/api\/v1\/client\/cron-jobs\/([^/]+)\/run$/, ({ params }) => {
+                        const id = (params[0] || params.id) as string;
+                        const job = mockCronJobs.find((j) => j.id === id);
+                        if (!job) return problem(404, "not_found", "No such job");
+                        job.last_run_at = new Date().toISOString();
+                        job.last_status = "ok";
+                        job.last_exit_code = 0;
+                        return new HttpResponse(null, { status: 202 });
+                      }),
+
+                      // DELETE /api/v1/client/cron-jobs/:id
+                      http.delete(/\/api\/v1\/client\/cron-jobs\/([^/]+)$/, ({ params }) => {
                         const id = (params[0] || params.id) as string;
                         const idx = mockCronJobs.findIndex((j) => j.id === id);
-                        if (idx !== -1) {
-                          mockCronJobs.splice(idx, 1);
-                        }
-                        return HttpResponse.json({ success: true });
+                        if (idx === -1) return problem(404, "not_found", "No such job");
+                        mockCronJobs.splice(idx, 1);
+                        return new HttpResponse(null, { status: 204 });
                       }),
 
                       // ===================================                      // LOG VIEWER (TODO(api:T10.04))

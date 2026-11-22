@@ -7,13 +7,13 @@ export interface CronJob {
   enabled: boolean;
   description?: string;
   timeout_seconds: number;
-  created_at: string;
+  created_at?: string;
   last_run_at: string | null;
-  next_run_at: string;
+  next_run_at: string | null;
   last_status: "success" | "failed" | "running" | "idle";
   last_exit_code: number | null;
   last_output: string | null;
-  last_duration_ms: number | null;
+  last_duration_ms?: number | null;
 }
 
 export interface CreateCronJobInput {
