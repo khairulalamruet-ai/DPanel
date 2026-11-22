@@ -5103,60 +5103,40 @@ export const handlers = [
     });
   }),
 
-  // Error & Suspended Page Templates: List all (GET /api/v1/admin/templates/pages)
-  // TODO(api:T06.13): Replace with real backend error page templates endpoint
-  http.get(/\/api\/v1\/admin\/templates\/pages$/, () => {
-    return HttpResponse.json({
-      items: mockPageTemplates,
-      total: mockPageTemplates.length,
+  // Error & suspended pages (GET /api/v1/admin/error-pages, PUT/DELETE .../:kind), shaped like `PageList`
+  ...(() => {
+    const KIND: Record<string, string> = {
+      suspended_domain: "suspended_domain",
+      suspended_user: "suspended_account",
+      error_404: "not_found",
+      error_502: "bad_gateway",
+    };
+    const view = () => ({
+      items: mockPageTemplates.map((tpl) => ({ kind: KIND[tpl.type], html: tpl.content, is_custom: tpl.isCustomized })),
+      max_bytes: 262144,
     });
-  }),
-
-  // Error & Suspended Page Templates: Get single (GET /api/v1/admin/templates/pages/:type)
-  // TODO(api:T06.13): Replace with real backend template detail endpoint
-  http.get(/\/api\/v1\/admin\/templates\/pages\/([^/]+)$/, ({ params }) => {
-    const type = (params.type || params[0]) as string;
-    const tpl = mockPageTemplates.find((t) => t.type === type || t.id === type);
-    if (!tpl) {
-      return HttpResponse.json({ message: "Page template not found" }, { status: 404 });
-    }
-    return HttpResponse.json(tpl);
-  }),
-
-  // Error & Suspended Page Templates: Update template (PUT /api/v1/admin/templates/pages/:type)
-  // TODO(api:T06.13): Replace with real backend template update endpoint
-  http.put(/\/api\/v1\/admin\/templates\/pages\/([^/]+)$/, async ({ params, request }) => {
-    const type = (params.type || params[0]) as string;
-    const tpl = mockPageTemplates.find((t) => t.type === type || t.id === type);
-    if (!tpl) {
-      return HttpResponse.json({ message: "Page template not found" }, { status: 404 });
-    }
-
-    const body = (await request.json()) as { content?: string };
-    if (typeof body.content === "string") {
-      tpl.content = body.content;
-      tpl.isCustomized = true;
-      tpl.updatedAt = new Date().toISOString();
-    }
-
-    return HttpResponse.json(tpl);
-  }),
-
-  // Error & Suspended Page Templates: Reset template (POST /api/v1/admin/templates/pages/:type/reset)
-  // TODO(api:T06.13): Replace with real backend template reset endpoint
-  http.post(/\/api\/v1\/admin\/templates\/pages\/([^/]+)\/reset$/, ({ params }) => {
-    const type = (params.type || params[0]) as string;
-    const tpl = mockPageTemplates.find((t) => t.type === type || t.id === type);
-    if (!tpl) {
-      return HttpResponse.json({ message: "Page template not found" }, { status: 404 });
-    }
-
-    tpl.content = tpl.defaultContent;
-    tpl.isCustomized = false;
-    tpl.updatedAt = new Date().toISOString();
-
-    return HttpResponse.json(tpl);
-  }),
+    const find = (kind: string) => mockPageTemplates.find((t) => KIND[t.type] === kind);
+    return [
+      http.get(/\/api\/v1\/admin\/error-pages$/, () => HttpResponse.json(view())),
+      http.put(/\/api\/v1\/admin\/error-pages\/([^/]+)$/, async ({ params, request }) => {
+        const tpl = find(params[0] as string);
+        if (!tpl) return problem(404, "not_found", "No such page");
+        const body = (await request.json()) as { html?: string };
+        if (typeof body.html === "string") {
+          tpl.content = body.html;
+          tpl.isCustomized = true;
+        }
+        return HttpResponse.json(view());
+      }),
+      http.delete(/\/api\/v1\/admin\/error-pages\/([^/]+)$/, ({ params }) => {
+        const tpl = find(params[0] as string);
+        if (!tpl) return problem(404, "not_found", "No such page");
+        tpl.content = tpl.defaultContent;
+        tpl.isCustomized = false;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    ];
+  })(),
 
   // GET/POST /api/v1/client/domains/:id/previews, DELETE .../:preview_id
   http.get(/\/api\/v1\/client\/domains\/([^/]+)\/previews$/, ({ params }) => {
