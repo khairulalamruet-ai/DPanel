@@ -17,7 +17,6 @@ import {
   useToast,
 } from "@builtpanel/ui";
 import { useTranslation } from "@builtpanel/i18n";
-import { apiFetch } from "@builtpanel/api";
 import {
   Boxes,
   Search,
@@ -29,7 +28,8 @@ import {
   RefreshCw,
   GitFork,
 } from "lucide-react";
-import { ModuleItem, ModuleCategory, ToggleModuleResponse } from "./types";
+import { ModuleItem, ModuleCategory } from "./types";
+import { listModules, setModuleEnabled } from "./api";
 import { DependencyWarningDialog } from "./DependencyWarningDialog";
 
 export function ModuleManagerPage() {
@@ -55,10 +55,7 @@ export function ModuleManagerPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiFetch<{ items: ModuleItem[]; total: number }>(
-        "/api/v1/admin/modules"
-      );
-      setModules(res.items || []);
+      setModules(await listModules());
     } catch (err: any) {
       setError(err?.message || "Failed to load modules");
     } finally {
@@ -100,40 +97,18 @@ export function ModuleManagerPage() {
   const executeToggle = async (mod: ModuleItem, cascade: boolean) => {
     try {
       setIsToggling(mod.name);
-      const res = await apiFetch<ToggleModuleResponse>(
-        `/api/v1/admin/modules/${mod.name}/toggle`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cascade }),
-        }
-      );
-
-      if (res.success && res.module) {
-        const modTitle = mod.title[lang] || mod.title.en || mod.name;
-        const msg = res.module.enabled
-          ? t("modules.toggle.enabledSuccess", { name: modTitle })
-          : t("modules.toggle.disabledSuccess", { name: modTitle });
-
-        toast({
-          title: modTitle,
-          description: msg,
-          variant: "default",
-        });
-
-        // Update local state with the returned module and any cascade disabled dependents
-        setModules((prev) =>
-          prev.map((item) => {
-            if (item.name === res.module.name) {
-              return res.module;
-            }
-            if (res.disabled_dependents && res.disabled_dependents.includes(item.name)) {
-              return { ...item, enabled: false, status: "disabled" };
-            }
-            return item;
-          })
-        );
-      }
+      // `enabled: true` when the module is off now; the other direction is `cascade` aware.
+      await setModuleEnabled(mod.name, !mod.enabled, cascade);
+      const modTitle = mod.title[lang] || mod.title.en || mod.name;
+      toast({
+        title: modTitle,
+        description: mod.enabled
+          ? t("modules.toggle.disabledSuccess", { name: modTitle })
+          : t("modules.toggle.enabledSuccess", { name: modTitle }),
+        variant: "default",
+      });
+      // What changed with it (the modules that depend on it) is read again.
+      await fetchModules();
     } catch (err: any) {
       toast({
         title: t("common.error"),

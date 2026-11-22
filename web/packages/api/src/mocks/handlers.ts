@@ -3254,74 +3254,49 @@ export const handlers = [
     });
   }),
 
-  // Modules: List all modules (GET /api/v1/admin/modules)
-  // TODO(api:T03.03): Replace with real backend endpoint
+  // Modules: list (GET /api/v1/admin/modules), shaped like `ModuleView` in openapi.json
   http.get(/\/api\/v1\/admin\/modules$/, () => {
     return HttpResponse.json({
-      items: modules,
-      total: modules.length,
+      items: modules.map((m) => ({
+        name: m.name,
+        version: m.version,
+        title: m.title,
+        category: m.category,
+        core: m.core,
+        enabled: m.enabled,
+        active: m.enabled,
+        present: true,
+        depends_on: m.depends_on,
+        dependents: modules.filter((o) => o.depends_on.includes(m.name)).map((o) => o.name),
+      })),
     });
   }),
 
-  // Modules: Toggle module state (POST /api/v1/admin/modules/:name/toggle)
-  // TODO(api:T03.03): Replace with real backend endpoint
-  // TODO(api:T03.12): Cascading dependency toggle warnings
-  http.post(/\/api\/v1\/admin\/modules\/([^/]+)\/toggle$/, async ({ params, request }) => {
+  // Modules: switch on or off (PUT /api/v1/admin/modules/:name  { enabled, cascade })
+  http.put(/\/api\/v1\/admin\/modules\/([^/]+)$/, async ({ params, request }) => {
     const name = params[0] as string;
-    const body = (await request.json().catch(() => ({}))) as any;
-    const { cascade = false } = body || {};
+    const { enabled, cascade = false } = (await request.json().catch(() => ({}))) as { enabled?: boolean; cascade?: boolean };
 
-    const modIndex = modules.findIndex((m) => m.name === name);
-    if (modIndex === -1) {
-      return HttpResponse.json({ error: "not_found", message: "Module not found" }, { status: 404 });
-    }
+    const mod = modules.find((m) => m.name === name);
+    if (!mod) return problem(404, "not_found", "No such module");
+    if (mod.core) return problem(409, "core_module", "A core module cannot be switched off");
 
-    const mod = modules[modIndex];
-    if (mod.core) {
-      return HttpResponse.json(
-        { error: "core_module_locked", message: "Core modules cannot be disabled" },
-        { status: 400 }
-      );
-    }
-
-    const targetEnabled = !mod.enabled;
-    const disabledDependents: string[] = [];
-
-    if (!targetEnabled) {
-      // Disabling module: find all enabled dependents
-      const activeDependents = modules.filter(
-        (m) => m.enabled && m.depends_on.includes(name)
-      );
-
-      if (activeDependents.length > 0) {
-        if (!cascade) {
-          return HttpResponse.json(
-            {
-              error: "dependencies_active",
-              message: "Cannot disable module because dependent modules are active",
-              dependents: activeDependents.map((d) => d.name),
-            },
-            { status: 409 }
-          );
-        }
-
-        // Cascade disable dependents
-        for (const dep of activeDependents) {
-          dep.enabled = false;
-          dep.status = "disabled";
-          disabledDependents.push(dep.name);
-        }
+    const changed: string[] = [];
+    if (!enabled) {
+      const dependents = modules.filter((m) => m.enabled && m.depends_on.includes(name));
+      if (dependents.length > 0 && !cascade) {
+        return problem(409, "dependents_active", `Other modules need it: ${dependents.map((d) => d.name).join(", ")}`);
+      }
+      for (const dep of dependents) {
+        dep.enabled = false;
+        dep.status = "disabled";
+        changed.push(dep.name);
       }
     }
-
-    mod.enabled = targetEnabled;
-    mod.status = targetEnabled ? "active" : "disabled";
-
-    return HttpResponse.json({
-      success: true,
-      module: mod,
-      disabled_dependents: disabledDependents,
-    });
+    mod.enabled = !!enabled;
+    mod.status = enabled ? "active" : "disabled";
+    changed.push(name);
+    return HttpResponse.json({ changed, active: modules.filter((m) => m.enabled).map((m) => m.name) });
   }),
 
   // Settings: Get all modules and their schemas/values (GET /api/v1/admin/settings)

@@ -78,7 +78,7 @@ describe("ModuleManagerPage (T03.12)", () => {
     });
 
     const searchInput = screen.getByPlaceholderText(/Search modules|মডিউল খুঁজুন/i);
-    fireEvent.change(searchInput, { target: { value: "PowerDNS" } });
+    fireEvent.change(searchInput, { target: { value: "dns" } });
 
     expect(screen.getByText("(dns)")).toBeInTheDocument();
     expect(screen.queryByText("(db-mysql)")).not.toBeInTheDocument();
