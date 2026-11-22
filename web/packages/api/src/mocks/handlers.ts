@@ -9636,80 +9636,72 @@ export const handlers = [
     },
   ];
 
-  let mockNotifSettings = {
-    email_enabled: true,
-    email_recipients: ["admin@enterprise.io"],
-    webhook_enabled: false,
-    webhook_url: "",
-    in_app_enabled: true,
-    notify_on_ssl_expiry: true,
-    notify_on_backup_failure: true,
-    notify_on_node_offline: true,
-    notify_on_security_alert: true,
-    snooze_until: null as string | null,
-  };
+  // The inbox, shaped like `NotificationView`; the same routes exist for `client` and `admin`.
+  const eventOf = (category: string) => (category === "ssl" ? "ssl.expiring" : category === "backup" ? "backup.finished" : category === "security" ? "security.waf_block" : "system.node");
+  let mockChannels: { id: string; kind: string; name: string; target: string; events: string[]; enabled: boolean }[] = [
+    { id: "ch_01", kind: "email", name: "Me", target: "admin@enterprise.io", events: [], enabled: true },
+  ];
+  let mockQuiet: { paused: boolean; snoozed_until: number | null } = { paused: false, snoozed_until: null };
+  const NOTIF = /\/api\/v1\/(?:client|admin)\/notifications/;
+  const route = (suffix: string) => new RegExp(`${NOTIF.source}${suffix}$`);
 
   return [
-    // GET /api/v1/notifications (TODO(api:T18.03), TODO(api:T18.05))
-    http.get(/\/api\/v1\/notifications$/, () => {
-      return HttpResponse.json(mockNotificationsList);
+    http.get(route(""), () => {
+      return HttpResponse.json({
+        items: mockNotificationsList.map((n) => ({
+          id: n.id,
+          event_type: eventOf(n.category),
+          severity: n.severity === "error" ? "critical" : n.severity,
+          subject: n.title,
+          body: n.message,
+          read: n.read,
+          created_at: Math.floor(new Date(n.created_at).getTime() / 1000),
+          data: null,
+        })),
+        unread: mockNotificationsList.filter((n) => !n.read).length,
+      });
     }),
 
-    // POST /api/v1/notifications/:id/read (TODO(api:T18.05))
-    http.post(/\/api\/v1\/notifications\/([^/]+)\/read$/, ({ params }) => {
-      const id = String(params[0]);
-      mockNotificationsList = mockNotificationsList.map((n) =>
-        n.id === id ? { ...n, read: true } : n
-      );
-      return HttpResponse.json({ success: true, id });
+    // POST .../notifications/read  { ids? }: some, or all
+    http.post(route("/read"), async ({ request }) => {
+      const body = (await request.json().catch(() => ({}))) as { ids?: string[] | null };
+      let updated = 0;
+      mockNotificationsList = mockNotificationsList.map((n) => {
+        if (!n.read && (!body.ids || body.ids.includes(n.id))) updated++;
+        return !body.ids || body.ids.includes(n.id) ? { ...n, read: true } : n;
+      });
+      return HttpResponse.json({ updated });
     }),
 
-    // POST /api/v1/notifications/read-all (TODO(api:T18.05))
-    http.post(/\/api\/v1\/notifications\/read-all$/, () => {
-      mockNotificationsList = mockNotificationsList.map((n) => ({ ...n, read: true }));
-      return HttpResponse.json({ success: true });
-    }),
+    http.get(route("/events"), () =>
+      HttpResponse.json({ events: ["ssl.expiring", "backup.finished", "backup.failed", "security.waf_block", "system.node"] }),
+    ),
 
-    // DELETE /api/v1/notifications/:id (TODO(api:T18.05))
-    http.delete(/\/api\/v1\/notifications\/([^/]+)$/, ({ params }) => {
-      const id = String(params[0]);
-      mockNotificationsList = mockNotificationsList.filter((n) => n.id !== id);
+    http.get(route("/channels"), () => HttpResponse.json(mockChannels)),
+    http.post(route("/channels"), async ({ request }) => {
+      const body = (await request.json()) as { kind: string; name: string; target: string; events?: string[] };
+      const channel = { id: `ch_${Date.now()}`, kind: body.kind, name: body.name, target: body.target, events: body.events ?? [], enabled: true };
+      mockChannels = [...mockChannels, channel];
+      return HttpResponse.json({ channel, secret: body.kind === "webhook" ? "whsec_mock_once" : null }, { status: 201 });
+    }),
+    http.patch(route("/channels/([^/]+)"), async ({ params, request }) => {
+      const body = (await request.json()) as { enabled?: boolean; events?: string[] };
+      mockChannels = mockChannels.map((c) => (c.id === params[0] ? { ...c, ...body } : c));
+      return new HttpResponse(null, { status: 204 });
+    }),
+    http.delete(route("/channels/([^/]+)"), ({ params }) => {
+      mockChannels = mockChannels.filter((c) => c.id !== params[0]);
       return new HttpResponse(null, { status: 204 });
     }),
 
-    // GET /api/v1/notifications/settings (TODO(api:T18.03), TODO(api:T18.05))
-    http.get(/\/api\/v1\/notifications\/settings$/, () => {
-      return HttpResponse.json(mockNotifSettings);
-    }),
-
-    // PUT /api/v1/notifications/settings (TODO(api:T18.03), TODO(api:T18.05))
-    http.put(/\/api\/v1\/notifications\/settings$/, async ({ request }) => {
-      const body = (await request.json().catch(() => ({}))) as any;
-      mockNotifSettings = { ...mockNotifSettings, ...body };
-      return HttpResponse.json(mockNotifSettings);
-    }),
-
-    // POST /api/v1/notifications/snooze (TODO(api:T18.03))
-    http.post(/\/api\/v1\/notifications\/snooze$/, async ({ request }) => {
-      const body = (await request.json().catch(() => ({}))) as any;
-      const hours = Number(body.duration_hours) || 0;
-      mockNotifSettings.snooze_until = hours > 0 ? new Date(Date.now() + hours * 3600000).toISOString() : null;
-      return HttpResponse.json({ snooze_until: mockNotifSettings.snooze_until });
-    }),
-
-    // POST /api/v1/notifications/test (TODO(api:T18.03))
-    http.post(/\/api\/v1\/notifications\/test$/, () => {
-      const sample = {
-        id: `notif-test-${Date.now()}`,
-        title: "Test Alert Notification",
-        message: "This is a verification test alert dispatched from Notification Settings.",
-        severity: "info" as const,
-        category: "system" as const,
-        read: false,
-        created_at: new Date().toISOString(),
+    http.get(route("/quiet"), () => HttpResponse.json(mockQuiet)),
+    http.put(route("/quiet"), async ({ request }) => {
+      const body = (await request.json()) as { paused: boolean; snooze_minutes?: number };
+      mockQuiet = {
+        paused: body.paused,
+        snoozed_until: body.snooze_minutes ? Math.floor(Date.now() / 1000) + body.snooze_minutes * 60 : null,
       };
-      mockNotificationsList.unshift(sample);
-      return HttpResponse.json({ success: true, item: sample });
+      return HttpResponse.json(mockQuiet);
     }),
   ];
 })(),
