@@ -385,7 +385,7 @@ pub async fn login_mfa(
 
 /// Re-checks the signed-in user's password before a sensitive change.
 /// Wrong passwords count toward the account lockout.
-async fn require_password(
+pub(crate) async fn require_password(
     state: &AuthState,
     account_id: Uuid,
     password: String,

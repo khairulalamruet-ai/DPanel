@@ -1927,3 +1927,114 @@ async fn preferences_belong_to_one_account_and_are_checked(pool: PgPool) {
     let r = send(&app, "GET", "/api/v1/auth/preferences", None, None).await;
     assert_eq!(r.status, StatusCode::UNAUTHORIZED);
 }
+
+// ------------------------------------------------------------ password
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn the_password_is_changed_only_with_the_old_one_and_signs_the_others_out(pool: PgPool) {
+    let hasher = PasswordHasher::new(fast_params(2)).unwrap();
+    create_account(&pool, &hasher, "amy", "active").await;
+    let app = app(state(&pool, hasher));
+    let first = sign_in(&app, "amy").await;
+    let second = sign_in(&app, "amy").await;
+    let change = |b: &Browser, body: Value| {
+        let (app, cookie, csrf) = (app.clone(), b.cookie.clone(), b.csrf.clone());
+        async move {
+            send_with(
+                &app,
+                "PUT",
+                "/api/v1/auth/password",
+                Some(&cookie),
+                Some(body),
+                &[("x-csrf-token", &csrf)],
+            )
+            .await
+        }
+    };
+    let strong = "Quiet-Harbor-Lantern-Orbit-77";
+
+    // A wrong current password: refused, and no new password is set.
+    let r = change(
+        &first,
+        json!({"current_password": "not-the-password", "new_password": strong}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+    assert_eq!(r.body["code"], "password_incorrect");
+    // The same password again, or one the policy refuses.
+    let r = change(
+        &first,
+        json!({"current_password": PASSWORD, "new_password": PASSWORD}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let codes: Vec<String> = r.body["errors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["code"].as_str().unwrap().to_owned())
+        .collect();
+    assert!(
+        codes.contains(&"password_unchanged".to_owned()),
+        "{codes:?}"
+    );
+    let r = change(
+        &first,
+        json!({"current_password": PASSWORD, "new_password": "short"}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(r.body["errors"][0]["code"], "password_too_short");
+
+    // Changed: the other session ends, this one stays, the old password stops working.
+    let r = change(
+        &first,
+        json!({"current_password": PASSWORD, "new_password": strong}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.body);
+    assert_eq!(r.body["other_sessions_ended"], 1);
+    assert_eq!(
+        send(&app, "GET", "/api/v1/auth/me", Some(&first.cookie), None)
+            .await
+            .status,
+        StatusCode::OK
+    );
+    assert_eq!(
+        send(&app, "GET", "/api/v1/auth/me", Some(&second.cookie), None)
+            .await
+            .status,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        login(&app, "amy", PASSWORD, None).await.status,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        login(&app, "amy", strong, None).await.status,
+        StatusCode::OK
+    );
+
+    // The change is in the audit log, with no password in it.
+    let (action, meta): (String, Value) = sqlx::query_as(
+        "SELECT action, metadata FROM audit_logs WHERE action = 'auth.password_changed'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(action, "auth.password_changed");
+    assert!(!meta.to_string().contains(strong));
+
+    // Without a session.
+    let r = send_with(
+        &app,
+        "PUT",
+        "/api/v1/auth/password",
+        None,
+        Some(json!({"current_password": "x", "new_password": strong})),
+        &[],
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::UNAUTHORIZED);
+}

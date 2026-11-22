@@ -36,6 +36,7 @@
 
 pub mod impersonate;
 pub mod mfa;
+mod password;
 pub mod preferences;
 pub mod root_login;
 pub mod sessions;
@@ -180,6 +181,7 @@ pub fn router() -> Router<AuthState> {
         .merge(mfa::router())
         .merge(sessions::router())
         .merge(preferences::router())
+        .merge(password::router())
 }
 
 /// Login request body.
@@ -747,12 +749,12 @@ impl Modify for SessionCookieScheme {
         login, logout, me, impersonate::redeem,
         mfa::login_mfa, mfa::sudo, mfa::status, mfa::enroll_totp, mfa::confirm_totp,
         mfa::disable_totp, sessions::list, sessions::revoke, sessions::revoke_others,
-        sessions::logout_all, preferences::read, preferences::replace
+        sessions::logout_all, preferences::read, preferences::replace, password::change
     ),
     components(schemas(
         LoginRequest, Me, Impersonator, impersonate::RedeemRequest, mfa::MfaChallenge, mfa::MfaLoginRequest, mfa::MfaStatus,
         mfa::SudoRequest, mfa::SudoStatus, mfa::TotpEnrollment, mfa::CodeRequest, mfa::BackupCodes, sessions::SessionView, sessions::SessionList,
-        sessions::RevokedCount, preferences::Preferences
+        sessions::RevokedCount, preferences::Preferences, password::ChangePassword, password::PasswordChanged
     )),
     modifiers(&SessionCookieScheme),
     tags((name = "auth", description = "Login, logout, the current account and two-factor authentication"))

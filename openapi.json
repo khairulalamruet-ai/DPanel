@@ -12269,6 +12269,93 @@
         ]
       }
     },
+    "/api/v1/auth/password": {
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Change the signed-in account's password.",
+        "operationId": "changePassword",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Changed; the other sessions ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordChanged"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`password_incorrect` or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`system_account`: the server's root has the server's own password",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The new password breaks the rules (`password_too_short`, `password_too_weak`, `password_unchanged`, ...)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failed attempts",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/preferences": {
       "get": {
         "tags": [
@@ -26369,6 +26456,27 @@
         },
         "additionalProperties": false
       },
+      "ChangePassword": {
+        "type": "object",
+        "description": "The old and the new password.",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "format": "password",
+            "description": "The password in use now."
+          },
+          "new_password": {
+            "type": "string",
+            "format": "password",
+            "description": "The password to use from now on."
+          }
+        },
+        "additionalProperties": false
+      },
       "ChangePlan": {
         "type": "object",
         "description": "The plan to move a user to.",
@@ -31393,6 +31501,21 @@
             "type": "integer",
             "format": "int64",
             "description": "Its size as stored (encrypted), in bytes.",
+            "minimum": 0
+          }
+        }
+      },
+      "PasswordChanged": {
+        "type": "object",
+        "description": "What the change did.",
+        "required": [
+          "other_sessions_ended"
+        ],
+        "properties": {
+          "other_sessions_ended": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Other sessions of the account that were ended.",
             "minimum": 0
           }
         }
