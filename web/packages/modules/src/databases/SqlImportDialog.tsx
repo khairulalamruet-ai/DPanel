@@ -9,9 +9,9 @@ import {
   Button,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { importDatabase } from "./api";
 import { UploadCloud, FileText, CheckCircle2, AlertTriangle } from "lucide-react";
-import { DatabaseItem, ImportDatabaseResponse } from "./types";
+import { DatabaseItem } from "./types";
 import { useTranslation } from "@builtpanel/i18n";
 
 interface SqlImportDialogProps {
@@ -51,23 +51,12 @@ export function SqlImportDialog({
       setIsImporting(true);
       setErrorMsg(null);
       setImportStatus("uploading");
-      setProgress(40);
+      setProgress(0);
 
-      // Simulate step 1: Uploading SQL dump
-      await new Promise((r) => setTimeout(r, 600));
-      setImportStatus("executing");
-      setProgress(80);
-
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
-      await apiFetch<ImportDatabaseResponse>(
-        `/api/v1/client/databases/${database.id}/import`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      await importDatabase(database.id, selectedFile, (percent) => {
+        setProgress(percent);
+        setImportStatus(percent < 50 ? "uploading" : "executing");
+      });
 
       setProgress(100);
       setImportStatus("done");

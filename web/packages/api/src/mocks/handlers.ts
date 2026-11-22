@@ -1946,101 +1946,72 @@ export const resetMockPreviewLinks = () => {
   mockPreviewLinks = getInitialPreviewLinks();
 };
 
+// The shapes of `DatabaseView` and `DbUserView` in openapi.json.
 interface MockDb {
   id: string;
   name: string;
-  raw_name: string;
-  prefix: string;
-  charset: string;
-  collation: string;
+  engine: "mysql" | "postgres";
+  status: "pending" | "ready" | "failed" | "deleting";
   size_bytes: number;
-  size_formatted: string;
-  tables_count: number;
-  assigned_users: string[];
-  created_at: string;
+  size_checked_at: string | null;
+  users: { user: string; user_id: string; access: string }[];
 }
 
 interface MockDbUser {
   id: string;
-  username: string;
-  raw_username: string;
-  prefix: string;
-  host: string;
-  grants: {
-    db_name: string;
-    privileges: string[];
-  }[];
-  created_at: string;
+  name: string;
+  engine: "mysql" | "postgres";
+  status: string;
+  databases: { database: string; database_id: string; access: string }[];
+  remote_hosts: string[];
 }
 
 const getInitialDatabases = (): MockDb[] => [
   {
     id: "db_01",
     name: "demo_wordpress",
-    raw_name: "wordpress",
-    prefix: "demo_",
-    charset: "utf8mb4",
-    collation: "utf8mb4_unicode_ci",
+    engine: "mysql",
+    status: "ready",
     size_bytes: 24657920,
-    size_formatted: "23.5 MB",
-    tables_count: 14,
-    assigned_users: ["demo_wpuser"],
-    created_at: "2026-11-10T12:00:00Z",
+    size_checked_at: "2026-11-10T12:00:00Z",
+    users: [{ user: "demo_wpuser", user_id: "dbusr_01", access: "all" }],
   },
   {
     id: "db_02",
     name: "demo_analytics",
-    raw_name: "analytics",
-    prefix: "demo_",
-    charset: "utf8mb4",
-    collation: "utf8mb4_unicode_ci",
+    engine: "mysql",
+    status: "ready",
     size_bytes: 19922944,
-    size_formatted: "19.0 MB",
-    tables_count: 6,
-    assigned_users: ["demo_analyst"],
-    created_at: "2026-11-11T15:30:00Z",
+    size_checked_at: "2026-11-11T15:30:00Z",
+    users: [{ user: "demo_analyst", user_id: "dbusr_02", access: "read_write" }],
   },
 ];
 
 const getInitialDbUsers = (): MockDbUser[] => [
   {
     id: "dbusr_01",
-    username: "demo_wpuser",
-    raw_username: "wpuser",
-    prefix: "demo_",
-    host: "10.0.0.%",
-    grants: [
-      {
-        db_name: "demo_wordpress",
-        privileges: ["ALL PRIVILEGES"],
-      },
-    ],
-    created_at: "2026-11-10T12:05:00Z",
+    name: "demo_wpuser",
+    engine: "mysql",
+    status: "ready",
+    databases: [{ database: "demo_wordpress", database_id: "db_01", access: "all" }],
+    remote_hosts: ["198.51.100.12/32"],
   },
   {
     id: "dbusr_02",
-    username: "demo_analyst",
-    raw_username: "analyst",
-    prefix: "demo_",
-    host: "10.0.0.%",
-    grants: [
-      {
-        db_name: "demo_analytics",
-        privileges: ["SELECT", "INSERT", "UPDATE"],
-      },
-    ],
-    created_at: "2026-11-11T15:35:00Z",
+    name: "demo_analyst",
+    engine: "mysql",
+    status: "ready",
+    databases: [{ database: "demo_analytics", database_id: "db_02", access: "read_write" }],
+    remote_hosts: [],
   },
 ];
 
 let mockDatabases = getInitialDatabases();
 let mockDbUsers = getInitialDbUsers();
-let mockRemoteDbHosts = ["198.51.100.12/32"];
 
 export const resetMockDatabases = () => {
   mockDatabases = getInitialDatabases();
   mockDbUsers = getInitialDbUsers();
-  mockRemoteDbHosts = ["198.51.100.12/32"];
 };
 
 
@@ -5542,226 +5513,226 @@ export const handlers = [
     });
   }),
 
-  // Databases: List all databases, users, limits (GET /api/v1/client/databases)
-  // TODO(api:T07.10): Replace with real backend client databases endpoint
+  // GET /api/v1/client/databases
   http.get(/\/api\/v1\/client\/databases$/, () => {
-    const totalBytes = mockDatabases.reduce((acc, db) => acc + db.size_bytes, 0);
-    const sizeMb = Number((totalBytes / (1024 * 1024)).toFixed(1));
-
-    return HttpResponse.json({
-      databases: mockDatabases,
-      users: mockDbUsers,
-      limits: {
-        max_databases: 5,
-        used_databases: mockDatabases.length,
-        max_db_users: 5,
-        used_db_users: mockDbUsers.length,
-        max_db_size_mb: 500,
-        used_db_size_mb: sizeMb,
-      },
-      remote_db_hosts: mockRemoteDbHosts,
-      phpmyadmin_url: "https://pma.builtpanel.net",
-    });
+    return HttpResponse.json({ items: mockDatabases, prefix: "demo_", limit: 5 });
   }),
 
-  // Databases: Create database (POST /api/v1/client/databases)
-  // TODO(api:T07.10): Replace with real backend database creation endpoint
+  // POST /api/v1/client/databases
   http.post(/\/api\/v1\/client\/databases$/, async ({ request }) => {
-    const body = (await request.json()) as any;
-    const name = String(body.name || "").trim();
-    if (!name) {
-      return HttpResponse.json({ message: "Database name is required" }, { status: 400 });
-    }
-
+    const body = (await request.json()) as { name: string; engine?: "mysql" | "postgres" };
+    const name = body.name.startsWith("demo_") ? body.name : `demo_${body.name}`;
     if (mockDatabases.some((d) => d.name === name)) {
-      return HttpResponse.json({ message: `Database ${name} already exists` }, { status: 409 });
+      return problem(409, "name_taken", "A database with this name exists");
     }
-
-    const newDb: MockDb = {
+    const db: MockDb = {
       id: `db_${Date.now()}`,
       name,
-      raw_name: name.replace(/^demo_/, ""),
-      prefix: "demo_",
-      charset: body.charset || "utf8mb4",
-      collation: body.collation || "utf8mb4_unicode_ci",
-      size_bytes: 1048576,
-      size_formatted: "1.0 MB",
-      tables_count: 0,
-      assigned_users: [],
-      created_at: new Date().toISOString(),
+      engine: body.engine ?? "mysql",
+      status: "ready",
+      size_bytes: 0,
+      size_checked_at: null,
+      users: [],
     };
-
-    mockDatabases = [newDb, ...mockDatabases];
-    return HttpResponse.json(newDb, { status: 201 });
+    mockDatabases = [db, ...mockDatabases];
+    return HttpResponse.json(db, { status: 201 });
   }),
 
-  // Databases: Delete database (DELETE /api/v1/client/databases/:id)
-  // TODO(api:T07.10): Replace with real backend database deletion endpoint
+  // DELETE /api/v1/client/databases/:id (202: gone when the node has removed it)
   http.delete(/\/api\/v1\/client\/databases\/([^/]+)$/, ({ params }) => {
-    const id = (params.id || params[0]) as string;
-    const target = mockDatabases.find((d) => d.id === id || d.name === id);
-    if (!target) {
-      return HttpResponse.json({ message: "Database not found" }, { status: 404 });
-    }
-
-    mockDatabases = mockDatabases.filter((d) => d.id !== target.id);
-    // Remove references from users
+    const id = (params[0] || params.id) as string;
+    if (!mockDatabases.some((d) => d.id === id)) return problem(404, "not_found", "No such database");
+    mockDatabases = mockDatabases.filter((d) => d.id !== id);
     mockDbUsers.forEach((u) => {
-      u.grants = u.grants.filter((g) => g.db_name !== target.name);
+      u.databases = u.databases.filter((g) => g.database_id !== id);
     });
-
-    return HttpResponse.json({ success: true, message: `Database ${target.name} deleted` });
+    return new HttpResponse(null, { status: 202 });
   }),
 
-  // Databases: Create user (POST /api/v1/client/databases/users)
-  // TODO(api:T07.10): Replace with real backend database user creation endpoint
-  http.post(/\/api\/v1\/client\/databases\/users$/, async ({ request }) => {
-    const body = (await request.json()) as any;
-    const username = String(body.username || "").trim();
-    if (!username) {
-      return HttpResponse.json({ message: "Username is required" }, { status: 400 });
-    }
+  // GET /api/v1/client/db-users
+  http.get(/\/api\/v1\/client\/db-users$/, () => {
+    return HttpResponse.json({ items: mockDbUsers, limit: 5 });
+  }),
 
-    if (mockDbUsers.some((u) => u.username === username)) {
-      return HttpResponse.json({ message: `User ${username} already exists` }, { status: 409 });
+  // POST /api/v1/client/db-users
+  http.post(/\/api\/v1\/client\/db-users$/, async ({ request }) => {
+    const body = (await request.json()) as { name: string; password?: string; engine?: "mysql" | "postgres" };
+    const name = body.name.startsWith("demo_") ? body.name : `demo_${body.name}`;
+    if (mockDbUsers.some((u) => u.name === name)) {
+      return problem(409, "name_taken", "A user with this name exists");
     }
-
-    const assignments = body.assignments || [];
-    const newUser: MockDbUser = {
+    const user: MockDbUser = {
       id: `dbusr_${Date.now()}`,
-      username,
-      raw_username: username.replace(/^demo_/, ""),
-      prefix: "demo_",
-      host: body.host || "10.0.0.%",
-      grants: assignments,
-      created_at: new Date().toISOString(),
+      name,
+      engine: body.engine ?? "mysql",
+      status: "ready",
+      databases: [],
+      remote_hosts: [],
     };
+    mockDbUsers = [user, ...mockDbUsers];
+    return HttpResponse.json({ user, password: body.password ? null : "Generated-Once-1" }, { status: 201 });
+  }),
 
-    mockDbUsers = [newUser, ...mockDbUsers];
-
-    // Update assigned_users in databases
-    assignments.forEach((a: any) => {
-      const db = mockDatabases.find((d) => d.name === a.db_name);
-      if (db && !db.assigned_users.includes(username)) {
-        db.assigned_users.push(username);
-      }
+  // DELETE /api/v1/client/db-users/:id (202)
+  http.delete(/\/api\/v1\/client\/db-users\/([^/]+)$/, ({ params }) => {
+    const id = (params[0] || params.id) as string;
+    if (!mockDbUsers.some((u) => u.id === id)) return problem(404, "not_found", "No such user");
+    mockDbUsers = mockDbUsers.filter((u) => u.id !== id);
+    mockDatabases.forEach((d) => {
+      d.users = d.users.filter((g) => g.user_id !== id);
     });
-
-    return HttpResponse.json(newUser, { status: 201 });
+    return new HttpResponse(null, { status: 202 });
   }),
 
-  // Databases: Delete user (DELETE /api/v1/client/databases/users/:id)
-  // TODO(api:T07.10): Replace with real backend database user deletion endpoint
-  http.delete(/\/api\/v1\/client\/databases\/users\/([^/]+)$/, ({ params }) => {
-    const id = (params.id || params[0]) as string;
-    const target = mockDbUsers.find((u) => u.id === id || u.username === id);
-    if (!target) {
-      return HttpResponse.json({ message: "Database user not found" }, { status: 404 });
-    }
-
-    mockDbUsers = mockDbUsers.filter((u) => u.id !== target.id);
-    mockDatabases.forEach((db) => {
-      db.assigned_users = db.assigned_users.filter((u) => u !== target.username);
-    });
-
-    return HttpResponse.json({ success: true, message: `Database user ${target.username} deleted` });
+  // PUT /api/v1/client/db-users/:id/password
+  http.put(/\/api\/v1\/client\/db-users\/([^/]+)\/password$/, ({ params }) => {
+    const user = mockDbUsers.find((u) => u.id === ((params[0] || params.id) as string));
+    if (!user) return problem(404, "not_found", "No such user");
+    return HttpResponse.json({ user, password: null });
   }),
 
-  // Databases: Update user grants (PUT /api/v1/client/databases/users/:id/grants)
-  // TODO(api:T07.10): Replace with real backend user grants update endpoint
-  http.put(/\/api\/v1\/client\/databases\/users\/([^/]+)\/grants$/, async ({ params, request }) => {
-    const id = (params.id || params[0]) as string;
-    const user = mockDbUsers.find((u) => u.id === id || u.username === id);
-    if (!user) {
-      return HttpResponse.json({ message: "Database user not found" }, { status: 404 });
-    }
-
-    const body = (await request.json()) as { db_name: string; privileges: string[] };
-    const { db_name, privileges } = body;
-
-    const existingIdx = user.grants.findIndex((g) => g.db_name === db_name);
-    if (privileges.length === 0) {
-      if (existingIdx !== -1) {
-        user.grants.splice(existingIdx, 1);
-      }
-      const db = mockDatabases.find((d) => d.name === db_name);
-      if (db) {
-        db.assigned_users = db.assigned_users.filter((u) => u !== user.username);
-      }
-    } else {
-      if (existingIdx !== -1) {
-        user.grants[existingIdx].privileges = privileges;
-      } else {
-        user.grants.push({ db_name, privileges });
-      }
-      const db = mockDatabases.find((d) => d.name === db_name);
-      if (db && !db.assigned_users.includes(user.username)) {
-        db.assigned_users.push(user.username);
-      }
-    }
-
-    return HttpResponse.json(user);
+  // GET/PUT /api/v1/client/db-users/:id/remote-hosts
+  http.get(/\/api\/v1\/client\/db-users\/([^/]+)\/remote-hosts$/, ({ params }) => {
+    const user = mockDbUsers.find((u) => u.id === ((params[0] || params.id) as string));
+    if (!user) return problem(404, "not_found", "No such user");
+    return HttpResponse.json({ cidrs: user.remote_hosts });
+  }),
+  http.put(/\/api\/v1\/client\/db-users\/([^/]+)\/remote-hosts$/, async ({ params, request }) => {
+    const user = mockDbUsers.find((u) => u.id === ((params[0] || params.id) as string));
+    if (!user) return problem(404, "not_found", "No such user");
+    const body = (await request.json()) as { cidrs: string[] };
+    user.remote_hosts = body.cidrs;
+    return HttpResponse.json({ cidrs: user.remote_hosts });
   }),
 
-  // Databases: Update remote hosts (PUT /api/v1/client/databases/remote-hosts)
-  // TODO(api:T07.05): Replace with real backend remote db hosts update endpoint
-  http.put(/\/api\/v1\/client\/databases\/remote-hosts$/, async ({ request }) => {
-    const body = (await request.json()) as { remote_db_hosts: string[] };
-    mockRemoteDbHosts = body.remote_db_hosts || [];
+  // PUT/DELETE /api/v1/client/databases/:id/grants/:user_id
+  http.put(/\/api\/v1\/client\/databases\/([^/]+)\/grants\/([^/]+)$/, async ({ params, request }) => {
+    const db = mockDatabases.find((d) => d.id === params[0]);
+    const user = mockDbUsers.find((u) => u.id === params[1]);
+    if (!db || !user) return problem(404, "not_found", "No such database or user");
+    const body = (await request.json()) as { access: string };
+    if (!["read_only", "read_write", "all"].includes(body.access)) {
+      return problem(422, "unknown_access", "The access level is read_only, read_write or all.");
+    }
+    db.users = [...db.users.filter((g) => g.user_id !== user.id), { user: user.name, user_id: user.id, access: body.access }];
+    user.databases = [
+      ...user.databases.filter((g) => g.database_id !== db.id),
+      { database: db.name, database_id: db.id, access: body.access },
+    ];
+    return HttpResponse.json(db);
+  }),
+  http.delete(/\/api\/v1\/client\/databases\/([^/]+)\/grants\/([^/]+)$/, ({ params }) => {
+    const db = mockDatabases.find((d) => d.id === params[0]);
+    const user = mockDbUsers.find((u) => u.id === params[1]);
+    if (!db || !user) return problem(404, "not_found", "No such database or user");
+    db.users = db.users.filter((g) => g.user_id !== user.id);
+    user.databases = user.databases.filter((g) => g.database_id !== db.id);
+    return new HttpResponse(null, { status: 202 });
+  }),
+
+  // POST /api/v1/client/databases/:id/phpmyadmin
+  http.post(/\/api\/v1\/client\/databases\/([^/]+)\/phpmyadmin$/, ({ params }) => {
+    if (!mockDatabases.some((d) => d.id === params[0])) return problem(404, "not_found", "No such database");
     return HttpResponse.json({
-      success: true,
-      remote_db_hosts: mockRemoteDbHosts,
-    });
-  }),
-
-  // Databases: phpMyAdmin SSO (POST /api/v1/client/databases/phpmyadmin-sso)
-  // TODO(api:T07.09): Replace with real backend phpMyAdmin SSO token endpoint
-  http.post(/\/api\/v1\/client\/databases\/phpmyadmin-sso$/, () => {
-    const ssoToken = `pma_sso_${Math.random().toString(36).substring(2, 10)}`;
-    return HttpResponse.json({
-      redirect_url: `https://pma.builtpanel.net/sso?token=${ssoToken}`,
-      token: ssoToken,
-      expires_in_seconds: 300,
-    });
-  }),
-
-  // Databases: Export SQL Dump (POST /api/v1/client/databases/:id/export)
-  // TODO(api:T07.08): Replace with real backend SQL dump export endpoint
-  http.post(/\/api\/v1\/client\/databases\/([^/]+)\/export$/, ({ params }) => {
-    const id = (params.id || params[0]) as string;
-    const db = mockDatabases.find((d) => d.id === id || d.name === id);
-    if (!db) {
-      return HttpResponse.json({ message: "Database not found" }, { status: 404 });
-    }
-
-    const filename = `${db.name}_dump_${Date.now()}.sql.gz`;
-    return HttpResponse.json({
-      download_url: `https://downloads.builtpanel.net/dumps/${filename}?signature=mock_signed_token`,
-      filename,
-      size_bytes: db.size_bytes,
+      url: "https://pma.builtpanel.net/sso?token=mock",
       expires_at: new Date(Date.now() + 300 * 1000).toISOString(),
     });
   }),
 
-  // Databases: Import SQL Dump (POST /api/v1/client/databases/:id/import)
-  // TODO(api:T07.07): Replace with real backend SQL dump import endpoint
-  http.post(/\/api\/v1\/client\/databases\/([^/]+)\/import$/, ({ params }) => {
-    const id = (params.id || params[0]) as string;
-    const db = mockDatabases.find((d) => d.id === id || d.name === id);
-    if (!db) {
-      return HttpResponse.json({ message: "Database not found" }, { status: 404 });
-    }
+  // Exports: POST /api/v1/client/databases/:id/exports (202), GET /api/v1/client/exports/:id,
+  // POST /api/v1/client/exports/:id/link
+  http.post(/\/api\/v1\/client\/databases\/([^/]+)\/exports$/, ({ params }) => {
+    const db = mockDatabases.find((d) => d.id === params[0]);
+    if (!db) return problem(404, "not_found", "No such database");
+    return HttpResponse.json(
+      {
+        id: "exp_01",
+        database: db.name,
+        database_id: db.id,
+        status: "queued",
+        received_bytes: 0,
+        created_at: new Date().toISOString(),
+      },
+      { status: 202 },
+    );
+  }),
+  http.get(/\/api\/v1\/client\/exports\/([^/]+)$/, ({ params }) =>
+    HttpResponse.json({
+      id: params[0],
+      database: "demo_wordpress",
+      database_id: "db_01",
+      status: "ready",
+      received_bytes: 1024,
+      size_bytes: 1024,
+      created_at: new Date().toISOString(),
+    }),
+  ),
+  http.post(/\/api\/v1\/client\/exports\/([^/]+)\/link$/, () =>
+    HttpResponse.json({
+      url: "https://downloads.builtpanel.net/dumps/demo_wordpress.sql.gz?signature=mock",
+      expires_at: new Date(Date.now() + 300 * 1000).toISOString(),
+    }),
+  ),
 
-    db.tables_count = Math.max(db.tables_count + 4, 12);
-    db.size_bytes += 5242880;
-    db.size_formatted = `${(db.size_bytes / (1024 * 1024)).toFixed(1)} MB`;
-
+  // Imports: POST /api/v1/client/databases/:id/imports, PUT .../chunks/:n, POST .../complete, GET
+  http.post(/\/api\/v1\/client\/databases\/([^/]+)\/imports$/, async ({ params, request }) => {
+    const db = mockDatabases.find((d) => d.id === params[0]);
+    if (!db) return problem(404, "not_found", "No such database");
+    const body = (await request.json()) as { size_bytes: number; gzip?: boolean };
+    return HttpResponse.json(
+      {
+        id: "imp_01",
+        database: db.name,
+        database_id: db.id,
+        status: "uploading",
+        gzip: body.gzip ?? false,
+        size_bytes: body.size_bytes,
+        received_bytes: 0,
+        bytes_done: 0,
+        next_chunk: 0,
+        max_chunk_bytes: 8 * 1024 * 1024,
+        statements: 0,
+        created_at: new Date().toISOString(),
+      },
+      { status: 201 },
+    );
+  }),
+  http.put(/\/api\/v1\/client\/imports\/([^/]+)\/chunks\/([^/]+)$/, async ({ params, request }) => {
+    const bytes = (await request.arrayBuffer()).byteLength;
     return HttpResponse.json({
-      success: true,
-      message: `SQL dump imported successfully into ${db.name}`,
-      operation_id: `op_db_import_${Date.now()}`,
+      id: params[0],
+      database: "demo_wordpress",
+      database_id: "db_01",
+      status: "uploading",
+      gzip: false,
+      size_bytes: bytes,
+      received_bytes: bytes,
+      bytes_done: 0,
+      next_chunk: Number(params[1]) + 1,
+      max_chunk_bytes: 8 * 1024 * 1024,
+      statements: 0,
+      created_at: new Date().toISOString(),
     });
   }),
+  http.post(/\/api\/v1\/client\/imports\/([^/]+)\/complete$/, ({ params }) =>
+    HttpResponse.json(
+      {
+        id: params[0],
+        database: "demo_wordpress",
+        database_id: "db_01",
+        status: "done",
+        gzip: false,
+        size_bytes: 1,
+        received_bytes: 1,
+        bytes_done: 1,
+        next_chunk: 1,
+        max_chunk_bytes: 8 * 1024 * 1024,
+        statements: 12,
+        created_at: new Date().toISOString(),
+      },
+      { status: 202 },
+    ),
+  ),
 
   // Admin Databases Overview (GET /api/v1/admin/databases/overview)
   // TODO(api:T07.11): Replace with real backend admin databases overview endpoint

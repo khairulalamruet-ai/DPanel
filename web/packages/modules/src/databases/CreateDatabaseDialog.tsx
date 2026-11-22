@@ -10,9 +10,9 @@ import {
   Input,
   useToast,
 } from "@builtpanel/ui";
-import { apiFetch } from "@builtpanel/api";
+import { createDatabase } from "./api";
 import { Database, AlertCircle } from "lucide-react";
-import { DatabaseItem, CreateDatabasePayload } from "./types";
+import { DatabaseItem } from "./types";
 import { useTranslation } from "@builtpanel/i18n";
 
 interface CreateDatabaseDialogProps {
@@ -34,8 +34,7 @@ export function CreateDatabaseDialog({
   const { toast } = useToast();
 
   const [dbName, setDbName] = useState("");
-  const [charset, setCharset] = useState("utf8mb4");
-  const [collation, setCollation] = useState("utf8mb4_unicode_ci");
+  const [engine, setEngine] = useState<"mysql" | "postgres">("mysql");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -57,16 +56,7 @@ export function CreateDatabaseDialog({
       setIsSubmitting(true);
       setValidationError(null);
 
-      const payload: CreateDatabasePayload = {
-        name: fullName,
-        charset,
-        collation,
-      };
-
-      const res = await apiFetch<DatabaseItem>("/api/v1/client/databases", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      const res = await createDatabase(fullName, prefix, engine);
 
       toast({
         title: t("common.success"),
@@ -149,39 +139,20 @@ export function CreateDatabaseDialog({
               </p>
             </div>
 
-            {/* Charset & Collation */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  {t("databases.fields.charset", "Character Set")}
-                </label>
-                <select
-                  value={charset}
-                  onChange={(e) => setCharset(e.target.value)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs"
-                  data-testid="select-db-charset"
-                >
-                  <option value="utf8mb4">utf8mb4 (Recommended)</option>
-                  <option value="utf8">utf8</option>
-                  <option value="latin1">latin1</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  {t("databases.fields.collation", "Collation")}
-                </label>
-                <select
-                  value={collation}
-                  onChange={(e) => setCollation(e.target.value)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs"
-                  data-testid="select-db-collation"
-                >
-                  <option value="utf8mb4_unicode_ci">utf8mb4_unicode_ci</option>
-                  <option value="utf8mb4_general_ci">utf8mb4_general_ci</option>
-                  <option value="utf8mb4_bin">utf8mb4_bin</option>
-                </select>
-              </div>
+            {/* Engine */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">
+                {t("databases.fields.engine", "Database engine")}
+              </label>
+              <select
+                value={engine}
+                onChange={(e) => setEngine(e.target.value as "mysql" | "postgres")}
+                className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs"
+                data-testid="select-db-engine"
+              >
+                <option value="mysql">MariaDB (MySQL)</option>
+                <option value="postgres">PostgreSQL</option>
+              </select>
             </div>
 
             <DialogFooter className="mt-6 border-t border-border pt-3">
