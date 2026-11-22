@@ -21,7 +21,11 @@ vi.mock("@builtpanel/api", () => ({
       data: { status: "ok", version: "0.1.0" },
     })),
   },
-  apiFetch: vi.fn(async () => ({
+  apiFetch: vi.fn(async () => ({}))
+}));
+
+vi.mock("./api", () => ({
+  loadAdminSummary: vi.fn(async () => ({
     nodes: { total: 3, online: 3, avg_cpu_percent: 18, avg_ram_percent: 42 },
     tenants: { total: 24, active: 22, domains_count: 58, databases_count: 36 },
     resources: {
