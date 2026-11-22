@@ -27,7 +27,7 @@ vi.mock("@builtpanel/i18n", () => ({
         "security.password.updating": "Updating...",
         "security.password.success": "Password updated successfully",
         "security.password.mismatch": "New passwords do not match",
-        "security.password.tooShort": "Password must be at least 8 characters",
+        "security.password.tooShort": "Password must be at least 12 characters",
         "security.mfa.title": "Two-Factor Authentication (TOTP)",
         "security.mfa.desc": "Add an extra layer of security.",
         "security.mfa.status": "2FA Status",
@@ -82,19 +82,16 @@ describe("AccountSecurityPage", () => {
     vi.restoreAllMocks();
 
     vi.spyOn(builtpanelApi, "apiFetch").mockImplementation(async (url: string) => {
-      if (url === "/api/v1/account/password") {
-        return { success: true };
+      if (url === "/api/v1/auth/password") {
+        return { other_sessions_ended: 0 };
       }
-      if (url === "/api/v1/account/login-history") {
+      if (url === "/api/v1/auth/me") {
+        return { id: "acc_1", kind: "client" };
+      }
+      if (url.startsWith("/api/v1/client/activity")) {
         return {
-          events: [
-            {
-              id: "evt_1",
-              ip_address: "127.0.0.1",
-              user_agent: "Chrome 130",
-              status: "success",
-              created_at: new Date().toISOString(),
-            },
+          items: [
+            { id: "evt_1", action: "auth.login", ip: "127.0.0.1", outcome: "success", at: new Date().toISOString(), by_you: true },
           ],
         };
       }
@@ -203,17 +200,17 @@ describe("AccountSecurityPage", () => {
     fireEvent.change(confirmInput, { target: { value: "short" } });
     fireEvent.click(submitBtn);
 
-    expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument();
+    expect(screen.getByText("Password must be at least 12 characters")).toBeInTheDocument();
 
     // Mismatched
-    fireEvent.change(newInput, { target: { value: "valid-password-123" } });
+    fireEvent.change(newInput, { target: { value: "valid-password-1234" } });
     fireEvent.change(confirmInput, { target: { value: "different-password" } });
     fireEvent.click(submitBtn);
 
     expect(screen.getByText("New passwords do not match")).toBeInTheDocument();
 
     // Valid
-    fireEvent.change(confirmInput, { target: { value: "valid-password-123" } });
+    fireEvent.change(confirmInput, { target: { value: "valid-password-1234" } });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {

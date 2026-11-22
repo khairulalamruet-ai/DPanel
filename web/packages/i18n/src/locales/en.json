@@ -81,7 +81,7 @@
       "updating": "Updating...",
       "success": "Password updated successfully",
       "mismatch": "New passwords do not match",
-      "tooShort": "Password must be at least 8 characters"
+      "tooShort": "Password must be at least 12 characters"
     },
     "mfa": {
       "title": "Two-Factor Authentication (TOTP)",

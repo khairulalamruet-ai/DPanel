@@ -2441,6 +2441,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change the signed-in account's password. */
+        put: operations["changePassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/preferences": {
         parameters: {
             query?: never;
@@ -5924,6 +5941,19 @@ export interface components {
             /** @description Allow SFTP. */
             sftp?: boolean | null;
         };
+        /** @description The old and the new password. */
+        ChangePassword: {
+            /**
+             * Format: password
+             * @description The password in use now.
+             */
+            current_password: string;
+            /**
+             * Format: password
+             * @description The password to use from now on.
+             */
+            new_password: string;
+        };
         /** @description The plan to move a user to. */
         ChangePlan: {
             /**
@@ -8474,6 +8504,14 @@ export interface components {
              * @description Its size as stored (encrypted), in bytes.
              */
             stored_bytes: number;
+        };
+        /** @description What the change did. */
+        PasswordChanged: {
+            /**
+             * Format: int64
+             * @description Other sessions of the account that were ended.
+             */
+            other_sessions_ended: number;
         };
         /** @description A new password. */
         PasswordRequest: {
@@ -19334,6 +19372,69 @@ export interface operations {
             };
             /** @description `mfa_already_enabled` */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePassword"];
+            };
+        };
+        responses: {
+            /** @description Changed; the other sessions ended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordChanged"];
+                };
+            };
+            /** @description `password_incorrect` or `csrf_failed` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `system_account`: the server's root has the server's own password */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description The new password breaks the rules (`password_too_short`, `password_too_weak`, `password_unchanged`, ...) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too many failed attempts */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
