@@ -77,3 +77,16 @@ describe("Module Registry (T03.11)", () => {
     });
   });
 });
+
+describe("Module registry has no duplicates", () => {
+  it("lists every module name and every admin menu entry once", () => {
+    const names = registeredFrontendModules.map((m) => m.manifest.name);
+    expect(names.filter((n, i) => names.indexOf(n) !== i)).toEqual([]);
+    for (const nav of ["adminNav", "clientNav"] as const) {
+      const ids = registeredFrontendModules.flatMap((m) => (m[nav] ?? []).map((i) => i.id));
+      expect(ids.filter((n, i) => ids.indexOf(n) !== i)).toEqual([]);
+      const hrefs = registeredFrontendModules.flatMap((m) => (m[nav] ?? []).map((i) => i.href));
+      expect(hrefs.filter((n, i) => hrefs.indexOf(n) !== i)).toEqual([]);
+    }
+  });
+});
