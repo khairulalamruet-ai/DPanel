@@ -22,13 +22,15 @@
 #   --no-upgrade         do not update the operating system first (by default every package, the
 #                        kernel included, is brought up to date: apt on Ubuntu/Debian, dnf on
 #                        AlmaLinux/Rocky/RHEL/CentOS Stream; nothing is rebooted for you)
+#   --no-resume          on AlmaLinux/Rocky/RHEL, when the update needs a reboot first: do not set up
+#                        the automatic continuation after it (run this command again yourself)
 #   --check              download and verify, then only look at what would be done
 #
 # The first administrator holds the built-in `super_admin` role (every permission, like WHM's
 # root); the generated password is printed once at the end. Anything else is passed to install.sh.
 set -euo pipefail
 
-REPO="khairulalamruet-ai/DPanel"; BASE_URL=""; HEADER=(); VERSION=""; TARBALL=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; UPGRADE=1; CHECK_ONLY=0
+REPO="khairulalamruet-ai/DPanel"; BASE_URL=""; HEADER=(); VERSION=""; TARBALL=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; UPGRADE=1; CHECK_ONLY=0; RESUME=1
 PASS=()
 
 while [ $# -gt 0 ]; do
@@ -41,8 +43,9 @@ while [ $# -gt 0 ]; do
         --hostname) HOSTNAME_FQDN="${2:?--hostname needs a name}"; shift 2 ;;
         --admin-email) ADMIN_EMAIL="${2:?--admin-email needs an address}"; shift 2 ;;
         --no-upgrade) UPGRADE=0; shift ;;
+        --no-resume) RESUME=0; shift ;;
         --check) CHECK_ONLY=1; PASS+=("$1"); shift ;;
-        -h | --help) sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) PASS+=("$1"); shift ;;
     esac
 done
@@ -172,6 +175,49 @@ os_family() {
         *) echo "" ;;
     esac
 }
+# After the reboot a one-shot service finishes the installation from the release that was just
+# downloaded and checked (kept in /var/lib/builtpanel-resume, root only), then removes itself.
+# The installer's final summary goes to /var/log/builtpanel-resume.log (mode 0600).
+resume_after_reboot() {
+    command -v systemctl > /dev/null || return 1
+    local dir=/var/lib/builtpanel-resume a
+    rm -rf "$dir"; mkdir -p "$dir"; chmod 700 "$dir"
+    cp -a "$WORK/release" "$dir/release" || return 1
+    {
+        printf '#!/usr/bin/env bash\n'
+        printf 'set -uo pipefail\n'
+        # Whatever happens, it runs once: a failed installation is not retried in a loop.
+        printf 'systemctl disable builtpanel-resume.service > /dev/null 2>&1\n'
+        printf 'rm -f /etc/systemd/system/builtpanel-resume.service\n'
+        printf 'BUILTPANEL_REBOOT_NEEDED=0 BPINSTALL_BANNER=0 TERM=dumb %q --no-upgrade --bin-dir %q --hostname %q --admin-email %q' \
+            "$dir/release/install.sh" "$dir/release/bin" "$HOSTNAME_FQDN" "$ADMIN_EMAIL"
+        for a in ${PASS[@]+"${PASS[@]}"}; do printf ' %q' "$a"; done
+        printf '\nstatus=$?\n'
+        printf 'echo "builtpanel-resume: the installer ended with $status"\n'
+        printf 'rm -rf %q\n' "$dir"
+        printf 'exit $status\n'
+    } > "$dir/run.sh"
+    chmod 700 "$dir/run.sh"
+    ( umask 077; : > /var/log/builtpanel-resume.log )
+    cat > /etc/systemd/system/builtpanel-resume.service << UNIT
+[Unit]
+Description=Finish the Built Panel installation after the reboot
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=$dir/run.sh
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash $dir/run.sh
+StandardOutput=append:/var/log/builtpanel-resume.log
+StandardError=append:/var/log/builtpanel-resume.log
+TimeoutStartSec=3600
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    systemctl daemon-reload && systemctl enable builtpanel-resume.service > /dev/null 2>&1
+}
 os_update() {
     local log=/var/log/builtpanel-os-update.log family n newest
     family="$(os_family)"
@@ -227,8 +273,15 @@ if [ "$UPGRADE" -eq 1 ] && [ "$CHECK_ONLY" -eq 0 ]; then
     if [ "$REBOOT_NEEDED" = 1 ] && [ "$(os_family)" = rhel ] && ! printf '%s\n' ${PASS[@]+"${PASS[@]}"} | grep -qx -- --no-agent; then
         # Docker's network modules must match the running kernel: the new one has to run first.
         _ui_end_step
-        echo "get.sh: NOT an error - the system update installed a newer kernel, and it has to be running first." >&2
-        echo "        Run  reboot  and then this same command again: the update is done, the second run installs the panel." >&2
+        if [ "$RESUME" = 1 ] && resume_after_reboot; then
+            echo "get.sh: NOT an error - the system update installed a newer kernel, and it has to be running first." >&2
+            echo "        Run  reboot  : the installation goes on by itself after the restart (about 5 minutes)." >&2
+            echo "        Follow it with  journalctl -u builtpanel-resume -f  ; when it is done, its summary (with the" >&2
+            echo "        panel's address and login) is in /var/log/builtpanel-resume.log (root only): read it, then delete it." >&2
+        else
+            echo "get.sh: NOT an error - the system update installed a newer kernel, and it has to be running first." >&2
+            echo "        Run  reboot  and then this same command again: the update is done, the second run installs the panel." >&2
+        fi
         exit 0
     fi
 fi
