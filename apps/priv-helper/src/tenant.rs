@@ -41,6 +41,26 @@ pub struct TenantEnv {
     pub agent_gid: u32,
     /// `/proc/self/mountinfo`: where quotas are looked for.
     pub mountinfo: PathBuf,
+    /// The containers run without a user namespace of their own (a root container engine, Kiri): tenant
+    /// id `N` is host id `N`, and `subuid_file` is not looked at.
+    pub identity: bool,
+}
+
+impl TenantEnv {
+    /// The ids the agent's containers use on the host, as `(start, count)`: the agent's subordinate range
+    /// for a rootless engine, every id as it is (`N` is `N`) for a root one.
+    ///
+    /// # Errors
+    /// The subordinate id file cannot be read, or the agent has no range in it.
+    pub fn id_range(&self) -> Result<(u32, u32), Failure> {
+        if self.identity {
+            return Ok((1, UID_END));
+        }
+        let text = fs::read_to_string(&self.subuid_file)
+            .map_err(|_| (ErrorCode::Failed, "cannot read the subordinate id file"))?;
+        subuid_range(&text, &self.agent_name)
+            .ok_or((ErrorCode::Failed, "the agent has no subordinate id range"))
+    }
 }
 
 /// What is wrong, in a form that goes back to the agent and into the log.
@@ -121,10 +141,7 @@ pub fn prepare_with_files(
             "the user id is outside the tenant range",
         ));
     }
-    let subuid = fs::read_to_string(&env.subuid_file)
-        .map_err(|_| (ErrorCode::Failed, "cannot read the subordinate id file"))?;
-    let range = subuid_range(&subuid, &env.agent_name)
-        .ok_or((ErrorCode::Failed, "the agent has no subordinate id range"))?;
+    let range = env.id_range()?;
     let owner = host_uid(range, uid)?;
     // When the tenants live on a filesystem with project quotas, the directory
     // joins the quota project of its id before it is handed over.
@@ -172,10 +189,7 @@ pub fn set_storage_quota(
     ))?;
     // The directory must exist and belong to this tenant's id: a limit for a
     // tenant that was never prepared would otherwise be set on nothing.
-    let subuid = fs::read_to_string(&env.subuid_file)
-        .map_err(|_| (ErrorCode::Failed, "cannot read the subordinate id file"))?;
-    let range = subuid_range(&subuid, &env.agent_name)
-        .ok_or((ErrorCode::Failed, "the agent has no subordinate id range"))?;
+    let range = env.id_range()?;
     let owner = host_uid(range, uid)?;
     match fs::symlink_metadata(&dir) {
         Ok(meta) if meta.file_type().is_dir() && meta.uid() == owner => {}
@@ -199,10 +213,7 @@ pub fn remove(env: &TenantEnv, tenant_id: &str, uid: u32) -> Result<(), Failure>
     if !valid_tenant_id(tenant_id) {
         return Err((ErrorCode::InvalidArguments, "the tenant id is not a UUID"));
     }
-    let subuid = fs::read_to_string(&env.subuid_file)
-        .map_err(|_| (ErrorCode::Failed, "cannot read the subordinate id file"))?;
-    let range = subuid_range(&subuid, &env.agent_name)
-        .ok_or((ErrorCode::Failed, "the agent has no subordinate id range"))?;
+    let range = env.id_range()?;
     let owner = host_uid(range, uid)?;
     remove_as(env, tenant_id, owner)
 }
@@ -370,6 +381,31 @@ mod tests {
     const ID: &str = "0190b6a2-0000-7000-8000-000000000001";
 
     #[test]
+    fn a_root_engine_uses_the_ids_as_they_are() {
+        let env = TenantEnv {
+            root: "/nonexistent".into(),
+            agent_name: "builtpanel-agent".into(),
+            // Not read at all in this mode.
+            subuid_file: "/nonexistent".into(),
+            agent_gid: 1,
+            mountinfo: "/nonexistent".into(),
+            identity: true,
+        };
+        let range = env.id_range().unwrap();
+        for uid in [UID_START, 10_042, UID_END - 1] {
+            assert_eq!(host_uid(range, uid).unwrap(), uid, "{uid}");
+        }
+        assert!(host_uid(range, UID_START - 1).is_err());
+        assert!(host_uid(range, UID_END).is_err());
+        // A rootless engine still needs its range.
+        let rootless = TenantEnv {
+            identity: false,
+            ..env
+        };
+        assert!(rootless.id_range().is_err());
+    }
+
+    #[test]
     fn ids_are_uuids_and_nothing_else() {
         assert!(valid_tenant_id(ID));
         for bad in [
@@ -444,6 +480,7 @@ mod tests {
             subuid_file: "/nonexistent".into(),
             agent_gid: gid,
             mountinfo: "/nonexistent".into(),
+            identity: false,
         };
         prepare_as(&env, ID, uid, None).unwrap();
         for path in [root.join(ID), root.join(ID).join("www")] {
@@ -470,6 +507,7 @@ mod tests {
             subuid_file: "/nonexistent".into(),
             agent_gid: gid,
             mountinfo: "/nonexistent".into(),
+            identity: false,
         };
         let files = [
             SkeletonFile {
@@ -516,6 +554,7 @@ mod tests {
             subuid_file: "/nonexistent".into(),
             agent_gid: gid,
             mountinfo: "/nonexistent".into(),
+            identity: false,
         };
         // Nothing there: fine.
         fs::create_dir_all(&root).unwrap();
@@ -553,6 +592,7 @@ mod tests {
             subuid_file: "/nonexistent".into(),
             agent_gid: gid,
             mountinfo: "/nonexistent".into(),
+            identity: false,
         };
         fs::create_dir_all(&root).unwrap();
         // A symlink where the tenant directory should be: never followed.
@@ -593,6 +633,7 @@ mod tests {
             subuid_file: "/nonexistent".into(),
             agent_gid: 0,
             mountinfo: "/nonexistent".into(),
+            identity: false,
         };
         assert_eq!(
             prepare(&env, "../../etc", 10_000).unwrap_err().0,
@@ -618,6 +659,7 @@ mod tests {
             subuid_file: "/nonexistent".into(),
             agent_gid: gid,
             mountinfo: "/proc/self/mountinfo".into(),
+            identity: false,
         };
         let code = |r: Result<(), Failure>| r.unwrap_err().0;
         let ok_limits = (Some(5 << 20), Some(2_000));

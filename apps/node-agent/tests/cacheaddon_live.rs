@@ -16,6 +16,10 @@ use builtpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -36,6 +40,11 @@ async fn a_tenants_cache_runs_on_its_network_with_a_password_and_wordpress_uses_
     let tenant = Uuid::now_v7();
     let www = tenants.join(tenant.to_string()).join("www");
     std::fs::create_dir_all(&www).unwrap();
+    // A root engine (Kiri) has no user-id shift: the tenant's id must be allowed into the folder.
+    if std::env::var_os("BUILTPANEL_TEST_UID_IDENTITY").is_some() {
+        use std::os::unix::fs::PermissionsExt as _;
+        std::fs::set_permissions(&www, std::fs::Permissions::from_mode(0o777)).unwrap();
+    }
     let username = TenantUsername::parse("alice").unwrap();
     let docker = DockerManager::connect(&docker_socket()).unwrap();
     let network = network_name(&username).unwrap();

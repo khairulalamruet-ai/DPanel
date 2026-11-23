@@ -18,6 +18,10 @@ const BUSYBOX: &str =
     "busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -87,14 +91,21 @@ async fn the_directories_the_user_id_and_the_network_are_created_and_usable() {
 
     // On disk: owned by the host id of tenant id 10042, private to it and the agent's group.
     let agent = std::env::var("BUILTPANEL_TEST_AGENT_USER").unwrap_or_else(|_| "dev".into());
-    let start: u32 = std::fs::read_to_string("/etc/subuid")
-        .unwrap()
-        .lines()
-        .find_map(|l| {
-            let mut fields = l.split(':');
-            (fields.next() == Some(agent.as_str())).then(|| fields.next().unwrap().parse().unwrap())
-        })
-        .expect("subuid range of the agent user");
+    // Under a root engine (Kiri) the helper maps a tenant id to itself (BUILTPANEL_TEST_UID_IDENTITY).
+    let identity = std::env::var_os("BUILTPANEL_TEST_UID_IDENTITY").is_some();
+    let start: u32 = if identity {
+        1
+    } else {
+        std::fs::read_to_string("/etc/subuid")
+            .unwrap()
+            .lines()
+            .find_map(|l| {
+                let mut fields = l.split(':');
+                (fields.next() == Some(agent.as_str()))
+                    .then(|| fields.next().unwrap().parse().unwrap())
+            })
+            .expect("subuid range of the agent user")
+    };
     for dir in [PathBuf::from(&root), PathBuf::from(&root).join("www")] {
         let meta = std::fs::metadata(&dir).unwrap();
         assert_eq!(meta.uid(), start + 10_042 - 1, "{dir:?}");

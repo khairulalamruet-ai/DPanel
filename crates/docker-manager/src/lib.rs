@@ -327,6 +327,9 @@ const USAGE_PARALLEL: usize = 4;
 #[derive(Clone)]
 pub struct DockerManager {
     docker: Docker,
+    /// Whether the engine is Kiri (asked once, on the first container): Kiri ignores the
+    /// `bind` options of a `local` volume, so a tenant's directory is mounted directly.
+    kiri: std::sync::Arc<tokio::sync::OnceCell<bool>>,
 }
 
 impl DockerManager {
@@ -342,7 +345,10 @@ impl DockerManager {
         let docker =
             Docker::connect_with_unix(path, API_TIMEOUT_SECS, bollard::API_DEFAULT_VERSION)
                 .map_err(map_error)?;
-        Ok(Self { docker })
+        Ok(Self {
+            docker,
+            kiri: std::sync::Arc::default(),
+        })
     }
 
     /// The daemon's version, which also proves it is reachable.
@@ -411,7 +417,10 @@ impl DockerManager {
     /// if the name is taken, [`DockerError::NotFound`] if the image, a volume or
     /// the network is missing.
     pub async fn create_container(&self, spec: &ContainerSpec) -> Result<String, DockerError> {
-        let body = spec.to_create_body()?;
+        let mut body = spec.to_create_body()?;
+        if self.is_kiri().await {
+            self.bind_volumes_directly(&mut body).await?;
+        }
         let options = CreateContainerOptionsBuilder::default()
             .name(spec.name.as_str())
             .build();
@@ -421,6 +430,63 @@ impl DockerManager {
             .await
             .map_err(map_error)?;
         Ok(created.id)
+    }
+
+    async fn is_kiri(&self) -> bool {
+        *self
+            .kiri
+            .get_or_init(|| async {
+                self.docker
+                    .version()
+                    .await
+                    .ok()
+                    .and_then(|v| v.platform)
+                    .is_some_and(|p| p.name == "Kiri")
+            })
+            .await
+    }
+
+    /// On Kiri a volume that is a tenant's directory (made by [`Self::create_bind_volume`]:
+    /// ours, with `o=bind` and a plain absolute `device`) becomes a bind mount of that same
+    /// directory, because Kiri would otherwise give the container an empty volume of its own.
+    async fn bind_volumes_directly(
+        &self,
+        body: &mut bollard::models::ContainerCreateBody,
+    ) -> Result<(), DockerError> {
+        use bollard::models::MountType;
+        let Some(mounts) = body.host_config.as_mut().and_then(|h| h.mounts.as_mut()) else {
+            return Ok(());
+        };
+        for mount in mounts
+            .iter_mut()
+            .filter(|m| m.typ == Some(MountType::VOLUME))
+        {
+            let Some(name) = mount.source.clone() else {
+                continue;
+            };
+            let volume = self.docker.inspect_volume(&name).await.map_err(map_error)?;
+            let is_ours = volume.labels.get(MANAGED_LABEL).map(String::as_str) == Some("true");
+            if !is_ours || volume.options.get("o").map(String::as_str) != Some("bind") {
+                continue;
+            }
+            let device = volume.options.get("device").cloned().unwrap_or_default();
+            let plain = Path::new(&device).is_absolute()
+                && Path::new(&device).components().all(|c| {
+                    matches!(
+                        c,
+                        std::path::Component::RootDir | std::path::Component::Normal(_)
+                    )
+                });
+            if !plain {
+                return Err(DockerError::Conflict(
+                    "the volume does not point to a plain directory".into(),
+                ));
+            }
+            mount.typ = Some(MountType::BIND);
+            mount.source = Some(device);
+            mount.volume_options = None;
+        }
+        Ok(())
     }
 
     /// Starts a container we created. Starting a running container is fine.

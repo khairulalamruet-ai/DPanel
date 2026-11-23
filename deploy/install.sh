@@ -19,6 +19,9 @@
 #   --no-agent           install the control plane only (nodes are added from other servers)
 #   --no-root-login      do not let `root` log in to the panel with this server's root password
 #                        (on by default, like WHM; the helper builtpanel-root-auth checks it)
+#   --engine docker|kiri the container engine of the local node: rootless Docker (default), or Kiri
+#                        (https://runkiri.com, a root engine in beta: its `kiri` group is root-equivalent, so
+#                        the agent is too; the engine of a node with tenants cannot be changed)
 #   --no-upgrade         do not update the operating system first (by default every installed package,
 #                        the kernel included, is brought up to date before anything is installed)
 #   --check              only look: what is there, what would be done; changes nothing
@@ -32,9 +35,18 @@
 # of the node channel, and with the local node: rootless Docker, the agent and the root helper.
 set -euo pipefail
 
-BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; UPGRADE=1; CHECK=0
+BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; UPGRADE=1; ENGINE=docker; CHECK=0
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ETC=/etc/builtpanel; SECRETS=$ETC/secrets; STATE=/var/lib/builtpanel; AGENT_PORT=8444
+# Kiri (https://runkiri.com, Apache-2.0): the engine-only package ("kiri-lite"), by the version and the SHA-256
+# we checked (not the ones the download site announces next to the files). Taken from download.runkiri.com.
+KIRI_VERSION=0.2.2
+declare -A KIRI_SHA256=(
+    ["kiri-lite_0.2.2_amd64.deb"]=24798125ee50bb24db86594a9ee1469b1032d9b2ffd7da616b06e40763c723b9
+    ["kiri-lite_0.2.2_arm64.deb"]=5388bd5651db97a23d7eb9f057881522cbad8a27b3463d293f337b8c8797d7f2
+    ["kiri-lite-0.2.2-1.x86_64.rpm"]=9d0743e224d2729648703234d8b634f122f5e3ee545538bf8cccbb74cb4237f0
+    ["kiri-lite-0.2.2-1.aarch64.rpm"]=91bbab3fc5f27cc41d546ba80d45531234ace3316bd9b7aaf4bf1e7b0d4b9a19
+)
 NEED_REBOOT="${BUILTPANEL_REBOOT_NEEDED:-0}"  # get.sh updates the system first and says here whether a reboot is due
 
 while [ $# -gt 0 ]; do
@@ -47,12 +59,15 @@ while [ $# -gt 0 ]; do
         --admin-username) ADMIN_USER="${2:?--admin-username needs a name}"; shift 2 ;;
         --no-agent) WITH_AGENT=0; shift ;;
         --no-root-login) ROOT_LOGIN=0; shift ;;
+        --engine) ENGINE="${2:?--engine needs docker or kiri}"; shift 2 ;;
         --no-upgrade) UPGRADE=0; shift ;;
         --check) CHECK=1; shift ;;
-        -h | --help) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "install.sh: unknown option: $1 (see --help)" >&2; exit 64 ;;
     esac
 done
+
+[ "$ENGINE" = docker ] || [ "$ENGINE" = kiri ] || { echo "install.sh: --engine must be docker or kiri" >&2; exit 64; }
 
 # The look: the logo, a live line per step with an overall progress bar (deploy/ui.sh), or plain
 # "==> step" lines when that file is missing or the output is not a terminal.
@@ -133,6 +148,7 @@ if [ "$CHECK" -eq 1 ]; then
     echo "==> check only: nothing is changed"
     echo "    system:        ${PRETTY_NAME} ($(uname -m)), ${mem_mb} MB memory, ${free_gb} GB free"
     echo "    system update: $([ "$UPGRADE" -eq 1 ] && echo 'every package and the kernel would be brought up to date first (--no-upgrade skips it)' || echo 'skipped (--no-upgrade)')"
+    echo "    engine:        $([ "$ENGINE" = kiri ] && echo "Kiri $KIRI_VERSION (pinned and checked), a root engine" || echo 'rootless Docker')"
     echo "    binaries:      ${need[*]} found and runnable"
     echo "    postgresql 18: $(command -v $PG_BIN/postgres > /dev/null && echo present || echo 'would be installed')"
     echo "    redis:         $(command -v redis-server || echo 'would be installed')"
@@ -540,6 +556,26 @@ else
 fi
 
 if [ "$WITH_AGENT" -eq 1 ]; then
+    if [ "$ENGINE" = kiri ]; then
+        say "the local node (Kiri engine, the agent, the root helper)"
+        case "$FAMILY:$(uname -m)" in
+            deb:x86_64) kiri_file="kiri-lite_${KIRI_VERSION}_amd64.deb" ;;
+            deb:aarch64) kiri_file="kiri-lite_${KIRI_VERSION}_arm64.deb" ;;
+            rhel:x86_64) kiri_file="kiri-lite-${KIRI_VERSION}-1.x86_64.rpm" ;;
+            rhel:aarch64) kiri_file="kiri-lite-${KIRI_VERSION}-1.aarch64.rpm" ;;
+            *) die "no Kiri package for this system" ;;
+        esac
+        if [ "$FAMILY" = rhel ]; then have_kiri="$(rpm -q --qf '%{VERSION}' kiri-lite 2> /dev/null || true)"; else have_kiri="$(dpkg-query -W -f='${Version}' kiri-lite 2> /dev/null || true)"; fi
+        if [ "$have_kiri" != "$KIRI_VERSION" ]; then
+            kiri_dir="$(mktemp -d /var/tmp/builtpanel-kiri.XXXXXX)"
+            curl -fsSL --proto '=https' --tlsv1.2 --retry 3 -o "$kiri_dir/$kiri_file" "https://download.runkiri.com/$kiri_file" || die "cannot download Kiri ($kiri_file)"
+            have=$(sha256sum "$kiri_dir/$kiri_file" | awk '{print $1}')
+            [ "$have" = "${KIRI_SHA256[$kiri_file]}" ] || die "the Kiri package does not match the checksum this installer was made with (got $have): nothing was installed"
+            if [ "$FAMILY" = rhel ]; then dnf install -y -q "$kiri_dir/$kiri_file" > /dev/null; else apt-get install -y -qq "$kiri_dir/$kiri_file" > /dev/null; fi
+            rm -rf "$kiri_dir"
+        fi
+        "$HERE/agent/install.sh" --binary "$BIN_DIR/builtpanel-agent" --priv-helper "$BIN_DIR/builtpanel-priv-helper" --engine kiri
+    else
     say "the local node (rootless Docker, the agent, the root helper)"
     if ! command -v dockerd-rootless-setuptool.sh > /dev/null; then
         if [ "$FAMILY" = rhel ]; then
@@ -560,6 +596,7 @@ if [ "$WITH_AGENT" -eq 1 ]; then
     if ! grep -qw cpu "/sys/fs/cgroup/user.slice/user-${agent_uid}.slice/user@${agent_uid}.service/cgroup.subtree_control" 2> /dev/null; then
         ui_warn "this server does not hand the CPU controller to the agent's user (a container-type VPS, or an old systemd): hosting accounts cannot get CPU limits here"
         CPU_LIMITS=no
+    fi
     fi
     # The agent drives the web server on this machine (Caddy's admin API, which listens on this
     # machine only) and keeps the panel's own name in what it sends it.
