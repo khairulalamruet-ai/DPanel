@@ -16,7 +16,7 @@ for t in tenant_live isolation_live; do
   TEST=$(ls -t $BIN/build/builtpanel-node-agent/*/out/$t-* 2>/dev/null | grep -v "\.d$" | head -1)
   [ -n "$TEST" ] || TEST=$(ls -t $BIN/deps/$t-* | grep -v "\.d$" | head -1)
   echo "=== $t"
-  bash -c "runuser -u dev -g dev -G kiri -- env BUILTPANEL_TEST_UID_IDENTITY=1 BUILTPANEL_TEST_DOCKER_SOCKET=/run/kiri/docker.sock BUILTPANEL_TEST_HELPER_SOCKET=$SOCK BUILTPANEL_TEST_TENANTS_ROOT=$ROOTDIR BUILTPANEL_AGENT_TRANSFERS=$TR $TEST --include-ignored --nocapture" 2>&1 | grep -E "^test |test result|panicked|left|right|skipped|error" -A4 | head -40
+  bash -c "runuser -u dev -g dev -G kiri -- env DOCKER_HOST=unix:///run/kiri/docker.sock BUILTPANEL_TEST_UID_IDENTITY=1 BUILTPANEL_TEST_DOCKER_SOCKET=/run/kiri/docker.sock BUILTPANEL_TEST_HELPER_SOCKET=$SOCK BUILTPANEL_TEST_TENANTS_ROOT=$ROOTDIR BUILTPANEL_AGENT_TRANSFERS=$TR $TEST --include-ignored --nocapture" 2>&1 | grep -E "^test |test result|panicked|left|right|skipped|error" -A4 | head -40
 done
 tail -4 /tmp/bp-kiri-helper.log | sed 's/^/   /'
 kill $HP 2>/dev/null; sleep 0.5

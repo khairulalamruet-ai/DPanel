@@ -166,6 +166,12 @@ fn disk(what: &str, err: &std::io::Error) -> AgentError {
 pub(super) fn sql_error(err: &tokio_postgres::Error) -> AgentError {
     if let Some(db) = err.as_db_error() {
         let code = db.code().code();
+        // "The system is starting up" (an engine that opens the port before the server is
+        // ready answers like this): it will be fine in a moment.
+        if code == "57P03" {
+            return AgentError::new(ErrorCode::Internal, "the database server is starting up")
+                .retryable();
+        }
         let message = if code == "28P01" || code == "28000" {
             "the database server refused the agent's password".to_owned()
         } else {

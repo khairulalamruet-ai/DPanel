@@ -52,6 +52,11 @@ async fn rig(tag: &str) -> Rig {
     let tenant = Uuid::now_v7();
     let www = tenants.join(tenant.to_string()).join("www");
     std::fs::create_dir_all(&www).unwrap();
+    // A root engine (Kiri) has no user-id shift: the tenant's id must be allowed into the folder.
+    if std::env::var_os("BUILTPANEL_TEST_UID_IDENTITY").is_some() {
+        use std::os::unix::fs::PermissionsExt as _;
+        std::fs::set_permissions(&www, std::fs::Permissions::from_mode(0o777)).unwrap();
+    }
     let username = TenantUsername::parse("alice").unwrap();
     let docker = DockerManager::connect(&docker_socket()).unwrap();
     let network = network_name(&username).unwrap();
@@ -190,15 +195,19 @@ async fn a_static_site_is_made_from_its_steps_alone_and_a_used_folder_is_refused
     let page = std::fs::read_to_string(rig.www.join("site").join("index.html")).unwrap();
     assert!(page.contains("<h1>Alice App</h1>"), "{page}");
     // A folder with something in it is refused; a default index page does not count.
-    std::fs::write(rig.www.join("site").join("mine.txt"), "mine").unwrap();
-    let e = install_app_as(
-        rig.context.clone(),
-        rig.op("static-site", "site", None, ""),
-        (0, 0),
-    )
-    .await
-    .unwrap_err();
-    assert_eq!(e.code, ErrorCode::InvalidArguments, "{e:?}");
+    // (Under a root engine the folder belongs to the tenant's id and this user cannot write in it.)
+    if std::fs::write(rig.www.join("site").join("mine.txt"), "mine").is_ok() {
+        let e = install_app_as(
+            rig.context.clone(),
+            rig.op("static-site", "site", None, ""),
+            (0, 0),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(e.code, ErrorCode::InvalidArguments, "{e:?}");
+    } else {
+        eprintln!("skipped the used-folder check: the folder is not writable here");
+    }
     // A folder that climbs out and a definition that is not valid are refused before anything runs.
     let e = install_app_as(
         rig.context.clone(),
