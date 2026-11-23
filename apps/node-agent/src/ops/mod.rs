@@ -49,6 +49,8 @@ pub mod services;
 pub mod sqlexport;
 pub mod sqlimport;
 pub mod sqlsplit;
+pub mod studio;
+mod studio_pg;
 pub mod tenant;
 pub mod traffic;
 pub mod transfer;
@@ -335,6 +337,10 @@ impl Registry {
             registry.register("file_op", {
                 let context = context.clone();
                 move |op| files::file_op(context.clone(), op)
+            });
+            registry.register("studio_op", {
+                let context = context.clone();
+                move |op| studio::studio_op(context.clone(), op)
             });
             registry.register("open_phpmyadmin", {
                 let context = context.clone();

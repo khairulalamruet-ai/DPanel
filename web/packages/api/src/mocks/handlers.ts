@@ -2026,6 +2026,7 @@ let mockDbUsers = getInitialDbUsers();
 export const resetMockDatabases = () => {
   mockDatabases = getInitialDatabases();
   mockDbUsers = getInitialDbUsers();
+  resetMockStudio();
 };
 
 
@@ -5079,6 +5080,13 @@ export const handlers = [
     db.users = db.users.filter((g) => g.user_id !== user.id);
     user.databases = user.databases.filter((g) => g.database_id !== db.id);
     return new HttpResponse(null, { status: 202 });
+  }),
+
+  // POST /api/v1/client/databases/:id/studio (the database studio)
+  http.post(/\/api\/v1\/client\/databases\/([^/]+)\/studio$/, async ({ params, request }) => {
+    if (!mockDatabases.some((d) => d.id === params[0])) return problem(404, "not_found", "No such database");
+    const body = (await request.json()) as Record<string, any>;
+    return HttpResponse.json(studioMock(body));
   }),
 
   // POST /api/v1/client/databases/:id/phpmyadmin
@@ -8913,3 +8921,87 @@ export const handlers = [
   ];
 })(),
 ];
+
+
+type StudioCell = string | null;
+let studioRows: StudioCell[][] = [];
+const STUDIO_COLUMNS = [
+  { name: "id", data_type: "int(11)", nullable: false, primary_key: true, default: null, generated: true },
+  { name: "name", data_type: "varchar(80)", nullable: false, primary_key: false, default: null, generated: false },
+  { name: "email", data_type: "varchar(120)", nullable: true, primary_key: false, default: null, generated: false },
+];
+export const resetMockStudio = () => {
+  studioRows = [
+    ["1", "Ada Lovelace", "ada@example.com"],
+    ["2", "Alan Turing", null],
+    ["3", "Grace Hopper", "grace@example.com"],
+  ];
+};
+resetMockStudio();
+
+const studioError = (code: string, message: string) => ({ type: "error", code, message });
+
+/** What the node would answer to one studio request, for a single table `customers`. */
+function studioMock(body: Record<string, any>) {
+  const names = STUDIO_COLUMNS.map((c) => c.name);
+  switch (body.type) {
+    case "tables":
+      return { type: "tables", tables: [{ name: "customers", kind: "table", rows: studioRows.length, size_bytes: 16384 }] };
+    case "describe":
+      if (body.table !== "customers") return studioError("not_found", "No such table.");
+      return {
+        type: "described",
+        columns: STUDIO_COLUMNS,
+        indexes: [{ name: "PRIMARY", columns: ["id"], unique: true }],
+        create_sql: "CREATE TABLE `customers` (\n  `id` int(11) NOT NULL AUTO_INCREMENT,\n  PRIMARY KEY (`id`)\n)",
+      };
+    case "rows": {
+      let rows = studioRows.slice();
+      for (const f of body.filters ?? []) {
+        const i = names.indexOf(f.column);
+        rows = rows.filter((r) => {
+          const v = r[i];
+          switch (f.op) {
+            case "eq": return v === f.value;
+            case "ne": return v !== f.value;
+            case "like": return v !== null && v.toLowerCase().includes(String(f.value).replace(/%/g, "").toLowerCase());
+            case "is_null": return v === null;
+            case "not_null": return v !== null;
+            default: return true;
+          }
+        });
+      }
+      if (body.order_by) {
+        const i = names.indexOf(body.order_by);
+        rows.sort((a, b) => String(a[i] ?? "").localeCompare(String(b[i] ?? ""), undefined, { numeric: true }) * (body.descending ? -1 : 1));
+      }
+      return { type: "rows", total: rows.length, grid: { columns: names, rows: rows.slice(body.offset, body.offset + body.limit), truncated: false } };
+    }
+    case "query": {
+      const sql = String(body.sql);
+      if (/^\s*select/i.test(sql)) return { type: "query", grid: { columns: names, rows: studioRows, truncated: false }, affected: 0, elapsed_ms: 3 };
+      if (/^\s*(insert|update|delete|create|drop|alter)/i.test(sql)) return { type: "query", grid: null, affected: 1, elapsed_ms: 4 };
+      return studioError("sql", "error 1064: You have an error in your SQL syntax");
+    }
+    case "insert_row": {
+      const row: StudioCell[] = [String(studioRows.length + 1), "", null];
+      for (const v of body.values) row[names.indexOf(v.column)] = v.value;
+      studioRows.push(row);
+      return { type: "changed", affected: 1 };
+    }
+    case "update_row": {
+      const id = body.key?.[0]?.value;
+      const row = studioRows.find((r) => r[0] === id);
+      if (!row) return { type: "changed", affected: 0 };
+      for (const v of body.values) row[names.indexOf(v.column)] = v.value;
+      return { type: "changed", affected: 1 };
+    }
+    case "delete_row": {
+      const before = studioRows.length;
+      studioRows = studioRows.filter((r) => r[0] !== body.key?.[0]?.value);
+      return { type: "changed", affected: before - studioRows.length };
+    }
+    default:
+      return studioError("invalid", "Unknown request.");
+  }
+}

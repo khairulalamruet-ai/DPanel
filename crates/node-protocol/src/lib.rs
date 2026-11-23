@@ -19,6 +19,7 @@
 //! redacting `Debug` and is left out of logs.
 
 pub mod files;
+pub mod studio;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -2304,6 +2305,18 @@ pub enum Operation {
         /// What to do.
         request: files::FileRequest,
     },
+    /// One database studio request on a tenant's own database on the node's shared
+    /// server, done with a temporary account that has rights on that one database.
+    /// Answered with [`Output::Studio`].
+    StudioOp {
+        /// The database's whole name.
+        database: String,
+        /// Which server (the node's shared one).
+        #[serde(default, skip_serializing_if = "DbEngine::is_mysql")]
+        engine: DbEngine,
+        /// What to do.
+        request: studio::StudioRequest,
+    },
     /// Makes (or changes) an SFTP/FTPS account of a tenant on the node's file transfer
     /// server: a virtual user whose home is a folder of the tenant's files, working as
     /// the tenant's own user id. The password is set when one is given (and is needed
@@ -2815,6 +2828,7 @@ impl Operation {
         "import_sql",
         "export_sql",
         "file_op",
+        "studio_op",
         "create_backup",
         "restore_backup",
         "delete_backup",
@@ -2930,9 +2944,9 @@ impl Operation {
             | Self::ExportSql {
                 engine, dedicated, ..
             } => Some((*engine, dedicated.as_deref())),
-            Self::SetDbRemoteAccess { engine, .. } | Self::AllowTenantDatabases { engine, .. } => {
-                Some((*engine, None))
-            }
+            Self::SetDbRemoteAccess { engine, .. }
+            | Self::AllowTenantDatabases { engine, .. }
+            | Self::StudioOp { engine, .. } => Some((*engine, None)),
             _ => None,
         }
     }
@@ -2957,6 +2971,7 @@ impl Operation {
             Self::ImportSql { .. } => "import_sql",
             Self::ExportSql { .. } => "export_sql",
             Self::FileOp { .. } => "file_op",
+            Self::StudioOp { .. } => "studio_op",
             Self::CreateBackup { .. } => "create_backup",
             Self::RestoreBackup { .. } => "restore_backup",
             Self::DeleteBackup { .. } => "delete_backup",
@@ -3557,6 +3572,11 @@ pub enum Output {
     File {
         /// What came of it.
         result: files::FileResult,
+    },
+    /// Answer to [`Operation::StudioOp`].
+    Studio {
+        /// What came of it.
+        result: studio::StudioResult,
     },
     /// Answer to [`Operation::ExportSql`].
     SqlExported {
@@ -4574,6 +4594,11 @@ mod tests {
                 uid: 10_000,
                 request: files::FileRequest::TrashList,
             },
+            Operation::StudioOp {
+                database: "alice_shop".into(),
+                engine: DbEngine::Mysql,
+                request: studio::StudioRequest::Tables,
+            },
             Operation::CreateBackup {
                 tenant_id: id(),
                 uid: 10_000,
@@ -4757,7 +4782,7 @@ mod tests {
         }
         assert_eq!(
             Operation::TYPE_NAMES.len(),
-            97,
+            98,
             "update TYPE_NAMES and type_name() together with the enum"
         );
     }

@@ -28,6 +28,7 @@ import {
   Plus,
   RefreshCw,
   ExternalLink,
+  Table2,
   UploadCloud,
   Download,
   Trash2,
@@ -46,6 +47,7 @@ import { CreateDatabaseUserDialog } from "./CreateDatabaseUserDialog";
 import { ManageGrantsDialog } from "./ManageGrantsDialog";
 import { SqlImportDialog } from "./SqlImportDialog";
 import { RemoteAccessDialog } from "./RemoteAccessDialog";
+import { DatabaseStudio } from "./studio";
 import { useTranslation } from "@builtpanel/i18n";
 
 export function ClientDatabasesPage() {
@@ -61,6 +63,7 @@ export function ClientDatabasesPage() {
   const [createDbOpen, setCreateDbOpen] = useState(false);
   const [createUserOpen, setCreateUserOpen] = useState(false);
   const [importDb, setImportDb] = useState<DatabaseItem | null>(null);
+  const [studioDb, setStudioDb] = useState<DatabaseItem | null>(null);
   const [manageGrantsUser, setManageGrantsUser] = useState<DatabaseUserItem | null>(null);
   const [remoteAccessOpen, setRemoteAccessOpen] = useState(false);
 
@@ -207,6 +210,10 @@ export function ClientDatabasesPage() {
         <p className="text-sm text-destructive">{error || t("databases.errors.loadFailed", "Failed to load databases")}</p>
       </div>
     );
+  }
+
+  if (studioDb) {
+    return <DatabaseStudio database={studioDb} onClose={() => setStudioDb(null)} />;
   }
 
   const { databases, users, limits } = data;
@@ -445,6 +452,20 @@ export function ClientDatabasesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {/* Database studio (MariaDB and PostgreSQL on the node's shared servers) */}
+                          {db.status === "ready" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setStudioDb(db)}
+                              className="h-8 w-8 p-0"
+                              title={t("databases.actions.studio", "Open the database studio")}
+                              data-testid={`btn-studio-${db.id}`}
+                            >
+                              <Table2 className="h-4 w-4" />
+                            </Button>
+                          )}
+
                           {/* SQL Import */}
                           <Button
                             variant="ghost"

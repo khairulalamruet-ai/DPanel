@@ -16108,6 +16108,113 @@
         ]
       }
     },
+    "/api/v1/client/databases/{id}/studio": {
+      "post": {
+        "tags": [
+          "databases"
+        ],
+        "summary": "Do one thing in a database of the account: look at it, change a row or run SQL.",
+        "operationId": "clientDatabaseStudio",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Database id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The answer (a request the server refused is a `type: error` answer)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudioResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`client_only`, `csrf_failed` or `feature_disabled`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such database",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`web_client_unavailable`, `database_not_ready` or `tenant_not_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests in a short time",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`node_unavailable` or `node_busy`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/client/db-users": {
       "get": {
         "tags": [
@@ -26279,6 +26386,26 @@
           }
         }
       },
+      "Assignment": {
+        "type": "object",
+        "description": "A column set to a value (`None` is `NULL`).",
+        "required": [
+          "column"
+        ],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "The column."
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The value as text."
+          }
+        }
+      },
       "AuditItem": {
         "type": "object",
         "description": "One audit entry.",
@@ -27655,6 +27782,45 @@
           }
         },
         "additionalProperties": false
+      },
+      "ColumnInfo": {
+        "type": "object",
+        "description": "One column of a table.",
+        "required": [
+          "name",
+          "data_type",
+          "nullable",
+          "primary_key"
+        ],
+        "properties": {
+          "data_type": {
+            "type": "string",
+            "description": "Its type as the server writes it (`varchar(255)`)."
+          },
+          "default": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The default, as text."
+          },
+          "generated": {
+            "type": "boolean",
+            "description": "Filled in by the server (auto increment, generated)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "nullable": {
+            "type": "boolean",
+            "description": "May hold `NULL`."
+          },
+          "primary_key": {
+            "type": "boolean",
+            "description": "Part of the primary key."
+          }
+        }
       },
       "ContainerView": {
         "type": "object",
@@ -29692,6 +29858,46 @@
           }
         }
       },
+      "Filter": {
+        "type": "object",
+        "description": "One condition of a table view.",
+        "required": [
+          "column",
+          "op"
+        ],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "The column."
+          },
+          "op": {
+            "$ref": "#/components/schemas/FilterOp",
+            "description": "How to compare."
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The value (not used by `is_null` and `not_null`)."
+          }
+        }
+      },
+      "FilterOp": {
+        "type": "string",
+        "description": "How a column of a table is compared with a value.",
+        "enum": [
+          "eq",
+          "ne",
+          "lt",
+          "le",
+          "gt",
+          "ge",
+          "like",
+          "is_null",
+          "not_null"
+        ]
+      },
       "FirewallPolicy": {
         "type": "object",
         "description": "The node's firewall (T11.06): who may reach which port. Applied by the privileged helper as\none nftables table of its own; IPv4 only.",
@@ -30141,6 +30347,40 @@
           }
         }
       },
+      "Grid": {
+        "type": "object",
+        "description": "A result set: column names and rows of text.",
+        "required": [
+          "columns",
+          "rows"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The column names."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "description": "The rows; `None` is `NULL`."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More rows existed than were kept, or a value was cut."
+          }
+        }
+      },
       "HeaderView": {
         "type": "object",
         "description": "One response header.",
@@ -30463,6 +30703,32 @@
           "status": {
             "type": "string",
             "description": "`uploading`, `queued`, `running`, `done`, `failed` or `cancelled`."
+          }
+        }
+      },
+      "IndexInfo": {
+        "type": "object",
+        "description": "One index of a table.",
+        "required": [
+          "name",
+          "columns",
+          "unique"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its columns, in order."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "unique": {
+            "type": "boolean",
+            "description": "No two rows may share its values."
           }
         }
       },
@@ -30830,6 +31096,24 @@
             "type": "integer",
             "format": "int32",
             "description": "Stopped after this many seconds."
+          }
+        }
+      },
+      "KeyPart": {
+        "type": "object",
+        "description": "One part of a primary key.",
+        "required": [
+          "column",
+          "value"
+        ],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "The column."
+          },
+          "value": {
+            "type": "string",
+            "description": "Its value as text."
           }
         }
       },
@@ -35675,6 +35959,398 @@
           }
         }
       },
+      "StudioErrorCode": {
+        "type": "string",
+        "description": "Why a request failed (it is the answer, not a transport error).",
+        "enum": [
+          "invalid",
+          "sql",
+          "not_found",
+          "too_large"
+        ]
+      },
+      "StudioRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The tables and views of the database.",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "tables"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The columns, keys and indexes of one table.",
+            "required": [
+              "table",
+              "type"
+            ],
+            "properties": {
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "describe"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A page of a table.",
+            "required": [
+              "table",
+              "offset",
+              "limit",
+              "type"
+            ],
+            "properties": {
+              "descending": {
+                "type": "boolean",
+                "description": "Descending when sorted."
+              },
+              "filters": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Filter"
+                },
+                "description": "Conditions, all of which must hold."
+              },
+              "limit": {
+                "type": "integer",
+                "format": "int32",
+                "description": "Rows to give (1..=[`MAX_PAGE_ROWS`]).",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "format": "int32",
+                "description": "Rows to skip.",
+                "minimum": 0
+              },
+              "order_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Sort by this column."
+              },
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rows"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Runs one SQL statement the client typed.",
+            "required": [
+              "sql",
+              "type"
+            ],
+            "properties": {
+              "sql": {
+                "type": "string",
+                "description": "The statement."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "query"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Adds a row (columns not named take their default).",
+            "required": [
+              "table",
+              "values",
+              "type"
+            ],
+            "properties": {
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "insert_row"
+                ]
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Assignment"
+                },
+                "description": "The values to put in."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Changes the one row whose primary key is `key`.",
+            "required": [
+              "table",
+              "key",
+              "values",
+              "type"
+            ],
+            "properties": {
+              "key": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/KeyPart"
+                },
+                "description": "The primary key."
+              },
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "update_row"
+                ]
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Assignment"
+                },
+                "description": "What to set."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Deletes the one row whose primary key is `key`.",
+            "required": [
+              "table",
+              "key",
+              "type"
+            ],
+            "properties": {
+              "key": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/KeyPart"
+                },
+                "description": "The primary key."
+              },
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "delete_row"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "What a studio asks for."
+      },
+      "StudioResult": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The tables.",
+            "required": [
+              "tables",
+              "type"
+            ],
+            "properties": {
+              "tables": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TableInfo"
+                },
+                "description": "Them, by name."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "tables"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A table's structure.",
+            "required": [
+              "columns",
+              "indexes",
+              "create_sql",
+              "type"
+            ],
+            "properties": {
+              "columns": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ColumnInfo"
+                },
+                "description": "The columns, in order."
+              },
+              "create_sql": {
+                "type": "string",
+                "description": "The statement that makes the table."
+              },
+              "indexes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/IndexInfo"
+                },
+                "description": "The indexes."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "described"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A page of rows.",
+            "required": [
+              "grid",
+              "total",
+              "type"
+            ],
+            "properties": {
+              "grid": {
+                "$ref": "#/components/schemas/Grid",
+                "description": "The page."
+              },
+              "total": {
+                "type": "integer",
+                "format": "int64",
+                "description": "How many rows match (counted, not estimated).",
+                "minimum": 0
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rows"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A statement's outcome.",
+            "required": [
+              "affected",
+              "elapsed_ms",
+              "type"
+            ],
+            "properties": {
+              "affected": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Rows it changed, when it did not give a result set.",
+                "minimum": 0
+              },
+              "elapsed_ms": {
+                "type": "integer",
+                "format": "int64",
+                "description": "How long it ran, in milliseconds.",
+                "minimum": 0
+              },
+              "grid": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Grid",
+                    "description": "Rows, when the statement gave a result set."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "query"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A row was added, changed or deleted.",
+            "required": [
+              "affected",
+              "type"
+            ],
+            "properties": {
+              "affected": {
+                "type": "integer",
+                "format": "int64",
+                "description": "How many rows (0 when the key matched none).",
+                "minimum": 0
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "changed"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "It could not be done.",
+            "required": [
+              "code",
+              "message",
+              "type"
+            ],
+            "properties": {
+              "code": {
+                "$ref": "#/components/schemas/StudioErrorCode",
+                "description": "Which kind."
+              },
+              "message": {
+                "type": "string",
+                "description": "In words (the server's, for `sql`)."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "What a studio request came to."
+      },
       "SudoRequest": {
         "type": "object",
         "description": "Re-authentication to enter sudo mode.",
@@ -35771,6 +36447,38 @@
               "$ref": "#/components/schemas/SystemLogLine"
             },
             "description": "Oldest first."
+          }
+        }
+      },
+      "TableInfo": {
+        "type": "object",
+        "description": "A table or view.",
+        "required": [
+          "name",
+          "kind",
+          "rows",
+          "size_bytes"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`table` or `view`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "rows": {
+            "type": "integer",
+            "format": "int64",
+            "description": "About how many rows (an estimate the server keeps).",
+            "minimum": 0
+          },
+          "size_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Data and index size, in bytes.",
+            "minimum": 0
           }
         }
       },

@@ -2237,3 +2237,172 @@ async fn databases_of_a_tenant_with_its_own_server_are_made_there_and_wait_while
         .await;
     assert_eq!(status, StatusCode::CONFLICT);
 }
+
+/// Plays a node that answers every `studio_op` with `answer`.
+fn studio_node(pool: PgPool, answer: Value) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        for _ in 0..400 {
+            let ids: Vec<Uuid> = sqlx::query_scalar(
+                "SELECT id FROM operations WHERE kind = 'studio_op' AND status = 'pending'",
+            )
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+            for id in ids {
+                sqlx::query(
+                    "UPDATE operations SET status = 'dispatched', attempts = 1 WHERE id = $1",
+                )
+                .bind(id)
+                .execute(&pool)
+                .await
+                .unwrap();
+                builtpanel_database::operations::succeed(
+                    &pool,
+                    id,
+                    &json!({"type": "studio", "result": answer}),
+                )
+                .await
+                .unwrap();
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+        }
+    })
+}
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn the_studio_works_on_ones_own_ready_database_and_its_sql_stays_out_of_the_audit_log(
+    pool: PgPool,
+) {
+    let e = env(&pool).await;
+    let (alice, tenant) = client(&pool, "alice", 10_000).await;
+    let (bobby, _) = client(&pool, "bobby", 10_001).await;
+    let (a, b) = (e.sign_in(alice).await, e.sign_in(bobby).await);
+    let database = ready_database(&pool, tenant, "alice_shop").await;
+    let path = format!("/api/v1/client/databases/{database}/studio");
+    let node = studio_node(
+        pool.clone(),
+        json!({"type": "tables", "tables": [{"name": "items", "kind": "table", "rows": 3, "size_bytes": 16384}]}),
+    );
+
+    // Someone else's database is not found; the body is not trusted for the database name.
+    let (status, _) = e
+        .call(&b, "POST", &path, Some(json!({"type": "tables"})))
+        .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, got) = e
+        .call(&a, "POST", &path, Some(json!({"type": "tables"})))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{got}");
+    assert_eq!(got["tables"][0]["name"], "items");
+    let payload: Value =
+        sqlx::query_scalar("SELECT payload FROM operations WHERE kind = 'studio_op'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(payload["database"], "alice_shop");
+    assert_eq!(payload["request"]["type"], "tables");
+
+    // A request that is not one of ours is refused before it reaches the node.
+    for bad in [
+        json!({"type": "shell", "command": "id"}),
+        json!({"type": "rows", "table": "items"}),
+        json!({"nothing": true}),
+    ] {
+        let (status, _) = e.call(&a, "POST", &path, Some(bad)).await;
+        assert!(
+            status == StatusCode::UNPROCESSABLE_ENTITY || status == StatusCode::BAD_REQUEST,
+            "{status}"
+        );
+    }
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM operations WHERE kind = 'studio_op'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1, "nothing refused was queued");
+
+    // A statement is queued once only (it may have changed something) and audited by kind only.
+    let secret = "SELECT 'hunter2-the-password'";
+    let (status, _) = e
+        .call(
+            &a,
+            "POST",
+            &path,
+            Some(json!({"type": "query", "sql": secret})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let attempts: i32 = sqlx::query_scalar(
+        "SELECT max_attempts FROM operations WHERE payload->'request'->>'type' = 'query'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(attempts, 1);
+    let audit: String = sqlx::query_scalar(
+        "SELECT string_agg(metadata::text, ' ') FROM audit_logs WHERE action = 'database.studio'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(
+        audit.contains("query") && !audit.contains("hunter2"),
+        "{audit}"
+    );
+    // Reading is not audited (it would be noise).
+    let reads: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit_logs WHERE action = 'database.studio' AND metadata->>'request' = 'tables'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(reads, 0);
+    node.abort();
+
+    // A PostgreSQL database has its studio too: the node is told which server.
+    let pg: Uuid = sqlx::query_scalar(
+        "INSERT INTO databases (tenant_id, name, status, engine) VALUES ($1, 'alice_pg', 'ready', 'postgres') RETURNING id",
+    )
+    .bind(tenant)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    let node = studio_node(pool.clone(), json!({"type": "tables", "tables": []}));
+    let (status, got) = e
+        .call(
+            &a,
+            "POST",
+            &format!("/api/v1/client/databases/{pg}/studio"),
+            Some(json!({"type": "tables"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{got}");
+    let engines: Vec<String> = sqlx::query_scalar(
+        "SELECT COALESCE(payload->>'engine', 'mysql') FROM operations WHERE kind = 'studio_op' AND payload->>'database' = 'alice_pg'",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(engines, ["postgres"]);
+    node.abort();
+    // A database that is not ready has none yet.
+    let pending: Uuid = sqlx::query_scalar(
+        "INSERT INTO databases (tenant_id, name, status) VALUES ($1, 'alice_new', 'pending') RETURNING id",
+    )
+    .bind(tenant)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    let (status, got) = e
+        .call(
+            &a,
+            "POST",
+            &format!("/api/v1/client/databases/{pending}/studio"),
+            Some(json!({"type": "tables"})),
+        )
+        .await;
+    assert_eq!(
+        (status, code(&got)),
+        (StatusCode::CONFLICT, "database_not_ready")
+    );
+}

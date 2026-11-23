@@ -3323,6 +3323,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/databases/{id}/studio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Do one thing in a database of the account: look at it, change a row or run SQL. */
+        post: operations["clientDatabaseStudio"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/db-users": {
         parameters: {
             query?: never;
@@ -5724,6 +5741,13 @@ export interface components {
              */
             version: string;
         };
+        /** @description A column set to a value (`None` is `NULL`). */
+        Assignment: {
+            /** @description The column. */
+            column: string;
+            /** @description The value as text. */
+            value?: string | null;
+        };
         /** @description One audit entry. */
         AuditItem: {
             /**
@@ -6357,6 +6381,21 @@ export interface components {
              * @example 123456
              */
             code: string;
+        };
+        /** @description One column of a table. */
+        ColumnInfo: {
+            /** @description Its type as the server writes it (`varchar(255)`). */
+            data_type: string;
+            /** @description The default, as text. */
+            default?: string | null;
+            /** @description Filled in by the server (auto increment, generated). */
+            generated?: boolean;
+            /** @description Its name. */
+            name: string;
+            /** @description May hold `NULL`. */
+            nullable: boolean;
+            /** @description Part of the primary key. */
+            primary_key: boolean;
         };
         /** @description A container of the account. */
         ContainerView: {
@@ -7402,6 +7441,20 @@ export interface components {
             /** @description Where to download from (a path on this panel). */
             url: string;
         };
+        /** @description One condition of a table view. */
+        Filter: {
+            /** @description The column. */
+            column: string;
+            /** @description How to compare. */
+            op: components["schemas"]["FilterOp"];
+            /** @description The value (not used by `is_null` and `not_null`). */
+            value?: string | null;
+        };
+        /**
+         * @description How a column of a table is compared with a value.
+         * @enum {string}
+         */
+        FilterOp: "eq" | "ne" | "lt" | "le" | "gt" | "ge" | "like" | "is_null" | "not_null";
         /**
          * @description The node's firewall (T11.06): who may reach which port. Applied by the privileged helper as
          *     one nftables table of its own; IPv4 only.
@@ -7613,6 +7666,15 @@ export interface components {
              */
             user_id: string;
         };
+        /** @description A result set: column names and rows of text. */
+        Grid: {
+            /** @description The column names. */
+            columns: string[];
+            /** @description The rows; `None` is `NULL`. */
+            rows: (string | null)[][];
+            /** @description More rows existed than were kept, or a value was cut. */
+            truncated?: boolean;
+        };
         /** @description One response header. */
         HeaderView: {
             /**
@@ -7778,6 +7840,15 @@ export interface components {
             statements: number;
             /** @description `uploading`, `queued`, `running`, `done`, `failed` or `cancelled`. */
             status: string;
+        };
+        /** @description One index of a table. */
+        IndexInfo: {
+            /** @description Its columns, in order. */
+            columns: string[];
+            /** @description Its name. */
+            name: string;
+            /** @description No two rows may share its values. */
+            unique: boolean;
         };
         /** @description One infected file a scan found. */
         Infection: {
@@ -7947,6 +8018,13 @@ export interface components {
              * @description Stopped after this many seconds.
              */
             timeout_seconds: number;
+        };
+        /** @description One part of a primary key. */
+        KeyPart: {
+            /** @description The column. */
+            column: string;
+            /** @description Its value as text. */
+            value: string;
         };
         /** @description The license, as the license page shows it. */
         LicenseView: {
@@ -10350,6 +10428,125 @@ export interface components {
             /** @description `pending`, `running`, `completed` or `failed`. */
             status: string;
         };
+        /**
+         * @description Why a request failed (it is the answer, not a transport error).
+         * @enum {string}
+         */
+        StudioErrorCode: "invalid" | "sql" | "not_found" | "too_large";
+        /** @description What a studio asks for. */
+        StudioRequest: {
+            /** @enum {string} */
+            type: "tables";
+        } | {
+            /** @description The table. */
+            table: string;
+            /** @enum {string} */
+            type: "describe";
+        } | {
+            /** @description Descending when sorted. */
+            descending?: boolean;
+            /** @description Conditions, all of which must hold. */
+            filters?: components["schemas"]["Filter"][];
+            /**
+             * Format: int32
+             * @description Rows to give (1..=[`MAX_PAGE_ROWS`]).
+             */
+            limit: number;
+            /**
+             * Format: int32
+             * @description Rows to skip.
+             */
+            offset: number;
+            /** @description Sort by this column. */
+            order_by?: string | null;
+            /** @description The table. */
+            table: string;
+            /** @enum {string} */
+            type: "rows";
+        } | {
+            /** @description The statement. */
+            sql: string;
+            /** @enum {string} */
+            type: "query";
+        } | {
+            /** @description The table. */
+            table: string;
+            /** @enum {string} */
+            type: "insert_row";
+            /** @description The values to put in. */
+            values: components["schemas"]["Assignment"][];
+        } | {
+            /** @description The primary key. */
+            key: components["schemas"]["KeyPart"][];
+            /** @description The table. */
+            table: string;
+            /** @enum {string} */
+            type: "update_row";
+            /** @description What to set. */
+            values: components["schemas"]["Assignment"][];
+        } | {
+            /** @description The primary key. */
+            key: components["schemas"]["KeyPart"][];
+            /** @description The table. */
+            table: string;
+            /** @enum {string} */
+            type: "delete_row";
+        };
+        /** @description What a studio request came to. */
+        StudioResult: {
+            /** @description Them, by name. */
+            tables: components["schemas"]["TableInfo"][];
+            /** @enum {string} */
+            type: "tables";
+        } | {
+            /** @description The columns, in order. */
+            columns: components["schemas"]["ColumnInfo"][];
+            /** @description The statement that makes the table. */
+            create_sql: string;
+            /** @description The indexes. */
+            indexes: components["schemas"]["IndexInfo"][];
+            /** @enum {string} */
+            type: "described";
+        } | {
+            /** @description The page. */
+            grid: components["schemas"]["Grid"];
+            /**
+             * Format: int64
+             * @description How many rows match (counted, not estimated).
+             */
+            total: number;
+            /** @enum {string} */
+            type: "rows";
+        } | {
+            /**
+             * Format: int64
+             * @description Rows it changed, when it did not give a result set.
+             */
+            affected: number;
+            /**
+             * Format: int64
+             * @description How long it ran, in milliseconds.
+             */
+            elapsed_ms: number;
+            grid?: components["schemas"]["Grid"] | null;
+            /** @enum {string} */
+            type: "query";
+        } | {
+            /**
+             * Format: int64
+             * @description How many rows (0 when the key matched none).
+             */
+            affected: number;
+            /** @enum {string} */
+            type: "changed";
+        } | {
+            /** @description Which kind. */
+            code: components["schemas"]["StudioErrorCode"];
+            /** @description In words (the server's, for `sql`). */
+            message: string;
+            /** @enum {string} */
+            type: "error";
+        };
         /** @description Re-authentication to enter sudo mode. */
         SudoRequest: {
             /**
@@ -10397,6 +10594,23 @@ export interface components {
         SystemLogList: {
             /** @description Oldest first. */
             items: components["schemas"]["SystemLogLine"][];
+        };
+        /** @description A table or view. */
+        TableInfo: {
+            /** @description `table` or `view`. */
+            kind: string;
+            /** @description Its name. */
+            name: string;
+            /**
+             * Format: int64
+             * @description About how many rows (an estimate the server keeps).
+             */
+            rows: number;
+            /**
+             * Format: int64
+             * @description Data and index size, in bytes.
+             */
+            size_bytes: number;
         };
         /** @description A template to save. */
         TemplateInput: {
@@ -22506,6 +22720,81 @@ export interface operations {
                 };
             };
             /** @description `phpmyadmin_failed` (the node could not start it) or `node_busy` (it is not ready yet; try again) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    clientDatabaseStudio: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Database id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudioRequest"];
+            };
+        };
+        responses: {
+            /** @description The answer (a request the server refused is a `type: error` answer) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudioResult"];
+                };
+            };
+            /** @description `client_only`, `csrf_failed` or `feature_disabled` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description No such database */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `web_client_unavailable`, `database_not_ready` or `tenant_not_running` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too many requests in a short time */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `node_unavailable` or `node_busy` */
             503: {
                 headers: {
                     [name: string]: unknown;

@@ -56,7 +56,7 @@ fn sessions_dir(context: &TenantContext) -> PathBuf {
     base(context).join("sessions")
 }
 
-fn accounts_dir(context: &TenantContext) -> PathBuf {
+pub(super) fn accounts_dir(context: &TenantContext) -> PathBuf {
     base(context).join("accounts")
 }
 

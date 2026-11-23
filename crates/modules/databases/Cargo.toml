@@ -16,7 +16,7 @@ builtpanel-auth-core.workspace = true
 builtpanel-database.workspace = true
 builtpanel-domain.workspace = true
 builtpanel-http-kit.workspace = true
-builtpanel-node-protocol.workspace = true
+builtpanel-node-protocol = { workspace = true, features = ["openapi"] }
 builtpanel-rbac.workspace = true
 builtpanel-session.workspace = true
 builtpanel-settings.workspace = true

@@ -24,6 +24,7 @@
 pub mod exports;
 pub mod imports;
 pub mod phpmyadmin;
+pub mod studio;
 
 use std::{path::PathBuf, sync::Arc};
 
@@ -117,6 +118,7 @@ pub fn client_router() -> Router<DatabasesState> {
         .merge(imports::client_router())
         .merge(exports::client_router())
         .merge(phpmyadmin::client_router())
+        .merge(studio::client_router())
 }
 
 /// Routes without a session (the node fetching an SQL dump with its token).
@@ -1490,14 +1492,20 @@ pub async fn set_remote(
         imports::put_chunk, imports::complete_import, imports::cancel_import,
         exports::start_export, exports::list_exports, exports::get_export,
         exports::make_link, exports::delete_export,
-        phpmyadmin::open_phpmyadmin
+        phpmyadmin::open_phpmyadmin, studio::studio
     ),
     components(schemas(
         GrantView, DatabaseView, DatabaseList, UserGrantView, DbUserView, DbUserList,
         DbUserCreated, AddDatabase, AddDbUser, NewPassword, SetAccess, RemoteHosts,
         NodeDatabases, DatabaseOverview, BigDatabase, BigDatabaseList, imports::ImportView, imports::ImportList, imports::StartImport,
         exports::ExportView, exports::ExportList, exports::DownloadLink,
-        phpmyadmin::PhpMyAdminLink
+        phpmyadmin::PhpMyAdminLink,
+        builtpanel_node_protocol::studio::StudioRequest, builtpanel_node_protocol::studio::StudioResult,
+        builtpanel_node_protocol::studio::Filter, builtpanel_node_protocol::studio::FilterOp,
+        builtpanel_node_protocol::studio::Assignment, builtpanel_node_protocol::studio::KeyPart,
+        builtpanel_node_protocol::studio::TableInfo, builtpanel_node_protocol::studio::ColumnInfo,
+        builtpanel_node_protocol::studio::IndexInfo, builtpanel_node_protocol::studio::Grid,
+        builtpanel_node_protocol::studio::StudioErrorCode
     )),
     tags((name = "databases", description = "Databases, their users and grants"))
 )]
