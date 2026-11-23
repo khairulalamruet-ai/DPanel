@@ -976,6 +976,25 @@ export const registeredFrontendModules: FrontendModule[] = [
   },
   {
     manifest: {
+      name: "app_installer",
+      title: { en: "Install an App", bn: "অ্যাপ ইনস্টল" },
+      category: "core",
+      core: true,
+      permissions: ["admin.apps.read", "admin.apps.manage"],
+    },
+    adminNav: [
+      {
+        id: "app-installer",
+        labelKey: "appInstaller.nav",
+        icon: <Boxes className="h-4 w-4" />,
+        href: "/app-installer",
+        order: 40,
+        permission: "admin.apps.read",
+      },
+    ],
+  },
+  {
+    manifest: {
       name: "api_tokens",
       title: { en: "API Tokens", bn: "এপিআই টোকেন" },
       category: "core",

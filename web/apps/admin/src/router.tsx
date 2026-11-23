@@ -59,6 +59,7 @@ import {
   CommandPalette,
   CommandPaletteTrigger,
   UpdatePage,
+  AppInstallerPage,
   ApiTokensPage,
   SupportReportPage,
   AdminDnsClusterPage,
@@ -568,6 +569,12 @@ const adminUpdateRoute = createRoute({
   component: UpdatePage,
 });
 
+const appInstallerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/app-installer",
+  component: AppInstallerPage,
+});
+
 // 50. API Tokens & Docs routes (T18.11)
 const apiTokensRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -789,6 +796,7 @@ const routeTree = rootRoute.addChildren([
   adminBrandingRoute,
   brandingRoute,
   updateRoute,
+  appInstallerRoute,
   adminUpdateRoute,
   apiTokensRoute,
   adminApiTokensRoute,

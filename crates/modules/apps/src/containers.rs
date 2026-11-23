@@ -199,7 +199,7 @@ fn check_image(req: &SetImage, creating: bool) -> Result<(), AppError> {
     }
 }
 
-fn audit(action: &'static str, who: &Principal, id: Uuid) -> AuditEntry {
+pub(crate) fn audit(action: &'static str, who: &Principal, id: Uuid) -> AuditEntry {
     AuditEntry::new(action, Outcome::Success)
         .actor(who.account_id())
         .target("container_image", id)

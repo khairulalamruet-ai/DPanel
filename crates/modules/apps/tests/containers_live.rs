@@ -518,3 +518,118 @@ async fn a_container_runs_an_approved_image_and_nothing_can_widen_what_it_may_do
         .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 }
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn customers_install_only_what_the_administrator_offers(pool: PgPool) {
+    let e = env(&pool).await;
+    let root = e.sign_in(admin(&pool).await).await;
+    let (account, _) = client(&pool, "alice", 10_000).await;
+    let alice = e.sign_in(account).await;
+
+    // The administrator sees the whole marketplace; nothing is offered yet.
+    let (status, all) = e
+        .call(&root, "GET", "/api/v1/admin/marketplace", None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{all}");
+    let all = all.as_array().unwrap();
+    assert!(all.len() > 50);
+    assert!(all.iter().all(|s| s["offered"] == json!(false)));
+    let container = all
+        .iter()
+        .find(|s| s["kind"] == "container")
+        .expect("a container entry")["slug"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let builtin = all.iter().find(|s| s["kind"] == "builtin").unwrap()["slug"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    // A customer sees no container software, and cannot install it.
+    let (_, mine) = e
+        .call(&alice, "GET", "/api/v1/client/marketplace", None)
+        .await;
+    assert!(
+        mine.as_array()
+            .unwrap()
+            .iter()
+            .all(|s| s["kind"] != "container")
+    );
+    let (status, got) = e
+        .call(
+            &alice,
+            "POST",
+            &format!("/api/v1/client/marketplace/{container}/install"),
+            Some(json!({})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CONFLICT, "{got}");
+    assert!(got.to_string().contains("not_offered"), "{got}");
+
+    // Only an administrator offers; the panel's own software cannot be offered.
+    let path = format!("/api/v1/admin/marketplace/{container}");
+    let (status, _) = e.call(&alice, "POST", &path, None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _) = e
+        .call(
+            &root,
+            "POST",
+            &format!("/api/v1/admin/marketplace/{builtin}"),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    let (status, got) = e.call(&root, "POST", &path, None).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{got}");
+    let (status, got) = e.call(&root, "POST", &path, None).await;
+    assert_eq!(
+        status,
+        StatusCode::NO_CONTENT,
+        "offering twice is fine: {got}"
+    );
+
+    // Now it is offered, to the administrator's list and to customers.
+    let (_, all) = e
+        .call(&root, "GET", "/api/v1/admin/marketplace", None)
+        .await;
+    let row = all
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["slug"] == json!(container))
+        .unwrap();
+    assert_eq!(row["offered"], json!(true));
+    let (_, mine) = e
+        .call(&alice, "GET", "/api/v1/client/marketplace", None)
+        .await;
+    assert!(
+        mine.as_array()
+            .unwrap()
+            .iter()
+            .any(|s| s["slug"] == json!(container))
+    );
+
+    // Removing it stops the offer again.
+    let (status, _) = e.call(&root, "DELETE", &path, None).await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, mine) = e
+        .call(&alice, "GET", "/api/v1/client/marketplace", None)
+        .await;
+    assert!(
+        mine.as_array()
+            .unwrap()
+            .iter()
+            .all(|s| s["kind"] != "container")
+    );
+    let (status, _) = e
+        .call(
+            &root,
+            "DELETE",
+            "/api/v1/admin/marketplace/no-such-thing",
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}

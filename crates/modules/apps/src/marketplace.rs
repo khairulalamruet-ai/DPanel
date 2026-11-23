@@ -7,6 +7,11 @@
 //! | POST | `/api/v1/client/marketplace/{slug}/install` | the same |
 //! | POST | `/api/v1/client/marketplace/{slug}/update` | the same |
 //! | DELETE | `/api/v1/client/marketplace/{slug}` | the same |
+//! | GET | `/api/v1/admin/marketplace` | `admin.apps.read` |
+//! | POST, DELETE | `/api/v1/admin/marketplace/{slug}` | `admin.apps.manage` |
+//!
+//! An administrator decides what customers may install: *install* (here) approves a software's
+//! image and offers it, *remove* stops offering it (what customers run keeps running).
 //!
 //! The list is the marketplace of the build (`deploy/marketplace/`) with, for each software, what
 //! this account has installed and whether a newer version is on offer. Installing adds the
@@ -30,10 +35,12 @@ use builtpanel_database::{
     runtime_apps as store,
 };
 use builtpanel_http_kit::{AppError, ProblemDetails};
-use builtpanel_rbac::Principal;
+use builtpanel_rbac::{Principal, Require};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+use builtpanel_rbac::permissions::{AppsManage, AppsRead};
 
 use super::{AppsState, containers, internal, runtime};
 
@@ -44,6 +51,16 @@ pub fn client_router() -> Router<AppsState> {
         .route("/api/v1/client/marketplace/{slug}/install", post(install))
         .route("/api/v1/client/marketplace/{slug}/update", post(update))
         .route("/api/v1/client/marketplace/{slug}", delete(uninstall))
+}
+
+/// The administrator's routes.
+pub fn admin_router() -> Router<AppsState> {
+    Router::new()
+        .route("/api/v1/admin/marketplace", get(admin_list))
+        .route(
+            "/api/v1/admin/marketplace/{slug}",
+            post(admin_install).delete(admin_remove),
+        )
 }
 
 /// What this account has of a software.
@@ -146,6 +163,18 @@ async fn installed_of(state: &AppsState, tenant_id: Uuid) -> Result<Vec<Have>, A
     Ok(have)
 }
 
+/// The references of the images the administrator offers (enabled).
+async fn offered_references(
+    state: &AppsState,
+) -> Result<std::collections::BTreeSet<String>, AppError> {
+    Ok(images::list(&state.db, true)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .map(|i| i.reference)
+        .collect())
+}
+
 fn catalog() -> Result<Vec<Software>, AppError> {
     marketplace::embedded().map_err(internal)
 }
@@ -183,9 +212,17 @@ pub async fn list(
 ) -> Result<Json<Vec<SoftwareView>>, AppError> {
     let (tenant, _) = runtime::feature(&state, &who).await?;
     let have = installed_of(&state, tenant.id).await?;
+    let offered = offered_references(&state).await?;
     Ok(Json(
         catalog()?
             .into_iter()
+            .filter(|s| {
+                s.kind != Kind::Container
+                    || offered.contains(&s.reference())
+                    || have
+                        .iter()
+                        .any(|h| h.slug == s.slug && h.status != "removing")
+            })
             .map(|s| {
                 let installed = have
                     .iter()
@@ -231,7 +268,7 @@ async fn image_of(state: &AppsState, s: &Software) -> Result<Image, AppError> {
     {
         return Ok(i);
     }
-    let name = format!("marketplace/{}/{}", s.slug, s.version);
+    let name = image_name(s);
     let note = s.image_note();
     let write = images::Write {
         name: &name,
@@ -252,6 +289,21 @@ async fn image_of(state: &AppsState, s: &Software) -> Result<Image, AppError> {
             .ok_or_else(|| internal(std::io::Error::other("the image could not be added"))),
         Err(images::WriteError::Database(e)) => Err(internal(e)),
     }
+}
+
+/// The catalog name of an entry's image: what the catalog accepts (letters, digits, `.`, `_`, `-`).
+fn image_name(s: &Software) -> String {
+    let text: String = format!("marketplace-{}-{}", s.slug, s.version)
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-') {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    text.chars().take(61).collect()
 }
 
 fn installable(s: &Software) -> Result<(), AppError> {
@@ -293,6 +345,12 @@ pub async fn install(
     let s = find(&slug)?;
     installable(&s)?;
     let (tenant, _) = runtime::feature(&state, &who).await?;
+    if !offered_references(&state).await?.contains(&s.reference()) {
+        return Err(AppError::conflict(
+            "not_offered",
+            format!("{} is not offered on this server.", s.name),
+        ));
+    }
     if installed_of(&state, tenant.id)
         .await?
         .iter()
@@ -373,6 +431,158 @@ pub async fn uninstall(
     runtime::remove(State(state), who, Path(have.id)).await
 }
 
+/// One piece of software as an administrator sees it.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AdminSoftwareView {
+    /// Identifier.
+    pub slug: String,
+    /// Name.
+    pub name: String,
+    /// The group (`databases`, `web_servers`, ...).
+    pub category: String,
+    /// The group's name.
+    pub category_name: String,
+    /// What it is.
+    pub description: String,
+    /// SPDX license.
+    pub license: String,
+    /// Project page.
+    pub homepage: String,
+    /// `container` (can be offered), `builtin` (the panel has it) or `unavailable`.
+    pub kind: String,
+    /// The version this build installs.
+    pub version: String,
+    /// `builtin`: where in the panel.
+    pub provided_by: String,
+    /// `unavailable`: why.
+    pub reason: String,
+    /// `container`: the memory it gets, MiB.
+    pub memory_mb: i32,
+    /// Customers may install it.
+    pub offered: bool,
+}
+
+/// The whole marketplace, with what is offered to customers.
+#[utoipa::path(get, path = "/api/v1/admin/marketplace", tag = "apps",
+    operation_id = "adminListMarketplace", security(("session" = [])),
+    responses((status = 200, description = "The software", body = Vec<AdminSoftwareView>),
+              (status = 403, description = "`permission_denied`", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn admin_list(
+    State(state): State<AppsState>,
+    _who: Require<AppsRead>,
+) -> Result<Json<Vec<AdminSoftwareView>>, AppError> {
+    let offered = offered_references(&state).await?;
+    Ok(Json(
+        catalog()?
+            .into_iter()
+            .map(|s| AdminSoftwareView {
+                offered: s.kind == Kind::Container && offered.contains(&s.reference()),
+                category_name: category_name(&s.category),
+                kind: kind_name(s.kind).to_owned(),
+                slug: s.slug,
+                name: s.name,
+                category: s.category,
+                description: s.description,
+                license: s.license,
+                homepage: s.homepage,
+                version: s.version,
+                provided_by: s.provided_by,
+                reason: s.reason,
+                memory_mb: s.memory_mb,
+            })
+            .collect(),
+    ))
+}
+
+/// Offer a piece of software to customers (its image is approved).
+#[utoipa::path(post, path = "/api/v1/admin/marketplace/{slug}", tag = "apps",
+    operation_id = "adminInstallSoftware", security(("session" = [])),
+    params(("slug" = String, Path, description = "Software"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    responses((status = 204, description = "Offered"),
+              (status = 404, description = "No such software", body = ProblemDetails, content_type = "application/problem+json"),
+              (status = 409, description = "`builtin` or `unavailable`", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn admin_install(
+    State(state): State<AppsState>,
+    Require(who, _): Require<AppsManage>,
+    Path(slug): Path<String>,
+) -> Result<StatusCode, AppError> {
+    let s = find(&slug)?;
+    installable(&s)?;
+    let image = image_of(&state, &s).await?;
+    if !image.enabled {
+        images::update(
+            &state.db,
+            image.id,
+            &images::Write {
+                name: &image.name,
+                reference: "",
+                default_port: image.default_port,
+                default_memory_mb: image.default_memory_mb,
+                note: &image.note,
+                enabled: true,
+            },
+        )
+        .await
+        .map_err(|e| match e {
+            images::WriteError::Taken => internal(std::io::Error::other("image name taken")),
+            images::WriteError::Database(db) => internal(db),
+        })?;
+    }
+    builtpanel_audit::insert(
+        &state.db,
+        &containers::audit("marketplace.offered", &who, image.id),
+    )
+    .await
+    .map_err(internal)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Stop offering a piece of software (what customers run keeps running).
+#[utoipa::path(delete, path = "/api/v1/admin/marketplace/{slug}", tag = "apps",
+    operation_id = "adminRemoveSoftware", security(("session" = [])),
+    params(("slug" = String, Path, description = "Software"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    responses((status = 204, description = "Not offered any more"),
+              (status = 404, description = "No such software", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn admin_remove(
+    State(state): State<AppsState>,
+    Require(who, _): Require<AppsManage>,
+    Path(slug): Path<String>,
+) -> Result<StatusCode, AppError> {
+    let s = find(&slug)?;
+    let reference = s.reference();
+    if let Some(image) = images::list(&state.db, false)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .find(|i| i.reference == reference && i.enabled)
+    {
+        images::update(
+            &state.db,
+            image.id,
+            &images::Write {
+                name: &image.name,
+                reference: "",
+                default_port: image.default_port,
+                default_memory_mb: image.default_memory_mb,
+                note: &image.note,
+                enabled: false,
+            },
+        )
+        .await
+        .map_err(|e| match e {
+            images::WriteError::Taken => internal(std::io::Error::other("image name taken")),
+            images::WriteError::Database(db) => internal(db),
+        })?;
+        builtpanel_audit::insert(
+            &state.db,
+            &containers::audit("marketplace.withdrawn", &who, image.id),
+        )
+        .await
+        .map_err(internal)?;
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -389,6 +599,23 @@ mod tests {
         );
         assert_eq!(parse_note("a note an administrator wrote"), None);
         assert_eq!(parse_note("marketplace:nover"), None);
+    }
+
+    #[test]
+    fn every_image_name_is_one_the_catalog_accepts() {
+        for s in marketplace::embedded().unwrap_or_default() {
+            if s.kind == Kind::Container {
+                let name = image_name(&s);
+                assert!(
+                    name.len() <= 61
+                        && name.starts_with(|c: char| c.is_ascii_alphanumeric())
+                        && name
+                            .chars()
+                            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')),
+                    "{name}"
+                );
+            }
+        }
     }
 
     #[test]

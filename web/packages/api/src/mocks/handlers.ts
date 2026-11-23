@@ -8168,6 +8168,30 @@ export const handlers = [
       }),
     ];
   })(),
+  ...(() => {
+    // The administrator's app list ("Install an App"): offering a software to customers and taking it back.
+    const apps = [
+      { slug: "redis", name: "Redis", category: "databases", category_name: "Databases", description: "In-memory data store used as cache and message broker.", license: "BSD-3-Clause", homepage: "https://redis.io", kind: "container", version: "8.0.2", provided_by: "", reason: "", memory_mb: 256, offered: false },
+      { slug: "postgresql", name: "PostgreSQL", category: "databases", category_name: "Databases", description: "The relational database.", license: "PostgreSQL", homepage: "https://postgresql.org", kind: "container", version: "18.1", provided_by: "", reason: "", memory_mb: 512, offered: true },
+      { slug: "nginx", name: "Nginx", category: "web_servers", category_name: "Web servers", description: "Web server and reverse proxy.", license: "BSD-2-Clause", homepage: "https://nginx.org", kind: "container", version: "1.29.0", provided_by: "", reason: "", memory_mb: 128, offered: false },
+      { slug: "php", name: "PHP", category: "server_side_scripting", category_name: "Server side scripting", description: "PHP versions are part of the panel.", license: "PHP-3.01", homepage: "https://php.net", kind: "builtin", version: "", provided_by: "Domains, PHP settings", reason: "", memory_mb: 0, offered: false },
+    ];
+    return [
+      http.get("/api/v1/admin/marketplace", () => HttpResponse.json(apps)),
+      http.post("/api/v1/admin/marketplace/:slug", ({ params }) => {
+        const a = apps.find((x) => x.slug === params.slug);
+        if (!a) return new HttpResponse(null, { status: 404 });
+        a.offered = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.delete("/api/v1/admin/marketplace/:slug", ({ params }) => {
+        const a = apps.find((x) => x.slug === params.slug);
+        if (!a) return new HttpResponse(null, { status: 404 });
+        a.offered = false;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    ];
+  })(),
                                               // ===================================                                              // T18.11: API Tokens & Scoped Execution
                                               // ===================================
   ...(() => {

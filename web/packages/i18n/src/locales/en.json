@@ -3484,5 +3484,24 @@
       "none": "No administrators.",
       "loadError": "The administrators could not be loaded"
     }
+  },
+  "appInstaller": {
+    "nav": "Install an App",
+    "title": "Install an App",
+    "subtitle": "Choose which software customers can install in their own isolated container. Removing one stops new installs; what customers already run keeps running.",
+    "search": "Search apps",
+    "categories": "Categories",
+    "all": "All",
+    "none": "No app matches.",
+    "offered": "Offered",
+    "install": "Install",
+    "remove": "Remove",
+    "homepage": "Project page",
+    "installed": "{{name}} is now offered to customers.",
+    "removed": "{{name}} is no longer offered.",
+    "failed": "The change failed.",
+    "loadError": "The app list could not be loaded.",
+    "builtin": "Part of the panel: {{where}}",
+    "unavailable": "Not available: {{why}}"
   }
 }

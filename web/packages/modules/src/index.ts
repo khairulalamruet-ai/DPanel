@@ -51,6 +51,7 @@ export * from "./branding";
 export * from "./onboarding";
 export * from "./search";
 export * from "./update";
+export * from "./app-installer";
 export * from "./api-tokens";
 export * from "./support-report";
 export type { SslStatus } from "./domains";

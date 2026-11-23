@@ -155,6 +155,7 @@ pub fn admin_router() -> Router<AppsState> {
     Router::new()
         .route("/api/v1/admin/tenants/{id}/apps", get(admin_list))
         .merge(containers::admin_router())
+        .merge(marketplace::admin_router())
 }
 
 fn internal(err: impl Into<Box<dyn std::error::Error + Send + Sync + 'static>>) -> AppError {
@@ -1850,6 +1851,7 @@ pub async fn cache_remove(
         runtime::redeploy, runtime::remove, containers::admin_list, containers::admin_add,
         containers::admin_change, containers::admin_remove, containers::client_images,
         containers::client_list, containers::client_create, containers::client_update,
+        marketplace::admin_list, marketplace::admin_install, marketplace::admin_remove,
         marketplace::list, marketplace::install, marketplace::update, marketplace::uninstall,
         gitdeploy::list, gitdeploy::create,
         gitdeploy::deploy_now, gitdeploy::rotate_secret, gitdeploy::remove, gitdeploy::webhook
@@ -1860,7 +1862,7 @@ pub async fn cache_remove(
         runtime::Runtimes, runtime::Redeploy, containers::ImageView, containers::SetImage,
         containers::ContainerView, containers::CreateContainer, containers::ChangeContainer, gitdeploy::GitDeployView, gitdeploy::GitDeployList,
         gitdeploy::CreateGitDeploy, gitdeploy::WebhookAnswer,
-        marketplace::SoftwareView, marketplace::Installed, marketplace::InstallRequest,
+        marketplace::AdminSoftwareView, marketplace::SoftwareView, marketplace::Installed, marketplace::InstallRequest,
         WpNewPassword, Pending, WpHarden, builtpanel_node_protocol::WpOverview,
         builtpanel_node_protocol::WpItem, builtpanel_node_protocol::WpScan
     )),

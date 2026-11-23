@@ -5435,6 +5435,151 @@
         ]
       }
     },
+    "/api/v1/admin/marketplace": {
+      "get": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "The whole marketplace, with what is offered to customers.",
+        "operationId": "adminListMarketplace",
+        "responses": {
+          "200": {
+            "description": "The software",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminSoftwareView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/marketplace/{slug}": {
+      "post": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "Offer a piece of software to customers (its image is approved).",
+        "operationId": "adminInstallSoftware",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Software",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Offered"
+          },
+          "404": {
+            "description": "No such software",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`builtin` or `unavailable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "Stop offering a piece of software (what customers run keeps running).",
+        "operationId": "adminRemoveSoftware",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Software",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Not offered any more"
+          },
+          "404": {
+            "description": "No such software",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/migration/transfers": {
       "get": {
         "tags": [
@@ -25765,6 +25910,80 @@
           }
         },
         "additionalProperties": false
+      },
+      "AdminSoftwareView": {
+        "type": "object",
+        "description": "One piece of software as an administrator sees it.",
+        "required": [
+          "slug",
+          "name",
+          "category",
+          "category_name",
+          "description",
+          "license",
+          "homepage",
+          "kind",
+          "version",
+          "provided_by",
+          "reason",
+          "memory_mb",
+          "offered"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "The group (`databases`, `web_servers`, ...)."
+          },
+          "category_name": {
+            "type": "string",
+            "description": "The group's name."
+          },
+          "description": {
+            "type": "string",
+            "description": "What it is."
+          },
+          "homepage": {
+            "type": "string",
+            "description": "Project page."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`container` (can be offered), `builtin` (the panel has it) or `unavailable`."
+          },
+          "license": {
+            "type": "string",
+            "description": "SPDX license."
+          },
+          "memory_mb": {
+            "type": "integer",
+            "format": "int32",
+            "description": "`container`: the memory it gets, MiB."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name."
+          },
+          "offered": {
+            "type": "boolean",
+            "description": "Customers may install it."
+          },
+          "provided_by": {
+            "type": "string",
+            "description": "`builtin`: where in the panel."
+          },
+          "reason": {
+            "type": "string",
+            "description": "`unavailable`: why."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Identifier."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version this build installs."
+          }
+        }
       },
       "AdministratorList": {
         "type": "object",
