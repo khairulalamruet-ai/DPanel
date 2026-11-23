@@ -956,6 +956,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/marketplace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The whole marketplace, with what is offered to customers. */
+        get: operations["adminListMarketplace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketplace/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Offer a piece of software to customers (its image is approved). */
+        post: operations["adminInstallSoftware"];
+        /** Stop offering a piece of software (what customers run keeps running). */
+        delete: operations["adminRemoveSoftware"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/migration/transfers": {
         parameters: {
             query?: never;
@@ -5520,6 +5555,38 @@ export interface components {
              * @description The user (account id) it is added for.
              */
             user_id: string;
+        };
+        /** @description One piece of software as an administrator sees it. */
+        AdminSoftwareView: {
+            /** @description The group (`databases`, `web_servers`, ...). */
+            category: string;
+            /** @description The group's name. */
+            category_name: string;
+            /** @description What it is. */
+            description: string;
+            /** @description Project page. */
+            homepage: string;
+            /** @description `container` (can be offered), `builtin` (the panel has it) or `unavailable`. */
+            kind: string;
+            /** @description SPDX license. */
+            license: string;
+            /**
+             * Format: int32
+             * @description `container`: the memory it gets, MiB.
+             */
+            memory_mb: number;
+            /** @description Name. */
+            name: string;
+            /** @description Customers may install it. */
+            offered: boolean;
+            /** @description `builtin`: where in the panel. */
+            provided_by: string;
+            /** @description `unavailable`: why. */
+            reason: string;
+            /** @description Identifier. */
+            slug: string;
+            /** @description The version this build installs. */
+            version: string;
         };
         /** @description A page of administrators. */
         AdministratorList: {
@@ -15010,6 +15077,110 @@ export interface operations {
             };
             /** @description The authority could not be reached */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminListMarketplace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The software */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSoftwareView"][];
+                };
+            };
+            /** @description `permission_denied` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminInstallSoftware: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Software */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Offered */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such software */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description `builtin` or `unavailable` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    adminRemoveSoftware: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The session's csrf_token */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                /** @description Software */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not offered any more */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such software */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
