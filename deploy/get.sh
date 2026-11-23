@@ -182,7 +182,20 @@ os_update() {
             # A new machine often runs its own first update at boot: wait for the package lock (up to 5
             # minutes). Edited configuration files are kept. full-upgrade, because a new kernel is a new package.
             local opts=(-o DPkg::Lock::Timeout=300 -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
-            apt-get "${opts[@]}" update -qq >> "$log" 2>&1 && apt-get "${opts[@]}" full-upgrade -y -qq >> "$log" 2>&1 || return 1
+            # DPkg::Lock::Timeout covers only the dpkg lock; the lists lock of `apt-get update` fails at once while
+            # the machine's own first update holds it. So each step is tried again while the log says "lock".
+            apt_step() {
+                local t
+                for t in $(seq 1 40); do
+                    : > "$log.step"
+                    if "$@" >> "$log.step" 2>&1; then cat "$log.step" >> "$log"; return 0; fi
+                    cat "$log.step" >> "$log"
+                    grep -qi 'could not get lock\|unable to lock\|is held by process' "$log.step" || return 1
+                    sleep 15
+                done
+                return 1
+            }
+            apt_step apt-get "${opts[@]}" update -qq && apt_step apt-get "${opts[@]}" full-upgrade -y -qq || return 1
             apt-get "${opts[@]}" autoremove -y -qq >> "$log" 2>&1 || true
             [ ! -e /run/reboot-required ] || REBOOT_NEEDED=1
             ;;
@@ -214,8 +227,8 @@ if [ "$UPGRADE" -eq 1 ] && [ "$CHECK_ONLY" -eq 0 ]; then
     if [ "$REBOOT_NEEDED" = 1 ] && [ "$(os_family)" = rhel ] && ! printf '%s\n' ${PASS[@]+"${PASS[@]}"} | grep -qx -- --no-agent; then
         # Docker's network modules must match the running kernel: the new one has to run first.
         _ui_end_step
-        echo "get.sh: the system update installed a newer kernel. Run  reboot  and then this same command again:" >&2
-        echo "        the update is done, the second run goes on with the installation." >&2
+        echo "get.sh: NOT an error - the system update installed a newer kernel, and it has to be running first." >&2
+        echo "        Run  reboot  and then this same command again: the update is done, the second run installs the panel." >&2
         exit 0
     fi
 fi
