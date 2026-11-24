@@ -29,6 +29,21 @@ env:
   SQLX_OFFLINE: "true"
 
 jobs:
+  pins:
+    # Kata Containers and Kiri are pinned in install.sh with the hash of every file. Here they are moved
+    # to their newest stable release (same major version) once, so both architectures get the same
+    # install.sh, and the installer in the archive checks each download against a hash fixed in it.
+    name: newest tool versions in the installer
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: deploy/dev/repin-tools.sh
+      - run: bash -n deploy/install.sh && git diff --stat -- deploy/install.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: install-sh
+          path: deploy/install.sh
+
   web:
     name: the web interface
     runs-on: ubuntu-22.04
@@ -64,7 +79,7 @@ jobs:
 
   build:
     name: build (${{ matrix.arch }})
-    needs: web
+    needs: [web, pins]
     strategy:
       fail-fast: true
       matrix:
@@ -113,8 +128,13 @@ jobs:
         with:
           name: web-dist
           path: dist/web
+      - uses: actions/download-artifact@v7
+        with:
+          name: install-sh
+          path: deploy
       - name: Package
         run: |
+          chmod +x deploy/install.sh # an artifact does not keep the executable bit
           v="${GITHUB_REF_NAME#v}"
           cp -r deploy/install.sh deploy/ui.sh deploy/systemd deploy/agent deploy/config deploy/runbooks deploy/release dist/
           cp openapi.json dist/
