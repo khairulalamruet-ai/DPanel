@@ -177,7 +177,8 @@ os_family() {
 }
 # After the reboot a one-shot service finishes the installation from the release that was just
 # downloaded and checked (kept in /var/lib/builtpanel-resume, root only), then removes itself.
-# The installer's final summary goes to /var/log/builtpanel-resume.log (mode 0600).
+# The installer's final summary goes to /var/log/builtpanel-resume.log (mode 0600); a generated administrator
+# password never goes into that log: it is written to /root/builtpanel-first-login.txt (mode 0600).
 resume_after_reboot() {
     command -v systemctl > /dev/null || return 1
     local dir=/var/lib/builtpanel-resume a
@@ -189,7 +190,7 @@ resume_after_reboot() {
         # Whatever happens, it runs once: a failed installation is not retried in a loop.
         printf 'systemctl disable builtpanel-resume.service > /dev/null 2>&1\n'
         printf 'rm -f /etc/systemd/system/builtpanel-resume.service\n'
-        printf 'BPINSTALL_REBOOT_NEEDED=0 BPINSTALL_BANNER=0 TERM=dumb %q --no-upgrade --bin-dir %q --hostname %q --admin-email %q' \
+        printf 'BPINSTALL_SECRET_FILE=/root/builtpanel-first-login.txt BPINSTALL_REBOOT_NEEDED=0 BPINSTALL_BANNER=0 TERM=dumb %q --no-upgrade --bin-dir %q --hostname %q --admin-email %q' \
             "$dir/release/install.sh" "$dir/release/bin" "$HOSTNAME_FQDN" "$ADMIN_EMAIL"
         for a in ${PASS[@]+"${PASS[@]}"}; do printf ' %q' "$a"; done
         printf '\nstatus=$?\n'
@@ -277,7 +278,8 @@ if [ "$UPGRADE" -eq 1 ] && [ "$CHECK_ONLY" -eq 0 ]; then
             echo "get.sh: NOT an error - the system update installed a newer kernel, and it has to be running first." >&2
             echo "        Run  reboot  : the installation goes on by itself after the restart (about 5 minutes)." >&2
             echo "        Follow it with  journalctl -u builtpanel-resume -f  ; when it is done, its summary (with the" >&2
-            echo "        panel's address and login) is in /var/log/builtpanel-resume.log (root only): read it, then delete it." >&2
+            echo "        panel's address) is in /var/log/builtpanel-resume.log, and a generated login password (never in that log)" >&2
+            echo "        is in /root/builtpanel-first-login.txt: both root only; read them, then delete them." >&2
         else
             echo "get.sh: NOT an error - the system update installed a newer kernel, and it has to be running first." >&2
             echo "        Run  reboot  and then this same command again: the update is done, the second run installs the panel." >&2

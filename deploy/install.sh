@@ -691,6 +691,11 @@ if [ "$ROOT_LOGIN" -eq 0 ] || [ "$ROOT_PW_STATE" != P ]; then
     if [ "$(runuser -u postgres -- psql -qAt -d builtpanel -c "select count(*) from accounts where kind = 'admin' and password_hash like '\$argon2id\$%'")" = 0 ]; then
         ADMIN_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)-Aa1"
         printf '%s\n' "$ADMIN_PASSWORD" | as_panel bpctl admin create --username "$ADMIN_USER" --email "$ADMIN_EMAIL" --password-stdin > /dev/null
+        # An install that runs unattended (after a reboot) writes its output to a log: the password goes
+        # to a file of its own, readable by root only, and the log only names it.
+        if [ -n "${BPINSTALL_SECRET_FILE:-}" ]; then
+            ( umask 077; printf 'Built Panel first login\nLogin:    %s\nPassword: %s\n(read it, sign in, change the password, then delete this file)\n' "$ADMIN_USER" "$ADMIN_PASSWORD" > "$BPINSTALL_SECRET_FILE" )
+        fi
     fi
 fi
 
@@ -729,7 +734,8 @@ ${UI_OK:-}${UI_B:-}Built Panel is installed.${UI_R:-}
 $([ -n "$WEB_DIR" ] && printf '  Admin:     https://%s   (this name must point here too)\n' "$ADMIN_HOSTNAME")
 $([ -n "$WEB_DIR" ] && [ -n "$PUBLIC_IP" ] && printf '  Without a certificate (works at once; the browser warns once: Advanced, continue):\n    admin:   https://%s:%s\n    clients: https://%s:%s\n' "$PUBLIC_IP" "$ADMIN_PORT" "$PUBLIC_IP" "$CLIENT_PORT")
 $([ "$ROOT_LOGIN" -eq 1 ] && [ "$ROOT_PW_STATE" = P ] && printf '  Login:     root\n  Password:  this server'"'"'s root password (the one you log in to the server with)\n  Access:    full, like WHM'"'"'s root (role super_admin)\n')
-$([ -n "$ADMIN_PASSWORD" ] && printf '  Login:     %s   (role super_admin: every permission on the panel)\n  Password:  %s\n  (shown once, never stored: sign in and change it, then set up two-factor)\n' "$ADMIN_USER" "$ADMIN_PASSWORD")
+$([ -n "$ADMIN_PASSWORD" ] && [ -z "${BPINSTALL_SECRET_FILE:-}" ] && printf '  Login:     %s   (role super_admin: every permission on the panel)\n  Password:  %s\n  (shown once, never stored: sign in and change it, then set up two-factor)\n' "$ADMIN_USER" "$ADMIN_PASSWORD")
+$([ -n "$ADMIN_PASSWORD" ] && [ -n "${BPINSTALL_SECRET_FILE:-}" ] && printf '  Login:     %s   (role super_admin: every permission on the panel)\n  Password:  in %s (root only): read it, sign in, change it, delete the file\n' "$ADMIN_USER" "$BPINSTALL_SECRET_FILE")
 $([ "$ROOT_LOGIN" -eq 1 ] && [ "$ROOT_PW_STATE" != P ] && printf '  Root:      root has no usable password on this server: set one with `sudo passwd root`, then log in as root\n')
 $([ -z "$ADMIN_PASSWORD" ] && [ "$ROOT_LOGIN" -eq 0 ] && echo '  (an administrator already existed; its password is unchanged)')
 
