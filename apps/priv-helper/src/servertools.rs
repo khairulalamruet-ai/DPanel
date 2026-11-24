@@ -266,6 +266,27 @@ pub fn drop_swap(env: &Env) -> Result<(), Failure> {
     }
 }
 
+/// Sends SIGTERM (SIGKILL with `kill`) to one process, from outside this helper's sandbox (which cannot see
+/// other users' processes). The first process and the helper itself are refused.
+///
+/// # Errors
+/// `InvalidArguments` for a process that may not be signalled; `Failed` when the signal could not be sent
+/// (the process is gone, or the signal was refused).
+pub fn signal_host(env: &Env, pid: u32, kill: bool) -> Result<(), Failure> {
+    if pid < 2 || pid == std::process::id() || i32::try_from(pid).is_err() {
+        return Err((
+            ErrorCode::InvalidArguments,
+            "this process may not be signalled",
+        ));
+    }
+    let signal = if kill { "-KILL" } else { "-TERM" };
+    if run(env, "/usr/bin/kill", &[signal, &pid.to_string()]) {
+        Ok(())
+    } else {
+        Err((ErrorCode::Failed, "the signal could not be sent"))
+    }
+}
+
 /// Reboots the machine; `hard` does not wait for the services to stop.
 ///
 /// # Errors
@@ -340,6 +361,32 @@ mod tests {
         assert_eq!(
             set_swap(&Env::default(), MAX_SWAP_MB + 1).unwrap_err().0,
             ErrorCode::InvalidArguments
+        );
+    }
+    #[test]
+    fn a_process_is_ended_but_the_first_one_and_this_helper_are_refused() {
+        let env = Env {
+            direct: true,
+            ..Env::default()
+        };
+        for pid in [0, 1, std::process::id()] {
+            assert_eq!(
+                signal_host(&env, pid, false).unwrap_err().0,
+                ErrorCode::InvalidArguments,
+                "{pid}"
+            );
+        }
+        let mut child = std::process::Command::new("/bin/sleep")
+            .arg("30")
+            .spawn()
+            .unwrap();
+        signal_host(&env, child.id(), false).unwrap();
+        let status = child.wait().unwrap();
+        assert!(!status.success(), "it was ended by the signal");
+        // A process that is gone: the signal cannot be sent.
+        assert_eq!(
+            signal_host(&env, child.id(), true).unwrap_err().0,
+            ErrorCode::Failed
         );
     }
 }

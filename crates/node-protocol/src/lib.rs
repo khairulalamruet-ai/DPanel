@@ -1370,6 +1370,155 @@ pub struct ServerInfo {
     pub ssh: Vec<(String, String)>,
 }
 
+/// A live reading of the machine (Server, Resource usage). Counters only grow; the caller works out rates
+/// from two readings. Shares and the load are whole hundredths (`1234` is 12.34).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ServerStats {
+    /// When the reading was taken (milliseconds since 1970).
+    pub taken_at_ms: u64,
+    /// Load average over 1, 5 and 15 minutes, in hundredths.
+    pub load_x100: [u32; 3],
+    /// Busy share of all processors since a moment ago, 0 to 100, in hundredths.
+    pub cpu_percent_x100: u32,
+    /// The same per processor.
+    pub cpu_cores_percent_x100: Vec<u32>,
+    /// Memory in all, in bytes.
+    pub memory_total_bytes: u64,
+    /// Memory in use (without what is only cache), in bytes.
+    pub memory_used_bytes: u64,
+    /// Swap in all, in bytes.
+    pub swap_total_bytes: u64,
+    /// Swap in use, in bytes.
+    pub swap_used_bytes: u64,
+    /// The root file system.
+    pub disk: DiskUsage,
+    /// Every whole disk, with counters since boot.
+    pub disk_io: Vec<DiskIo>,
+    /// Every network interface, with counters since boot.
+    pub net_io: Vec<NetIo>,
+}
+
+/// Space on the root file system.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DiskUsage {
+    /// The device (`/dev/vda1`, or empty when it is not known).
+    pub device: String,
+    /// The file system type (`ext4`, ...).
+    pub filesystem: String,
+    /// Size in bytes.
+    pub total_bytes: u64,
+    /// Used, in bytes.
+    pub used_bytes: u64,
+    /// Free for programs, in bytes.
+    pub free_bytes: u64,
+}
+
+/// Counters of one disk since boot.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DiskIo {
+    /// The name (`vda`, `vda1`, ...).
+    pub name: String,
+    /// Reads completed.
+    pub read_count: u64,
+    /// Writes completed.
+    pub write_count: u64,
+    /// Bytes read.
+    pub read_bytes: u64,
+    /// Bytes written.
+    pub write_bytes: u64,
+    /// Milliseconds spent reading.
+    pub read_ms: u64,
+    /// Milliseconds spent writing.
+    pub write_ms: u64,
+}
+
+/// Counters of one network interface since boot.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NetIo {
+    /// The name (`eth0`, `lo`, ...).
+    pub name: String,
+    /// Bytes sent.
+    pub bytes_sent: u64,
+    /// Bytes received.
+    pub bytes_received: u64,
+    /// Packets sent.
+    pub packets_sent: u64,
+    /// Packets received.
+    pub packets_received: u64,
+    /// Receive errors.
+    pub errors_in: u64,
+    /// Send errors.
+    pub errors_out: u64,
+}
+
+/// One process of the machine (Server, Process manager). Shares are whole hundredths of a percent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HostProcess {
+    /// Process id.
+    pub pid: u32,
+    /// Its parent.
+    pub ppid: u32,
+    /// The user it runs as (the name, or the number when there is no name).
+    pub owner: String,
+    /// The user id.
+    pub uid: u32,
+    /// Its nice value (the priority; lower is more important).
+    pub priority: i32,
+    /// `R` running, `S` sleeping, `D` waiting for the disk, `Z` zombie, `T` stopped.
+    pub state: String,
+    /// Share of one processor over a short while, in hundredths of a percent (can go over 100 % with threads).
+    pub cpu_percent_x100: u32,
+    /// Share of the machine's memory, in hundredths of a percent.
+    pub memory_percent_x100: u32,
+    /// Resident memory, in bytes.
+    pub memory_bytes: u64,
+    /// The command line, clipped to 300 characters.
+    pub command: String,
+}
+
+/// What can be read about one process.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HostProcessDetail {
+    /// Process id.
+    pub pid: u32,
+    /// Its parent.
+    pub ppid: u32,
+    /// The user it runs as.
+    pub owner: String,
+    /// `Name:` of the process.
+    pub name: String,
+    /// `R`, `S`, `D`, `Z`, `T`, ...
+    pub state: String,
+    /// Threads.
+    pub threads: u32,
+    /// Resident memory, in bytes.
+    pub memory_bytes: u64,
+    /// Seconds since it started.
+    pub age_seconds: u64,
+    /// Its priority (nice value).
+    pub priority: i32,
+    /// The whole command line (arguments joined by a space), clipped to 4000 characters.
+    pub command_line: String,
+    /// The services (control groups) it belongs to, one path per line of its cgroup.
+    pub cgroup: String,
+}
+
+/// Which signal to send a process of the machine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HostSignal {
+    /// Ask it to end (SIGTERM), and kill it after a few seconds when it does not.
+    Terminate,
+    /// Kill it at once (SIGKILL).
+    Kill,
+}
+
 /// The SSH access of a node (System menu).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -2288,6 +2437,25 @@ pub enum Operation {
     /// Moves what is swapped out back into memory and turns swap on again; refused when there is not
     /// enough free memory. Answered with [`Output::ServerActionDone`].
     DropSwap,
+    /// A live reading of load, processors, memory, disk, disk and network counters. Answered with
+    /// [`Output::ServerStats`].
+    ReportServerStats,
+    /// Every process of the machine with its processor and memory use. Answered with
+    /// [`Output::HostProcesses`].
+    ListHostProcesses,
+    /// What can be read about one process of the machine. Answered with [`Output::HostProcessDetail`].
+    InspectHostProcess {
+        /// The process.
+        pid: u32,
+    },
+    /// Sends a signal to one process of the machine. The first process, kernel threads, the agent, the
+    /// helper and their parents are refused. Answered with [`Output::ProcessSignalled`].
+    SignalHostProcess {
+        /// The process.
+        pid: u32,
+        /// Which signal.
+        signal: HostSignal,
+    },
     /// The SSH server's settings as it will use them, the keys that may log in as root and the
     /// text of `sshd_config`. Answered with [`Output::SshAccess`].
     ReadSshAccess,
@@ -2925,6 +3093,10 @@ impl Operation {
         "update_malware_signatures",
         "set_user_agent_blocklist",
         "report_server_info",
+        "report_server_stats",
+        "list_host_processes",
+        "inspect_host_process",
+        "signal_host_process",
         "set_timezone",
         "set_swap",
         "drop_caches",
@@ -3074,6 +3246,10 @@ impl Operation {
             Self::UpdateMalwareSignatures => "update_malware_signatures",
             Self::SetUserAgentBlocklist { .. } => "set_user_agent_blocklist",
             Self::ReportServerInfo => "report_server_info",
+            Self::ReportServerStats => "report_server_stats",
+            Self::ListHostProcesses => "list_host_processes",
+            Self::InspectHostProcess { .. } => "inspect_host_process",
+            Self::SignalHostProcess { .. } => "signal_host_process",
             Self::SetTimezone { .. } => "set_timezone",
             Self::SetSwap { .. } => "set_swap",
             Self::DropCaches => "drop_caches",
@@ -3595,6 +3771,21 @@ pub enum Output {
     ServerInfo {
         /// What the node says.
         info: ServerInfo,
+    },
+    /// Answer to [`Operation::ReportServerStats`].
+    ServerStats {
+        /// The reading (boxed: it is large).
+        stats: Box<ServerStats>,
+    },
+    /// Answer to [`Operation::ListHostProcesses`].
+    HostProcesses {
+        /// The processes, the busiest first (at most 2000).
+        items: Vec<HostProcess>,
+    },
+    /// Answer to [`Operation::InspectHostProcess`].
+    HostProcessDetail {
+        /// What could be read.
+        detail: HostProcessDetail,
     },
     /// Answer to the server tools ([`Operation::SetTimezone`], [`Operation::SetSwap`],
     /// [`Operation::DropCaches`], [`Operation::DropSwap`], [`Operation::RebootNode`]).
@@ -4867,6 +5058,13 @@ mod tests {
                 since_ms: 0,
                 limit: 50,
             },
+            Operation::ReportServerStats,
+            Operation::ListHostProcesses,
+            Operation::InspectHostProcess { pid: 2 },
+            Operation::SignalHostProcess {
+                pid: 2,
+                signal: HostSignal::Terminate,
+            },
         ] {
             let wire = serde_json::to_value(&op).unwrap();
             assert_eq!(wire["type"], op.type_name());
@@ -4874,7 +5072,7 @@ mod tests {
         }
         assert_eq!(
             Operation::TYPE_NAMES.len(),
-            98,
+            108,
             "update TYPE_NAMES and type_name() together with the enum"
         );
     }

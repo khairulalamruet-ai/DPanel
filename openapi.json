@@ -7134,6 +7134,264 @@
         ]
       }
     },
+    "/api/v1/admin/nodes/{id}/server/processes": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Every process of the node with its processor and memory use, the busiest first.",
+        "operationId": "adminHostProcesses",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The processes (at most 2000)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HostProcessView"
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; ask again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.server.read)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/nodes/{id}/server/processes/{pid}": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "What can be read about one process of the node.",
+        "operationId": "adminHostProcess",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pid",
+            "in": "path",
+            "description": "Process id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The process",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostProcessDetailView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; ask again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.server.read)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "There is no such process",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/nodes/{id}/server/processes/{pid}/signal": {
+      "post": {
+        "tags": [
+          "services"
+        ],
+        "summary": "End a process of the node. The first process, kernel threads and the panel's own programs are refused.",
+        "operationId": "adminSignalHostProcess",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pid",
+            "in": "path",
+            "description": "Process id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HostSignalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What came of it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostSignalled"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; it goes on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A signal that is not `term` or `kill`, process 1, or a process that may not be signalled",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/nodes/{id}/server/reboot": {
       "post": {
         "tags": [
@@ -7215,6 +7473,74 @@
           },
           "422": {
             "description": "`confirm` is not the node's name",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/nodes/{id}/server/stats": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "A live reading of the node: load, processors, memory, swap, disk, disk and network counters.",
+        "operationId": "adminServerStats",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The reading",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerStatsView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; ask again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.server.read)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -29844,6 +30170,61 @@
           }
         }
       },
+      "DiskIoView": {
+        "type": "object",
+        "description": "Counters of one disk.",
+        "required": [
+          "name",
+          "read_count",
+          "write_count",
+          "read_bytes",
+          "write_bytes",
+          "read_ms",
+          "write_ms"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name."
+          },
+          "read_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bytes read.",
+            "minimum": 0
+          },
+          "read_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Reads completed.",
+            "minimum": 0
+          },
+          "read_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Milliseconds spent reading.",
+            "minimum": 0
+          },
+          "write_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bytes written.",
+            "minimum": 0
+          },
+          "write_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Writes completed.",
+            "minimum": 0
+          },
+          "write_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Milliseconds spent writing.",
+            "minimum": 0
+          }
+        }
+      },
       "DiskUsageView": {
         "type": "object",
         "description": "What the account's files use.",
@@ -31328,6 +31709,183 @@
           }
         },
         "additionalProperties": false
+      },
+      "HostProcessDetailView": {
+        "type": "object",
+        "description": "What can be read about one process.",
+        "required": [
+          "pid",
+          "ppid",
+          "owner",
+          "name",
+          "state",
+          "threads",
+          "memory_bytes",
+          "age_seconds",
+          "priority",
+          "command_line",
+          "cgroup"
+        ],
+        "properties": {
+          "age_seconds": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds since it started.",
+            "minimum": 0
+          },
+          "cgroup": {
+            "type": "string",
+            "description": "Its control groups, one per line."
+          },
+          "command_line": {
+            "type": "string",
+            "description": "The whole command line."
+          },
+          "memory_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Resident memory, in bytes.",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "owner": {
+            "type": "string",
+            "description": "The user it runs as."
+          },
+          "pid": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Process id.",
+            "minimum": 0
+          },
+          "ppid": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Its parent.",
+            "minimum": 0
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Its nice value."
+          },
+          "state": {
+            "type": "string",
+            "description": "`R`, `S`, `D`, `Z`, `T`."
+          },
+          "threads": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Threads.",
+            "minimum": 0
+          }
+        }
+      },
+      "HostProcessView": {
+        "type": "object",
+        "description": "One process of the node.",
+        "required": [
+          "pid",
+          "ppid",
+          "owner",
+          "uid",
+          "priority",
+          "state",
+          "cpu_percent",
+          "memory_percent",
+          "memory_bytes",
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "The command line, clipped."
+          },
+          "cpu_percent": {
+            "type": "number",
+            "format": "double",
+            "description": "Share of one processor, in percent."
+          },
+          "memory_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Resident memory, in bytes.",
+            "minimum": 0
+          },
+          "memory_percent": {
+            "type": "number",
+            "format": "double",
+            "description": "Share of the node's memory, in percent."
+          },
+          "owner": {
+            "type": "string",
+            "description": "The user it runs as."
+          },
+          "pid": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Process id.",
+            "minimum": 0
+          },
+          "ppid": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Its parent.",
+            "minimum": 0
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Its nice value (priority; lower is more important)."
+          },
+          "state": {
+            "type": "string",
+            "description": "`R`, `S`, `D`, `Z`, `T`."
+          },
+          "uid": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The user id.",
+            "minimum": 0
+          }
+        }
+      },
+      "HostSignalRequest": {
+        "type": "object",
+        "description": "Which signal.",
+        "required": [
+          "signal"
+        ],
+        "properties": {
+          "signal": {
+            "type": "string",
+            "description": "`term` (ask it to end, and kill it after ten seconds if it does not) or `kill` (at once)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "HostSignalled": {
+        "type": "object",
+        "description": "What came of the signal.",
+        "required": [
+          "pid",
+          "outcome"
+        ],
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "description": "`exited`, `killed`, `not_found` or `still_running`."
+          },
+          "pid": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The process.",
+            "minimum": 0
+          }
+        }
       },
       "ImageList": {
         "type": "object",
@@ -32843,6 +33401,61 @@
               "ns1.example.net",
               "ns2.example.net"
             ]
+          }
+        }
+      },
+      "NetIoView": {
+        "type": "object",
+        "description": "Counters of one network interface.",
+        "required": [
+          "name",
+          "bytes_sent",
+          "bytes_received",
+          "packets_sent",
+          "packets_received",
+          "errors_in",
+          "errors_out"
+        ],
+        "properties": {
+          "bytes_received": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bytes received.",
+            "minimum": 0
+          },
+          "bytes_sent": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bytes sent.",
+            "minimum": 0
+          },
+          "errors_in": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Receive errors.",
+            "minimum": 0
+          },
+          "errors_out": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Send errors.",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string",
+            "description": "The name."
+          },
+          "packets_received": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Packets received.",
+            "minimum": 0
+          },
+          "packets_sent": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Packets sent.",
+            "minimum": 0
           }
         }
       },
@@ -35908,6 +36521,94 @@
           }
         },
         "additionalProperties": false
+      },
+      "ServerStatsView": {
+        "type": "object",
+        "description": "A live reading of a node. Counters only grow: work rates out from two readings.",
+        "required": [
+          "taken_at_ms",
+          "load",
+          "cpu_percent",
+          "cpu_cores_percent",
+          "memory_total_bytes",
+          "memory_used_bytes",
+          "swap_total_bytes",
+          "swap_used_bytes",
+          "disk",
+          "disk_io",
+          "net_io"
+        ],
+        "properties": {
+          "cpu_cores_percent": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "The same per processor."
+          },
+          "cpu_percent": {
+            "type": "number",
+            "format": "double",
+            "description": "Busy share of all processors, 0 to 100."
+          },
+          "disk": {
+            "$ref": "#/components/schemas/DiskUsageView",
+            "description": "The root file system."
+          },
+          "disk_io": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiskIoView"
+            },
+            "description": "Every disk with its counters since boot."
+          },
+          "load": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "Load average over 1, 5 and 15 minutes."
+          },
+          "memory_total_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Memory in all, in bytes.",
+            "minimum": 0
+          },
+          "memory_used_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Memory in use (not counting cache), in bytes.",
+            "minimum": 0
+          },
+          "net_io": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetIoView"
+            },
+            "description": "Every network interface with its counters since boot."
+          },
+          "swap_total_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Swap in all, in bytes.",
+            "minimum": 0
+          },
+          "swap_used_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Swap in use, in bytes.",
+            "minimum": 0
+          },
+          "taken_at_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "When it was taken (milliseconds since 1970).",
+            "minimum": 0
+          }
+        }
       },
       "ServerView": {
         "type": "object",

@@ -154,7 +154,7 @@ pub async fn report_server_info(op: Operation) -> Result<Output, AgentError> {
     Ok(Output::ServerInfo { info })
 }
 
-async fn through_helper(
+pub(super) async fn through_helper(
     context: &TenantContext,
     action: Action,
     name: &str,

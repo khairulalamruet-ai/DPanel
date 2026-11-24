@@ -158,6 +158,16 @@ pub enum Action {
     /// Moves what is swapped out back into memory, then turns swap on again. Refused when there is
     /// not enough free memory for it.
     DropSwap,
+    /// Sends SIGTERM (or SIGKILL with `kill`) to one process of the machine. The first process and
+    /// this helper itself are refused; the agent has already refused kernel threads and the panel's own
+    /// programs.
+    SignalHost {
+        /// The process, from 2 up.
+        pid: u32,
+        /// SIGKILL instead of SIGTERM.
+        #[serde(default)]
+        kill: bool,
+    },
     /// What the SSH server will do and the keys that may log in as root (see
     /// [`crate::sshaccess`]). Answered with `{"keys": [line, ...], "ports": [...], "root_login",
     /// "password_authentication", "pubkey_authentication"}`.
@@ -224,6 +234,7 @@ impl Action {
             Self::DropCaches => "drop_caches",
             Self::Reboot { .. } => "reboot",
             Self::DropSwap => "drop_swap",
+            Self::SignalHost { .. } => "signal_host",
             Self::ReadSsh => "read_ssh",
             Self::AddSshKey { .. } => "add_ssh_key",
             Self::RemoveSshKey { .. } => "remove_ssh_key",
@@ -335,6 +346,7 @@ fn valid_id(id: &str) -> bool {
 fn allowed_fields(action: &str) -> Option<&'static [&'static str]> {
     match action {
         "noop" => Some(&["type"]),
+        "signal_host" => Some(&["type", "pid", "kill"]),
         "prepare_tenant" => Some(&["type", "tenant_id", "uid", "skeleton"]),
         "set_storage_quota" => Some(&["type", "tenant_id", "uid", "disk_bytes", "inodes"]),
         "set_db_firewall" => Some(&["type", "cidrs"]),

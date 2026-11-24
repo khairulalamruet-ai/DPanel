@@ -179,7 +179,7 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         loop {
             let rows: Vec<(Uuid, Value)> = sqlx::query_as(
-                "SELECT id, payload FROM operations WHERE kind IN ('list_containers', 'restart_container', 'restart_node_service', 'read_service_log', 'list_processes', 'signal_process', 'report_server_info', 'set_timezone', 'set_swap', 'drop_caches', 'reboot_node', 'drop_swap', 'read_ssh_access', 'set_ssh_settings', 'add_ssh_key', 'remove_ssh_key', 'write_sshd_config') AND status = 'pending'",
+                "SELECT id, payload FROM operations WHERE kind IN ('list_containers', 'restart_container', 'restart_node_service', 'read_service_log', 'list_processes', 'signal_process', 'report_server_info', 'set_timezone', 'set_swap', 'drop_caches', 'reboot_node', 'drop_swap', 'read_ssh_access', 'set_ssh_settings', 'add_ssh_key', 'remove_ssh_key', 'write_sshd_config', 'report_server_stats', 'list_host_processes', 'inspect_host_process', 'signal_host_process') AND status = 'pending'",
             )
             .fetch_all(&pool)
             .await
@@ -214,6 +214,47 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                             "uptime_seconds": 1000, "memory_total_bytes": 2000, "memory_available_bytes": 1000,
                             "swap_total_bytes": 500, "swap_used_bytes": 100, "ssh": [["permitrootlogin", "yes"]]
                         }})),
+                        None,
+                    )
+                } else if kind == "report_server_stats" {
+                    (
+                        "succeeded",
+                        Some(json!({"type": "server_stats", "stats": {
+                            "taken_at_ms": 1_700_000_000_000u64, "load_x100": [85, 124, 130],
+                            "cpu_percent_x100": 1480, "cpu_cores_percent_x100": [1000, 2000],
+                            "memory_total_bytes": 2000, "memory_used_bytes": 900,
+                            "swap_total_bytes": 500, "swap_used_bytes": 100,
+                            "disk": {"device": "/dev/vda1", "filesystem": "ext4", "total_bytes": 4000, "used_bytes": 3000, "free_bytes": 1000},
+                            "disk_io": [{"name": "vda", "read_count": 1, "write_count": 2, "read_bytes": 3, "write_bytes": 4, "read_ms": 5, "write_ms": 6}],
+                            "net_io": [{"name": "eth0", "bytes_sent": 1, "bytes_received": 2, "packets_sent": 3, "packets_received": 4, "errors_in": 0, "errors_out": 0}]
+                        }})),
+                        None,
+                    )
+                } else if kind == "list_host_processes" {
+                    (
+                        "succeeded",
+                        Some(json!({"type": "host_processes", "items": [
+                            {"pid": 3933974, "ppid": 1, "owner": "100998", "uid": 100_998, "priority": 0, "state": "S",
+                             "cpu_percent_x100": 97, "memory_percent_x100": 266, "memory_bytes": 1000, "command": "mongod --auth"}
+                        ]})),
+                        None,
+                    )
+                } else if kind == "inspect_host_process" {
+                    (
+                        "succeeded",
+                        Some(json!({"type": "host_process_detail", "detail": {
+                            "pid": 3933974, "ppid": 1, "owner": "100998", "name": "mongod", "state": "S", "threads": 4,
+                            "memory_bytes": 1000, "age_seconds": 60, "priority": 0,
+                            "command_line": "mongod --auth", "cgroup": "0::/system.slice/x.service"
+                        }})),
+                        None,
+                    )
+                } else if kind == "signal_host_process" {
+                    (
+                        "succeeded",
+                        Some(
+                            json!({"type": "process_signalled", "pid": payload["pid"], "outcome": if payload["signal"] == "kill" { "killed" } else { "exited" }}),
+                        ),
                         None,
                     )
                 } else if kind == "read_ssh_access" {
@@ -701,6 +742,66 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
             .0,
         StatusCode::OK
     );
+    // Live numbers and the process manager.
+    let stats_url = format!("{server}/stats");
+    assert_eq!(
+        e.call(&alice, "GET", &stats_url).await.0,
+        StatusCode::FORBIDDEN
+    );
+    let (status, stats) = e.call(&root, "GET", &stats_url).await;
+    assert_eq!(status, StatusCode::OK, "{stats}");
+    assert_eq!(stats["load"], json!([0.85, 1.24, 1.3]));
+    assert_eq!(stats["cpu_percent"], 14.8);
+    assert_eq!(stats["cpu_cores_percent"], json!([10.0, 20.0]));
+    assert_eq!(stats["disk"]["device"], "/dev/vda1");
+    assert_eq!(stats["net_io"][0]["name"], "eth0");
+    assert_eq!(stats["disk_io"][0]["write_ms"], 6);
+    let procs_url = format!("{server}/processes");
+    assert_eq!(
+        e.call(&alice, "GET", &procs_url).await.0,
+        StatusCode::FORBIDDEN
+    );
+    let (status, procs) = e.call(&root, "GET", &procs_url).await;
+    assert_eq!(status, StatusCode::OK, "{procs}");
+    assert_eq!(procs[0]["pid"], 3_933_974);
+    assert_eq!(procs[0]["memory_percent"], 2.66);
+    let (status, one) = e.call(&root, "GET", &format!("{procs_url}/3933974")).await;
+    assert_eq!(status, StatusCode::OK, "{one}");
+    assert_eq!(one["name"], "mongod");
+    let sig = format!("{procs_url}/3933974/signal");
+    assert_eq!(
+        post_json(&plain, sig.clone(), json!({"signal": "term"}))
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    let (status, done) = post_json(&root, sig.clone(), json!({"signal": "kill"})).await;
+    assert_eq!(
+        (status, done["outcome"].as_str()),
+        (StatusCode::OK, Some("killed")),
+        "{done}"
+    );
+    let (status, done) = post_json(&root, sig.clone(), json!({"signal": "term"})).await;
+    assert_eq!(
+        (status, done["outcome"].as_str()),
+        (StatusCode::OK, Some("exited")),
+        "{done}"
+    );
+    assert_eq!(
+        post_json(&root, sig, json!({"signal": "hup"})).await.0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    assert_eq!(
+        post_json(
+            &root,
+            format!("{procs_url}/1/signal"),
+            json!({"signal": "kill"})
+        )
+        .await
+        .0,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "process 1 is never signalled"
+    );
     // A reboot needs the node's name, as typed.
     let before: i64 =
         sqlx::query_scalar("SELECT count(*) FROM operations WHERE kind = 'reboot_node'")
@@ -859,6 +960,8 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
             "node_server.swap_set",
             "node_server.caches_dropped",
             "node_server.swap_dropped",
+            "node_server.process_signalled",
+            "node_server.process_signalled",
             "node_server.reboot",
             "node_server.ssh_settings",
             "node_server.ssh_key_added",

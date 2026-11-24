@@ -275,6 +275,9 @@ fn execute_one(action: &Action, config: &Config) -> Result<(), (ErrorCode, &'sta
         Action::DropCaches => crate::servertools::drop_caches(&config.server),
         Action::Reboot { hard } => crate::servertools::reboot(&config.server, *hard),
         Action::DropSwap => crate::servertools::drop_swap(&config.server),
+        Action::SignalHost { pid, kill } => {
+            crate::servertools::signal_host(&config.server, *pid, *kill)
+        }
         Action::ReadSsh => Ok(()),
         Action::AddSshKey { key } => crate::sshaccess::add_key(&config.server, key),
         Action::RemoveSshKey { blob } => crate::sshaccess::remove_key(&config.server, blob),

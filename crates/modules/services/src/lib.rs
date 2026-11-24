@@ -8,6 +8,9 @@
 //! | POST | `/api/v1/client/processes/{container}/{pid}/signal` | the owner |
 //! | GET | `/api/v1/admin/nodes/{id}/server` | `admin.server.read` |
 //! | POST | `/api/v1/admin/nodes/{id}/server/{timezone,swap,drop-caches,reboot}` | `admin.server.manage`, sudo mode |
+//! | GET | `/api/v1/admin/nodes/{id}/server/stats` | `admin.server.read` |
+//! | GET | `/api/v1/admin/nodes/{id}/server/processes`, `.../processes/{pid}` | `admin.server.read` |
+//! | POST | `/api/v1/admin/nodes/{id}/server/processes/{pid}/signal` | `admin.server.manage`, sudo mode |
 //! | GET | `/api/v1/admin/nodes/{id}/services` | `admin.nodes.read` |
 //! | POST | `/api/v1/admin/nodes/{id}/services/{name}/restart` | `admin.nodes.manage` |
 //! | GET | `/api/v1/admin/nodes/{id}/services/{name}/log` | `admin.nodes.read` |
@@ -92,6 +95,19 @@ pub fn admin_router() -> Router<ServicesState> {
         )
         .route("/api/v1/admin/nodes/{id}/server/reboot", post(reboot_node))
         .route("/api/v1/admin/nodes/{id}/server/drop-swap", post(drop_swap))
+        .route("/api/v1/admin/nodes/{id}/server/stats", get(server_stats))
+        .route(
+            "/api/v1/admin/nodes/{id}/server/processes",
+            get(host_processes),
+        )
+        .route(
+            "/api/v1/admin/nodes/{id}/server/processes/{pid}",
+            get(host_process),
+        )
+        .route(
+            "/api/v1/admin/nodes/{id}/server/processes/{pid}/signal",
+            post(signal_host_process),
+        )
         .route("/api/v1/admin/nodes/{id}/ssh", get(ssh_access))
         .route(
             "/api/v1/admin/nodes/{id}/ssh/settings",
@@ -708,6 +724,423 @@ async fn server_action(
         Err(operation_id) => {
             Ok((StatusCode::ACCEPTED, Json(Pending { operation_id })).into_response())
         }
+    }
+}
+
+// ------------------------------------------------------------------- live numbers and processes
+
+/// A live reading of a node. Counters only grow: work rates out from two readings.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ServerStatsView {
+    /// When it was taken (milliseconds since 1970).
+    pub taken_at_ms: u64,
+    /// Load average over 1, 5 and 15 minutes.
+    pub load: Vec<f64>,
+    /// Busy share of all processors, 0 to 100.
+    pub cpu_percent: f64,
+    /// The same per processor.
+    pub cpu_cores_percent: Vec<f64>,
+    /// Memory in all, in bytes.
+    pub memory_total_bytes: u64,
+    /// Memory in use (not counting cache), in bytes.
+    pub memory_used_bytes: u64,
+    /// Swap in all, in bytes.
+    pub swap_total_bytes: u64,
+    /// Swap in use, in bytes.
+    pub swap_used_bytes: u64,
+    /// The root file system.
+    pub disk: DiskUsageView,
+    /// Every disk with its counters since boot.
+    pub disk_io: Vec<DiskIoView>,
+    /// Every network interface with its counters since boot.
+    pub net_io: Vec<NetIoView>,
+}
+
+/// Space on the root file system.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DiskUsageView {
+    /// The device.
+    pub device: String,
+    /// The file system type.
+    pub filesystem: String,
+    /// Size in bytes.
+    pub total_bytes: u64,
+    /// Used, in bytes.
+    pub used_bytes: u64,
+    /// Free, in bytes.
+    pub free_bytes: u64,
+}
+
+/// Counters of one disk.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DiskIoView {
+    /// The name.
+    pub name: String,
+    /// Reads completed.
+    pub read_count: u64,
+    /// Writes completed.
+    pub write_count: u64,
+    /// Bytes read.
+    pub read_bytes: u64,
+    /// Bytes written.
+    pub write_bytes: u64,
+    /// Milliseconds spent reading.
+    pub read_ms: u64,
+    /// Milliseconds spent writing.
+    pub write_ms: u64,
+}
+
+/// Counters of one network interface.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct NetIoView {
+    /// The name.
+    pub name: String,
+    /// Bytes sent.
+    pub bytes_sent: u64,
+    /// Bytes received.
+    pub bytes_received: u64,
+    /// Packets sent.
+    pub packets_sent: u64,
+    /// Packets received.
+    pub packets_received: u64,
+    /// Receive errors.
+    pub errors_in: u64,
+    /// Send errors.
+    pub errors_out: u64,
+}
+
+/// One process of the node.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct HostProcessView {
+    /// Process id.
+    pub pid: u32,
+    /// Its parent.
+    pub ppid: u32,
+    /// The user it runs as.
+    pub owner: String,
+    /// The user id.
+    pub uid: u32,
+    /// Its nice value (priority; lower is more important).
+    pub priority: i32,
+    /// `R`, `S`, `D`, `Z`, `T`.
+    pub state: String,
+    /// Share of one processor, in percent.
+    pub cpu_percent: f64,
+    /// Share of the node's memory, in percent.
+    pub memory_percent: f64,
+    /// Resident memory, in bytes.
+    pub memory_bytes: u64,
+    /// The command line, clipped.
+    pub command: String,
+}
+
+/// What can be read about one process.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct HostProcessDetailView {
+    /// Process id.
+    pub pid: u32,
+    /// Its parent.
+    pub ppid: u32,
+    /// The user it runs as.
+    pub owner: String,
+    /// Its name.
+    pub name: String,
+    /// `R`, `S`, `D`, `Z`, `T`.
+    pub state: String,
+    /// Threads.
+    pub threads: u32,
+    /// Resident memory, in bytes.
+    pub memory_bytes: u64,
+    /// Seconds since it started.
+    pub age_seconds: u64,
+    /// Its nice value.
+    pub priority: i32,
+    /// The whole command line.
+    pub command_line: String,
+    /// Its control groups, one per line.
+    pub cgroup: String,
+}
+
+/// Which signal.
+#[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct HostSignalRequest {
+    /// `term` (ask it to end, and kill it after ten seconds if it does not) or `kill` (at once).
+    pub signal: String,
+}
+
+/// What came of the signal.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct HostSignalled {
+    /// The process.
+    pub pid: u32,
+    /// `exited`, `killed`, `not_found` or `still_running`.
+    pub outcome: String,
+}
+
+fn answer<T>(
+    got: Result<Output, Uuid>,
+    pick: impl FnOnce(Output) -> Option<T>,
+) -> Result<Result<T, Uuid>, AppError> {
+    match got {
+        Ok(out) => pick(out)
+            .map(Ok)
+            .ok_or_else(|| internal(std::io::Error::other("an unexpected answer"))),
+        Err(operation_id) => Ok(Err(operation_id)),
+    }
+}
+
+fn pending(operation_id: Uuid) -> Response {
+    (StatusCode::ACCEPTED, Json(Pending { operation_id })).into_response()
+}
+
+/// A live reading of the node: load, processors, memory, swap, disk, disk and network counters.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/nodes/{id}/server/stats",
+    tag = "services",
+    operation_id = "adminServerStats",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id")),
+    responses(
+        (status = 200, description = "The reading", body = ServerStatsView),
+        (status = 202, description = "The node is slow; ask again", body = Pending),
+        (status = 403, description = "`permission_denied` (needs admin.server.read)", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 404, description = "No such node", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn server_stats(
+    State(state): State<ServicesState>,
+    who: Require<ServerRead>,
+    Path(id): Path<Uuid>,
+) -> Result<Response, AppError> {
+    let got = ask_node(&state, id, &who.0, &Operation::ReportServerStats).await?;
+    Ok(
+        match answer(got, |o| match o {
+            Output::ServerStats { stats } => Some(stats),
+            _ => None,
+        })? {
+            Ok(s) => Json(ServerStatsView {
+                taken_at_ms: s.taken_at_ms,
+                load: s.load_x100.iter().map(|v| f64::from(*v) / 100.0).collect(),
+                cpu_percent: f64::from(s.cpu_percent_x100) / 100.0,
+                cpu_cores_percent: s
+                    .cpu_cores_percent_x100
+                    .iter()
+                    .map(|v| f64::from(*v) / 100.0)
+                    .collect(),
+                memory_total_bytes: s.memory_total_bytes,
+                memory_used_bytes: s.memory_used_bytes,
+                swap_total_bytes: s.swap_total_bytes,
+                swap_used_bytes: s.swap_used_bytes,
+                disk: DiskUsageView {
+                    device: s.disk.device,
+                    filesystem: s.disk.filesystem,
+                    total_bytes: s.disk.total_bytes,
+                    used_bytes: s.disk.used_bytes,
+                    free_bytes: s.disk.free_bytes,
+                },
+                disk_io: s
+                    .disk_io
+                    .into_iter()
+                    .map(|d| DiskIoView {
+                        name: d.name,
+                        read_count: d.read_count,
+                        write_count: d.write_count,
+                        read_bytes: d.read_bytes,
+                        write_bytes: d.write_bytes,
+                        read_ms: d.read_ms,
+                        write_ms: d.write_ms,
+                    })
+                    .collect(),
+                net_io: s
+                    .net_io
+                    .into_iter()
+                    .map(|n| NetIoView {
+                        name: n.name,
+                        bytes_sent: n.bytes_sent,
+                        bytes_received: n.bytes_received,
+                        packets_sent: n.packets_sent,
+                        packets_received: n.packets_received,
+                        errors_in: n.errors_in,
+                        errors_out: n.errors_out,
+                    })
+                    .collect(),
+            })
+            .into_response(),
+            Err(operation_id) => pending(operation_id),
+        },
+    )
+}
+
+/// Every process of the node with its processor and memory use, the busiest first.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/nodes/{id}/server/processes",
+    tag = "services",
+    operation_id = "adminHostProcesses",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id")),
+    responses(
+        (status = 200, description = "The processes (at most 2000)", body = Vec<HostProcessView>),
+        (status = 202, description = "The node is slow; ask again", body = Pending),
+        (status = 403, description = "`permission_denied` (needs admin.server.read)", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 404, description = "No such node", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn host_processes(
+    State(state): State<ServicesState>,
+    who: Require<ServerRead>,
+    Path(id): Path<Uuid>,
+) -> Result<Response, AppError> {
+    let got = ask_node(&state, id, &who.0, &Operation::ListHostProcesses).await?;
+    Ok(
+        match answer(got, |o| match o {
+            Output::HostProcesses { items } => Some(items),
+            _ => None,
+        })? {
+            Ok(items) => Json(
+                items
+                    .into_iter()
+                    .map(|p| HostProcessView {
+                        pid: p.pid,
+                        ppid: p.ppid,
+                        owner: p.owner,
+                        uid: p.uid,
+                        priority: p.priority,
+                        state: p.state,
+                        cpu_percent: f64::from(p.cpu_percent_x100) / 100.0,
+                        memory_percent: f64::from(p.memory_percent_x100) / 100.0,
+                        memory_bytes: p.memory_bytes,
+                        command: p.command,
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .into_response(),
+            Err(operation_id) => pending(operation_id),
+        },
+    )
+}
+
+/// What can be read about one process of the node.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/nodes/{id}/server/processes/{pid}",
+    tag = "services",
+    operation_id = "adminHostProcess",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id"), ("pid" = u32, Path, description = "Process id")),
+    responses(
+        (status = 200, description = "The process", body = HostProcessDetailView),
+        (status = 202, description = "The node is slow; ask again", body = Pending),
+        (status = 403, description = "`permission_denied` (needs admin.server.read)", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 404, description = "No such node", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "There is no such process", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn host_process(
+    State(state): State<ServicesState>,
+    who: Require<ServerRead>,
+    Path((id, pid)): Path<(Uuid, u32)>,
+) -> Result<Response, AppError> {
+    let got = ask_node(&state, id, &who.0, &Operation::InspectHostProcess { pid }).await?;
+    Ok(
+        match answer(got, |o| match o {
+            Output::HostProcessDetail { detail } => Some(detail),
+            _ => None,
+        })? {
+            Ok(d) => Json(HostProcessDetailView {
+                pid: d.pid,
+                ppid: d.ppid,
+                owner: d.owner,
+                name: d.name,
+                state: d.state,
+                threads: d.threads,
+                memory_bytes: d.memory_bytes,
+                age_seconds: d.age_seconds,
+                priority: d.priority,
+                command_line: d.command_line,
+                cgroup: d.cgroup,
+            })
+            .into_response(),
+            Err(operation_id) => pending(operation_id),
+        },
+    )
+}
+
+/// End a process of the node. The first process, kernel threads and the panel's own programs are refused.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/nodes/{id}/server/processes/{pid}/signal",
+    tag = "services",
+    operation_id = "adminSignalHostProcess",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id"), ("pid" = u32, Path, description = "Process id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    request_body = HostSignalRequest,
+    responses(
+        (status = 200, description = "What came of it", body = HostSignalled),
+        (status = 202, description = "The node is slow; it goes on", body = Pending),
+        (status = 403, description = "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "A signal that is not `term` or `kill`, process 1, or a process that may not be signalled", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn signal_host_process(
+    State(state): State<ServicesState>,
+    who: RequireRecent<ServerManage>,
+    Path((id, pid)): Path<(Uuid, u32)>,
+    Json(req): Json<HostSignalRequest>,
+) -> Result<Response, AppError> {
+    let signal = match req.signal.as_str() {
+        "term" => builtpanel_node_protocol::HostSignal::Terminate,
+        "kill" => builtpanel_node_protocol::HostSignal::Kill,
+        _ => {
+            return Err(AppError::validation(vec![
+                builtpanel_http_kit::FieldError::new("signal", "invalid", "term or kill."),
+            ]));
+        }
+    };
+    if pid < 2 {
+        return Err(AppError::validation(vec![
+            builtpanel_http_kit::FieldError::new("pid", "invalid", "Process 1 cannot be ended."),
+        ]));
+    }
+    let got = ask_node(
+        &state,
+        id,
+        &who.0,
+        &Operation::SignalHostProcess { pid, signal },
+    )
+    .await?;
+    match answer(got, |o| match o {
+        Output::ProcessSignalled { pid, outcome } => Some((pid, outcome)),
+        _ => None,
+    })? {
+        Ok((pid, outcome)) => {
+            builtpanel_audit::insert(
+                &state.db,
+                &builtpanel_audit::AuditEntry::new(
+                    "node_server.process_signalled",
+                    builtpanel_audit::Outcome::Success,
+                )
+                .actor(who.0.account_id())
+                .target("node", id)
+                .metadata(serde_json::json!({ "pid": pid, "signal": req.signal })),
+            )
+            .await
+            .map_err(internal)?;
+            let outcome = match outcome {
+                builtpanel_node_protocol::SignalOutcome::Exited => "exited",
+                builtpanel_node_protocol::SignalOutcome::Killed => "killed",
+                builtpanel_node_protocol::SignalOutcome::NotFound => "not_found",
+                builtpanel_node_protocol::SignalOutcome::StillRunning => "still_running",
+            };
+            Ok(Json(HostSignalled {
+                pid,
+                outcome: outcome.to_owned(),
+            })
+            .into_response())
+        }
+        Err(operation_id) => Ok(pending(operation_id)),
     }
 }
 
@@ -1507,7 +1940,7 @@ pub async fn node_service_log(
 #[openapi(
     paths(
         list_services, restart_service, list_processes, signal_process, server_info,
-        set_timezone, set_swap, drop_caches, drop_swap, reboot_node, node_services, restart_node_service, node_service_log,
+        set_timezone, set_swap, drop_caches, drop_swap, server_stats, host_processes, host_process, signal_host_process, reboot_node, node_services, restart_node_service, node_service_log,
         ssh_access, set_ssh_settings, add_ssh_key, remove_ssh_key, write_sshd_config
     ),
     components(schemas(
@@ -1515,7 +1948,8 @@ pub async fn node_service_log(
         Signalled, ServerInfoView, SshSetting, TimezoneRequest, SwapRequest, RebootRequest,
         ServerActionView, NodeServiceView, NodeServiceList,
         ServiceLogLine, ServiceLog, SshKeyView, SshAccessView, SshSettingsRequest, SshKeyRequest,
-        SshKeyRemoveRequest, SshConfigRequest
+        SshKeyRemoveRequest, SshConfigRequest, ServerStatsView, DiskUsageView, DiskIoView, NetIoView,
+        HostProcessView, HostProcessDetailView, HostSignalRequest, HostSignalled
     )),
     tags((name = "services", description = "An account's own services"))
 )]
