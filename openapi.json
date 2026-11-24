@@ -7057,6 +7057,83 @@
         ]
       }
     },
+    "/api/v1/admin/nodes/{id}/server/drop-swap": {
+      "post": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Move what is swapped out back into memory and turn swap on again. Refused when there is not\nenough free memory for it.",
+        "operationId": "adminDropSwap",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerActionView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; it goes on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "There is not enough free memory for what is in swap",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/nodes/{id}/server/reboot": {
       "post": {
         "tags": [
@@ -7547,6 +7624,462 @@
           },
           "503": {
             "description": "`node_unavailable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/nodes/{id}/ssh": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "The SSH access of a node: how it listens, who may log in, and its configuration.",
+        "operationId": "adminSshAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The SSH access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SshAccessView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; ask again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.server.read)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/nodes/{id}/ssh/config": {
+      "put": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Replace `sshd_config`. The node checks it with `sshd -t` first, refuses a text that would lock\neveryone out, and puts the old file back when SSH does not come up with it.",
+        "operationId": "adminWriteSshdConfig",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SshConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerActionView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; it goes on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The SSH server does not accept the text, or it would lock everyone out",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/nodes/{id}/ssh/keys": {
+      "post": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Authorise a public key for root over SSH.",
+        "operationId": "adminAddSshKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SshKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerActionView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; it goes on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a public key this server accepts, or it is there already",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/nodes/{id}/ssh/keys/remove": {
+      "post": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Take an authorised key away. Refused when it is the last one and password login is off.",
+        "operationId": "adminRemoveSshKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SshKeyRemoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerActionView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; it goes on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No key with this fingerprint, or the removal would lock everyone out",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/nodes/{id}/ssh/settings": {
+      "put": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Change the node's SSH settings. The node refuses a change that would lock everyone out, checks\nthe result, and puts the old settings back when SSH does not come up.",
+        "operationId": "adminSetSshSettings",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SshSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerActionView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; it goes on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Nothing to change, a value that is not allowed, or a change that would lock everyone out",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -33682,6 +34215,10 @@
           "confirm": {
             "type": "string",
             "description": "The node's name, typed as it is."
+          },
+          "hard": {
+            "type": "boolean",
+            "description": "Restart at once, without waiting for the services to stop (default: wait)."
           }
         },
         "additionalProperties": false
@@ -35684,6 +36221,117 @@
           }
         }
       },
+      "SshAccessView": {
+        "type": "object",
+        "description": "The SSH access of a node.",
+        "required": [
+          "ports",
+          "root_login",
+          "password_authentication",
+          "pubkey_authentication",
+          "keys",
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "type": "string",
+            "description": "The text of `sshd_config`."
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SshKeyView"
+            },
+            "description": "The keys that may log in as root."
+          },
+          "password_authentication": {
+            "type": "boolean",
+            "description": "Whether passwords may be used to log in."
+          },
+          "ports": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            },
+            "description": "Every port the SSH server listens on."
+          },
+          "pubkey_authentication": {
+            "type": "boolean",
+            "description": "Whether keys may be used to log in."
+          },
+          "root_login": {
+            "type": "string",
+            "description": "`yes`, `no`, `prohibit-password` or `forced-commands-only`."
+          }
+        }
+      },
+      "SshConfigRequest": {
+        "type": "object",
+        "description": "The new text of `sshd_config`.",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The whole file, at most 64 KiB."
+          }
+        },
+        "additionalProperties": false
+      },
+      "SshKeyRemoveRequest": {
+        "type": "object",
+        "description": "Which key to take away.",
+        "required": [
+          "fingerprint"
+        ],
+        "properties": {
+          "fingerprint": {
+            "type": "string",
+            "description": "The key's fingerprint (`SHA256:...`) as listed."
+          }
+        },
+        "additionalProperties": false
+      },
+      "SshKeyRequest": {
+        "type": "object",
+        "description": "A public key to authorise for root.",
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "One public key line: `ssh-ed25519 AAAA... comment`."
+          }
+        },
+        "additionalProperties": false
+      },
+      "SshKeyView": {
+        "type": "object",
+        "description": "A key that may log in as root over SSH.",
+        "required": [
+          "kind",
+          "fingerprint",
+          "comment"
+        ],
+        "properties": {
+          "comment": {
+            "type": "string",
+            "description": "The comment of the key line."
+          },
+          "fingerprint": {
+            "type": "string",
+            "description": "`SHA256:...`, as `ssh-keygen -l` prints it."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`ssh-ed25519`, `ssh-rsa`, ..."
+          }
+        }
+      },
       "SshSetting": {
         "type": "object",
         "description": "One SSH server setting.",
@@ -35701,6 +36349,43 @@
             "description": "Its value."
           }
         }
+      },
+      "SshSettingsRequest": {
+        "type": "object",
+        "description": "The SSH settings to change; what is absent stays as it is.",
+        "properties": {
+          "password_authentication": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether passwords may be used to log in."
+          },
+          "port": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The port: 22, or 1024 to 65535 (not one the panel uses).",
+            "minimum": 0
+          },
+          "pubkey_authentication": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether keys may be used to log in."
+          },
+          "root_login": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`yes`, `no`, `prohibit-password` or `forced-commands-only`."
+          }
+        },
+        "additionalProperties": false
       },
       "SslView": {
         "type": "object",

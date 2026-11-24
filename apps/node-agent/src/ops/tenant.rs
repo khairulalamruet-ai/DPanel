@@ -103,7 +103,11 @@ pub fn ask_helper_data(
             HelperCode::InvalidArguments | HelperCode::UnknownAction | HelperCode::InvalidRequest,
         ) => AgentError::new(
             ErrorCode::InvalidArguments,
-            "the privileged helper refused the request",
+            // The helper's refusals are fixed texts that never echo what was asked.
+            error.map_or_else(
+                || "the privileged helper refused the request".to_owned(),
+                |e| format!("the privileged helper refused the request: {}", e.message),
+            ),
         ),
         Some(HelperCode::Forbidden) => AgentError::new(
             ErrorCode::Internal,

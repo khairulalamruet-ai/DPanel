@@ -26,6 +26,7 @@ pub mod quota;
 pub mod server;
 pub mod servertools;
 pub mod skeleton;
+pub mod sshaccess;
 pub mod tenant;
 
 pub use protocol::{Action, ErrorCode, Request, Response};

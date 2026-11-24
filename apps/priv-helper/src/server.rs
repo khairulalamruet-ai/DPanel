@@ -237,6 +237,9 @@ fn execute(
     let _only_one = ONE_AT_A_TIME
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Action::ReadSsh = action {
+        return crate::sshaccess::read_all(&config.server).map(Some);
+    }
     execute_one(action, config).map(|()| None)
 }
 
@@ -258,11 +261,38 @@ fn execute_one(action: &Action, config: &Config) -> Result<(), (ErrorCode, &'sta
         Action::SetPgFirewall { cidrs } => {
             crate::firewall::set_in(crate::firewall::TABLE_PG, config.pg_port, cidrs)
         }
-        Action::SetNodeFirewall { policy } => crate::nodefw::set(policy, config.ssh_port),
+        Action::SetNodeFirewall { policy } => {
+            // The ports SSH really listens on (the administrator may have moved it), or the one the
+            // helper was started with when they cannot be read.
+            let mut ports = crate::sshaccess::listening_ports(&config.server);
+            if ports.is_empty() {
+                ports.push(config.ssh_port);
+            }
+            crate::nodefw::set(policy, &ports)
+        }
         Action::SetTimezone { zone } => crate::servertools::set_timezone(&config.server, zone),
         Action::SetSwap { megabytes } => crate::servertools::set_swap(&config.server, *megabytes),
         Action::DropCaches => crate::servertools::drop_caches(&config.server),
-        Action::Reboot => crate::servertools::reboot(&config.server),
+        Action::Reboot { hard } => crate::servertools::reboot(&config.server, *hard),
+        Action::DropSwap => crate::servertools::drop_swap(&config.server),
+        Action::ReadSsh => Ok(()),
+        Action::AddSshKey { key } => crate::sshaccess::add_key(&config.server, key),
+        Action::RemoveSshKey { blob } => crate::sshaccess::remove_key(&config.server, blob),
+        Action::SetSshSettings {
+            port,
+            root_login,
+            password,
+            pubkey,
+        } => crate::sshaccess::set_settings(
+            &config.server,
+            &crate::sshaccess::Settings {
+                port: *port,
+                root_login: root_login.clone(),
+                password: *password,
+                pubkey: *pubkey,
+            },
+        ),
+        Action::WriteSshdConfig { text } => crate::sshaccess::write_config(&config.server, text),
         Action::RemoveTenant { tenant_id, uid } => tenant::remove(&config.tenants, tenant_id, *uid),
         Action::PlaceFile {
             tenant_id,

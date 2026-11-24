@@ -165,7 +165,7 @@ fn the_packet_filter_accepts_every_shape_of_policy_and_keeps_the_old_table_when_
     .checked()
     .unwrap();
     // The deny-everything shape is only checked (-c): nothing is loaded.
-    let script = nodefw::ruleset(&deny, 22);
+    let script = nodefw::ruleset(&deny, &[22]);
     let mut child = Command::new("/usr/sbin/nft")
         .args(["-c", "-f", "-"])
         .stdin(Stdio::piped())

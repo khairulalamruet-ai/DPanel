@@ -29,7 +29,7 @@ use axum::{
     extract::{FromRef, Path, State},
     http::StatusCode,
     response::{IntoResponse as _, Response},
-    routing::{get, post},
+    routing::{get, post, put},
 };
 use builtpanel_database::{
     accounts::DbAccountKind,
@@ -91,6 +91,21 @@ pub fn admin_router() -> Router<ServicesState> {
             post(drop_caches),
         )
         .route("/api/v1/admin/nodes/{id}/server/reboot", post(reboot_node))
+        .route("/api/v1/admin/nodes/{id}/server/drop-swap", post(drop_swap))
+        .route("/api/v1/admin/nodes/{id}/ssh", get(ssh_access))
+        .route(
+            "/api/v1/admin/nodes/{id}/ssh/settings",
+            put(set_ssh_settings),
+        )
+        .route("/api/v1/admin/nodes/{id}/ssh/keys", post(add_ssh_key))
+        .route(
+            "/api/v1/admin/nodes/{id}/ssh/keys/remove",
+            post(remove_ssh_key),
+        )
+        .route(
+            "/api/v1/admin/nodes/{id}/ssh/config",
+            put(write_sshd_config),
+        )
         .route("/api/v1/admin/nodes/{id}/services", get(node_services))
         .route(
             "/api/v1/admin/nodes/{id}/services/{name}/restart",
@@ -653,6 +668,9 @@ pub struct SwapRequest {
 pub struct RebootRequest {
     /// The node's name, typed as it is.
     pub confirm: String,
+    /// Restart at once, without waiting for the services to stop (default: wait).
+    #[serde(default)]
+    pub hard: bool,
 }
 
 /// Done.
@@ -802,6 +820,38 @@ pub async fn drop_caches(
     .await
 }
 
+/// Move what is swapped out back into memory and turn swap on again. Refused when there is not
+/// enough free memory for it.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/nodes/{id}/server/drop-swap",
+    tag = "services",
+    operation_id = "adminDropSwap",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    responses(
+        (status = 200, description = "Done", body = ServerActionView),
+        (status = 202, description = "The node is slow; it goes on", body = Pending),
+        (status = 403, description = "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "There is not enough free memory for what is in swap", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn drop_swap(
+    State(state): State<ServicesState>,
+    who: RequireRecent<ServerManage>,
+    Path(id): Path<Uuid>,
+) -> Result<Response, AppError> {
+    server_action(
+        &state,
+        &who.0,
+        id,
+        Operation::DropSwap,
+        "node_server.swap_dropped",
+        serde_json::json!({}),
+    )
+    .await
+}
+
 /// Reboot the node. The body must carry the node's name as it is.
 #[utoipa::path(
     post,
@@ -845,9 +895,344 @@ pub async fn reboot_node(
         &state,
         &who.0,
         id,
-        Operation::RebootNode,
+        Operation::RebootNode { hard: req.hard },
         "node_server.reboot",
-        serde_json::json!({ "node": name }),
+        serde_json::json!({ "node": name, "hard": req.hard }),
+    )
+    .await
+}
+
+/// A key that may log in as root over SSH.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SshKeyView {
+    /// `ssh-ed25519`, `ssh-rsa`, ...
+    pub kind: String,
+    /// `SHA256:...`, as `ssh-keygen -l` prints it.
+    pub fingerprint: String,
+    /// The comment of the key line.
+    pub comment: String,
+}
+
+/// The SSH access of a node.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SshAccessView {
+    /// Every port the SSH server listens on.
+    pub ports: Vec<u16>,
+    /// `yes`, `no`, `prohibit-password` or `forced-commands-only`.
+    pub root_login: String,
+    /// Whether passwords may be used to log in.
+    pub password_authentication: bool,
+    /// Whether keys may be used to log in.
+    pub pubkey_authentication: bool,
+    /// The keys that may log in as root.
+    pub keys: Vec<SshKeyView>,
+    /// The text of `sshd_config`.
+    pub config: String,
+}
+
+/// The SSH access of a node: how it listens, who may log in, and its configuration.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/nodes/{id}/ssh",
+    tag = "services",
+    operation_id = "adminSshAccess",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id")),
+    responses(
+        (status = 200, description = "The SSH access", body = SshAccessView),
+        (status = 202, description = "The node is slow; ask again", body = Pending),
+        (status = 403, description = "`permission_denied` (needs admin.server.read)", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 404, description = "No such node", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn ssh_access(
+    State(state): State<ServicesState>,
+    who: Require<ServerRead>,
+    Path(id): Path<Uuid>,
+) -> Result<Response, AppError> {
+    match ask_node(&state, id, &who.0, &Operation::ReadSshAccess).await? {
+        Ok(Output::SshAccess { access }) => Ok(Json(SshAccessView {
+            ports: access.ports,
+            root_login: access.root_login,
+            password_authentication: access.password_authentication,
+            pubkey_authentication: access.pubkey_authentication,
+            keys: access
+                .keys
+                .into_iter()
+                .map(|k| SshKeyView {
+                    kind: k.kind,
+                    fingerprint: k.fingerprint,
+                    comment: k.comment,
+                })
+                .collect(),
+            config: access.config,
+        })
+        .into_response()),
+        Ok(_) => Err(internal(std::io::Error::other("an unexpected answer"))),
+        Err(operation_id) => {
+            Ok((StatusCode::ACCEPTED, Json(Pending { operation_id })).into_response())
+        }
+    }
+}
+
+/// The SSH settings to change; what is absent stays as it is.
+#[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SshSettingsRequest {
+    /// The port: 22, or 1024 to 65535 (not one the panel uses).
+    #[serde(default)]
+    pub port: Option<u16>,
+    /// `yes`, `no`, `prohibit-password` or `forced-commands-only`.
+    #[serde(default)]
+    pub root_login: Option<String>,
+    /// Whether passwords may be used to log in.
+    #[serde(default)]
+    pub password_authentication: Option<bool>,
+    /// Whether keys may be used to log in.
+    #[serde(default)]
+    pub pubkey_authentication: Option<bool>,
+}
+
+/// Change the node's SSH settings. The node refuses a change that would lock everyone out, checks
+/// the result, and puts the old settings back when SSH does not come up.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/nodes/{id}/ssh/settings",
+    tag = "services",
+    operation_id = "adminSetSshSettings",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    request_body = SshSettingsRequest,
+    responses(
+        (status = 200, description = "Done", body = ServerActionView),
+        (status = 202, description = "The node is slow; it goes on", body = Pending),
+        (status = 403, description = "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 404, description = "No such node", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "Nothing to change, a value that is not allowed, or a change that would lock everyone out", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn set_ssh_settings(
+    State(state): State<ServicesState>,
+    who: RequireRecent<ServerManage>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<SshSettingsRequest>,
+) -> Result<Response, AppError> {
+    let mut errors = Vec::new();
+    if req.port.is_none()
+        && req.root_login.is_none()
+        && req.password_authentication.is_none()
+        && req.pubkey_authentication.is_none()
+    {
+        errors.push(builtpanel_http_kit::FieldError::new(
+            "port",
+            "required",
+            "Give at least one setting to change.",
+        ));
+    }
+    if req.port.is_some_and(|p| p != 22 && p < 1024) {
+        errors.push(builtpanel_http_kit::FieldError::new(
+            "port",
+            "out_of_range",
+            "Use 22, or a port from 1024 to 65535.",
+        ));
+    }
+    if req
+        .root_login
+        .as_deref()
+        .is_some_and(|v| !["yes", "no", "prohibit-password", "forced-commands-only"].contains(&v))
+    {
+        errors.push(builtpanel_http_kit::FieldError::new(
+            "root_login",
+            "invalid",
+            "Choose yes, no, prohibit-password or forced-commands-only.",
+        ));
+    }
+    if !errors.is_empty() {
+        return Err(AppError::validation(errors));
+    }
+    let detail = serde_json::json!({
+        "port": req.port,
+        "root_login": req.root_login,
+        "password_authentication": req.password_authentication,
+        "pubkey_authentication": req.pubkey_authentication,
+    });
+    server_action(
+        &state,
+        &who.0,
+        id,
+        Operation::SetSshSettings {
+            port: req.port,
+            root_login: req.root_login,
+            password_authentication: req.password_authentication,
+            pubkey_authentication: req.pubkey_authentication,
+        },
+        "node_server.ssh_settings",
+        detail,
+    )
+    .await
+}
+
+/// A public key to authorise for root.
+#[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SshKeyRequest {
+    /// One public key line: `ssh-ed25519 AAAA... comment`.
+    pub key: String,
+}
+
+/// Authorise a public key for root over SSH.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/nodes/{id}/ssh/keys",
+    tag = "services",
+    operation_id = "adminAddSshKey",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    request_body = SshKeyRequest,
+    responses(
+        (status = 200, description = "Done", body = ServerActionView),
+        (status = 202, description = "The node is slow; it goes on", body = Pending),
+        (status = 403, description = "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 404, description = "No such node", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "Not a public key this server accepts, or it is there already", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn add_ssh_key(
+    State(state): State<ServicesState>,
+    who: RequireRecent<ServerManage>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<SshKeyRequest>,
+) -> Result<Response, AppError> {
+    if req.key.trim().is_empty() || req.key.len() > 8192 || req.key.contains(['\n', '\r', '\0']) {
+        return Err(AppError::validation(vec![
+            builtpanel_http_kit::FieldError::new(
+                "key",
+                "invalid",
+                "Give one public key line, such as ssh-ed25519 AAAA... name.",
+            ),
+        ]));
+    }
+    // The audit entry names the key by its type and comment, not by the key.
+    let words: Vec<&str> = req.key.split_whitespace().collect();
+    let detail = serde_json::json!({
+        "kind": words.first(),
+        "comment": words.get(2..).map(|c| c.join(" ")),
+    });
+    server_action(
+        &state,
+        &who.0,
+        id,
+        Operation::AddSshKey { key: req.key },
+        "node_server.ssh_key_added",
+        detail,
+    )
+    .await
+}
+
+/// Which key to take away.
+#[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SshKeyRemoveRequest {
+    /// The key's fingerprint (`SHA256:...`) as listed.
+    pub fingerprint: String,
+}
+
+/// Take an authorised key away. Refused when it is the last one and password login is off.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/nodes/{id}/ssh/keys/remove",
+    tag = "services",
+    operation_id = "adminRemoveSshKey",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    request_body = SshKeyRemoveRequest,
+    responses(
+        (status = 200, description = "Done", body = ServerActionView),
+        (status = 202, description = "The node is slow; it goes on", body = Pending),
+        (status = 403, description = "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 404, description = "No such node", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "No key with this fingerprint, or the removal would lock everyone out", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn remove_ssh_key(
+    State(state): State<ServicesState>,
+    who: RequireRecent<ServerManage>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<SshKeyRemoveRequest>,
+) -> Result<Response, AppError> {
+    if !req.fingerprint.starts_with("SHA256:") || req.fingerprint.len() > 80 {
+        return Err(AppError::validation(vec![
+            builtpanel_http_kit::FieldError::new(
+                "fingerprint",
+                "invalid",
+                "Give the fingerprint as listed (SHA256:...).",
+            ),
+        ]));
+    }
+    let detail = serde_json::json!({ "fingerprint": req.fingerprint });
+    server_action(
+        &state,
+        &who.0,
+        id,
+        Operation::RemoveSshKey {
+            fingerprint: req.fingerprint,
+        },
+        "node_server.ssh_key_removed",
+        detail,
+    )
+    .await
+}
+
+/// The new text of `sshd_config`.
+#[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SshConfigRequest {
+    /// The whole file, at most 64 KiB.
+    pub text: String,
+}
+
+/// Replace `sshd_config`. The node checks it with `sshd -t` first, refuses a text that would lock
+/// everyone out, and puts the old file back when SSH does not come up with it.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/nodes/{id}/ssh/config",
+    tag = "services",
+    operation_id = "adminWriteSshdConfig",
+    security(("session" = [])),
+    params(("id" = Uuid, Path, description = "Node id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    request_body = SshConfigRequest,
+    responses(
+        (status = 200, description = "Done", body = ServerActionView),
+        (status = 202, description = "The node is slow; it goes on", body = Pending),
+        (status = 403, description = "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 404, description = "No such node", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "The SSH server does not accept the text, or it would lock everyone out", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn write_sshd_config(
+    State(state): State<ServicesState>,
+    who: RequireRecent<ServerManage>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<SshConfigRequest>,
+) -> Result<Response, AppError> {
+    if req.text.trim().is_empty() || req.text.len() > 65_536 {
+        return Err(AppError::validation(vec![
+            builtpanel_http_kit::FieldError::new(
+                "text",
+                "invalid",
+                "The configuration must not be empty or longer than 64 KiB.",
+            ),
+        ]));
+    }
+    // The text itself stays out of the audit log; its size and a hash say what was written.
+    let detail = serde_json::json!({ "bytes": req.text.len() });
+    server_action(
+        &state,
+        &who.0,
+        id,
+        Operation::WriteSshdConfig { text: req.text },
+        "node_server.sshd_config_written",
+        detail,
     )
     .await
 }
@@ -1122,13 +1507,15 @@ pub async fn node_service_log(
 #[openapi(
     paths(
         list_services, restart_service, list_processes, signal_process, server_info,
-        set_timezone, set_swap, drop_caches, reboot_node, node_services, restart_node_service, node_service_log
+        set_timezone, set_swap, drop_caches, drop_swap, reboot_node, node_services, restart_node_service, node_service_log,
+        ssh_access, set_ssh_settings, add_ssh_key, remove_ssh_key, write_sshd_config
     ),
     components(schemas(
         ServiceView, ServiceList, ServiceRestarted, Pending, ProcessView, ProcessList, SignalRequest,
         Signalled, ServerInfoView, SshSetting, TimezoneRequest, SwapRequest, RebootRequest,
         ServerActionView, NodeServiceView, NodeServiceList,
-        ServiceLogLine, ServiceLog
+        ServiceLogLine, ServiceLog, SshKeyView, SshAccessView, SshSettingsRequest, SshKeyRequest,
+        SshKeyRemoveRequest, SshConfigRequest
     )),
     tags((name = "services", description = "An account's own services"))
 )]

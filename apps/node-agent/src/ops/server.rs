@@ -4,12 +4,14 @@
 
 use std::sync::Arc;
 
-use builtpanel_node_protocol::{AgentError, Operation, Output, ServerInfo};
+use builtpanel_node_protocol::{
+    AgentError, Operation, Output, ServerInfo, SshAccess, SshAuthorizedKey,
+};
 use builtpanel_priv_helper::protocol::Action;
 
 use super::{
     sqlimport::{failed, invalid},
-    tenant::{TenantContext, ask_helper},
+    tenant::{TenantContext, ask_helper, ask_helper_data},
 };
 
 /// The SSH server settings that matter for safety, lower-case names.
@@ -166,6 +168,247 @@ async fn through_helper(
     })
 }
 
+const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/// Standard base64 without padding (the form of an SSH fingerprint).
+fn base64_nopad(bytes: &[u8]) -> String {
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let n = chunk
+            .iter()
+            .enumerate()
+            .fold(0u32, |n, (i, b)| n | (u32::from(*b) << (16 - 8 * i)));
+        for i in 0..=chunk.len() {
+            out.push(char::from(B64[((n >> (18 - 6 * i)) & 63) as usize]));
+        }
+    }
+    out
+}
+
+/// Standard base64 (padding allowed), or `None` for anything else.
+fn base64_decode(text: &str) -> Option<Vec<u8>> {
+    let text = text.trim_end_matches('=');
+    let mut out = Vec::with_capacity(text.len() * 3 / 4);
+    let (mut acc, mut bits) = (0u32, 0u32);
+    for c in text.bytes() {
+        let v = u32::try_from(B64.iter().position(|b| *b == c)?).ok()?;
+        acc = (acc << 6) | v;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push(u8::try_from((acc >> bits) & 0xff).ok()?);
+        }
+    }
+    Some(out)
+}
+
+/// `SHA256:...` of the key text of a public-key line, as `ssh-keygen -l` prints it.
+fn fingerprint(blob: &str) -> Option<String> {
+    use sha2::{Digest, Sha256};
+    let raw = base64_decode(blob)?;
+    Some(format!("SHA256:{}", base64_nopad(&Sha256::digest(raw))))
+}
+
+/// The type, key text and comment of a key line (options in front of the type are skipped).
+fn key_parts(line: &str) -> Option<(String, String, String)> {
+    const TYPES: [&str; 7] = [
+        "ssh-ed25519",
+        "ssh-rsa",
+        "ecdsa-sha2-nistp256",
+        "ecdsa-sha2-nistp384",
+        "ecdsa-sha2-nistp521",
+        "sk-ssh-ed25519@openssh.com",
+        "sk-ecdsa-sha2-nistp256@openssh.com",
+    ];
+    let words: Vec<&str> = line.split_whitespace().collect();
+    let i = words.iter().position(|w| TYPES.contains(w))?;
+    let blob = words.get(i + 1)?;
+    let comment = words.get(i + 2..).unwrap_or_default().join(" ");
+    Some((words[i].to_owned(), (*blob).to_owned(), comment))
+}
+
+/// [`through_helper`] for the SSH changes: a failed one (refused, or rolled back) is not tried again
+/// by itself, so the administrator sees the reason and decides.
+async fn ssh_change(
+    context: &TenantContext,
+    action: Action,
+    name: &str,
+) -> Result<Output, AgentError> {
+    through_helper(context, action, name)
+        .await
+        .map_err(|mut e| {
+            e.retryable = false;
+            e
+        })
+}
+
+async fn helper_data(
+    context: &TenantContext,
+    action: Action,
+) -> Result<Option<serde_json::Value>, AgentError> {
+    let socket = context.helper_socket.clone();
+    tokio::task::spawn_blocking(move || ask_helper_data(&socket, action))
+        .await
+        .map_err(|_| failed("the action was cancelled"))?
+}
+
+/// The keys the helper lists, as (fingerprint, key text, type, comment).
+fn listed_keys(data: &serde_json::Value) -> Vec<(String, String, String, String)> {
+    data["keys"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|l| key_parts(l.as_str()?))
+        .filter_map(|(kind, blob, comment)| Some((fingerprint(&blob)?, blob, kind, comment)))
+        .collect()
+}
+
+/// `read_ssh_access`.
+///
+/// # Errors
+/// [`AgentError`]: the helper failing.
+pub async fn read_ssh_access(
+    context: Arc<TenantContext>,
+    op: Operation,
+) -> Result<Output, AgentError> {
+    let Operation::ReadSshAccess = op else {
+        return Err(super::wrong_operation());
+    };
+    let data = helper_data(&context, Action::ReadSsh)
+        .await?
+        .ok_or_else(|| failed("the helper gave no answer"))?;
+    let keys = listed_keys(&data)
+        .into_iter()
+        .map(|(fingerprint, _, kind, comment)| SshAuthorizedKey {
+            kind,
+            fingerprint,
+            comment,
+        })
+        .collect();
+    let config = tokio::task::spawn_blocking(|| {
+        std::fs::read_to_string("/etc/ssh/sshd_config")
+            .unwrap_or_default()
+            .chars()
+            .take(65_536)
+            .collect::<String>()
+    })
+    .await
+    .map_err(|_| failed("the reading was cancelled").retryable())?;
+    let ports = data["ports"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|p| u16::try_from(p.as_u64()?).ok())
+        .collect();
+    Ok(Output::SshAccess {
+        access: SshAccess {
+            ports,
+            root_login: data["root_login"].as_str().unwrap_or_default().to_owned(),
+            password_authentication: data["password_authentication"].as_bool().unwrap_or(true),
+            pubkey_authentication: data["pubkey_authentication"].as_bool().unwrap_or(true),
+            keys,
+            config,
+        },
+    })
+}
+
+/// `set_ssh_settings`: the helper checks the values again, and the result.
+///
+/// # Errors
+/// [`AgentError`]: nothing to change, a value out of range, a lock-out, or SSH not coming back
+/// (the old settings stay).
+pub async fn set_ssh_settings(
+    context: Arc<TenantContext>,
+    op: Operation,
+) -> Result<Output, AgentError> {
+    let Operation::SetSshSettings {
+        port,
+        root_login,
+        password_authentication,
+        pubkey_authentication,
+    } = op
+    else {
+        return Err(super::wrong_operation());
+    };
+    if port.is_none()
+        && root_login.is_none()
+        && password_authentication.is_none()
+        && pubkey_authentication.is_none()
+    {
+        return Err(invalid("nothing to change"));
+    }
+    ssh_change(
+        &context,
+        Action::SetSshSettings {
+            port,
+            root_login,
+            password: password_authentication,
+            pubkey: pubkey_authentication,
+        },
+        "set_ssh_settings",
+    )
+    .await
+}
+
+/// `add_ssh_key`.
+///
+/// # Errors
+/// [`AgentError`]: a key that is not acceptable or is there already.
+pub async fn add_ssh_key(context: Arc<TenantContext>, op: Operation) -> Result<Output, AgentError> {
+    let Operation::AddSshKey { key } = op else {
+        return Err(super::wrong_operation());
+    };
+    if key.is_empty() || key.len() > 8192 {
+        return Err(invalid("the key is not usable"));
+    }
+    ssh_change(&context, Action::AddSshKey { key }, "add_ssh_key").await
+}
+
+/// `remove_ssh_key`: the fingerprint is looked up in the keys the helper lists now.
+///
+/// # Errors
+/// [`AgentError`]: no key with that fingerprint, or the removal would lock everyone out.
+pub async fn remove_ssh_key(
+    context: Arc<TenantContext>,
+    op: Operation,
+) -> Result<Output, AgentError> {
+    let Operation::RemoveSshKey { fingerprint } = op else {
+        return Err(super::wrong_operation());
+    };
+    let data = helper_data(&context, Action::ReadSsh)
+        .await?
+        .ok_or_else(|| failed("the helper gave no answer"))?;
+    let blob = listed_keys(&data)
+        .into_iter()
+        .find(|(f, ..)| *f == fingerprint)
+        .map(|(_, blob, ..)| blob)
+        .ok_or_else(|| invalid("there is no key with this fingerprint"))?;
+    ssh_change(&context, Action::RemoveSshKey { blob }, "remove_ssh_key").await
+}
+
+/// `write_sshd_config`.
+///
+/// # Errors
+/// [`AgentError`]: a text the SSH server does not accept, a lock-out, or SSH not coming back (the
+/// old file stays).
+pub async fn write_sshd_config(
+    context: Arc<TenantContext>,
+    op: Operation,
+) -> Result<Output, AgentError> {
+    let Operation::WriteSshdConfig { text } = op else {
+        return Err(super::wrong_operation());
+    };
+    if text.trim().is_empty() || text.len() > 65_536 {
+        return Err(invalid("the configuration is empty or too long"));
+    }
+    ssh_change(
+        &context,
+        Action::WriteSshdConfig { text },
+        "write_sshd_config",
+    )
+    .await
+}
+
 /// `set_timezone`.
 ///
 /// # Errors
@@ -231,19 +474,31 @@ pub async fn drop_caches(context: Arc<TenantContext>, op: Operation) -> Result<O
     through_helper(&context, Action::DropCaches, "drop_caches").await
 }
 
+/// `drop_swap`.
+///
+/// # Errors
+/// [`AgentError`]: not enough free memory for what is in swap, or the helper failing.
+pub async fn drop_swap(context: Arc<TenantContext>, op: Operation) -> Result<Output, AgentError> {
+    let Operation::DropSwap = op else {
+        return Err(super::wrong_operation());
+    };
+    through_helper(&context, Action::DropSwap, "drop_swap").await
+}
+
 /// `reboot_node`: the answer is given first, the machine goes down a few seconds later.
 ///
 /// # Errors
 /// [`AgentError`]: the helper failing.
 pub async fn reboot_node(context: Arc<TenantContext>, op: Operation) -> Result<Output, AgentError> {
-    let Operation::RebootNode = op else {
+    let Operation::RebootNode { hard } = op else {
         return Err(super::wrong_operation());
     };
     // The operation is answered before the reboot starts, or it would be sent again.
     let socket = context.helper_socket.clone();
     tokio::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-        let _ = tokio::task::spawn_blocking(move || ask_helper(&socket, Action::Reboot)).await;
+        let _ =
+            tokio::task::spawn_blocking(move || ask_helper(&socket, Action::Reboot { hard })).await;
     });
     Ok(Output::ServerActionDone {
         action: "reboot_node".into(),
@@ -251,6 +506,7 @@ pub async fn reboot_node(context: Arc<TenantContext>, op: Operation) -> Result<O
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -266,6 +522,28 @@ mod tests {
         assert_eq!(get("port"), Some("2200"));
         assert_eq!(get("x11forwarding"), Some("no"));
         assert_eq!(get("usedns"), None);
+    }
+
+    #[test]
+    fn a_fingerprint_is_the_one_ssh_keygen_prints() {
+        // `ssh-keygen -l -f` of this key prints SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU.
+        let blob = "AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
+        assert_eq!(
+            fingerprint(blob).as_deref(),
+            Some("SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU")
+        );
+        assert_eq!(base64_nopad(b"foobar"), "Zm9vYmFy");
+        assert_eq!(base64_nopad(b"fo"), "Zm8");
+        assert_eq!(base64_decode("Zm9vYmFy").unwrap(), b"foobar");
+        assert_eq!(base64_decode("Zm8=").unwrap(), b"fo");
+        assert!(base64_decode("a b").is_none());
+        let (kind, _, comment) =
+            key_parts(&format!("no-pty ssh-ed25519 {blob} me@laptop")).unwrap();
+        assert_eq!(
+            (kind.as_str(), comment.as_str()),
+            ("ssh-ed25519", "me@laptop")
+        );
+        assert!(key_parts("# only a comment").is_none());
     }
 
     #[test]

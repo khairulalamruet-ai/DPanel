@@ -179,7 +179,7 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         loop {
             let rows: Vec<(Uuid, Value)> = sqlx::query_as(
-                "SELECT id, payload FROM operations WHERE kind IN ('list_containers', 'restart_container', 'restart_node_service', 'read_service_log', 'list_processes', 'signal_process', 'report_server_info', 'set_timezone', 'set_swap', 'drop_caches', 'reboot_node') AND status = 'pending'",
+                "SELECT id, payload FROM operations WHERE kind IN ('list_containers', 'restart_container', 'restart_node_service', 'read_service_log', 'list_processes', 'signal_process', 'report_server_info', 'set_timezone', 'set_swap', 'drop_caches', 'reboot_node', 'drop_swap', 'read_ssh_access', 'set_ssh_settings', 'add_ssh_key', 'remove_ssh_key', 'write_sshd_config') AND status = 'pending'",
             )
             .fetch_all(&pool)
             .await
@@ -216,6 +216,27 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                         }})),
                         None,
                     )
+                } else if kind == "read_ssh_access" {
+                    (
+                        "succeeded",
+                        Some(json!({"type": "ssh_access", "access": {
+                            "ports": [22], "root_login": "prohibit-password",
+                            "password_authentication": true, "pubkey_authentication": true,
+                            "keys": [{"kind": "ssh-ed25519", "fingerprint": "SHA256:abc", "comment": "me@laptop"}],
+                            "config": "Port 22\n"
+                        }})),
+                        None,
+                    )
+                } else if (kind == "add_ssh_key" && payload["key"] == "ssh-ed25519 bad")
+                    || (kind == "remove_ssh_key" && payload["fingerprint"] == "SHA256:nope")
+                {
+                    (
+                        "failed",
+                        None,
+                        Some(
+                            json!({"code": "invalid_arguments", "message": "the privileged helper refused the request: that key is not valid", "retryable": false}),
+                        ),
+                    )
                 } else if kind == "set_timezone" && payload["zone"] != "Asia/Dhaka" {
                     (
                         "failed",
@@ -224,8 +245,18 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                             json!({"code": "invalid_arguments", "message": "not a time zone of this machine", "retryable": false}),
                         ),
                     )
-                } else if ["set_timezone", "set_swap", "drop_caches", "reboot_node"]
-                    .contains(&kind.as_str())
+                } else if [
+                    "set_timezone",
+                    "set_swap",
+                    "drop_caches",
+                    "reboot_node",
+                    "drop_swap",
+                    "set_ssh_settings",
+                    "add_ssh_key",
+                    "remove_ssh_key",
+                    "write_sshd_config",
+                ]
+                .contains(&kind.as_str())
                 {
                     (
                         "succeeded",
@@ -578,12 +609,12 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
     for who in [&alice, &plain] {
         assert_eq!(e.call(who, "GET", &server).await.0, StatusCode::FORBIDDEN);
     }
-    let post_json = |who: &Browser, path: String, body: Value| {
+    let send_json = |method: &'static str, who: &Browser, path: String, body: Value| {
         let app = e.app.clone();
         let (cookie, csrf) = (who.cookie.clone(), who.csrf.clone());
         async move {
             let req = Request::builder()
-                .method("POST")
+                .method(method)
                 .uri(path)
                 .header(header::COOKIE, cookie)
                 .header(CSRF_HEADER, csrf)
@@ -601,6 +632,8 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
             )
         }
     };
+    let post_json = |who: &Browser, path: String, body: Value| send_json("POST", who, path, body);
+    let put_json = |who: &Browser, path: String, body: Value| send_json("PUT", who, path, body);
     assert_eq!(
         post_json(&plain, format!("{server}/drop-caches"), json!({}))
             .await
@@ -656,6 +689,18 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
             .0,
         StatusCode::OK
     );
+    assert_eq!(
+        post_json(&plain, format!("{server}/drop-swap"), json!({}))
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        post_json(&root, format!("{server}/drop-swap"), json!({}))
+            .await
+            .0,
+        StatusCode::OK
+    );
     // A reboot needs the node's name, as typed.
     let before: i64 =
         sqlx::query_scalar("SELECT count(*) FROM operations WHERE kind = 'reboot_node'")
@@ -676,7 +721,7 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
     let (status, done) = post_json(
         &root,
         format!("{server}/reboot"),
-        json!({"confirm": node_name}),
+        json!({"confirm": node_name, "hard": true}),
     )
     .await;
     assert_eq!(
@@ -684,6 +729,123 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
         (StatusCode::OK, Some("reboot_node")),
         "{done}"
     );
+    // ---- SSH access: read, then the four changes; each is audited without the key or the text.
+    let ssh = format!("/api/v1/admin/nodes/{node}/ssh");
+    let (status, access) = e.call(&root, "GET", &ssh).await;
+    assert_eq!(status, StatusCode::OK, "{access}");
+    assert_eq!(
+        (
+            access["ports"][0].as_u64(),
+            access["keys"][0]["fingerprint"].as_str(),
+            access["password_authentication"].as_bool()
+        ),
+        (Some(22), Some("SHA256:abc"), Some(true))
+    );
+    for who in [&alice, &plain] {
+        assert_eq!(e.call(who, "GET", &ssh).await.0, StatusCode::FORBIDDEN);
+    }
+    assert_eq!(
+        put_json(&plain, format!("{ssh}/settings"), json!({"port": 2222}))
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    for bad in [
+        json!({}),
+        json!({"port": 80}),
+        json!({"root_login": "maybe"}),
+    ] {
+        assert_eq!(
+            put_json(&root, format!("{ssh}/settings"), bad.clone())
+                .await
+                .0,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{bad}"
+        );
+    }
+    let (status, done) = put_json(
+        &root,
+        format!("{ssh}/settings"),
+        json!({"port": 2222, "password_authentication": false}),
+    )
+    .await;
+    assert_eq!(
+        (status, done["action"].as_str()),
+        (StatusCode::OK, Some("set_ssh_settings")),
+        "{done}"
+    );
+    for bad in [json!({"key": ""}), json!({"key": "ssh-ed25519 bad"})] {
+        assert_eq!(
+            post_json(&root, format!("{ssh}/keys"), bad.clone()).await.0,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{bad}"
+        );
+    }
+    let key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl me@laptop";
+    assert_eq!(
+        post_json(&root, format!("{ssh}/keys"), json!({"key": key}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    for bad in [
+        json!({"fingerprint": "nope"}),
+        json!({"fingerprint": "SHA256:nope"}),
+    ] {
+        assert_eq!(
+            post_json(&root, format!("{ssh}/keys/remove"), bad.clone())
+                .await
+                .0,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{bad}"
+        );
+    }
+    assert_eq!(
+        post_json(
+            &root,
+            format!("{ssh}/keys/remove"),
+            json!({"fingerprint": "SHA256:abc"})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    for bad in [json!({"text": ""}), json!({"text": "  \n"})] {
+        assert_eq!(
+            put_json(&root, format!("{ssh}/config"), bad.clone())
+                .await
+                .0,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{bad}"
+        );
+    }
+    assert_eq!(
+        put_json(
+            &root,
+            format!("{ssh}/config"),
+            json!({"text": "Port 22\nSecretWord yes\n"})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let leaked: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit_logs WHERE action LIKE 'node_server.ssh%' AND (metadata::text LIKE '%AAAAC3Nza%' OR metadata::text LIKE '%SecretWord%')",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        leaked, 0,
+        "neither the key nor the config text is in the audit log"
+    );
+    let hard: Vec<bool> = sqlx::query_scalar(
+        "SELECT COALESCE((payload->>'hard')::boolean, false) FROM operations WHERE kind = 'reboot_node'",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(hard, [true], "the hard reboot reached the node as asked");
     let audited: Vec<String> = sqlx::query_scalar(
         "SELECT action FROM audit_logs WHERE action LIKE 'node_server.%' ORDER BY at, id",
     )
@@ -696,7 +858,12 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
             "node_server.timezone_set",
             "node_server.swap_set",
             "node_server.caches_dropped",
-            "node_server.reboot"
+            "node_server.swap_dropped",
+            "node_server.reboot",
+            "node_server.ssh_settings",
+            "node_server.ssh_key_added",
+            "node_server.ssh_key_removed",
+            "node_server.sshd_config_written"
         ]
     );
     played.abort();

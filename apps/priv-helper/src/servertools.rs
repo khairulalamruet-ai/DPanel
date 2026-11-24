@@ -33,6 +33,14 @@ pub struct Env {
     /// Run the commands directly instead of as transient units (a test, where there is no
     /// systemd to ask).
     pub direct: bool,
+    /// The SSH server program (see [`crate::sshaccess`]).
+    pub sshd: PathBuf,
+    /// The SSH server's main configuration file.
+    pub sshd_config: PathBuf,
+    /// The drop-in file the panel writes the SSH settings to.
+    pub ssh_dropin: PathBuf,
+    /// The keys that may log in as root.
+    pub root_keys: PathBuf,
 }
 
 impl Default for Env {
@@ -42,6 +50,10 @@ impl Default for Env {
             swap_file: "/swapfile".into(),
             zoneinfo: "/usr/share/zoneinfo".into(),
             direct: false,
+            sshd: "/usr/sbin/sshd".into(),
+            sshd_config: "/etc/ssh/sshd_config".into(),
+            ssh_dropin: "/etc/ssh/sshd_config.d/00-builtpanel.conf".into(),
+            root_keys: "/root/.ssh/authorized_keys".into(),
         }
     }
 }
@@ -49,7 +61,7 @@ impl Default for Env {
 /// The biggest swap file that can be asked for, in MiB.
 pub const MAX_SWAP_MB: u32 = 32_768;
 
-fn run(env: &Env, program: &str, args: &[&str]) -> bool {
+pub(crate) fn run(env: &Env, program: &str, args: &[&str]) -> bool {
     let mut command = if env.direct {
         Command::new(program)
     } else {
@@ -73,6 +85,35 @@ fn run(env: &Env, program: &str, args: &[&str]) -> bool {
         .stderr(Stdio::null())
         .status()
         .is_ok_and(|s| s.success())
+}
+
+/// Runs one fixed command (outside this helper's sandbox, like [`run`]) with `input` on its standard
+/// input, and returns what it printed; `None` when it could not start or did not succeed. Nothing of
+/// the input is ever part of the command line.
+pub(crate) fn run_io(env: &Env, program: &str, args: &[&str], input: &[u8]) -> Option<Vec<u8>> {
+    use std::io::Write;
+    let mut command = if env.direct {
+        Command::new(program)
+    } else {
+        let mut c = Command::new("/usr/bin/systemd-run");
+        c.args(["--quiet", "--wait", "--collect", "--pipe", "--", program]);
+        c
+    };
+    let mut child = command
+        .args(args)
+        .env_clear()
+        .env("PATH", "/usr/sbin:/usr/bin:/sbin:/bin")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    if let Some(mut stdin) = child.stdin.take() {
+        // A command that ends without reading its input is fine (a closed pipe).
+        let _ = stdin.write_all(input);
+    }
+    let output = child.wait_with_output().ok()?;
+    output.status.success().then_some(output.stdout)
 }
 
 /// A zone name: `Europe/Berlin`, `UTC`, `Etc/GMT+1`: plain parts, no dots at the start.
@@ -183,13 +224,59 @@ pub fn drop_caches(env: &Env) -> Result<(), Failure> {
     }
 }
 
-/// Reboots the machine.
+/// Whether `used` bytes of swap fit back into the memory that is free (with a tenth to spare).
+#[must_use]
+pub fn swap_fits(meminfo: &str, used_kib: u64) -> bool {
+    let available = kib_of(meminfo, "MemAvailable");
+    used_kib <= available / 10 * 9
+}
+
+fn kib_of(meminfo: &str, key: &str) -> u64 {
+    meminfo
+        .lines()
+        .find_map(|l| l.strip_prefix(key)?.strip_prefix(':'))
+        .and_then(|v| v.split_whitespace().next())
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0)
+}
+
+/// Moves what is swapped out back into memory and turns swap on again (`swapoff -a`, `swapon -a`).
+///
+/// # Errors
+/// Not enough free memory for what is in swap (nothing is changed), or a command failing.
+pub fn drop_swap(env: &Env) -> Result<(), Failure> {
+    let meminfo = std::fs::read_to_string("/proc/meminfo").unwrap_or_default();
+    let used = kib_of(&meminfo, "SwapTotal").saturating_sub(kib_of(&meminfo, "SwapFree"));
+    if used == 0 {
+        return Ok(());
+    }
+    if !swap_fits(&meminfo, used) {
+        return Err((
+            ErrorCode::InvalidArguments,
+            "there is not enough free memory to take the swapped pages back",
+        ));
+    }
+    let off = run(env, "/usr/sbin/swapoff", &["-a"]);
+    // Whatever happened, swap goes back on.
+    let on = run(env, "/usr/sbin/swapon", &["-a"]);
+    if off && on {
+        Ok(())
+    } else {
+        Err((ErrorCode::Failed, "the swap could not be emptied"))
+    }
+}
+
+/// Reboots the machine; `hard` does not wait for the services to stop.
 ///
 /// # Errors
 /// The command failing.
-pub fn reboot(env: &Env) -> Result<(), Failure> {
-    let ok = Command::new(&env.reboot_command)
-        .arg("reboot")
+pub fn reboot(env: &Env, hard: bool) -> Result<(), Failure> {
+    let mut command = Command::new(&env.reboot_command);
+    command.arg("reboot");
+    if hard {
+        command.arg("--force");
+    }
+    let ok = command
         .env_clear()
         .env("PATH", "/usr/sbin:/usr/bin:/sbin:/bin")
         .stdin(Stdio::null())
@@ -232,6 +319,15 @@ mod tests {
         ] {
             assert!(!valid_zone(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn swap_goes_back_only_when_the_memory_is_there() {
+        let mem = "MemAvailable:   1000 kB\nSwapTotal: 500 kB\nSwapFree: 100 kB\n";
+        assert!(swap_fits(mem, 400));
+        assert!(swap_fits(mem, 900));
+        assert!(!swap_fits(mem, 901));
+        assert!(!swap_fits("", 1));
     }
 
     #[test]

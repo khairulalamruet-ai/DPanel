@@ -1370,6 +1370,36 @@ pub struct ServerInfo {
     pub ssh: Vec<(String, String)>,
 }
 
+/// The SSH access of a node (System menu).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SshAccess {
+    /// Every port the SSH server listens on.
+    pub ports: Vec<u16>,
+    /// `PermitRootLogin`: `yes`, `no`, `prohibit-password` or `forced-commands-only`.
+    pub root_login: String,
+    /// Whether passwords may be used to log in.
+    pub password_authentication: bool,
+    /// Whether keys may be used to log in.
+    pub pubkey_authentication: bool,
+    /// The keys that may log in as root.
+    pub keys: Vec<SshAuthorizedKey>,
+    /// The text of `sshd_config` (at most 64 KiB).
+    pub config: String,
+}
+
+/// One key that may log in as root.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SshAuthorizedKey {
+    /// `ssh-ed25519`, `ssh-rsa`, ...
+    pub kind: String,
+    /// `SHA256:` and the key's SHA-256 in base64, as `ssh-keygen -l` prints it.
+    pub fingerprint: String,
+    /// The comment at the end of the line (often `user@machine`).
+    pub comment: String,
+}
+
 /// Most runs in one report.
 pub const MAX_CRON_RUNS_PER_REPORT: usize = 500;
 
@@ -2250,7 +2280,52 @@ pub enum Operation {
     DropCaches,
     /// Reboots the machine: the answer comes just before it goes down. Answered with
     /// [`Output::ServerActionDone`].
-    RebootNode,
+    RebootNode {
+        /// Restart at once, without waiting for the services to stop.
+        #[serde(default)]
+        hard: bool,
+    },
+    /// Moves what is swapped out back into memory and turns swap on again; refused when there is not
+    /// enough free memory. Answered with [`Output::ServerActionDone`].
+    DropSwap,
+    /// The SSH server's settings as it will use them, the keys that may log in as root and the
+    /// text of `sshd_config`. Answered with [`Output::SshAccess`].
+    ReadSshAccess,
+    /// Changes the SSH server's safety settings; what is absent stays as it is. The node checks the
+    /// result, refuses a change that would lock everyone out, and puts the old settings back when
+    /// SSH does not come up. Answered with [`Output::ServerActionDone`].
+    SetSshSettings {
+        /// The port: 22, or 1024 to 65535 (not one the panel uses).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        port: Option<u16>,
+        /// `yes`, `no`, `prohibit-password` or `forced-commands-only`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_login: Option<String>,
+        /// Whether passwords may be used to log in.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        password_authentication: Option<bool>,
+        /// Whether keys may be used to log in.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pubkey_authentication: Option<bool>,
+    },
+    /// Authorises one public key (`type key [comment]`, no options) for root over SSH. Answered
+    /// with [`Output::ServerActionDone`].
+    AddSshKey {
+        /// The key line.
+        key: String,
+    },
+    /// Takes one authorised key away, named by its fingerprint (`SHA256:...`). Answered with
+    /// [`Output::ServerActionDone`].
+    RemoveSshKey {
+        /// The fingerprint.
+        fingerprint: String,
+    },
+    /// Replaces `sshd_config` (checked first, kept until SSH has come back with it). Answered with
+    /// [`Output::ServerActionDone`].
+    WriteSshdConfig {
+        /// The whole text, at most 64 KiB.
+        text: String,
+    },
     /// Lists the containers of one account (and only those: the ones that carry its id).
     /// Answered with [`Output::Containers`].
     ListContainers {
@@ -2854,6 +2929,12 @@ impl Operation {
         "set_swap",
         "drop_caches",
         "reboot_node",
+        "drop_swap",
+        "read_ssh_access",
+        "set_ssh_settings",
+        "add_ssh_key",
+        "remove_ssh_key",
+        "write_sshd_config",
         "list_processes",
         "signal_process",
         "report_services",
@@ -2996,7 +3077,13 @@ impl Operation {
             Self::SetTimezone { .. } => "set_timezone",
             Self::SetSwap { .. } => "set_swap",
             Self::DropCaches => "drop_caches",
-            Self::RebootNode => "reboot_node",
+            Self::RebootNode { .. } => "reboot_node",
+            Self::DropSwap => "drop_swap",
+            Self::ReadSshAccess => "read_ssh_access",
+            Self::SetSshSettings { .. } => "set_ssh_settings",
+            Self::AddSshKey { .. } => "add_ssh_key",
+            Self::RemoveSshKey { .. } => "remove_ssh_key",
+            Self::WriteSshdConfig { .. } => "write_sshd_config",
             Self::ListProcesses { .. } => "list_processes",
             Self::SignalProcess { .. } => "signal_process",
             Self::ReportServices => "report_services",
@@ -3510,10 +3597,15 @@ pub enum Output {
         info: ServerInfo,
     },
     /// Answer to the server tools ([`Operation::SetTimezone`], [`Operation::SetSwap`],
-    /// [`Operation::DropCaches`], [`Operation::RebootNode`]).
+    /// [`Operation::DropCaches`], [`Operation::DropSwap`], [`Operation::RebootNode`]).
     ServerActionDone {
         /// Which one.
         action: String,
+    },
+    /// Answer to [`Operation::ReadSshAccess`].
+    SshAccess {
+        /// What the node says.
+        access: SshAccess,
     },
     /// Answer to [`Operation::ListProcesses`].
     Processes {

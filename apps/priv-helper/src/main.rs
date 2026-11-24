@@ -114,6 +114,10 @@ fn main() -> ExitCode {
             "--reboot-command" => value().map(|v| server.reboot_command = v.into()),
             "--swap-file" => value().map(|v| server.swap_file = v.into()),
             "--zoneinfo-dir" => value().map(|v| server.zoneinfo = v.into()),
+            "--sshd-program" => value().map(|v| server.sshd = v.into()),
+            "--sshd-config" => value().map(|v| server.sshd_config = v.into()),
+            "--ssh-dropin" => value().map(|v| server.ssh_dropin = v.into()),
+            "--root-keys" => value().map(|v| server.root_keys = v.into()),
             "--direct-server-tools" => {
                 server.direct = true;
                 Some(())

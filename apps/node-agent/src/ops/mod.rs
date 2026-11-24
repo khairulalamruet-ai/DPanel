@@ -218,6 +218,30 @@ impl Registry {
                 move |op| nodeservices::read_service_log(context.clone(), op)
             });
             registry.register("report_server_info", server::report_server_info);
+            registry.register("drop_swap", {
+                let context = context.clone();
+                move |op| server::drop_swap(context.clone(), op)
+            });
+            registry.register("read_ssh_access", {
+                let context = context.clone();
+                move |op| server::read_ssh_access(context.clone(), op)
+            });
+            registry.register("set_ssh_settings", {
+                let context = context.clone();
+                move |op| server::set_ssh_settings(context.clone(), op)
+            });
+            registry.register("add_ssh_key", {
+                let context = context.clone();
+                move |op| server::add_ssh_key(context.clone(), op)
+            });
+            registry.register("remove_ssh_key", {
+                let context = context.clone();
+                move |op| server::remove_ssh_key(context.clone(), op)
+            });
+            registry.register("write_sshd_config", {
+                let context = context.clone();
+                move |op| server::write_sshd_config(context.clone(), op)
+            });
             registry.register("set_cache_instance", {
                 let context = context.clone();
                 move |op| cacheaddon::set_cache_instance(context.clone(), op)

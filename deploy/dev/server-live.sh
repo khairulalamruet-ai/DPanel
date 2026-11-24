@@ -6,18 +6,29 @@
 set -uo pipefail
 BIN=/home/dev/target-rust/debug
 ROOTDIR=/srv/tenants-live; SOCK=/tmp/bp-live-helper.sock; TR=/tmp/bp-live-transfers; SWAP=/var/tmp/bp-test-swap
-runuser -u dev -- bash -lc 'cd ~/work/DHPanel-claude && . ~/.cargo/env && CARGO_TARGET_DIR=~/target-rust SQLX_OFFLINE=true cargo test -q -p builtpanel-node-agent --test server_live --no-run 2>&1 | grep -E "^error" -A10 | head -30; CARGO_TARGET_DIR=~/target-rust SQLX_OFFLINE=true cargo build -q -p builtpanel-priv-helper 2>&1 | tail -3'
+runuser -u dev -- bash -lc 'cd ~/work/${BP_WORK:-DHPanel-claude} && . ~/.cargo/env && CARGO_TARGET_DIR=~/target-rust SQLX_OFFLINE=true cargo test -q -p builtpanel-node-agent --test server_live --no-run 2>&1 | grep -E "^error" -A10 | head -30; CARGO_TARGET_DIR=~/target-rust SQLX_OFFLINE=true cargo build -q -p builtpanel-priv-helper 2>&1 | tail -3'
 TEST=$(ls -t $BIN/build/builtpanel-node-agent/*/out/server_live-* | grep -v "\.d$" | head -1)
 OLD_TZ=$(readlink /etc/localtime); cp /etc/fstab /tmp/fstab.saved
 rm -f $SOCK; rm -rf $TR; mkdir -p $TR; chown dev:dev $TR; chmod 770 $TR
+# SSH access: a folder of its own with a real sshd's checks (-t, -T) but never the machine's own
+# sshd_config, and no reload (the helper runs the tools directly).
+SSHD=/tmp/bp-ssh-live; rm -rf $SSHD; mkdir -p $SSHD/sshd_config.d
+ssh-keygen -q -t ed25519 -N '' -f $SSHD/host_key; ssh-keygen -q -t ed25519 -N '' -C test@live -f $SSHD/user_key
+printf 'HostKey %s/host_key\nInclude %s/sshd_config.d/*.conf\n' $SSHD $SSHD > $SSHD/sshd_config
+NEWCONF=$(printf 'HostKey %s/host_key\nInclude %s/sshd_config.d/*.conf\nPort 2292\n' $SSHD $SSHD)
+chmod 755 $SSHD $SSHD/sshd_config.d
 $BIN/builtpanel-priv-helper --socket $SOCK --agent-user dev --tenants-root $ROOTDIR --transfers-dir $TR \
-  --direct-server-tools --reboot-command /bin/true --swap-file $SWAP > /tmp/bp-live-helper.log 2>&1 &
+  --direct-server-tools --reboot-command /bin/true --swap-file $SWAP \
+  --sshd-program /usr/sbin/sshd --sshd-config $SSHD/sshd_config --ssh-dropin $SSHD/sshd_config.d/00-builtpanel.conf \
+  --root-keys $SSHD/authorized_keys > /tmp/bp-live-helper.log 2>&1 &
 HP=$!
 for _ in $(seq 1 30); do [ -S $SOCK ] && break; sleep 0.2; done
-runuser -u dev -- env BUILTPANEL_TEST_HELPER_SOCKET=$SOCK BUILTPANEL_TEST_SWAP_FILE=$SWAP $TEST --include-ignored --nocapture 2>&1 | grep -E "^test |test result|panicked|left|right|skipped|error" -A6 | head -40
-echo "== helper log:"; grep -E "set_timezone|set_swap|drop_caches|reboot" /tmp/bp-live-helper.log | sed 's/^/   /' | tail -12
+runuser -u dev -- env BUILTPANEL_TEST_HELPER_SOCKET=$SOCK BUILTPANEL_TEST_SWAP_FILE=$SWAP \
+  BUILTPANEL_TEST_SSH_KEY="$(cut -d' ' -f1-3 $SSHD/user_key.pub)" BUILTPANEL_TEST_SSH_FINGERPRINT="$(ssh-keygen -l -f $SSHD/user_key.pub | awk '{print $2}')" \
+  BUILTPANEL_TEST_SSH_DROPIN=$SSHD/sshd_config.d/00-builtpanel.conf BUILTPANEL_TEST_SSH_NEWCONFIG="$NEWCONF" $TEST --include-ignored --nocapture 2>&1 | grep -E "^test |test result|panicked|left|right|skipped|error" -A6 | head -40
+echo "== helper log:"; grep -E "set_timezone|set_swap|drop_caches|reboot|ssh" /tmp/bp-live-helper.log | sed 's/^/   /' | tail -12
 kill $HP 2>/dev/null; sleep 0.5
 swapoff $SWAP 2>/dev/null; rm -f $SWAP; cp /tmp/fstab.saved /etc/fstab
 [ -n "$OLD_TZ" ] && ln -sf "$OLD_TZ" /etc/localtime
 echo "== time zone now: $(readlink /etc/localtime); fstab restored: $(diff -q /etc/fstab /tmp/fstab.saved && echo yes)"
-rm -rf $SOCK $TR /tmp/fstab.saved
+rm -rf $SOCK $TR /tmp/fstab.saved $SSHD

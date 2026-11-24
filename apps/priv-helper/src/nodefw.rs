@@ -40,9 +40,9 @@ fn port_text(rule: &PortRule) -> String {
     }
 }
 
-/// The whole ruleset for a checked policy and the SSH port.
+/// The whole ruleset for a checked policy and the ports SSH listens on (always open).
 #[must_use]
-pub fn ruleset(policy: &FirewallPolicy, ssh_port: u16) -> String {
+pub fn ruleset(policy: &FirewallPolicy, ssh_ports: &[u16]) -> String {
     let mut text =
         format!("table inet {TABLE}\ndelete table inet {TABLE}\ntable inet {TABLE} {{\n");
     text.push_str(&set_text("always", &policy.always_allow));
@@ -54,7 +54,12 @@ pub fn ruleset(policy: &FirewallPolicy, ssh_port: u16) -> String {
     text.push_str("        ct state established,related accept\n");
     text.push_str("        iifname \"lo\" accept\n");
     text.push_str("        ip saddr @always accept\n");
-    text.push_str(&format!("        tcp dport {ssh_port} accept\n"));
+    let ports: Vec<String> = ssh_ports.iter().map(u16::to_string).collect();
+    text.push_str(&if ports.len() == 1 {
+        format!("        tcp dport {} accept\n", ports[0])
+    } else {
+        format!("        tcp dport {{ {} }} accept\n", ports.join(", "))
+    });
     text.push_str("        ip protocol icmp accept\n");
     text.push_str("        ip6 nexthdr icmpv6 accept\n");
     text.push_str("        ip saddr @allowed accept\n");
@@ -119,6 +124,16 @@ fn run(script: &str, check_only: bool) -> Result<(), Failure> {
     }
 }
 
+/// Opens one more port in the live firewall table at once (the SSH port after it was moved), ahead
+/// of its other rules. Nothing happens when the node has no firewall table; the next full policy
+/// keeps the port open on its own (it takes the SSH ports from the SSH server).
+pub fn open_port_now(port: u16) {
+    let _ = run(
+        &format!("insert rule inet {TABLE} input tcp dport {port} accept\n"),
+        false,
+    );
+}
+
 /// Loads a ruleset text: tested first, then applied; a refusal changes nothing.
 ///
 /// # Errors
@@ -132,14 +147,14 @@ pub fn apply(script: &str) -> Result<(), Failure> {
 ///
 /// # Errors
 /// A policy that is not valid (not retryable), or the packet filter failing.
-pub fn set(policy: &FirewallPolicy, ssh_port: u16) -> Result<(), Failure> {
+pub fn set(policy: &FirewallPolicy, ssh_ports: &[u16]) -> Result<(), Failure> {
     let policy = policy.checked().map_err(|_| {
         (
             ErrorCode::InvalidArguments,
             "the firewall policy is not valid",
         )
     })?;
-    apply(&ruleset(&policy, ssh_port))
+    apply(&ruleset(&policy, ssh_ports))
 }
 
 #[cfg(test)]
@@ -175,7 +190,7 @@ mod tests {
                 per_minute: 120,
             }],
         };
-        let text = ruleset(&policy.checked().unwrap(), 2200);
+        let text = ruleset(&policy.checked().unwrap(), &[2200]);
         let at = |needle: &str| {
             text.find(needle)
                 .unwrap_or_else(|| panic!("{needle} missing in\n{text}"))
@@ -192,7 +207,7 @@ mod tests {
         ));
         assert!(text.contains("elements = { 203.0.113.7/32 }"));
         // Without default_deny nothing drops what is not named.
-        let open = ruleset(&FirewallPolicy::default(), 22);
+        let open = ruleset(&FirewallPolicy::default(), &[22]);
         assert!(!open.contains("counter drop"));
     }
 
@@ -262,7 +277,7 @@ mod tests {
                     default_deny: true,
                     ..FirewallPolicy::default()
                 },
-                22
+                &[22]
             )
             .unwrap_err()
             .0,

@@ -149,8 +149,50 @@ pub enum Action {
     },
     /// Writes dirty pages to disk and drops the page cache.
     DropCaches,
-    /// Reboots the machine.
-    Reboot,
+    /// Reboots the machine. `hard` does not wait for the services to stop (`systemctl reboot --force`).
+    Reboot {
+        /// Restart at once.
+        #[serde(default)]
+        hard: bool,
+    },
+    /// Moves what is swapped out back into memory, then turns swap on again. Refused when there is
+    /// not enough free memory for it.
+    DropSwap,
+    /// What the SSH server will do and the keys that may log in as root (see
+    /// [`crate::sshaccess`]). Answered with `{"keys": [line, ...], "ports": [...], "root_login",
+    /// "password_authentication", "pubkey_authentication"}`.
+    ReadSsh,
+    /// Authorises one public key (`type key [comment]`) for root over SSH.
+    AddSshKey {
+        /// The key line.
+        key: String,
+    },
+    /// Takes one key away, named by its key text (the second word of its line).
+    RemoveSshKey {
+        /// The key text (base64).
+        blob: String,
+    },
+    /// Changes the SSH server's safety settings (see [`crate::sshaccess`]); what is absent stays.
+    SetSshSettings {
+        /// The port.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        port: Option<u16>,
+        /// `yes`, `no`, `prohibit-password` or `forced-commands-only`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_login: Option<String>,
+        /// Password login.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        password: Option<bool>,
+        /// Key login.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pubkey: Option<bool>,
+    },
+    /// Replaces `sshd_config` (checked with `sshd -t` first; the old file comes back when SSH does
+    /// not).
+    WriteSshdConfig {
+        /// The whole text.
+        text: String,
+    },
     /// Removes a tenant's two (empty) directories after its files were
     /// deleted. Never deletes any file: a non-empty directory is a failure.
     RemoveTenant {
@@ -180,7 +222,13 @@ impl Action {
             Self::SetTimezone { .. } => "set_timezone",
             Self::SetSwap { .. } => "set_swap",
             Self::DropCaches => "drop_caches",
-            Self::Reboot => "reboot",
+            Self::Reboot { .. } => "reboot",
+            Self::DropSwap => "drop_swap",
+            Self::ReadSsh => "read_ssh",
+            Self::AddSshKey { .. } => "add_ssh_key",
+            Self::RemoveSshKey { .. } => "remove_ssh_key",
+            Self::SetSshSettings { .. } => "set_ssh_settings",
+            Self::WriteSshdConfig { .. } => "write_sshd_config",
             Self::RemoveTenant { .. } => "remove_tenant",
         }
     }
@@ -303,6 +351,13 @@ fn allowed_fields(action: &str) -> Option<&'static [&'static str]> {
         "take_file" => Some(&["type", "tenant_id", "uid", "path", "staged", "max_bytes"]),
         "backup_files" => Some(&["type", "tenant_id", "uid", "staged", "key"]),
         "remove_tenant" => Some(&["type", "tenant_id", "uid"]),
+        "reboot" => Some(&["type", "hard"]),
+        "drop_swap" => Some(&["type"]),
+        "read_ssh" => Some(&["type"]),
+        "add_ssh_key" => Some(&["type", "key"]),
+        "remove_ssh_key" => Some(&["type", "blob"]),
+        "set_ssh_settings" => Some(&["type", "port", "root_login", "password", "pubkey"]),
+        "write_sshd_config" => Some(&["type", "text"]),
         _ => None,
     }
 }
