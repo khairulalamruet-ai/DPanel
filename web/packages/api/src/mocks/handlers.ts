@@ -3011,6 +3011,311 @@ export const handlers = [
           migrated_tenants: migratedCount || 12,
         });
       }),
+
+      // ==================== System & Server Tools Mocks (T10.15) ====================
+      ...(() => {
+        interface SshKeyItem {
+          id: string;
+          name: string;
+          key_type: string;
+          fingerprint: string;
+          public_key: string;
+          created_at: string;
+        }
+
+        const mockServerState: Record<string, {
+          hostname: string;
+          os: string;
+          kernel: string;
+          uptime_seconds: number;
+          timezone: string;
+          memory_total_bytes: number;
+          memory_available_bytes: number;
+          swap_total_bytes: number;
+          swap_used_bytes: number;
+          ssh: { name: string; value: string }[];
+        }> = {};
+
+        const mockSshKeysStore: SshKeyItem[] = [
+          {
+            id: "key-01",
+            name: "admin-workstation-ed25519",
+            key_type: "ssh-ed25519",
+            fingerprint: "SHA256:7uX9P2k9k5uK9hO2p8rQ1z3bN7xT6eM5aV4gY3wL1mE",
+            public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIn5h8b2b6U9X5k4m8h3p7Q6a1b2c3d4e5f6g7h8 admin@dhpanel-box",
+            created_at: "2026-11-10T08:00:00Z",
+          },
+          {
+            id: "key-02",
+            name: "backup-agent-rsa",
+            key_type: "ssh-rsa",
+            fingerprint: "SHA256:4mP1k9n2b7v6c5x4z3a2s1d0f9g8h7j6k5l4q3w2e1r",
+            public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8... backup@cluster",
+            created_at: "2026-11-15T12:00:00Z",
+          },
+        ];
+
+        let mockSshRawConfig = `# /etc/ssh/sshd_config (Managed by BuiltPanel)
+Port 22
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+MaxAuthTries 6
+ClientAliveInterval 300
+ClientAliveCountMax 2
+Subsystem sftp /usr/lib/openssh/sftp-server
+`;
+
+        const mockMigrations: Record<string, any> = {};
+
+        const getServer = (nodeId: string) => {
+          if (!mockServerState[nodeId]) {
+            const target = mockNodes.find((n) => n.id === nodeId || n.name === nodeId);
+            mockServerState[nodeId] = {
+              hostname: target ? target.hostname || target.name : `${nodeId}.builtpanel.internal`,
+              os: "Ubuntu 24.04.1 LTS",
+              kernel: "6.8.0-45-generic",
+              uptime_seconds: 432000,
+              timezone: "UTC",
+              memory_total_bytes: 8 * 1024 * 1024 * 1024,
+              memory_available_bytes: 4620 * 1024 * 1024,
+              swap_total_bytes: 4096 * 1024 * 1024,
+              swap_used_bytes: 256 * 1024 * 1024,
+              ssh: [
+                { name: "Port", value: "22" },
+                { name: "PermitRootLogin", value: "no" },
+                { name: "PasswordAuthentication", value: "no" },
+                { name: "PubkeyAuthentication", value: "yes" },
+                { name: "MaxAuthTries", value: "6" },
+              ],
+            };
+          }
+          return mockServerState[nodeId];
+        };
+
+        return [
+          // GET /api/v1/admin/nodes/:id/server
+          http.get(/\/api\/v1\/admin\/nodes\/([^/]+)\/server$/, ({ params }) => {
+            const nodeId = (params[0] || (params as any).id) as string;
+            return HttpResponse.json(getServer(nodeId));
+          }),
+
+          // POST /api/v1/admin/nodes/:id/server/timezone
+          http.post(/\/api\/v1\/admin\/nodes\/([^/]+)\/server\/timezone$/, async ({ params, request }) => {
+            const nodeId = (params[0] || (params as any).id) as string;
+            const body = (await request.json().catch(() => ({}))) as any;
+            const srv = getServer(nodeId);
+            if (body.zone) {
+              srv.timezone = body.zone;
+            }
+            return HttpResponse.json({ action: "timezone" });
+          }),
+
+          // POST /api/v1/admin/nodes/:id/server/swap
+          http.post(/\/api\/v1\/admin\/nodes\/([^/]+)\/server\/swap$/, async ({ params, request }) => {
+            const nodeId = (params[0] || (params as any).id) as string;
+            const body = (await request.json().catch(() => ({}))) as any;
+            const srv = getServer(nodeId);
+            if (typeof body.megabytes === "number") {
+              srv.swap_total_bytes = body.megabytes * 1024 * 1024;
+              if (body.megabytes === 0) {
+                srv.swap_used_bytes = 0;
+              }
+            }
+            return HttpResponse.json({ action: "swap" });
+          }),
+
+          // POST /api/v1/admin/nodes/:id/server/drop-caches
+          http.post(/\/api\/v1\/admin\/nodes\/([^/]+)\/server\/drop-caches$/, ({ params }) => {
+            const nodeId = (params[0] || (params as any).id) as string;
+            const srv = getServer(nodeId);
+            srv.memory_available_bytes = Math.min(srv.memory_total_bytes, srv.memory_available_bytes + 512 * 1024 * 1024);
+            return HttpResponse.json({ action: "drop-caches" });
+          }),
+
+          // POST /api/v1/admin/nodes/:id/server/reboot
+          http.post(/\/api\/v1\/admin\/nodes\/([^/]+)\/server\/reboot$/, async ({ params, request }) => {
+            const nodeId = (params[0] || (params as any).id) as string;
+            const body = (await request.json().catch(() => ({}))) as any;
+            const srv = getServer(nodeId);
+            srv.uptime_seconds = 0;
+            return HttpResponse.json({ action: "reboot", mode: body.mode || "graceful" });
+          }),
+
+          // SSH Access: GET /api/v1/admin/nodes/:id/ssh TODO(api:T10.15)
+          http.get(/\/api\/v1\/admin\/nodes\/([^/]+)\/ssh$/, ({ params }) => {
+            const nodeId = (params[0] || (params as any).id) as string;
+            const srv = getServer(nodeId);
+            return HttpResponse.json({
+              port: 22,
+              permit_root_login: "no",
+              password_authentication: false,
+              pubkey_authentication: true,
+              max_auth_tries: 6,
+            });
+          }),
+
+          // SSH Access: PUT /api/v1/admin/nodes/:id/ssh/config TODO(api:T10.15)
+          http.put(/\/api\/v1\/admin\/nodes\/([^/]+)\/ssh\/config$/, async ({ params, request }) => {
+            const nodeId = (params[0] || (params as any).id) as string;
+            const body = (await request.json().catch(() => ({}))) as any;
+            const srv = getServer(nodeId);
+            if (body.port) {
+              const p = srv.ssh.find((s) => s.name === "Port");
+              if (p) p.value = String(body.port);
+            }
+            if (body.permit_root_login) {
+              const r = srv.ssh.find((s) => s.name === "PermitRootLogin");
+              if (r) r.value = body.permit_root_login;
+            }
+            return HttpResponse.json({ success: true, message: "SSH configuration updated and verified" });
+          }),
+
+          // SSH Keys: GET /api/v1/admin/nodes/:id/ssh/keys TODO(api:T10.15)
+          http.get(/\/api\/v1\/admin\/nodes\/([^/]+)\/ssh\/keys$/, () => {
+            return HttpResponse.json({ items: mockSshKeysStore });
+          }),
+
+          // SSH Keys: POST /api/v1/admin/nodes/:id/ssh/keys TODO(api:T10.15)
+          http.post(/\/api\/v1\/admin\/nodes\/([^/]+)\/ssh\/keys$/, async ({ request }) => {
+            const body = (await request.json().catch(() => ({}))) as any;
+            const newKey: SshKeyItem = {
+              id: "key-" + Date.now(),
+              name: body.name || "new-authorized-key",
+              key_type: body.public_key?.startsWith("ssh-ed25519") ? "ssh-ed25519" : "ssh-rsa",
+              fingerprint: "SHA256:" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+              public_key: body.public_key || "",
+              created_at: new Date().toISOString(),
+            };
+            mockSshKeysStore.push(newKey);
+            return HttpResponse.json(newKey, { status: 201 });
+          }),
+
+          // SSH Keys: DELETE /api/v1/admin/nodes/:id/ssh/keys/:keyId TODO(api:T10.15)
+          http.delete(/\/api\/v1\/admin\/nodes\/([^/]+)\/ssh\/keys\/([^/]+)$/, ({ params }) => {
+            const keyId = (params[1] || (params as any).keyId) as string;
+            const idx = mockSshKeysStore.findIndex((k) => k.id === keyId);
+            if (idx !== -1) {
+              mockSshKeysStore.splice(idx, 1);
+            }
+            return new HttpResponse(null, { status: 204 });
+          }),
+
+          // SSH Raw: GET /api/v1/admin/nodes/:id/ssh/raw TODO(api:T10.15)
+          http.get(/\/api\/v1\/admin\/nodes\/([^/]+)\/ssh\/raw$/, () => {
+            return HttpResponse.json({ raw: mockSshRawConfig });
+          }),
+
+          // SSH Raw: PUT /api/v1/admin/nodes/:id/ssh/raw TODO(api:T10.15)
+          http.put(/\/api\/v1\/admin\/nodes\/([^/]+)\/ssh\/raw$/, async ({ request }) => {
+            const body = (await request.json().catch(() => ({}))) as any;
+            if (body.raw) {
+              mockSshRawConfig = body.raw;
+            }
+            return HttpResponse.json({ success: true, message: "sshd_config verified and applied" });
+          }),
+
+          // Server Migration: POST /api/v1/admin/nodes/:id/migrate TODO(api:T15.01)
+          http.post(/\/api\/v1\/admin\/nodes\/([^/]+)\/migrate$/, async ({ params, request }) => {
+            const nodeId = (params[0] || (params as any).id) as string;
+            const body = (await request.json().catch(() => ({}))) as any;
+            const migrationId = "mig-" + Date.now();
+            mockMigrations[nodeId] = {
+              id: migrationId,
+              status: "running",
+              progress: 35,
+              current_step: "Syncing configuration files",
+              started_at: new Date().toISOString(),
+              remote_host: body.remote_host,
+              steps: [
+                { id: "step-1", name: "Connecting to remote SSH host", status: "completed" },
+                { id: "step-2", name: "Verifying target disk space & OS", status: "completed" },
+                { id: "step-3", name: "Syncing configuration files", status: "in_progress" },
+                { id: "step-4", name: "Transferring tenant storage & databases", status: "pending" },
+                { id: "step-5", name: "Validating services on remote host", status: "pending" },
+              ],
+              logs: [
+                `[${new Date().toISOString()}] Initiating SSH connection to ${body.remote_host || "remote.server.internal"}:22 as ${body.user || "root"}`,
+                `[${new Date().toISOString()}] Host key verified. Authentication successful via credentials in memory.`,
+                `[${new Date().toISOString()}] Pre-flight check: Target disk free space 84.2 GB (required: 12.4 GB). OK.`,
+                `[${new Date().toISOString()}] Dumping control plane config and security keys...`,
+                `[${new Date().toISOString()}] Streaming file sync stream over encrypted SSH pipe...`,
+              ],
+            };
+            return HttpResponse.json({ id: migrationId, message: "Migration initiated" }, { status: 202 });
+          }),
+
+          // Server Migration: GET /api/v1/admin/nodes/:id/migrate/status TODO(api:T15.01)
+          http.get(/\/api\/v1\/admin\/nodes\/([^/]+)\/migrate\/status$/, ({ params }) => {
+            const nodeId = (params[0] || (params as any).id) as string;
+            const current = mockMigrations[nodeId] || {
+              id: "mig-idle",
+              status: "idle",
+              progress: 0,
+              current_step: "Ready",
+              steps: [],
+              logs: [],
+            };
+            return HttpResponse.json(current);
+          }),
+
+          // Multi-Server: POST /api/v1/admin/nodes/join TODO(api:T02.08)
+          http.post(/\/api\/v1\/admin\/nodes\/join$/, async ({ request }) => {
+            const body = (await request.json().catch(() => ({}))) as any;
+            const id = "00000000-0000-0000-0000-" + Math.random().toString(16).substring(2, 14).padEnd(12, "0");
+            mockNodes.push({
+              id,
+              name: body.name || "node-joined-" + Math.floor(Math.random() * 100),
+              hostname: body.address || "joined.builtpanel.internal",
+              ip_address: body.address || "198.51.100.25",
+              status: "online",
+              version: "0.1.0",
+              fingerprint: "SHA256:00112233445566778899aabbccddeeff00112233",
+              last_seen_at: new Date().toISOString(),
+              enrolled_at: new Date().toISOString(),
+              capabilities: {
+                cpu_cores: 4,
+                cpu_model: "Intel Xeon Platinum",
+                cpu_usage_pct: 12.5,
+                ram_total_bytes: 8 * 1024 * 1024 * 1024,
+                ram_used_bytes: 3 * 1024 * 1024 * 1024,
+                disk_total_bytes: 100 * 1024 * 1024 * 1024,
+                disk_used_bytes: 20 * 1024 * 1024 * 1024,
+                kernel: "6.8.0-generic",
+                docker_version: "27.1.1",
+                security_features: ["seccomp", "apparmor", "userns"],
+              },
+              capacity: {
+                allocated_cpu_cores: 2,
+                allocated_ram_bytes: 4 * 1024 * 1024 * 1024,
+                allocated_disk_bytes: 50 * 1024 * 1024 * 1024,
+                tenants_count: 0,
+                max_tenants: 20,
+                saturation_pct: 10,
+                oversell: {
+                  cpu_ratio: 1.0,
+                  ram_ratio: 1.0,
+                  disk_ratio: 1.0,
+                },
+              },
+            });
+            return HttpResponse.json({ success: true, node_id: id });
+          }),
+
+          // Multi-Server: POST /api/v1/admin/nodes/join-code TODO(api:T02.08)
+          http.post(/\/api\/v1\/admin\/nodes\/join-code$/, async () => {
+            const token = "dhn_join_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const expiresAt = new Date(Date.now() + 900 * 1000).toISOString();
+            const cmd = `curl -sSL https://get.builtpanel.com/agent.sh | sudo bash -s -- --token ${token}`;
+            return HttpResponse.json({
+              code: token,
+              expires_at: expiresAt,
+              install_command: cmd,
+            });
+          }),
+        ];
+      })(),
     ];
   })(),
   // GET /api/v1/admin/operations?status&kind&node_id

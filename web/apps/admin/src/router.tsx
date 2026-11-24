@@ -48,6 +48,7 @@ import {
   ClientProcessesPage,
   AdminProcessesPage,
   AdminServerToolsPage,
+  AdminSystemPage,
   ClientWafPage,
   AdminWafPage,
   MigrationPage,
@@ -477,11 +478,23 @@ const adminProcessesRoute = createRoute({
   component: AdminProcessesPage,
 });
 
-// 37. Server Tools route (T10.15)
+// 37. Server Tools & System route (T10.15)
+const adminSystemRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/system",
+  component: AdminSystemPage,
+});
+
+const systemRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/system",
+  component: AdminSystemPage,
+});
+
 const adminServerToolsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/server-tools",
-  component: AdminServerToolsPage,
+  component: AdminSystemPage,
 });
 
 // 38. WAF routes (T11.04)
@@ -767,6 +780,8 @@ const routeTree = rootRoute.addChildren([
   clientProcessesRoute,
   processesRoute,
   adminProcessesRoute,
+  adminSystemRoute,
+  systemRoute,
   adminServerToolsRoute,
   clientWafRoute,
   adminWafRoute,

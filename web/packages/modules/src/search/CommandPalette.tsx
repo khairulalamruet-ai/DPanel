@@ -91,7 +91,8 @@ export function CommandPalette({
       { id: "page-settings", title: t("common.settings", "System Settings"), subtitle: "/settings", category: "pages", href: "/settings" },
       { id: "page-license", title: t("license.nav", "License Authority"), subtitle: "/admin/license", category: "pages", href: "/admin/license" },
       { id: "page-audit", title: t("audit.nav", "Audit Log Viewer"), subtitle: "/audit", category: "pages", href: "/audit" },
-      { id: "page-tools", title: t("serverTools.nav", "Server Diagnostic Tools"), subtitle: "/server-tools", category: "pages", href: "/server-tools" },
+      { id: "page-system", title: t("system.nav", "System Administration"), subtitle: "/admin/system", category: "pages", href: "/admin/system" },
+      { id: "page-tools", title: t("serverTools.nav", "Server Diagnostic Tools"), subtitle: "/admin/system", category: "pages", href: "/admin/system" },
     ],
     [t]
   );

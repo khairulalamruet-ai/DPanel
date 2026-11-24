@@ -690,20 +690,20 @@ export const registeredFrontendModules: FrontendModule[] = [
   {
     manifest: {
       name: "server-tools",
-      title: { en: "Server Tools", bn: "সার্ভার টুলস" },
+      title: { en: "System", bn: "সিস্টেম" },
       category: "tools",
       core: true,
-      permissions: ["admin.server.manage", "admin.nodes.manage"],
-      features: ["server-tools"],
+      permissions: ["admin.server.read", "admin.server.manage", "admin.nodes.manage"],
+      features: ["server-tools", "system"],
     },
     adminNav: [
       {
-        id: "admin-server-tools",
-        labelKey: "serverTools.nav",
-        icon: <Wrench className="h-4 w-4" />,
-        href: "/admin/server-tools",
+        id: "admin-system",
+        labelKey: "system.nav",
+        icon: <Server className="h-4 w-4" />,
+        href: "/admin/system",
         order: 64,
-        permission: "admin.server.manage",
+        permission: "admin.server.read",
       },
     ],
   },
