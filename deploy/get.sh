@@ -189,7 +189,7 @@ resume_after_reboot() {
         # Whatever happens, it runs once: a failed installation is not retried in a loop.
         printf 'systemctl disable builtpanel-resume.service > /dev/null 2>&1\n'
         printf 'rm -f /etc/systemd/system/builtpanel-resume.service\n'
-        printf 'BUILTPANEL_REBOOT_NEEDED=0 BPINSTALL_BANNER=0 TERM=dumb %q --no-upgrade --bin-dir %q --hostname %q --admin-email %q' \
+        printf 'BPINSTALL_REBOOT_NEEDED=0 BPINSTALL_BANNER=0 TERM=dumb %q --no-upgrade --bin-dir %q --hostname %q --admin-email %q' \
             "$dir/release/install.sh" "$dir/release/bin" "$HOSTNAME_FQDN" "$ADMIN_EMAIL"
         for a in ${PASS[@]+"${PASS[@]}"}; do printf ' %q' "$a"; done
         printf '\nstatus=$?\n'
@@ -290,4 +290,4 @@ say "starting the installer"
 _ui_end_step
 # The installer goes on with the same look, without drawing the logo again. The system update is done here
 # (or was asked not to be), so it does not repeat it; it only needs to know whether a reboot is due.
-BUILTPANEL_REBOOT_NEEDED="$REBOOT_NEEDED" BPINSTALL_BANNER=0 "$WORK/release/install.sh" --no-upgrade --bin-dir "$WORK/release/bin" --hostname "$HOSTNAME_FQDN" --admin-email "$ADMIN_EMAIL" ${PASS[@]+"${PASS[@]}"}
+BPINSTALL_REBOOT_NEEDED="$REBOOT_NEEDED" BPINSTALL_BANNER=0 "$WORK/release/install.sh" --no-upgrade --bin-dir "$WORK/release/bin" --hostname "$HOSTNAME_FQDN" --admin-email "$ADMIN_EMAIL" ${PASS[@]+"${PASS[@]}"}

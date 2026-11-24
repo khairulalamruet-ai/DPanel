@@ -47,7 +47,7 @@ declare -A KIRI_SHA256=(
     ["kiri-lite-0.2.2-1.x86_64.rpm"]=9d0743e224d2729648703234d8b634f122f5e3ee545538bf8cccbb74cb4237f0
     ["kiri-lite-0.2.2-1.aarch64.rpm"]=91bbab3fc5f27cc41d546ba80d45531234ace3316bd9b7aaf4bf1e7b0d4b9a19
 )
-NEED_REBOOT="${BUILTPANEL_REBOOT_NEEDED:-0}"  # get.sh updates the system first and says here whether a reboot is due
+NEED_REBOOT="${BPINSTALL_REBOOT_NEEDED:-0}"  # get.sh updates the system first and says here whether a reboot is due
 
 while [ $# -gt 0 ]; do
     case "$1" in
