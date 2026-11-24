@@ -593,6 +593,13 @@ async fn the_whole_journey_from_the_admin_screen_to_an_enrolled_node(pool: PgPoo
         )
     );
 
+    assert_eq!(
+        created["install_command"],
+        format!(
+            "curl -fsSL https://github.com/khairulalamruet-ai/DPanel/releases/latest/download/get.sh | sudo BUILTPANEL_ENROLL_TOKEN={secret} bash -s -- --join-server https://panel.example.com:8443 --join-fingerprint sha256:{fp}"
+        )
+    );
+
     // The agent enrols with it.
     let (_, csr) = greedy_csr();
     let (status, enrolled) = e.enrol(&secret, &csr).await;

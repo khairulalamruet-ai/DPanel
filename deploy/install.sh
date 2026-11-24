@@ -45,7 +45,7 @@
 # exists, the agent and the root helper.
 set -euo pipefail
 
-BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; UPGRADE=1; ENGINE=auto; CHECK=0
+BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; UPGRADE=1; ENGINE=auto; CHECK=0; NODE_ONLY=0; JOIN_SERVER=""; JOIN_FP=""
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ETC=/etc/builtpanel; SECRETS=$ETC/secrets; STATE=/var/lib/builtpanel; AGENT_PORT=8444
 # Kiri (https://runkiri.com, Apache-2.0): the engine-only package ("kiri-lite"), by the version and the SHA-256
@@ -75,6 +75,8 @@ while [ $# -gt 0 ]; do
         --admin-email) ADMIN_EMAIL="${2:?--admin-email needs an address}"; shift 2 ;;
         --admin-username) ADMIN_USER="${2:?--admin-username needs a name}"; shift 2 ;;
         --no-agent) WITH_AGENT=0; shift ;;
+        --join-server) JOIN_SERVER="${2:?--join-server needs the panel address}"; NODE_ONLY=1; shift 2 ;;
+        --join-fingerprint) JOIN_FP="${2:?--join-fingerprint needs sha256:...}"; NODE_ONLY=1; shift 2 ;;
         --no-root-login) ROOT_LOGIN=0; shift ;;
         --engine) ENGINE="${2:?--engine needs podman, docker, kiri or docker-kata}"; shift 2 ;;
         --no-upgrade) UPGRADE=0; shift ;;
@@ -165,6 +167,15 @@ if [ "$FAMILY" = rhel ]; then PG_BIN=/usr/pgsql-18/bin; PG_SERVICE=postgresql-18
 [ "$(stat -fc %T /sys/fs/cgroup 2> /dev/null)" = cgroup2fs ] || die "cgroup v2 is not in use (the unified hierarchy): hosting accounts' memory and CPU limits would not work"
 command -v systemctl > /dev/null || die "systemd is required"
 [ -n "$BIN_DIR" ] || die "give the release's binaries with --bin-dir DIR"
+if [ "$NODE_ONLY" -eq 1 ]; then
+    # A node that joins an existing panel: no control plane, database, web interface or administrator here.
+    # The one-time enrolment token comes from the environment (BUILTPANEL_ENROLL_TOKEN), never from a command line.
+    WITH_AGENT=1; ROOT_LOGIN=0; WEB_DIR=""
+    [[ "$JOIN_SERVER" =~ ^https://[A-Za-z0-9.:_-]+/?$ ]] || die "--join-server must look like https://panel.example.com"
+    [[ "$JOIN_FP" =~ ^sha256:[0-9a-f]{64}$ ]] || die "--join-fingerprint must look like sha256:<64 hex digits>"
+    [ -n "${BUILTPANEL_ENROLL_TOKEN:-}" ] || die "the enrolment token is missing (BUILTPANEL_ENROLL_TOKEN)"
+    HOSTNAME_FQDN=""; ADMIN_EMAIL=""
+else
 [ -n "$HOSTNAME_FQDN" ] || die "give the panel's DNS name with --hostname NAME"
 [[ "$HOSTNAME_FQDN" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || die "--hostname must be a plain DNS name (lowercase letters, digits, dots, dashes)"
 [ -n "$WEB_DIR" ] || { [ -d "$HERE/web" ] && WEB_DIR="$HERE/web"; } || true
@@ -177,7 +188,8 @@ if [ -n "$WEB_DIR" ]; then
 fi
 [ -n "$ADMIN_EMAIL" ] || die "give the first administrator's email with --admin-email"
 [[ "$ADMIN_EMAIL" =~ ^[^@\ ]+@[^@\ ]+\.[^@\ ]+$ ]] || die "--admin-email does not look like an email address"
-need=(builtpanel-control-api bpctl); [ "$WITH_AGENT" -eq 1 ] && need+=(builtpanel-agent builtpanel-priv-helper); [ "$ROOT_LOGIN" -eq 1 ] && need+=(builtpanel-root-auth)
+fi
+need=(); [ "$NODE_ONLY" -eq 0 ] && need+=(builtpanel-control-api bpctl); [ "$WITH_AGENT" -eq 1 ] && need+=(builtpanel-agent builtpanel-priv-helper); [ "$ROOT_LOGIN" -eq 1 ] && need+=(builtpanel-root-auth)
 for b in "${need[@]}"; do
     [ -x "$BIN_DIR/$b" ] || die "$BIN_DIR/$b is missing or not executable"
     # An ELF program for this machine's architecture (the control plane has no --version: running
@@ -297,6 +309,7 @@ else
     apt_install ca-certificates curl gnupg openssl ufw uidmap dbus-user-session slirp4netns
 fi
 
+if [ "$NODE_ONLY" -eq 0 ]; then
 say "PostgreSQL 18"
 if [ ! -x "$PG_BIN/postgres" ]; then
     if [ "$FAMILY" = rhel ]; then
@@ -349,6 +362,7 @@ redis_version="$("$REDIS_BIN" --version | sed -n 's/.*v=\([0-9.]*\).*/\1/p')"
 [ "$(printf '%s\n6.2\n' "$redis_version" | sort -V | head -1)" = 6.2 ] || die "Redis $redis_version is too old: the panel needs 6.2 or newer"
 systemctl enable --now "$REDIS_SERVICE" > /dev/null 2>&1
 
+fi # node-only: no database, Redis, control plane
 say "Caddy"
 if ! command -v caddy > /dev/null; then
     if [ "$FAMILY" = rhel ]; then
@@ -364,6 +378,7 @@ if ! command -v caddy > /dev/null; then
     fi
 fi
 
+if [ "$NODE_ONLY" -eq 0 ]; then
 # --- user, folders, secrets ----------------------------------------------------------------
 say "the panel's user and folders"
 id builtpanel > /dev/null 2>&1 || useradd --system --user-group --home-dir "$STATE" --no-create-home --shell /usr/sbin/nologin builtpanel
@@ -458,6 +473,7 @@ chown builtpanel:builtpanel "$SECRETS"/*.crt "$SECRETS"/*.key
 
 say "database schema"
 as_panel bpctl migrate > /dev/null
+fi # node-only: no database, Redis, control plane
 
 CPU_LIMITS=yes
 ROOT_PW_STATE=""
@@ -479,6 +495,7 @@ else
 fi
 
 # --- the service, the web server, the firewall ----------------------------------------------
+if [ "$NODE_ONLY" -eq 0 ]; then
 say "the control plane's service"
 install -m 0644 "$HERE/systemd/builtpanel-control-api.service" /etc/systemd/system/builtpanel-control-api.service
 if [ "$FAMILY" = rhel ]; then
@@ -506,6 +523,7 @@ systemctl restart builtpanel-control-api
 for _ in $(seq 1 40); do curl -fsS http://127.0.0.1:8080/api/v1/public/ready > /dev/null 2>&1 && break; sleep 0.5; done
 curl -fsS http://127.0.0.1:8080/api/v1/public/ready > /dev/null 2>&1 || die "the control plane does not answer (journalctl -u builtpanel-control-api)"
 
+fi # node-only: no database, Redis, control plane
 WEB_ROOT=/usr/share/builtpanel/web
 if [ -n "$WEB_DIR" ]; then
     say "the web interface (clients on $HOSTNAME_FQDN, administrators on $ADMIN_HOSTNAME)"
@@ -563,6 +581,7 @@ CLIENT_PORT=2083; ADMIN_PORT=2087
 PUBLIC_IP=$(curl -4 -fsS --max-time 5 https://api.ipv4.icanhazip.com 2> /dev/null | tr -d ' \r\n' || true)
 [[ "$PUBLIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || PUBLIC_IP=$(ip -4 route get 1.1.1.1 2> /dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -1)
 [[ "$PUBLIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || PUBLIC_IP=""
+[ "$NODE_ONLY" -eq 0 ] || PUBLIC_IP=""   # a node serves no panel: no extra ports
 if [ -n "$PUBLIC_IP" ] && [ "$FAMILY" = rhel ] && command -v semanage > /dev/null && [ "$(getenforce 2> /dev/null)" = Enforcing ]; then
     for port in $CLIENT_PORT $ADMIN_PORT; do semanage port -a -t http_port_t -p tcp "$port" 2> /dev/null || semanage port -m -t http_port_t -p tcp "$port" 2> /dev/null || true; done
 fi
@@ -586,7 +605,7 @@ say "Caddy in front of the panel"
             panel_site "https://$PUBLIC_IP:$CLIENT_PORT" client "tls internal"
             panel_site "https://$PUBLIC_IP:$ADMIN_PORT" admin "tls internal"
         fi
-    else
+    elif [ "$NODE_ONLY" -eq 0 ]; then
         printf '%s {\n    encode zstd gzip\n    reverse_proxy 127.0.0.1:8080\n}\n' "$HOSTNAME_FQDN"
     fi
 } > /etc/caddy/Caddyfile
@@ -718,18 +737,42 @@ if [ "$WITH_AGENT" -eq 1 ]; then
     cat > /etc/systemd/system/builtpanel-agent.service.d/panel.conf <<CONF
 [Service]
 Environment=BUILTPANEL_AGENT_CADDY_ADMIN=http://127.0.0.1:2019
-Environment=BUILTPANEL_AGENT_PANEL_HOST=$HOSTNAME_FQDN
-Environment=BUILTPANEL_AGENT_PANEL_UPSTREAM=127.0.0.1:8080
+$([ "$NODE_ONLY" -eq 0 ] && printf 'Environment=BUILTPANEL_AGENT_PANEL_HOST=%s\nEnvironment=BUILTPANEL_AGENT_PANEL_UPSTREAM=127.0.0.1:8080\n' "$HOSTNAME_FQDN")
 $([ -n "$WEB_DIR" ] && printf 'Environment=BUILTPANEL_AGENT_PANEL_ADMIN_HOST=%s\nEnvironment=BUILTPANEL_AGENT_PANEL_WEB_ROOT=%s\n' "$ADMIN_HOSTNAME" "$WEB_ROOT")
 CONF
     systemctl daemon-reload
     systemctl try-restart builtpanel-agent 2> /dev/null || true
+    if [ "$NODE_ONLY" -eq 1 ]; then
+        say "joining the panel at $JOIN_SERVER"
+        # The one-time token is read from the environment (BUILTPANEL_ENROLL_TOKEN), never put on a command line.
+        # A node that is already running was joined by an earlier run: its identity is kept.
+        if ! systemctl is-active --quiet builtpanel-agent; then
+            runuser -u builtpanel-agent -- builtpanel-agent enroll --server "$JOIN_SERVER" --ca-fingerprint "$JOIN_FP" \
+                || die "the panel refused the enrolment (the token is single-use and expires: make a new one in the panel and run this again)"
+            systemctl enable --now builtpanel-agent > /dev/null 2>&1
+        fi
+        unset BUILTPANEL_ENROLL_TOKEN
+    fi
 fi
 
 # The administrator with a password of its own (it is the way in when `root` cannot be: root login
 # off, or root has no password on this server). Made last, so a password that is printed is never
 # lost to an install that stopped half way. With root login on and a root password set, root is
 # the administrator, like WHM, and nothing is generated.
+if [ "$NODE_ONLY" -eq 1 ]; then
+    trap - EXIT
+    ui_done
+    cat -s <<EOF | ui_box
+${UI_OK:-}${UI_B:-}This server has joined the panel as a node.${UI_R:-}
+
+  Panel:   $JOIN_SERVER
+  It appears under System, Multi-server, and is ready for hosting accounts
+  (engine: $(cat /etc/builtpanel/node-engine 2> /dev/null || echo "$ENGINE")).
+$([ "${NEED_REBOOT:-0}" = 1 ] && printf '\nThe system update needs a reboot (a newer kernel or core libraries): run  reboot  when it suits you.\n')
+EOF
+    exit 0
+fi
+
 say "the first administrator"
 ADMIN_PASSWORD=""
 if [ "$ROOT_LOGIN" -eq 0 ] || [ "$ROOT_PW_STATE" != P ]; then

@@ -29016,6 +29016,13 @@
             "format": "uuid",
             "description": "Token id (use it to cancel the token)."
           },
+          "install_command": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "One command for a blank server (run as a user that may use `sudo`): installs the node\n(container engine, agent) from the release and joins this panel with the token above. Absent\nwithout `agent.public_url` or the node channel's CA."
+          },
           "name": {
             "type": "string",
             "description": "The node name this token is for."

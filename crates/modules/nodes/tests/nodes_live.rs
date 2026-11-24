@@ -270,6 +270,11 @@ async fn the_token_is_shown_once_and_only_its_hash_is_kept(pool: PgPool) {
         body["enroll_command"],
         format!("builtpanel-agent enroll --server https://panel.example.com:8443 --token {secret}")
     );
+    assert_eq!(
+        body["install_command"],
+        Value::Null,
+        "no CA here: no join command"
+    );
 
     // The database holds the hash of the token, and the token text appears nowhere.
     let (stored_hash, expires_in): (Vec<u8>, f64) = sqlx::query_as(

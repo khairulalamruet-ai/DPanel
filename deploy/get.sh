@@ -19,6 +19,10 @@
 #   --header 'H: V'      an HTTP header for the download (e.g. 'Authorization: Bearer TOKEN')
 #   --tarball FILE       install from a release archive already on this machine (no download)
 #   --no-agent           the control plane only; nodes are added from other servers
+#   --join-server URL --join-fingerprint sha256:HEX
+#                        the opposite: install only a node and join the panel at URL (the panel's System,
+#                        Multi-server page prints the whole command). The one-time token is read from the
+#                        BUILTPANEL_ENROLL_TOKEN environment variable, never from a command line.
 #   --engine E           podman (the default), docker, docker-kata or kiri; without it a terminal is asked
 #   --no-upgrade         do not update the operating system first (by default every package, the
 #                        kernel included, is brought up to date: apt on Ubuntu/Debian, dnf on
@@ -46,10 +50,13 @@ while [ $# -gt 0 ]; do
         --no-upgrade) UPGRADE=0; shift ;;
         --no-resume) RESUME=0; shift ;;
         --check) CHECK_ONLY=1; PASS+=("$1"); shift ;;
-        -h | --help) sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) PASS+=("$1"); shift ;;
     esac
 done
+
+# A join cannot continue after a reboot by itself (its one-time token lives in this shell only).
+if printf '%s\n' ${PASS[@]+"${PASS[@]}"} | grep -qx -- --join-server; then RESUME=0; fi
 
 # The installer's look (deploy/ui.sh). The published get.sh carries a copy of it right below
 # the marker (the release puts it there); run from a checkout, it reads the file next to it;
@@ -184,7 +191,7 @@ tar -xzf "$WORK/release.tar.gz" -C "$WORK/release" --strip-components=1 --no-sam
 [ -x "$WORK/release/install.sh" ] && [ -d "$WORK/release/bin" ] || die "the archive is not a Built Panel release (no install.sh and bin/)"
 
 # --- defaults that make it one command -------------------------------------------------------
-if [ -z "$HOSTNAME_FQDN" ]; then
+if [ -z "$HOSTNAME_FQDN" ] && ! printf '%s\n' ${PASS[@]+"${PASS[@]}"} | grep -qx -- --join-server; then
     # sslip.io answers any name of the form a-b-c-d.sslip.io with that address, so the panel (and
     # admin.<name>) work and get a certificate without any DNS setting.
     ip=$(curl -4 -fsS --max-time 10 https://api.ipify.org 2> /dev/null || true)
@@ -192,7 +199,10 @@ if [ -z "$HOSTNAME_FQDN" ]; then
     HOSTNAME_FQDN="${ip//./-}.sslip.io"
     say "no --hostname given: using $HOSTNAME_FQDN"
 fi
-[ -n "$ADMIN_EMAIL" ] || ADMIN_EMAIL="admin@$HOSTNAME_FQDN"
+[ -n "$ADMIN_EMAIL" ] || ADMIN_EMAIL="admin@${HOSTNAME_FQDN:-localhost.localdomain}"
+# A node that joins a panel has neither a panel name nor an administrator.
+IDENT=(--hostname "$HOSTNAME_FQDN" --admin-email "$ADMIN_EMAIL")
+if printf '%s\n' ${PASS[@]+"${PASS[@]}"} | grep -qx -- --join-server; then IDENT=(); fi
 
 # --- the operating system ---------------------------------------------------------------------
 # Brought up to date before anything is installed: the security fixes and the kernel, by the way of the
@@ -299,7 +309,7 @@ if [ "$UPGRADE" -eq 1 ] && [ "$CHECK_ONLY" -eq 0 ]; then
     say "checking this server"
     # The installer's own look at the server (system, memory, disk, programs) decides: nothing below runs on a
     # server it would refuse.
-    if ! "$WORK/release/install.sh" --check --bin-dir "$WORK/release/bin" --hostname "$HOSTNAME_FQDN" --admin-email "$ADMIN_EMAIL" ${PASS[@]+"${PASS[@]}"} > "$WORK/check.log" 2>&1; then
+    if ! "$WORK/release/install.sh" --check --bin-dir "$WORK/release/bin" ${IDENT[@]+"${IDENT[@]}"} ${PASS[@]+"${PASS[@]}"} > "$WORK/check.log" 2>&1; then
         _ui_end_step
         tail -n 8 "$WORK/check.log" >&2
         die "this server cannot run Built Panel (see above): nothing was changed"
@@ -327,4 +337,4 @@ say "starting the installer"
 _ui_end_step
 # The installer goes on with the same look, without drawing the logo again. The system update is done here
 # (or was asked not to be), so it does not repeat it; it only needs to know whether a reboot is due.
-BPINSTALL_REBOOT_NEEDED="$REBOOT_NEEDED" BPINSTALL_BANNER=0 "$WORK/release/install.sh" --no-upgrade --bin-dir "$WORK/release/bin" --hostname "$HOSTNAME_FQDN" --admin-email "$ADMIN_EMAIL" ${PASS[@]+"${PASS[@]}"}
+BPINSTALL_REBOOT_NEEDED="$REBOOT_NEEDED" BPINSTALL_BANNER=0 "$WORK/release/install.sh" --no-upgrade --bin-dir "$WORK/release/bin" ${IDENT[@]+"${IDENT[@]}"} ${PASS[@]+"${PASS[@]}"}

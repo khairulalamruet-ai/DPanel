@@ -182,6 +182,10 @@ pub struct CreatedEnrollment {
     pub expires_in: u64,
     /// Command to run on the new server. Absent when `agent.public_url` is not configured.
     pub enroll_command: Option<String>,
+    /// One command for a blank server (run as a user that may use `sudo`): installs the node
+    /// (container engine, agent) from the release and joins this panel with the token above. Absent
+    /// without `agent.public_url` or the node channel's CA.
+    pub install_command: Option<String>,
 }
 
 impl std::fmt::Debug for CreatedEnrollment {
@@ -305,6 +309,10 @@ fn valid_node_name(name: &str) -> bool {
         && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
+/// Where the one-command installer is published (the same release channel as the panel itself).
+const NODE_INSTALLER_URL: &str =
+    "https://github.com/khairulalamruet-ai/DPanel/releases/latest/download/get.sh";
+
 /// Add a node: creates a one-time enrollment token.
 #[utoipa::path(
     post,
@@ -395,6 +403,14 @@ pub async fn create_enrollment(
         .public_url
         .as_deref()
         .map(|url| format!("builtpanel-agent enroll --server {url}{pin} --token {token_text}"));
+    // The same join as one command for a blank server. The token travels in the environment of the
+    // installer (not on its command line), so it is not shown in the process list.
+    let install_command = state.public_url.as_deref().zip(state.ca.as_deref()).map(|(url, ca)| {
+        format!(
+            "curl -fsSL {NODE_INSTALLER_URL} | sudo BUILTPANEL_ENROLL_TOKEN={token_text} bash -s -- --join-server {url} --join-fingerprint sha256:{}",
+            ca.fingerprint_sha256()
+        )
+    });
     let body = CreatedEnrollment {
         id: created.id,
         name: created.name.clone(),
@@ -402,6 +418,7 @@ pub async fn create_enrollment(
         expires_at: rfc3339(created.expires_at),
         expires_in: state.token_ttl.as_secs(),
         enroll_command,
+        install_command,
     };
     let mut response = (StatusCode::CREATED, Json(body)).into_response();
     response
@@ -630,6 +647,7 @@ mod tests {
             expires_at: String::new(),
             expires_in: 900,
             enroll_command: Some("builtpanel-agent enroll --token dhn_secret-token-value".into()),
+            install_command: None,
         };
         let dbg = format!("{created:?}");
         assert!(
