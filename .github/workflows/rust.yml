@@ -105,6 +105,11 @@ jobs:
         run: cargo check --workspace --all-targets --locked
 
       - name: Tests (unit + integration)
+        env:
+          # sqlx gives every test pool up to 5 connections out of one shared budget of 20: with four
+          # tests at once (a four-core runner's default) the database tests time out in setup
+          # (PoolTimedOut). Three at once always fit.
+          RUST_TEST_THREADS: "3"
         run: cargo test --workspace --locked --no-fail-fast -- --include-ignored
 
       - name: openapi.json is up to date
