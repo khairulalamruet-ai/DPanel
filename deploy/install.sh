@@ -19,9 +19,16 @@
 #   --no-agent           install the control plane only (nodes are added from other servers)
 #   --no-root-login      do not let `root` log in to the panel with this server's root password
 #                        (on by default, like WHM; the helper builtpanel-root-auth checks it)
-#   --engine docker|kiri the container engine of the local node: rootless Docker (default), or Kiri
+#   --engine podman|docker|kiri|docker-kata
+#                        the container engine of the local node: rootless Docker (the default), rootless
+#                        Podman (4.4 or newer; its rootless bridge networks hide the visitor's address from
+#                        the containers, so per-address limits such as SFTP login bans cannot work), or Kiri
 #                        (https://runkiri.com, a root engine in beta: its `kiri` group is root-equivalent, so
-#                        the agent is too; the engine of a node with tenants cannot be changed)
+#                        the agent is too). A node with tenants can change between Podman and Docker (their
+#                        files keep the same ids) but not to or from Kiri.
+#                        docker-kata: Docker with Kata Containers (every container in its own light virtual
+#                        machine; needs /dev/kvm, so hardware virtualization or nested virtualization). A root
+#                        engine: the agent is in the `docker` group, which is root-equivalent.
 #   --no-upgrade         do not update the operating system first (by default every installed package,
 #                        the kernel included, is brought up to date before anything is installed)
 #   --check              only look: what is there, what would be done; changes nothing
@@ -35,7 +42,7 @@
 # of the node channel, and with the local node: rootless Docker, the agent and the root helper.
 set -euo pipefail
 
-BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; UPGRADE=1; ENGINE=docker; CHECK=0
+BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; UPGRADE=1; ENGINE=auto; CHECK=0
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ETC=/etc/builtpanel; SECRETS=$ETC/secrets; STATE=/var/lib/builtpanel; AGENT_PORT=8444
 # Kiri (https://runkiri.com, Apache-2.0): the engine-only package ("kiri-lite"), by the version and the SHA-256
@@ -46,6 +53,13 @@ declare -A KIRI_SHA256=(
     ["kiri-lite_0.2.2_arm64.deb"]=5388bd5651db97a23d7eb9f057881522cbad8a27b3463d293f337b8c8797d7f2
     ["kiri-lite-0.2.2-1.x86_64.rpm"]=9d0743e224d2729648703234d8b634f122f5e3ee545538bf8cccbb74cb4237f0
     ["kiri-lite-0.2.2-1.aarch64.rpm"]=91bbab3fc5f27cc41d546ba80d45531234ace3316bd9b7aaf4bf1e7b0d4b9a19
+)
+# Kata Containers (https://katacontainers.io, Apache-2.0): each container in its own light virtual machine.
+# The release and the SHA-256 of its static package, as the project's release page gave them.
+KATA_VERSION=4.4.0
+declare -A KATA_SHA256=(
+    ["kata-static-4.4.0-amd64.tar.zst"]=ccbc0cbc591089d0c57012b78da64b23ef43e0bac0f869dc7bfebe8588c33986
+    ["kata-static-4.4.0-arm64.tar.zst"]=9dd4407d4b756858fe9ce33322a605f5a932743839a8ec47108e8513dcc3aaa3
 )
 NEED_REBOOT="${BPINSTALL_REBOOT_NEEDED:-0}"  # get.sh updates the system first and says here whether a reboot is due
 
@@ -59,7 +73,7 @@ while [ $# -gt 0 ]; do
         --admin-username) ADMIN_USER="${2:?--admin-username needs a name}"; shift 2 ;;
         --no-agent) WITH_AGENT=0; shift ;;
         --no-root-login) ROOT_LOGIN=0; shift ;;
-        --engine) ENGINE="${2:?--engine needs docker or kiri}"; shift 2 ;;
+        --engine) ENGINE="${2:?--engine needs podman, docker or kiri}"; shift 2 ;;
         --no-upgrade) UPGRADE=0; shift ;;
         --check) CHECK=1; shift ;;
         -h | --help) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -67,7 +81,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-[ "$ENGINE" = docker ] || [ "$ENGINE" = kiri ] || { echo "install.sh: --engine must be docker or kiri" >&2; exit 64; }
+case "$ENGINE" in auto | podman | docker | kiri | docker-kata) ;; *) echo "install.sh: --engine must be podman, docker, kiri or docker-kata" >&2; exit 64 ;; esac
 
 # The look: the logo, a live line per step with an overall progress bar (deploy/ui.sh), or plain
 # "==> step" lines when that file is missing or the output is not a terminal.
@@ -148,7 +162,14 @@ if [ "$CHECK" -eq 1 ]; then
     echo "==> check only: nothing is changed"
     echo "    system:        ${PRETTY_NAME} ($(uname -m)), ${mem_mb} MB memory, ${free_gb} GB free"
     echo "    system update: $([ "$UPGRADE" -eq 1 ] && echo 'every package and the kernel would be brought up to date first (--no-upgrade skips it)' || echo 'skipped (--no-upgrade)')"
-    echo "    engine:        $([ "$ENGINE" = kiri ] && echo "Kiri $KIRI_VERSION (pinned and checked), a root engine" || echo 'rootless Docker')"
+    case "$ENGINE" in
+        kiri) engine_label="Kiri $KIRI_VERSION (pinned and checked), a root engine" ;;
+        docker) engine_label='rootless Docker' ;;
+        podman) engine_label='rootless Podman' ;;
+        docker-kata) engine_label="Docker with Kata Containers $KATA_VERSION (pinned and checked), a root engine" ;;
+        *) engine_label='rootless Docker' ;;
+    esac
+    echo "    engine:        $engine_label"
     echo "    binaries:      ${need[*]} found and runnable"
     echo "    postgresql 18: $(command -v $PG_BIN/postgres > /dev/null && echo present || echo 'would be installed')"
     echo "    redis:         $(command -v redis-server || echo 'would be installed')"
@@ -556,6 +577,11 @@ else
 fi
 
 if [ "$WITH_AGENT" -eq 1 ]; then
+    if [ "$ENGINE" = auto ]; then
+        # An already set up node keeps its engine; a new one gets rootless Docker. Podman is opt-in
+        # (--engine podman): its rootless bridge networks hide the visitor's address from the containers.
+        if [ -s /etc/builtpanel/node-engine ]; then ENGINE="$(cat /etc/builtpanel/node-engine)"; else ENGINE=docker; fi
+    fi
     if [ "$ENGINE" = kiri ]; then
         say "the local node (Kiri engine, the agent, the root helper)"
         case "$FAMILY:$(uname -m)" in
@@ -576,6 +602,48 @@ if [ "$WITH_AGENT" -eq 1 ]; then
         fi
         "$HERE/agent/install.sh" --binary "$BIN_DIR/builtpanel-agent" --priv-helper "$BIN_DIR/builtpanel-priv-helper" --engine kiri
     else
+    if [ "$ENGINE" = docker-kata ]; then
+    say "the local node (Docker with Kata Containers, the agent, the root helper)"
+    [ -c /dev/kvm ] || die "/dev/kvm is missing: Kata Containers needs hardware virtualization (on a VPS: nested virtualization, which many providers leave off)"
+    case "$(uname -m)" in x86_64) kata_file="kata-static-${KATA_VERSION}-amd64.tar.zst" ;; aarch64) kata_file="kata-static-${KATA_VERSION}-arm64.tar.zst" ;; *) die "no Kata package for this machine" ;; esac
+    if [ ! -x /opt/kata/bin/containerd-shim-kata-v2 ] || ! /opt/kata/bin/containerd-shim-kata-v2 --version 2> /dev/null | grep -q "$KATA_VERSION"; then
+        if [ "$FAMILY" = rhel ]; then dnf_install zstd; else apt_install zstd; fi
+        kata_dir="$(mktemp -d /var/tmp/builtpanel-kata.XXXXXX)"
+        curl -fsSL --proto '=https' --tlsv1.2 --retry 3 -o "$kata_dir/$kata_file" "https://github.com/kata-containers/kata-containers/releases/download/${KATA_VERSION}/${kata_file}" || die "cannot download Kata Containers ($kata_file)"
+        have=$(sha256sum "$kata_dir/$kata_file" | awk '{print $1}')
+        [ "$have" = "${KATA_SHA256[$kata_file]}" ] || die "the Kata package does not match the checksum this installer was made with (got $have): nothing was installed"
+        tar --zstd -xf "$kata_dir/$kata_file" -C /
+        rm -rf "$kata_dir"
+    fi
+    # Docker finds the runtime through containerd's shim name.
+    ln -sf /opt/kata/bin/containerd-shim-kata-v2 /usr/local/bin/containerd-shim-kata-v2
+    ln -sf /opt/kata/bin/kata-runtime /usr/local/bin/kata-runtime
+    if ! command -v dockerd > /dev/null; then
+        if [ "$FAMILY" = rhel ]; then
+            curl -fsSL https://download.docker.com/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
+            dnf_install docker-ce docker-ce-cli containerd.io
+        else
+            install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL "https://download.docker.com/linux/${ID}/gpg" | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
+            echo "deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/${ID} ${CODENAME} stable" > /etc/apt/sources.list.d/docker.list
+            apt-get update -qq > /dev/null
+            apt_install docker-ce docker-ce-cli containerd.io
+        fi
+    fi
+    "$HERE/agent/install.sh" --binary "$BIN_DIR/builtpanel-agent" --priv-helper "$BIN_DIR/builtpanel-priv-helper" --engine docker-kata
+    elif [ "$ENGINE" = podman ]; then
+    say "the local node (rootless Podman, the agent, the root helper)"
+    ui_warn "Podman's rootless bridge networks show every container the same client address: per-address limits inside containers (SFTP failed-login bans) cannot tell visitors apart"
+    if [ "$FAMILY" = rhel ]; then dnf_install podman; else apt_install podman; fi
+    pm_have="$(podman --version | awk '{print $3}')"
+    [ "$(printf '%s\n4.4\n' "$pm_have" | sort -V | head -1)" = 4.4 ] || die "Podman $pm_have is older than 4.4 (cgroup v2 limits and netavark need 4.4): use --engine docker on this system"
+    "$HERE/agent/install.sh" --binary "$BIN_DIR/builtpanel-agent" --priv-helper "$BIN_DIR/builtpanel-priv-helper" --engine podman
+    agent_uid=$(id -u builtpanel-agent)
+    if ! grep -qw cpu "/sys/fs/cgroup/user.slice/user-${agent_uid}.slice/user@${agent_uid}.service/cgroup.subtree_control" 2> /dev/null; then
+        ui_warn "this server does not hand the CPU controller to the agent's user (a container-type VPS, or an old systemd): hosting accounts cannot get CPU limits here"
+        CPU_LIMITS=no
+    fi
+    else
     say "the local node (rootless Docker, the agent, the root helper)"
     if ! command -v dockerd-rootless-setuptool.sh > /dev/null; then
         if [ "$FAMILY" = rhel ]; then
@@ -591,11 +659,12 @@ if [ "$WITH_AGENT" -eq 1 ]; then
         # Only the agent's own rootless daemon is used: the system-wide one stays off.
         systemctl disable --now docker.service docker.socket > /dev/null 2>&1 || true
     fi
-    "$HERE/agent/install.sh" --binary "$BIN_DIR/builtpanel-agent" --priv-helper "$BIN_DIR/builtpanel-priv-helper" --rootless-docker
+    "$HERE/agent/install.sh" --binary "$BIN_DIR/builtpanel-agent" --priv-helper "$BIN_DIR/builtpanel-priv-helper" --engine docker
     agent_uid=$(id -u builtpanel-agent)
     if ! grep -qw cpu "/sys/fs/cgroup/user.slice/user-${agent_uid}.slice/user@${agent_uid}.service/cgroup.subtree_control" 2> /dev/null; then
         ui_warn "this server does not hand the CPU controller to the agent's user (a container-type VPS, or an old systemd): hosting accounts cannot get CPU limits here"
         CPU_LIMITS=no
+    fi
     fi
     fi
     # The agent drives the web server on this machine (Caddy's admin API, which listens on this

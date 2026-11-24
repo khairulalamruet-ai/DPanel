@@ -572,6 +572,24 @@ pub async fn restart_service(
         wait_healthy(&context.docker, name).await?;
         restarted.push(name.as_str().to_owned());
     }
+    // The web server looks a PHP container up by name when it starts. An engine may give the
+    // restarted container another address (Podman does), so the web server starts over too.
+    if service == "php" {
+        let web = name_of(&username, "web")?;
+        if context.docker.inspect(&web).await.is_ok_and(|i| i.running) {
+            context
+                .docker
+                .stop(&web, Duration::from_secs(10))
+                .await
+                .map_err(|e| docker_error(&e))?;
+            context
+                .docker
+                .start(&web)
+                .await
+                .map_err(|e| docker_error(&e))?;
+            wait_healthy(&context.docker, &web).await?;
+        }
+    }
     Ok(Output::ServiceRestarted {
         containers: restarted,
     })

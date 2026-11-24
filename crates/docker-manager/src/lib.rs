@@ -231,6 +231,14 @@ impl DockerError {
     }
 }
 
+/// An image as it was asked for: Podman writes the registry in front (`docker.io/...`).
+fn plain_image(image: String) -> String {
+    match image.strip_prefix("docker.io/") {
+        Some(rest) => rest.strip_prefix("library/").unwrap_or(rest).to_owned(),
+        None => image,
+    }
+}
+
 fn map_error(err: BollardError) -> DockerError {
     match err {
         BollardError::DockerResponseServerError {
@@ -240,6 +248,16 @@ fn map_error(err: BollardError) -> DockerError {
             status_code: 409,
             message,
         } => DockerError::Conflict(clip(&message)),
+        // Podman answers a taken name, or the removal of a running container, with 500
+        // where Docker says 409.
+        BollardError::DockerResponseServerError {
+            status_code: 500,
+            message,
+        } if message.contains("is already in use")
+            || (message.contains("cannot remove container") && message.contains("running")) =>
+        {
+            DockerError::Conflict(clip(&message))
+        }
         BollardError::DockerResponseServerError {
             status_code,
             message,
@@ -273,6 +291,8 @@ pub struct ContainerInfo {
     pub running: bool,
     /// Exit code of the last run, if it has ended.
     pub exit_code: Option<i64>,
+    /// How many times the engine has restarted it by its restart policy.
+    pub restart_count: i64,
     /// Labels.
     pub labels: HashMap<String, String>,
     /// The limits in force (zeros if Docker reports none).
@@ -329,8 +349,22 @@ pub struct DockerManager {
     docker: Docker,
     /// Whether the engine is Kiri (asked once, on the first container): Kiri ignores the
     /// `bind` options of a `local` volume, so a tenant's directory is mounted directly.
-    kiri: std::sync::Arc<tokio::sync::OnceCell<bool>>,
+    engine: std::sync::Arc<tokio::sync::OnceCell<Engine>>,
+    /// The OCI runtime every container is made with (`kata` for a node that runs each one in its
+    /// own light virtual machine); `None` is the engine's own.
+    runtime: Option<String>,
 }
+
+/// The engines behind the Docker-compatible socket that differ in ways that matter here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Engine {
+    Docker,
+    Kiri,
+    Podman,
+}
+
+/// The environment variable that names the container runtime of a node (set by the installer).
+pub const RUNTIME_ENV: &str = "BUILTPANEL_CONTAINER_RUNTIME";
 
 impl DockerManager {
     /// Connects to the daemon behind a Unix socket. Nothing is sent yet; use
@@ -345,10 +379,24 @@ impl DockerManager {
         let docker =
             Docker::connect_with_unix(path, API_TIMEOUT_SECS, bollard::API_DEFAULT_VERSION)
                 .map_err(map_error)?;
+        // A runtime name is plain; anything else is ignored rather than passed to the engine.
+        let runtime = std::env::var(RUNTIME_ENV).ok().filter(|r| {
+            !r.is_empty()
+                && r.len() <= 32
+                && r.bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        });
         Ok(Self {
             docker,
-            kiri: std::sync::Arc::default(),
+            engine: std::sync::Arc::default(),
+            runtime,
         })
+    }
+
+    /// The runtime containers are made with, when it is not the engine's own.
+    #[must_use]
+    pub fn runtime(&self) -> Option<&str> {
+        self.runtime.as_deref()
     }
 
     /// The daemon's version, which also proves it is reachable.
@@ -418,8 +466,26 @@ impl DockerManager {
     /// the network is missing.
     pub async fn create_container(&self, spec: &ContainerSpec) -> Result<String, DockerError> {
         let mut body = spec.to_create_body()?;
-        if self.is_kiri().await {
-            self.bind_volumes_directly(&mut body).await?;
+        if let Some(runtime) = &self.runtime {
+            body.host_config
+                .get_or_insert_with(Default::default)
+                .runtime = Some(runtime.clone());
+        }
+        match self.engine().await {
+            Engine::Docker => {}
+            // Kiri ignores the `bind` options of a `local` volume. Podman honours them but then hands
+            // the directory to the container's user on first use (a tenant's directory would stop
+            // being the agent's); and it labels nothing for SELinux, so a confined container could
+            // not read the directory at all.
+            Engine::Kiri => self.bind_volumes_directly(&mut body).await?,
+            Engine::Podman => {
+                self.bind_volumes_directly(&mut body).await?;
+                if let Some(host) = body.host_config.as_mut() {
+                    host.security_opt
+                        .get_or_insert_with(Vec::new)
+                        .push("label=disable".to_owned());
+                }
+            }
         }
         let options = CreateContainerOptionsBuilder::default()
             .name(spec.name.as_str())
@@ -432,16 +498,26 @@ impl DockerManager {
         Ok(created.id)
     }
 
-    async fn is_kiri(&self) -> bool {
+    /// Which engine answers (asked once, on the first container).
+    async fn engine(&self) -> Engine {
         *self
-            .kiri
+            .engine
             .get_or_init(|| async {
-                self.docker
-                    .version()
-                    .await
-                    .ok()
-                    .and_then(|v| v.platform)
-                    .is_some_and(|p| p.name == "Kiri")
+                let Ok(v) = self.docker.version().await else {
+                    return Engine::Docker;
+                };
+                if v.platform.as_ref().is_some_and(|p| p.name == "Kiri") {
+                    Engine::Kiri
+                } else if v
+                    .components
+                    .iter()
+                    .flatten()
+                    .any(|c| c.name == "Podman Engine")
+                {
+                    Engine::Podman
+                } else {
+                    Engine::Docker
+                }
             })
             .await
     }
@@ -1216,7 +1292,7 @@ impl DockerManager {
                 Some(TenantContainer {
                     name,
                     role: labels.get(ROLE_LABEL).cloned().unwrap_or_default(),
-                    image: c.image.unwrap_or_default(),
+                    image: plain_image(c.image.unwrap_or_default()),
                     state: c.state.map(|s| s.to_string()).unwrap_or_default(),
                     status: c.status.unwrap_or_default(),
                     created: c.created.unwrap_or(0),
@@ -1354,6 +1430,15 @@ impl DockerManager {
     /// # Errors
     /// [`DockerError::Conflict`] if the name is taken.
     pub async fn create_network(&self, name: &Name, internal: bool) -> Result<(), DockerError> {
+        // Docker refuses a second network of the same name; Podman's compatible API makes a
+        // twin instead, so the name is checked here for both.
+        match self.docker.inspect_network(name.as_str(), None).await {
+            Ok(_) => return Err(DockerError::Conflict("the network exists".into())),
+            Err(BollardError::DockerResponseServerError {
+                status_code: 404, ..
+            }) => {}
+            Err(other) => return Err(map_error(other)),
+        }
         self.docker
             .create_network(NetworkCreateRequest {
                 name: name.as_str().to_owned(),
@@ -1425,7 +1510,9 @@ impl DockerManager {
             Err(BollardError::DockerResponseServerError {
                 status_code: 403 | 409,
                 message,
-            }) if message.contains("already exists") => Ok(()),
+            }) if message.contains("already exists") || message.contains("already connected") => {
+                Ok(())
+            }
             Err(e) => Err(map_error(e)),
         }
     }
@@ -1561,11 +1648,19 @@ impl DockerManager {
     }
 
     async fn require_managed_container(&self, name: &Name) -> Result<ContainerInfo, DockerError> {
-        let c = self
-            .docker
-            .inspect_container(name.as_str(), None)
-            .await
-            .map_err(map_error)?;
+        // Podman reports a container that is just ending as `stopped`, a state Docker's API
+        // does not have and the client cannot read; it is `exited` a moment later.
+        let mut tries = 0;
+        let c = loop {
+            match self.docker.inspect_container(name.as_str(), None).await {
+                Ok(c) => break c,
+                Err(e) if tries < 20 && e.to_string().contains("unknown variant `stopped`") => {
+                    tries += 1;
+                    tokio::time::sleep(Duration::from_millis(250)).await;
+                }
+                Err(e) => return Err(map_error(e)),
+            }
+        };
         let config = c.config.unwrap_or_default();
         let labels = config.labels.unwrap_or_default();
         if labels.get(MANAGED_LABEL).map(String::as_str) != Some("true") {
@@ -1595,6 +1690,7 @@ impl DockerManager {
             }
         }
         Ok(ContainerInfo {
+            restart_count: c.restart_count.unwrap_or(0),
             published,
             id: c.id.unwrap_or_default(),
             name: c
@@ -1602,7 +1698,7 @@ impl DockerManager {
                 .unwrap_or_default()
                 .trim_start_matches('/')
                 .to_owned(),
-            image: config.image.unwrap_or_default(),
+            image: plain_image(config.image.unwrap_or_default()),
             status: state.status.map(|s| s.to_string()).unwrap_or_default(),
             running,
             exit_code: (!running).then_some(state.exit_code).flatten(),

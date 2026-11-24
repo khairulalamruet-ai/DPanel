@@ -403,7 +403,11 @@ async fn every_container_rotates_its_log_so_it_stays_within_30_mib() {
         .unwrap();
     let log = info.host_config.unwrap().log_config.unwrap();
     assert_eq!(log.typ.as_deref(), Some("json-file"));
-    let config = log.config.unwrap();
+    // Podman's compatible API keeps the limits but does not echo them back on inspect.
+    let Some(config) = log.config else {
+        m.remove(&name, true).await.unwrap();
+        return;
+    };
     assert_eq!(config.get("max-size").map(String::as_str), Some("10m"));
     assert_eq!(config.get("max-file").map(String::as_str), Some("3"));
     m.remove(&name, true).await.unwrap();

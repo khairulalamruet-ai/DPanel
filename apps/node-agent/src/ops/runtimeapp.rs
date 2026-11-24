@@ -443,19 +443,25 @@ async fn wait_up(
 ) -> Result<(), AgentError> {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(40);
     let mut up_since: Option<tokio::time::Instant> = None;
+    let mut first_restarts: Option<i64> = None;
     loop {
         let info = docker
             .inspect(container)
             .await
             .map_err(|e| docker_error(&e))?;
-        if info.running && info.status == "running" {
+        // Docker shows `restarting` between runs; Podman restarts at once, so a program that keeps
+        // stopping looks `running` at every look. The restart count tells.
+        let restarts = *first_restarts.get_or_insert(info.restart_count);
+        let looping = info.restart_count > restarts;
+        if info.running && info.status == "running" && !looping {
             let since = *up_since.get_or_insert_with(tokio::time::Instant::now);
             if since.elapsed() >= Duration::from_secs(4) {
                 return Ok(());
             }
         } else {
             up_since = None;
-            let stopped = matches!(info.status.as_str(), "exited" | "dead" | "restarting");
+            let stopped =
+                looping || matches!(info.status.as_str(), "exited" | "dead" | "restarting");
             if stopped || tokio::time::Instant::now() >= deadline {
                 let printed = docker
                     .logs(container, 0, 4000)
