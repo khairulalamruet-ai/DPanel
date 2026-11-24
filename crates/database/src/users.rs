@@ -1,7 +1,7 @@
 //! Client accounts as the administrator sees them: an account together with its
 //! tenant, plan and node (T04.12).
 
-use dhpanel_domain::{Email, TenantStatus};
+use builtpanel_domain::{Email, TenantStatus};
 use sqlx::{PgConnection, PgPool, types::Uuid};
 
 /// One client account with what it owns.

@@ -1,0 +1,8 @@
+slug        = "system-libraries"
+name        = "System libraries"
+category    = "libraries"
+kind        = "unavailable"
+description = "Libraries the server software is built with (OpenSSL, zlib, ICU, ...)."
+license     = "Apache-2.0"
+covers      = ["GeoIP (library)", "CURL (library)", "MCrypt (library)", "OpenLDAP (library)", "SNMP (library)", "CURL 7 (library)", "OpenSSL 1.0 (library)", "libcap (library)", "gettext (library)", "FreeTDS (library)", "BZip (library)", "XML (library)", "PCRE (library)", "GNU dbm (library)", "Mhash (library)", "Ncurses (library)", "libiconv (library)", "libmcrypt (library)", "Zlib (library)", "SSH (library)", "libtool (library)", "XSLT (library)", "ICU (library)", "IMAP (library)", "HTML Tidy (library)", "Readline (library)", "Libevent (library)", "Libexpat (library)", "GMP (library)", "SCONS (library)", "SERF (library)", "libzip (library)", "libonig (library)", "liblzma (library)", "libsodium (library)", "nghttp2 (library)", "aspell (library)", "libuuid (library)", "libyaml (library)", "libiodbc (library)", "OpenSSL 1.1 (library)", "Libodbc (library)", "OpenSSL 3.0 (library)", "IMAPUW (library)", "Libkrb (library)", "Msodbcsql (library)", "Libargon2 (library)", "LIBSXG (library)", "Libmaxminddb (library)", "Libgeoip (library)", "Libspf2 (library)", "Libidn2 (library)", "Icu69 (library)", "Brotli (library)", "Quictls (library)", "Libzstd (library)", "Libffi (library)", "Luajit (library)"]
+reason      = "a system library belongs to the server's operating system and needs root to install; the panel's PHP and Node.js images already include what sites need and a container brings its own"

@@ -1,6 +1,6 @@
 [package]
-name = "dhpanel-worker"
-description = "DHPanel background job runner and scheduler."
+name = "builtpanel-worker"
+description = "Built Panel background job runner and scheduler."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,11 +8,11 @@ license.workspace = true
 publish.workspace = true
 
 [[bin]]
-name = "dhpanel-worker"
+name = "builtpanel-worker"
 path = "src/main.rs"
 
 [dependencies]
-dhpanel-common.workspace = true
+builtpanel-common.workspace = true
 
 [lints]
 workspace = true

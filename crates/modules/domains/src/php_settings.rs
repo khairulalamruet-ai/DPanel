@@ -21,10 +21,10 @@ use axum::{
     extract::{Path, State},
     routing::get,
 };
-use dhpanel_database::{php as store, plans};
-use dhpanel_domain::php_ini::{self, Caps, IniSettings};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_database::{php as store, plans};
+use builtpanel_domain::php_ini::{self, Caps, IniSettings};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
@@ -158,11 +158,11 @@ async fn set(
         store::set_settings(&mut tx, hosting.tenant.id, &json)
             .await
             .map_err(internal)?;
-        dhpanel_audit::insert(
+        builtpanel_audit::insert(
             &mut *tx,
-            &dhpanel_audit::AuditEntry::new(
+            &builtpanel_audit::AuditEntry::new(
                 "php.settings_changed",
-                dhpanel_audit::Outcome::Success,
+                builtpanel_audit::Outcome::Success,
             )
             .actor(who.account_id())
             .tenant(hosting.tenant.id)

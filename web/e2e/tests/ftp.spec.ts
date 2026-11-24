@@ -12,7 +12,7 @@ test.describe("FTP Accounts Management UI (T08.13)", () => {
 
     // Connection settings card
     await expect(page.getByTestId("ftp-connection-card")).toBeVisible();
-    await expect(page.getByTestId("ftp-info-host")).toContainText("ftp.demo.dhpanel.test");
+    await expect(page.getByTestId("ftp-info-host")).toContainText("ftp.demo.builtpanel.test");
     await expect(page.getByTestId("ftp-info-port")).toContainText("21");
     await expect(page.getByTestId("ftp-info-protocol")).toContainText("FTPS");
 

@@ -11,7 +11,7 @@ use sqlx::{PgPool, types::Uuid};
 /// One container's counters and levels, as read.
 #[derive(Debug, Clone)]
 pub struct Container {
-    /// `dh-<account>-<role>`.
+    /// `bp-<account>-<role>`.
     pub name: String,
     /// Memory in use.
     pub memory_bytes: u64,
@@ -56,12 +56,12 @@ fn big(v: u64) -> i64 {
     i64::try_from(v).unwrap_or(i64::MAX)
 }
 
-/// The account a container belongs to: the longest account name `dh-<name>-` begins with.
+/// The account a container belongs to: the longest account name `bp-<name>-` begins with.
 fn owner<'a>(name: &str, accounts: &'a [(String, Uuid)]) -> Option<&'a Uuid> {
     accounts
         .iter()
         .filter(|(user, _)| {
-            name.strip_prefix("dh-").is_some_and(|r| {
+            name.strip_prefix("bp-").is_some_and(|r| {
                 r.strip_prefix(user.as_str())
                     .is_some_and(|rest| rest.starts_with('-'))
             })
@@ -660,50 +660,54 @@ pub async fn prometheus_text(pool: &PgPool) -> Result<String, sqlx::Error> {
     };
     gauge(
         &mut out,
-        "dhpanel_node_cpu_busy_ratio",
+        "builtpanel_node_cpu_busy_ratio",
         "Share of the node's CPU that was busy (0 to 1).",
     );
     for n in &nodes {
         let _ = writeln!(
             out,
-            "dhpanel_node_cpu_busy_ratio{{node=\"{}\"}} {}",
+            "builtpanel_node_cpu_busy_ratio{{node=\"{}\"}} {}",
             label(&n.node),
             f64::from(n.cpu_busy_millis) / 1000.0
         );
     }
     for (name, help, value) in [
         (
-            "dhpanel_node_memory_used_bytes",
+            "builtpanel_node_memory_used_bytes",
             "Memory in use on the node.",
             0usize,
         ),
-        ("dhpanel_node_memory_total_bytes", "Memory of the node.", 1),
         (
-            "dhpanel_node_swap_used_bytes",
+            "builtpanel_node_memory_total_bytes",
+            "Memory of the node.",
+            1,
+        ),
+        (
+            "builtpanel_node_swap_used_bytes",
             "Swap in use on the node.",
             2,
         ),
         (
-            "dhpanel_node_disk_used_bytes",
+            "builtpanel_node_disk_used_bytes",
             "Disk in use where the accounts' files are.",
             3,
         ),
         (
-            "dhpanel_node_disk_total_bytes",
+            "builtpanel_node_disk_total_bytes",
             "Size of the disk where the accounts' files are.",
             4,
         ),
         (
-            "dhpanel_node_load1",
+            "builtpanel_node_load1",
             "One-minute load average of the node.",
             5,
         ),
         (
-            "dhpanel_node_containers",
+            "builtpanel_node_containers",
             "Running containers on the node.",
             6,
         ),
-        ("dhpanel_node_cpus", "Logical CPUs of the node.", 7),
+        ("builtpanel_node_cpus", "Logical CPUs of the node.", 7),
     ] {
         gauge(&mut out, name, help);
         for n in &nodes {
@@ -732,29 +736,33 @@ pub async fn prometheus_text(pool: &PgPool) -> Result<String, sqlx::Error> {
     .await?;
     for (name, help, which) in [
         (
-            "dhpanel_tenant_cpu_cores",
+            "builtpanel_tenant_cpu_cores",
             "CPU an account used (1 = one whole CPU).",
             0usize,
         ),
-        ("dhpanel_tenant_memory_bytes", "Memory an account uses.", 1),
-        ("dhpanel_tenant_processes", "Processes of an account.", 2),
         (
-            "dhpanel_tenant_net_receive_bytes",
+            "builtpanel_tenant_memory_bytes",
+            "Memory an account uses.",
+            1,
+        ),
+        ("builtpanel_tenant_processes", "Processes of an account.", 2),
+        (
+            "builtpanel_tenant_net_receive_bytes",
             "Bytes an account received in its last minute.",
             3,
         ),
         (
-            "dhpanel_tenant_net_transmit_bytes",
+            "builtpanel_tenant_net_transmit_bytes",
             "Bytes an account sent in its last minute.",
             4,
         ),
         (
-            "dhpanel_tenant_io_read_bytes",
+            "builtpanel_tenant_io_read_bytes",
             "Disk bytes an account read in its last minute.",
             5,
         ),
         (
-            "dhpanel_tenant_io_write_bytes",
+            "builtpanel_tenant_io_write_bytes",
             "Disk bytes an account wrote in its last minute.",
             6,
         ),
@@ -773,7 +781,7 @@ pub async fn prometheus_text(pool: &PgPool) -> Result<String, sqlx::Error> {
             let _ = writeln!(out, "{name}{{account=\"{}\"}} {v}", label(&t.account));
         }
     }
-    gauge(&mut out, "dhpanel_tenants", "Hosting accounts by state.");
+    gauge(&mut out, "builtpanel_tenants", "Hosting accounts by state.");
     for r in
         sqlx::query!(r#"SELECT status AS "status!", count(*) AS "n!" FROM tenants GROUP BY status"#)
             .fetch_all(pool)
@@ -781,14 +789,14 @@ pub async fn prometheus_text(pool: &PgPool) -> Result<String, sqlx::Error> {
     {
         let _ = writeln!(
             out,
-            "dhpanel_tenants{{status=\"{}\"}} {}",
+            "builtpanel_tenants{{status=\"{}\"}} {}",
             label(&r.status),
             r.n
         );
     }
     gauge(
         &mut out,
-        "dhpanel_operations",
+        "builtpanel_operations",
         "Node operations in the ledger by state (the last day).",
     );
     for r in sqlx::query!(
@@ -800,7 +808,7 @@ pub async fn prometheus_text(pool: &PgPool) -> Result<String, sqlx::Error> {
     {
         let _ = writeln!(
             out,
-            "dhpanel_operations{{status=\"{}\"}} {}",
+            "builtpanel_operations{{status=\"{}\"}} {}",
             label(&r.status),
             r.n
         );
@@ -821,11 +829,109 @@ mod tests {
     fn a_container_belongs_to_the_longest_account_name_in_front_of_its_role() {
         let (a, b) = (Uuid::from_u128(1), Uuid::from_u128(2));
         let accounts = vec![("alice".to_owned(), a), ("alice-shop".to_owned(), b)];
-        assert_eq!(owner("dh-alice-web", &accounts), Some(&a));
-        assert_eq!(owner("dh-alice-php-8-3", &accounts), Some(&a));
-        assert_eq!(owner("dh-alice-shop-php", &accounts), Some(&b));
-        assert_eq!(owner("dh-alicex-web", &accounts), None);
-        assert_eq!(owner("dh-db", &accounts), None);
+        assert_eq!(owner("bp-alice-web", &accounts), Some(&a));
+        assert_eq!(owner("bp-alice-php-8-3", &accounts), Some(&a));
+        assert_eq!(owner("bp-alice-shop-php", &accounts), Some(&b));
+        assert_eq!(owner("bp-alicex-web", &accounts), None);
+        assert_eq!(owner("bp-db", &accounts), None);
         assert_eq!(owner("alice-web", &accounts), None);
+    }
+}
+
+/// How much of its plan an account uses, in whole percent; `None` where the plan has no limit
+/// or nothing has been measured (yet).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Shares {
+    /// Memory of the newest reading (not older than [`FRESH_SECONDS`]).
+    pub memory: Option<i32>,
+    /// CPU of the newest reading.
+    pub cpu: Option<i32>,
+    /// Disk space as the node last measured it.
+    pub disk: Option<i32>,
+    /// Files and folders as the node last measured them.
+    pub inodes: Option<i32>,
+}
+
+/// A reading older than this says nothing about the account now (the node reads every minute).
+pub const FRESH_SECONDS: i64 = 900;
+
+fn percent(used: Option<i64>, limit: Option<i64>) -> Option<i32> {
+    let (used, limit) = (used?, limit?);
+    if limit <= 0 || used < 0 {
+        return None;
+    }
+    let share = (i128::from(used) * 100 + i128::from(limit) / 2) / i128::from(limit);
+    Some(i32::try_from(share.min(999)).unwrap_or(999))
+}
+
+/// [`Shares`] of the given accounts (the ones that have no row are left out).
+///
+/// # Errors
+/// Database errors.
+pub async fn shares(
+    pool: &PgPool,
+    tenant_ids: &[Uuid],
+) -> Result<HashMap<Uuid, Shares>, sqlx::Error> {
+    type Row = (
+        Uuid,
+        Option<i32>,
+        Option<i64>,
+        Option<i64>,
+        Option<i64>,
+        Option<i32>,
+        Option<i64>,
+        Option<i64>,
+        Option<i64>,
+    );
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT t.id,
+                (SELECT u.cpu_millis FROM usage_minute u
+                  WHERE u.tenant_id = t.id AND u.at > now() - make_interval(secs => $2)
+                  ORDER BY u.at DESC LIMIT 1),
+                (SELECT u.memory_bytes FROM usage_minute u
+                  WHERE u.tenant_id = t.id AND u.at > now() - make_interval(secs => $2)
+                  ORDER BY u.at DESC LIMIT 1),
+                d.total_bytes, d.inodes,
+                p.cpu_millis, p.memory_bytes, p.disk_bytes, p.inodes
+           FROM tenants t
+           JOIN plans p ON p.id = t.plan_id
+           LEFT JOIN tenant_disk_usage d ON d.tenant_id = t.id
+          WHERE t.id = ANY($1)",
+    )
+    .bind(tenant_ids)
+    .bind(FRESH_SECONDS as f64)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(
+            |(id, cpu, mem, disk, inodes, cpu_cap, mem_cap, disk_cap, inode_cap)| {
+                (
+                    id,
+                    Shares {
+                        cpu: percent(cpu.map(i64::from), cpu_cap.map(i64::from)),
+                        memory: percent(mem, mem_cap),
+                        disk: percent(disk, disk_cap),
+                        inodes: percent(inodes, inode_cap),
+                    },
+                )
+            },
+        )
+        .collect())
+}
+
+#[cfg(test)]
+mod shares_tests {
+    use super::percent;
+
+    #[test]
+    fn percent_rounds_and_ignores_missing_or_unlimited() {
+        assert_eq!(percent(Some(512), Some(1024)), Some(50));
+        assert_eq!(percent(Some(1), Some(3)), Some(33));
+        assert_eq!(percent(Some(2), Some(3)), Some(67));
+        assert_eq!(percent(Some(5), None), None);
+        assert_eq!(percent(None, Some(5)), None);
+        assert_eq!(percent(Some(5), Some(0)), None);
+        assert_eq!(percent(Some(10_000), Some(10)), Some(999));
     }
 }

@@ -15,15 +15,15 @@ per language) and published with the release.
 | Module authoring | developers | `docs/guides/creating-a-module.md` (T03) |
 
 ## Runbooks (operator, short, tested)
-1. **Incident:** how to tell what is wrong (`/api/v1/public/health`, `dhctl status`, node
+1. **Incident:** how to tell what is wrong (`/api/v1/public/health`, `bpctl status`, node
    status, the logs), a decision list (a node offline, the database full, a licence problem), who
    to call.
-2. **Key rotation:** the release key (`dhctl release` + the `release-public-keys.txt` ring), the
+2. **Key rotation:** the release key (`bpctl release` + the `release-public-keys.txt` ring), the
    node CA, the master key for stored secrets, the licence authority's signing key. For each:
    when, the exact commands, what to check afterwards, how to roll back.
 3. **Restore:** the control plane's database from its backup, one tenant from a backup,
    a node rebuilt from nothing, what is lost in each case.
-4. **Update and rollback:** staging first, `dhpanel-deploy`, what a failed update leaves behind.
+4. **Update and rollback:** staging first, `builtpanel-deploy`, what a failed update leaves behind.
 5. **Licence:** an expired or revoked licence, a hardware change, the integrity scan's
    `recovering` state and how an administrator approves or rejects recovery.
 

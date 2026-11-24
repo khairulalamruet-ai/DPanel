@@ -9,7 +9,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
-use dhpanel_http_kit::{
+use builtpanel_http_kit::{
     AppError,
     health::{self, Readiness},
 };
@@ -51,7 +51,7 @@ pub struct AppState {
 #[derive(Clone)]
 pub struct FleetMetrics {
     /// The database.
-    pub db: dhpanel_database::sqlx::PgPool,
+    pub db: builtpanel_database::sqlx::PgPool,
     /// The bearer token Prometheus sends.
     pub token: Arc<secrecy::SecretString>,
 }
@@ -110,15 +110,15 @@ pub fn router(routes: Router, trusted_proxies: Arc<[IpAddr]>) -> Router {
             REQUEST_TIMEOUT,
         ))
         .layer(axum::middleware::from_fn(
-            dhpanel_http_kit::metrics::track_http_metrics,
+            builtpanel_http_kit::metrics::track_http_metrics,
         ))
         .layer(CatchPanicLayer::custom(panic_response))
         .layer(axum::middleware::from_fn_with_state(
             trusted_proxies,
-            dhpanel_http_kit::client_ip::client_ip_layer,
+            builtpanel_http_kit::client_ip::client_ip_layer,
         ))
         .layer(axum::middleware::from_fn(
-            dhpanel_http_kit::request_id::correlation_id_layer,
+            builtpanel_http_kit::request_id::correlation_id_layer,
         ))
 }
 
@@ -193,7 +193,7 @@ async fn render_metrics(State(state): State<AppState>, headers: axum::http::Head
         // A slow database must not hold up the scrape: the process's own numbers still go.
         match tokio::time::timeout(
             std::time::Duration::from_secs(10),
-            dhpanel_database::usage::prometheus_text(&fleet.db),
+            builtpanel_database::usage::prometheus_text(&fleet.db),
         )
         .await
         {
@@ -299,7 +299,7 @@ mod tests {
         let (status, body) =
             get_json(plain(state(Readiness::default())), "/api/v1/openapi.json").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body["info"]["title"], "DHPanel API");
+        assert_eq!(body["info"]["title"], "Built Panel API");
         assert!(body["paths"]["/api/v1/public/health"].is_object());
     }
 
@@ -335,7 +335,7 @@ mod tests {
         assert_eq!(res.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             res.headers()[header::CONTENT_TYPE],
-            dhpanel_http_kit::error::PROBLEM_JSON
+            builtpanel_http_kit::error::PROBLEM_JSON
         );
         assert_eq!(res.headers()["x-request-id"], "corr-abc");
         let bytes = axum::body::to_bytes(res.into_body(), 64 * 1024)
@@ -356,7 +356,7 @@ mod tests {
             .route("/boom", get(boom))
             .layer(CatchPanicLayer::custom(panic_response))
             .layer(axum::middleware::from_fn(
-                dhpanel_http_kit::request_id::correlation_id_layer,
+                builtpanel_http_kit::request_id::correlation_id_layer,
             ));
         let res = app
             .oneshot(
@@ -446,7 +446,7 @@ mod fleet_metrics_tests {
 
     fn app(token: &str) -> Router {
         // A database that is not there: the answer must not depend on it being so.
-        let db = dhpanel_database::sqlx::postgres::PgPoolOptions::new()
+        let db = builtpanel_database::sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect_lazy("postgres://x:x@127.0.0.1:1/x")
             .expect("a lazy pool");

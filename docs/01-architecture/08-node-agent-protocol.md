@@ -17,7 +17,7 @@
 
 ## Enrollment-এর ধাপ
 1. Admin "Add node" চাপেন → এক-বারের token তৈরি হয় (১৫ মিনিট মেয়াদ) আর install command দেখানো হয়।
-2. Node-এ install script চলে → agent binary + `dhpanel-agent` user + systemd তৈরি হয়।
+2. Node-এ install script চলে → agent binary + `builtpanel-agent` user + systemd তৈরি হয়।
 3. Agent key pair বানায় → CSR + token + host fingerprint পাঠায়।
 4. Control plane যাচাই করে, cert দেয়, `nodes` row তৈরি করে।
 5. Agent capability report পাঠায় (CPU, RAM, disk, kernel, Docker version, seccomp/AppArmor আছে কিনা)।

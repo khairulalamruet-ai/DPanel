@@ -1,0 +1,8 @@
+slug        = "erlang"
+name        = "Erlang"
+category    = "server_side_scripting"
+kind        = "unavailable"
+description = "Erlang."
+license     = "Apache-2.0"
+covers      = ["Erlang"]
+reason      = "a language runtime or build tool, not a service; put it in your own container image (Containers)"

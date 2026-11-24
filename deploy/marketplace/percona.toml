@@ -1,0 +1,9 @@
+slug        = "percona"
+name        = "Percona Server"
+category    = "databases"
+kind        = "unavailable"
+description = "A MySQL-compatible server by Percona."
+license     = "GPL-2.0-only"
+homepage    = "https://www.percona.com"
+covers      = ["Percona", "Percona 5.7 (service)", "Percona 8.0 (service)"]
+reason      = "the image starts as root starts as root and then switches to its own user; use the panel's MariaDB"

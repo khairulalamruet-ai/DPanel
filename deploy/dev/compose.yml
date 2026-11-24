@@ -3,19 +3,19 @@
 #   cp deploy/dev/.env.example deploy/dev/.env   # then set strong passwords
 #   docker compose -f deploy/dev/compose.yml --env-file deploy/dev/.env up -d
 # All ports bind to 127.0.0.1 only.
-name: dhpanel-dev
+name: builtpanel-dev
 
 services:
   postgres:
     image: postgres:18
     environment:
-      POSTGRES_USER: dhpanel
+      POSTGRES_USER: builtpanel
       POSTGRES_PASSWORD: ${PG_PASSWORD:?set PG_PASSWORD in deploy/dev/.env}
-      POSTGRES_DB: dhpanel_dev
+      POSTGRES_DB: builtpanel_dev
     ports: ["127.0.0.1:5432:5432"]
     volumes: [pgdata:/var/lib/postgresql]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dhpanel -d dhpanel_dev"]
+      test: ["CMD-SHELL", "pg_isready -U builtpanel -d builtpanel_dev"]
       interval: 5s
       retries: 10
 

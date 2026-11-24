@@ -8,7 +8,7 @@ let mockSession = {
   features: ["dummy_feature"],
 };
 
-vi.mock("@dhpanel/auth", () => ({
+vi.mock("@builtpanel/auth", () => ({
   useSession: () => ({
     data: mockSession,
     isLoading: false,
@@ -18,7 +18,7 @@ vi.mock("@dhpanel/auth", () => ({
   }),
 }));
 
-vi.mock("@dhpanel/i18n", () => ({
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const dict: Record<string, string> = {

@@ -1,12 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "DHPanel API",
-    "description": "Control plane API for the DHPanel hosting panel. Errors use RFC 9457 Problem Details (`application/problem+json`).",
+    "title": "Built Panel API",
+    "description": "Control plane API for the Built Panel hosting panel. Errors use RFC 9457 Problem Details (`application/problem+json`).",
     "license": {
       "name": "Proprietary"
     },
-    "version": "0.1.0"
+    "version": "0.1.19"
   },
   "servers": [
     {
@@ -1128,7 +1128,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StartImport"
+                "$ref": "#/components/schemas/BackupStartImport"
               }
             }
           },
@@ -1608,7 +1608,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TemplateList"
+                  "$ref": "#/components/schemas/DnsTemplateList"
                 }
               }
             }
@@ -1651,7 +1651,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TemplateInput"
+                "$ref": "#/components/schemas/DnsTemplateInput"
               }
             }
           },
@@ -1663,7 +1663,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TemplateView"
+                  "$ref": "#/components/schemas/DnsTemplateView"
                 }
               }
             }
@@ -1731,7 +1731,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TemplateView"
+                  "$ref": "#/components/schemas/DnsTemplateView"
                 }
               }
             }
@@ -1794,7 +1794,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TemplateInput"
+                "$ref": "#/components/schemas/DnsTemplateInput"
               }
             }
           },
@@ -1806,7 +1806,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TemplateView"
+                  "$ref": "#/components/schemas/DnsTemplateView"
                 }
               }
             }
@@ -5435,6 +5435,151 @@
         ]
       }
     },
+    "/api/v1/admin/marketplace": {
+      "get": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "The whole marketplace, with what is offered to customers.",
+        "operationId": "adminListMarketplace",
+        "responses": {
+          "200": {
+            "description": "The software",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminSoftwareView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/marketplace/{slug}": {
+      "post": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "Offer a piece of software to customers (its image is approved).",
+        "operationId": "adminInstallSoftware",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Software",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Offered"
+          },
+          "404": {
+            "description": "No such software",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`builtin` or `unavailable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "Stop offering a piece of software (what customers run keeps running).",
+        "operationId": "adminRemoveSoftware",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Software",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Not offered any more"
+          },
+          "404": {
+            "description": "No such software",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/migration/transfers": {
       "get": {
         "tags": [
@@ -5450,7 +5595,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TransferView"
+                    "$ref": "#/components/schemas/MigrationTransferView"
                   }
                 }
               }
@@ -5495,7 +5640,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/MigrationTransferView"
                 }
               }
             }
@@ -5553,7 +5698,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/MigrationTransferView"
                 }
               }
             }
@@ -5650,7 +5795,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/MigrationTransferView"
                 }
               }
             }
@@ -5708,7 +5853,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/MigrationTransferView"
                 }
               }
             }
@@ -5878,7 +6023,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TransferView"
+                    "$ref": "#/components/schemas/NodeTransferView"
                   }
                 }
               }
@@ -5934,7 +6079,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -5992,7 +6137,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -6049,7 +6194,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -6116,7 +6261,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -6183,7 +6328,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferView"
+                  "$ref": "#/components/schemas/NodeTransferView"
                 }
               }
             }
@@ -7371,11 +7516,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Restarted",
+            "description": "ServiceRestarted",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Restarted"
+                  "$ref": "#/components/schemas/ServiceRestarted"
                 }
               }
             }
@@ -9854,6 +9999,176 @@
         ]
       }
     },
+    "/api/v1/admin/update/apply": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Update the panel to the version the last check found: the request goes to the update service,\nwhich installs it (follow `run` in the status).",
+        "operationId": "updateApply",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Handed to the update service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyStarted"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.settings.manage), `reauth_required` or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`update_not_available` (this server has no update service), `no_such_update` (not the version on offer) or `update_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`release_site_unavailable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/update/check": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Ask the release site for its newest release.",
+        "operationId": "updateCheck",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Checked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.settings.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`release_site_unavailable`: the release site could not be reached",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/update/status": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "The update page's numbers.",
+        "operationId": "updateStatus",
+        "responses": {
+          "200": {
+            "description": "What runs, what is on offer, what the update service did",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateStatus"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.settings.read) or `mfa_setup_required`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/usage/nodes/{id}": {
       "get": {
         "tags": [
@@ -12269,6 +12584,194 @@
         ]
       }
     },
+    "/api/v1/auth/password": {
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Change the signed-in account's password.",
+        "operationId": "changePassword",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Changed; the other sessions ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordChanged"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`password_incorrect` or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`system_account`: the server's root has the server's own password",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The new password breaks the rules (`password_too_short`, `password_too_weak`, `password_unchanged`, ...)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failed attempts",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/preferences": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The saved settings.",
+        "operationId": "getPreferences",
+        "responses": {
+          "200": {
+            "description": "The settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preferences"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not logged in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Replace the settings.",
+        "operationId": "putPreferences",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Preferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preferences"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not logged in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A language or entry that is not usable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/sessions": {
       "get": {
         "tags": [
@@ -12463,6 +12966,91 @@
           },
           "429": {
             "description": "Too many failed attempts",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/activity": {
+      "get": {
+        "tags": [
+          "logs"
+        ],
+        "summary": "What happened in the account, newest first (logins, changes, failures).",
+        "operationId": "clientActivity",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "path",
+            "description": "How many entries (1-200, default 50).",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "path",
+            "description": "`next_cursor` of the page before.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "description": "Only actions that start with this (`login`, `database`, ...).",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityPage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`client_only`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A count or cursor that is not usable",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12762,6 +13350,55 @@
           },
           "404": {
             "description": "Not the account's",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "Stop tracking an application. Its files and its database stay in the account (they are\nremoved in Files and Databases); the place becomes free for another installation.",
+        "operationId": "clientForgetApp",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Application id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No longer tracked"
+          },
+          "404": {
+            "description": "Not the account's",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`app_installing`: wait until the installation ends",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13457,7 +14094,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExportList"
+                  "$ref": "#/components/schemas/BackupExportList"
                 }
               }
             }
@@ -13820,7 +14457,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExportView"
+                  "$ref": "#/components/schemas/BackupExportView"
                 }
               }
             }
@@ -13934,6 +14571,52 @@
           },
           "422": {
             "description": "Nothing to restore, a folder that is not usable, or something the backup does not have",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/bootstrap": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Everything the customer interface needs after sign-in: the same as the\nadministrators' bootstrap, with the plan's features and limits.",
+        "operationId": "clientBootstrap",
+        "responses": {
+          "200": {
+            "description": "The caller, their permissions, the modules with a customer menu entry, the plan's features and limits, branding and the CSRF token. Never cached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bootstrap"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_customer`: administrators use the administrators' bootstrap",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -14379,11 +15062,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Restarted",
+            "description": "ServiceRestarted",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Restarted"
+                  "$ref": "#/components/schemas/ServiceRestarted"
                 }
               }
             }
@@ -15409,6 +16092,113 @@
           },
           "503": {
             "description": "`phpmyadmin_failed` (the node could not start it) or `node_busy` (it is not ready yet; try again)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/databases/{id}/studio": {
+      "post": {
+        "tags": [
+          "databases"
+        ],
+        "summary": "Do one thing in a database of the account: look at it, change a row or run SQL.",
+        "operationId": "clientDatabaseStudio",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Database id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The answer (a request the server refused is a `type: error` answer)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudioResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`client_only`, `csrf_failed` or `feature_disabled`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such database",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`web_client_unavailable`, `database_not_ready` or `tenant_not_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests in a short time",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`node_unavailable` or `node_busy`",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -19274,7 +20064,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DownloadLink"
+                  "$ref": "#/components/schemas/FileDownloadLink"
                 }
               }
             }
@@ -20900,6 +21690,236 @@
         ]
       }
     },
+    "/api/v1/client/marketplace": {
+      "get": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "The marketplace, with what this account has installed.",
+        "operationId": "clientListMarketplace",
+        "responses": {
+          "200": {
+            "description": "The software, grouped by category order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SoftwareView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`client_only` or `feature_disabled`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/marketplace/{slug}": {
+      "delete": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "Remove an installed software (its container goes).",
+        "operationId": "clientUninstallSoftware",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Software",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued"
+          },
+          "404": {
+            "description": "No such software, or it is not installed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/marketplace/{slug}/install": {
+      "post": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "Install a piece of software.",
+        "operationId": "clientInstallSoftware",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Software",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such software",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`already_installed`, `builtin`, `unavailable`, `limit_reached` or `tenant_not_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/marketplace/{slug}/update": {
+      "post": {
+        "tags": [
+          "apps"
+        ],
+        "summary": "Run an installed software again from the version on offer.",
+        "operationId": "clientUpdateSoftware",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Software",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such software, or it is not installed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`up_to_date`, `limit_reached` or `tenant_not_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/client/notifications": {
       "get": {
         "tags": [
@@ -22135,6 +23155,110 @@
         ]
       }
     },
+    "/api/v1/client/traffic": {
+      "get": {
+        "tags": [
+          "logs"
+        ],
+        "summary": "How many requests the account's website got: totals, by kind of answer, per hour and the\nmost asked pages. Counted from the web server's log, which the node keeps for a while only.",
+        "operationId": "clientTraffic",
+        "parameters": [
+          {
+            "name": "range",
+            "in": "path",
+            "description": "`24h` (default), `7d` or `30d`.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "top",
+            "in": "path",
+            "description": "How many of the most asked pages (1-50, default 10).",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrafficView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; ask again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`client_only` or `feature_disabled`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`tenant_not_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A range or count that is not usable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`node_unavailable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/client/usage": {
       "get": {
         "tags": [
@@ -22431,6 +23555,303 @@
           },
           "404": {
             "description": "Not one of the account's domains, or no policy",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/waf/domains/{id}/ip-blocks": {
+      "get": {
+        "tags": [
+          "security"
+        ],
+        "summary": "The addresses one of the account's domains turns away.",
+        "operationId": "clientListIpBlocks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Domain id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpBlockList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not one of the account's domains",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "security"
+        ],
+        "summary": "Turn an address or a network away from one of the account's domains: the web server answers\nit `403` within seconds, before the firewall or the site sees the request.",
+        "operationId": "clientAddIpBlock",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Domain id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddIpBlock"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpBlockView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not one of the account's domains",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`ip_block_exists` or `ip_block_limit`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not an address or network that can be turned away",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/waf/domains/{id}/ip-blocks/{block_id}": {
+      "delete": {
+        "tags": [
+          "security"
+        ],
+        "summary": "Stop turning an address away.",
+        "operationId": "clientRemoveIpBlock",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Domain id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "description": "Entry id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "404": {
+            "description": "Not one of the account's",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/client/waf/events": {
+      "get": {
+        "tags": [
+          "logs"
+        ],
+        "summary": "The requests the account's web application firewall refused, the newest first, read from the\nfirewall's log on the node (which holds the recent past only).",
+        "operationId": "clientWafEvents",
+        "parameters": [
+          {
+            "name": "range",
+            "in": "path",
+            "description": "`24h` (default), `7d` or `30d`.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "path",
+            "description": "How many events at most, the newest (1-200, default 50).",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WafEventList"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The node is slow; ask again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pending"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`client_only` or `feature_disabled`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`tenant_not_running`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A range or count that is not usable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`node_unavailable`",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -23180,7 +24601,7 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "__Host-dh_session=…; Path=/; Secure; HttpOnly; SameSite=Strict"
+                "description": "__Host-bp_session=…; Path=/; Secure; HttpOnly; SameSite=Strict"
               }
             },
             "content": {
@@ -23259,7 +24680,7 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "__Host-dh_session=…; Path=/; Secure; HttpOnly; SameSite=Strict"
+                "description": "__Host-bp_session=…; Path=/; Secure; HttpOnly; SameSite=Strict"
               }
             },
             "content": {
@@ -23271,7 +24692,7 @@
             }
           },
           "202": {
-            "description": "Password accepted but a second factor is required: a short-lived `__Host-dh_mfa` cookie is set; continue with POST /api/v1/public/auth/login/mfa",
+            "description": "Password accepted but a second factor is required: a short-lived `__Host-bp_mfa` cookie is set; continue with POST /api/v1/public/auth/login/mfa",
             "content": {
               "application/json": {
                 "schema": {
@@ -23322,6 +24743,16 @@
                 "description": "Seconds until the lock expires"
               }
             },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`root` with the server's root password: the root login helper is not reachable",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -23387,6 +24818,27 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/branding": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "The panel's look, for the sign-in page (nobody is signed in yet).",
+        "operationId": "public_branding",
+        "responses": {
+          "200": {
+            "description": "The name, logo, colour and texts of the panel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Branding"
                 }
               }
             }
@@ -23599,7 +25051,7 @@
             }
           },
           "503": {
-            "description": "`enrollment_unavailable`: this control plane has no node CA yet (run `dhctl ca init`)",
+            "description": "`enrollment_unavailable`: this control plane has no node CA yet (run `bpctl ca init`)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24046,6 +25498,51 @@
           }
         ]
       }
+    },
+    "/api/v1/search": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Find domains and accounts by a few letters.",
+        "operationId": "search",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "path",
+            "description": "A few letters of a domain name, a username or an email address (two at least).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "At most ten matches of each kind; none when fewer than two letters are given",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SearchHit"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -24063,6 +25560,84 @@
           }
         },
         "additionalProperties": false
+      },
+      "ActivityItem": {
+        "type": "object",
+        "description": "One thing that happened in the account.",
+        "required": [
+          "id",
+          "at",
+          "action",
+          "outcome",
+          "by_you"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "What happened, e.g. `database.create`."
+          },
+          "at": {
+            "type": "string",
+            "description": "When (RFC 3339, UTC)."
+          },
+          "by_you": {
+            "type": "boolean",
+            "description": "Whether the account's own login did it (otherwise staff did, on its behalf)."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Entry id."
+          },
+          "ip": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where from: only for what the account did itself."
+          },
+          "outcome": {
+            "type": "string",
+            "description": "`success`, `failure` or `denied`."
+          },
+          "target_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Which one."
+          },
+          "target_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What it was done to (`domain`, `database`, ...)."
+          }
+        }
+      },
+      "ActivityPage": {
+        "type": "object",
+        "description": "A page of the activity.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityItem"
+            },
+            "description": "Newest first."
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pass this as `cursor` for the next page (`null`: the end)."
+          }
+        }
       },
       "AddAdvisory": {
         "type": "object",
@@ -24282,6 +25857,28 @@
         },
         "additionalProperties": false
       },
+      "AddIpBlock": {
+        "type": "object",
+        "description": "An address or a network to turn away.",
+        "required": [
+          "cidr"
+        ],
+        "properties": {
+          "cidr": {
+            "type": "string",
+            "description": "An IPv4 or IPv6 address, or a network in CIDR form (`203.0.113.0/24`). Networks larger\nthan a /8 (IPv4) or a /16 (IPv6) are refused.",
+            "example": "203.0.113.0/24"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why (at most 200 characters)."
+          }
+        },
+        "additionalProperties": false
+      },
       "AddRecord": {
         "type": "object",
         "description": "A record to add.",
@@ -24420,6 +26017,80 @@
           }
         },
         "additionalProperties": false
+      },
+      "AdminSoftwareView": {
+        "type": "object",
+        "description": "One piece of software as an administrator sees it.",
+        "required": [
+          "slug",
+          "name",
+          "category",
+          "category_name",
+          "description",
+          "license",
+          "homepage",
+          "kind",
+          "version",
+          "provided_by",
+          "reason",
+          "memory_mb",
+          "offered"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "The group (`databases`, `web_servers`, ...)."
+          },
+          "category_name": {
+            "type": "string",
+            "description": "The group's name."
+          },
+          "description": {
+            "type": "string",
+            "description": "What it is."
+          },
+          "homepage": {
+            "type": "string",
+            "description": "Project page."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`container` (can be offered), `builtin` (the panel has it) or `unavailable`."
+          },
+          "license": {
+            "type": "string",
+            "description": "SPDX license."
+          },
+          "memory_mb": {
+            "type": "integer",
+            "format": "int32",
+            "description": "`container`: the memory it gets, MiB."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name."
+          },
+          "offered": {
+            "type": "boolean",
+            "description": "Customers may install it."
+          },
+          "provided_by": {
+            "type": "string",
+            "description": "`builtin`: where in the panel."
+          },
+          "reason": {
+            "type": "string",
+            "description": "`unavailable`: why."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Identifier."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version this build installs."
+          }
+        }
       },
       "AdministratorList": {
         "type": "object",
@@ -24678,6 +26349,63 @@
           }
         }
       },
+      "ApplyStarted": {
+        "type": "object",
+        "description": "The update was handed to the update service.",
+        "required": [
+          "ok",
+          "status",
+          "version"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Always true."
+          },
+          "status": {
+            "type": "string",
+            "description": "Always `started`: follow `run` in the status."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version it will install."
+          }
+        }
+      },
+      "ApplyUpdate": {
+        "type": "object",
+        "description": "What to update to.",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The version shown by the last check; any other is refused.",
+            "example": "0.1.15"
+          }
+        }
+      },
+      "Assignment": {
+        "type": "object",
+        "description": "A column set to a value (`None` is `NULL`).",
+        "required": [
+          "column"
+        ],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "The column."
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The value as text."
+          }
+        }
+      },
       "AuditItem": {
         "type": "object",
         "description": "One audit entry.",
@@ -24788,6 +26516,38 @@
               "null"
             ],
             "description": "Pass as `cursor` to get the next (older) page; absent on the last page."
+          }
+        }
+      },
+      "AutoUpdateView": {
+        "type": "object",
+        "description": "The automatic update's settings, and when it will act on the release on offer.",
+        "required": [
+          "enabled",
+          "delay_days",
+          "hour_utc"
+        ],
+        "properties": {
+          "delay_days": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Days a release waits after it appears (`system.auto_update_delay_days`)."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Switched on (setting `system.auto_update`; on unless an administrator switched it off)."
+          },
+          "hour_utc": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The hour, UTC, in which it starts (`system.auto_update_hour`); the window is six hours long."
+          },
+          "scheduled_for": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When it will install the release on offer (RFC 3339, UTC); absent when it is off, nothing is on\noffer, this server cannot update itself, or the attempt has been made."
           }
         }
       },
@@ -24903,6 +26663,81 @@
           }
         }
       },
+      "BackupExportList": {
+        "type": "object",
+        "description": "The exports.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupExportView"
+            },
+            "description": "Newest first."
+          }
+        }
+      },
+      "BackupExportView": {
+        "type": "object",
+        "description": "An export.",
+        "required": [
+          "id",
+          "backup_id",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "backup_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The backup it packs."
+          },
+          "created_at": {
+            "type": "string",
+            "description": "When it was asked for."
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What went wrong."
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When it ended."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "object": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The file's name at the destination (once ready)."
+          },
+          "size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Its size in bytes (once ready)."
+          },
+          "status": {
+            "type": "string",
+            "description": "`queued`, `running`, `ready` or `failed`."
+          }
+        }
+      },
       "BackupList": {
         "type": "object",
         "description": "The backups.",
@@ -24918,6 +26753,38 @@
             "description": "Newest first."
           }
         }
+      },
+      "BackupStartImport": {
+        "type": "object",
+        "description": "An export file to turn into a backup.",
+        "required": [
+          "tenant_id",
+          "destination_id",
+          "object",
+          "passphrase"
+        ],
+        "properties": {
+          "destination_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The destination the file is at (and the backup is made at)."
+          },
+          "object": {
+            "type": "string",
+            "description": "The file's name, `exports/<id>.tar`.",
+            "example": "exports/0190a1b2c3d4e5f60718293a4b5c6d7e.tar"
+          },
+          "passphrase": {
+            "type": "string",
+            "description": "The passphrase the export was made with."
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The hosting account the backup is for."
+          }
+        },
+        "additionalProperties": false
       },
       "BackupView": {
         "type": "object",
@@ -25078,11 +26945,11 @@
             "items": {
               "type": "string"
             },
-            "description": "Plan features. Administrators have no plan, so this is empty; the\ncustomer bootstrap fills it."
+            "description": "Plan features (the customer bootstrap only; administrators have no plan)."
           },
           "limits": {
             "type": "object",
-            "description": "Plan limits and usage, by key. Empty for administrators."
+            "description": "Plan limits by key, `-1` for no limit (the customer bootstrap only)."
           },
           "locale": {
             "type": "string",
@@ -25170,7 +27037,7 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/BootstrapNav",
-                "description": "Entry in the administrator's menu, if it has one."
+                "description": "Entry in the menu of whoever asked, if it has one."
               },
               {
                 "type": "null"
@@ -25247,13 +27114,38 @@
         "required": [
           "panel_name",
           "maintenance_notice",
-          "default_language"
+          "default_language",
+          "logo_url",
+          "favicon_url",
+          "accent_color",
+          "login_title",
+          "login_subtitle"
         ],
         "properties": {
+          "accent_color": {
+            "type": "string",
+            "description": "The main colour as `#rrggbb` (empty: the default)."
+          },
           "default_language": {
             "type": "string",
             "description": "Language used when the account has no preference (`en` or `bn`).",
             "example": "en"
+          },
+          "favicon_url": {
+            "type": "string",
+            "description": "An https address of the tab icon (empty: the default)."
+          },
+          "login_subtitle": {
+            "type": "string",
+            "description": "A line under the heading of the sign-in page."
+          },
+          "login_title": {
+            "type": "string",
+            "description": "Heading of the sign-in page (empty: the panel name)."
+          },
+          "logo_url": {
+            "type": "string",
+            "description": "An https address of the logo (empty: none)."
           },
           "maintenance_notice": {
             "type": "string",
@@ -25262,7 +27154,7 @@
           "panel_name": {
             "type": "string",
             "description": "Name shown on the sign-in page and in the browser tab.",
-            "example": "DHPanel"
+            "example": "Built Panel"
           }
         }
       },
@@ -25608,6 +27500,27 @@
         },
         "additionalProperties": false
       },
+      "ChangePassword": {
+        "type": "object",
+        "description": "The old and the new password.",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "format": "password",
+            "description": "The password in use now."
+          },
+          "new_password": {
+            "type": "string",
+            "format": "password",
+            "description": "The password to use from now on."
+          }
+        },
+        "additionalProperties": false
+      },
       "ChangePlan": {
         "type": "object",
         "description": "The plan to move a user to.",
@@ -25869,6 +27782,45 @@
           }
         },
         "additionalProperties": false
+      },
+      "ColumnInfo": {
+        "type": "object",
+        "description": "One column of a table.",
+        "required": [
+          "name",
+          "data_type",
+          "nullable",
+          "primary_key"
+        ],
+        "properties": {
+          "data_type": {
+            "type": "string",
+            "description": "Its type as the server writes it (`varchar(255)`)."
+          },
+          "default": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The default, as text."
+          },
+          "generated": {
+            "type": "boolean",
+            "description": "Filled in by the server (auto increment, generated)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "nullable": {
+            "type": "boolean",
+            "description": "May hold `NULL`."
+          },
+          "primary_key": {
+            "type": "boolean",
+            "description": "Part of the primary key."
+          }
+        }
       },
       "ContainerView": {
         "type": "object",
@@ -26393,7 +28345,7 @@
           },
           "source_type": {
             "type": "string",
-            "description": "`cpanel` or `cyberpanel` (`openpanel` and `dhpanel_archive` are not readable yet)."
+            "description": "`cpanel` or `cyberpanel` (`openpanel` and `builtpanel_archive` are not readable yet)."
           },
           "ssh_key": {
             "type": [
@@ -26493,7 +28445,7 @@
               "string",
               "null"
             ],
-            "description": "A webhook's signing secret: shown this once (the calls carry `X-DHPanel-Signature`, the\nHMAC-SHA256 of the body under it)."
+            "description": "A webhook's signing secret: shown this once (the calls carry `X-BuiltPanel-Signature`, the\nHMAC-SHA256 of the body under it)."
           }
         }
       },
@@ -27020,6 +28972,102 @@
           }
         }
       },
+      "DnsTemplateInput": {
+        "type": "object",
+        "description": "A template to write.",
+        "required": [
+          "name",
+          "records"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "What it is for."
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "Make it the template new zones start from."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique name: lower-case letters, digits and `_`, 2-32 characters.",
+            "example": "web_only"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateLine"
+            },
+            "description": "The lines (at most 100)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DnsTemplateList": {
+        "type": "object",
+        "description": "The templates.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DnsTemplateView"
+            },
+            "description": "The default first, then by name."
+          }
+        }
+      },
+      "DnsTemplateView": {
+        "type": "object",
+        "description": "A zone template.",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "records",
+          "is_default",
+          "built_in",
+          "updated_at"
+        ],
+        "properties": {
+          "built_in": {
+            "type": "boolean",
+            "description": "Made by the installation: it can be changed but not deleted."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "New zones start from this one."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique name.",
+            "example": "default"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateLine"
+            },
+            "description": "The lines."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last change (RFC 3339, UTC)."
+          }
+        }
+      },
       "DomainList": {
         "type": "object",
         "description": "A page of domains.",
@@ -27182,7 +29230,7 @@
           "policy": {
             "oneOf": [
               {
-                "$ref": "#/components/schemas/PolicyView",
+                "$ref": "#/components/schemas/WafPolicyView",
                 "description": "The domain's own policy (`null`: none)."
               },
               {
@@ -27791,6 +29839,65 @@
           }
         }
       },
+      "FileDownloadLink": {
+        "type": "object",
+        "description": "A download link.",
+        "required": [
+          "url",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Until when the link works (RFC 3339, UTC)."
+          },
+          "url": {
+            "type": "string",
+            "description": "Where to download from (a path on this panel)."
+          }
+        }
+      },
+      "Filter": {
+        "type": "object",
+        "description": "One condition of a table view.",
+        "required": [
+          "column",
+          "op"
+        ],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "The column."
+          },
+          "op": {
+            "$ref": "#/components/schemas/FilterOp",
+            "description": "How to compare."
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The value (not used by `is_null` and `not_null`)."
+          }
+        }
+      },
+      "FilterOp": {
+        "type": "string",
+        "description": "How a column of a table is compared with a value.",
+        "enum": [
+          "eq",
+          "ne",
+          "lt",
+          "le",
+          "gt",
+          "ge",
+          "like",
+          "is_null",
+          "not_null"
+        ]
+      },
       "FirewallPolicy": {
         "type": "object",
         "description": "The node's firewall (T11.06): who may reach which port. Applied by the privileged helper as\none nftables table of its own; IPv4 only.",
@@ -28240,6 +30347,40 @@
           }
         }
       },
+      "Grid": {
+        "type": "object",
+        "description": "A result set: column names and rows of text.",
+        "required": [
+          "columns",
+          "rows"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The column names."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "description": "The rows; `None` is `NULL`."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More rows existed than were kept, or a value was cut."
+          }
+        }
+      },
       "HeaderView": {
         "type": "object",
         "description": "One response header.",
@@ -28285,7 +30426,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ImageView"
+              "$ref": "#/components/schemas/SecurityImageView"
             },
             "description": "By role."
           }
@@ -28565,6 +30706,32 @@
           }
         }
       },
+      "IndexInfo": {
+        "type": "object",
+        "description": "One index of a table.",
+        "required": [
+          "name",
+          "columns",
+          "unique"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its columns, in order."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "unique": {
+            "type": "boolean",
+            "description": "No two rows may share its values."
+          }
+        }
+      },
       "Infection": {
         "type": "object",
         "description": "One infected file a scan found.",
@@ -28642,6 +30809,21 @@
         },
         "additionalProperties": false
       },
+      "InstallRequest": {
+        "type": "object",
+        "description": "What to give for a new installation.",
+        "properties": {
+          "domain_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The domain that shows it (software that has a web page of its own)."
+          }
+        },
+        "additionalProperties": false
+      },
       "InstallWordPress": {
         "type": "object",
         "description": "A WordPress site to install.",
@@ -28697,6 +30879,96 @@
           }
         },
         "additionalProperties": false
+      },
+      "Installed": {
+        "type": "object",
+        "description": "What this account has of a software.",
+        "required": [
+          "id",
+          "version",
+          "status",
+          "update_available"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why it failed."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The container's id."
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `ready`, `failed` or `removing`."
+          },
+          "update_available": {
+            "type": "boolean",
+            "description": "A newer version is on offer."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version it runs."
+          }
+        }
+      },
+      "IpBlockList": {
+        "type": "object",
+        "description": "A domain's turned-away addresses.",
+        "required": [
+          "items",
+          "limit"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IpBlockView"
+            },
+            "description": "Oldest first."
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Most one domain may list."
+          }
+        }
+      },
+      "IpBlockView": {
+        "type": "object",
+        "description": "An address or a network a domain turns away.",
+        "required": [
+          "id",
+          "cidr",
+          "created_at"
+        ],
+        "properties": {
+          "cidr": {
+            "type": "string",
+            "description": "The address (`203.0.113.9`) or the network (`203.0.113.0/24`)."
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "When it was added (Unix seconds)."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why, if said."
+          }
+        }
       },
       "JobList": {
         "type": "object",
@@ -28824,6 +31096,24 @@
             "type": "integer",
             "format": "int32",
             "description": "Stopped after this many seconds."
+          }
+        }
+      },
+      "KeyPart": {
+        "type": "object",
+        "description": "One part of a primary key.",
+        "required": [
+          "column",
+          "value"
+        ],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "The column."
+          },
+          "value": {
+            "type": "string",
+            "description": "Its value as text."
           }
         }
       },
@@ -29366,6 +31656,114 @@
           }
         }
       },
+      "MigrationTransferView": {
+        "type": "object",
+        "description": "A transfer.",
+        "required": [
+          "id",
+          "source_type",
+          "backup_file",
+          "tenant_username",
+          "target_domain",
+          "dry_run",
+          "status",
+          "progress_percent",
+          "current_step",
+          "steps",
+          "logs",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "backup_file": {
+            "type": "string",
+            "description": "The backup's file name."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339, UTC."
+          },
+          "current_step": {
+            "type": "string",
+            "description": "The step being done."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Whether it only plans."
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why it failed."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The log (the last 2000 lines)."
+          },
+          "plan": {
+            "description": "What the import does and what stands in its way (the dry run's answer)."
+          },
+          "progress_percent": {
+            "type": "integer",
+            "format": "int32",
+            "description": "0 to 100."
+          },
+          "size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The backup's size, in bytes."
+          },
+          "source_host": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The server it was fetched from."
+          },
+          "source_type": {
+            "type": "string",
+            "description": "`cpanel`, `cyberpanel`, `openpanel` or `builtpanel_archive`."
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `running`, `completed`, `failed` or `cancelled`."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StepView"
+            },
+            "description": "The steps, in order."
+          },
+          "target_domain": {
+            "type": "string",
+            "description": "The main domain here."
+          },
+          "tenant_username": {
+            "type": "string",
+            "description": "The account's name here."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339, UTC."
+          }
+        }
+      },
       "ModuleChange": {
         "type": "object",
         "description": "What a switch changed.",
@@ -29732,6 +32130,81 @@
           "state": {
             "type": "string",
             "description": "`running`, `stopped`, `unreachable` or `not_installed`."
+          }
+        }
+      },
+      "NodeTransferView": {
+        "type": "object",
+        "description": "A transfer of an account to another node.",
+        "required": [
+          "id",
+          "tenant_id",
+          "from_node",
+          "to_node",
+          "destination_id",
+          "auto_cutover",
+          "state",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "auto_cutover": {
+            "type": "boolean",
+            "description": "Whether it goes on to the last pass by itself."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it was asked for (RFC 3339, UTC)."
+          },
+          "destination_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The backup destination the copies pass through."
+          },
+          "downtime_secs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Seconds the site was off (when it is over)."
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What went wrong."
+          },
+          "from_node": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The node it is leaving."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "state": {
+            "type": "string",
+            "description": "`requested`, `provisioning`, `precopy_backup`, `precopy_restore`, `precopied` (waiting\nfor `cutover`), `freezing`, `delta_backup`, `delta_restore`, `switching`, `switched`\n(the old copy is still there), `cleaning`, `done`, `cancelling`, `cancelled` or\n`failed`."
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The account."
+          },
+          "to_node": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The node it goes to."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it last changed (RFC 3339, UTC)."
           }
         }
       },
@@ -30287,6 +32760,21 @@
           }
         }
       },
+      "PasswordChanged": {
+        "type": "object",
+        "description": "What the change did.",
+        "required": [
+          "other_sessions_ended"
+        ],
+        "properties": {
+          "other_sessions_ended": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Other sessions of the account that were ended.",
+            "minimum": 0
+          }
+        }
+      },
       "PasswordRequest": {
         "type": "object",
         "description": "A new password.",
@@ -30622,7 +33110,7 @@
           "policy": {
             "oneOf": [
               {
-                "$ref": "#/components/schemas/PolicyView",
+                "$ref": "#/components/schemas/WafPolicyView",
                 "description": "The policy set exactly here (`null`: none)."
               },
               {
@@ -30690,6 +33178,35 @@
             "format": "int32",
             "description": "The last port of a range (`port` to `to`).",
             "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "Preferences": {
+        "type": "object",
+        "description": "An account's settings.",
+        "required": [
+          "favorites"
+        ],
+        "properties": {
+          "favorites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Pinned menu entries, in the order the account wants them.",
+            "example": [
+              "files",
+              "domains"
+            ]
+          },
+          "locale": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`en` or `bn` (`null`: none chosen, the interface decides).",
+            "example": "bn"
           }
         },
         "additionalProperties": false
@@ -30770,7 +33287,7 @@
       },
       "ProblemDetails": {
         "type": "object",
-        "description": "Wire format (RFC 9457 + DHPanel extensions `code`, `correlation_id`, `errors`).",
+        "description": "Wire format (RFC 9457 + Built Panel extensions `code`, `correlation_id`, `errors`).",
         "required": [
           "type",
           "title",
@@ -32046,6 +34563,131 @@
         },
         "additionalProperties": false
       },
+      "SearchHit": {
+        "type": "object",
+        "description": "One match.",
+        "required": [
+          "id",
+          "title",
+          "category",
+          "href"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "`domains` or `users`."
+          },
+          "href": {
+            "type": "string",
+            "description": "Where it is in the interface."
+          },
+          "id": {
+            "type": "string",
+            "description": "Id of the thing found."
+          },
+          "subtitle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A second line: the owner of a domain, the email of an account."
+          },
+          "title": {
+            "type": "string",
+            "description": "What to show."
+          }
+        }
+      },
+      "SecurityImageView": {
+        "type": "object",
+        "description": "An image of the allow-list and what is known about it.",
+        "required": [
+          "reference",
+          "role",
+          "note",
+          "update_available"
+        ],
+        "properties": {
+          "checked_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "When the registry was asked (Unix seconds)."
+          },
+          "critical": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Findings by severity (`null`: not scanned)."
+          },
+          "high": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Findings by severity."
+          },
+          "latest_digest": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What the registry says the tag is now."
+          },
+          "low": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Findings by severity."
+          },
+          "medium": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Findings by severity."
+          },
+          "note": {
+            "type": "string",
+            "description": "What it is."
+          },
+          "reference": {
+            "type": "string",
+            "description": "The pinned reference (`name@sha256:…`)."
+          },
+          "role": {
+            "type": "string",
+            "description": "The role it plays (`web`, `php`, `db`, …)."
+          },
+          "scanned_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "When it was scanned (Unix seconds); `null`: not yet."
+          },
+          "tag": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The moving tag it was pinned from."
+          },
+          "update_available": {
+            "type": "boolean",
+            "description": "A newer image exists: the tag now has another digest than the pin."
+          }
+        }
+      },
       "ServerActionView": {
         "type": "object",
         "description": "Done.",
@@ -32234,6 +34876,24 @@
           }
         }
       },
+      "ServiceRestarted": {
+        "type": "object",
+        "description": "A restarted service.",
+        "required": [
+          "name",
+          "state"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The container."
+          },
+          "state": {
+            "type": "string",
+            "description": "Its state now."
+          }
+        }
+      },
       "ServiceView": {
         "type": "object",
         "description": "One of the account's containers.",
@@ -32257,7 +34917,7 @@
           },
           "name": {
             "type": "string",
-            "description": "Its name (`dh-<account>-<role>`)."
+            "description": "Its name (`bp-<account>-<role>`)."
           },
           "role": {
             "type": "string",
@@ -32925,6 +35585,105 @@
           }
         }
       },
+      "SoftwareView": {
+        "type": "object",
+        "description": "One piece of software of the marketplace.",
+        "required": [
+          "slug",
+          "name",
+          "category",
+          "category_name",
+          "description",
+          "license",
+          "homepage",
+          "kind",
+          "version",
+          "covers",
+          "provided_by",
+          "reason",
+          "usage",
+          "port",
+          "memory_mb"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "The group (`databases`, `web_servers`, ...)."
+          },
+          "category_name": {
+            "type": "string",
+            "description": "The group's name."
+          },
+          "covers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The Webuzo names this entry stands for."
+          },
+          "description": {
+            "type": "string",
+            "description": "What it is."
+          },
+          "homepage": {
+            "type": "string",
+            "description": "Project page."
+          },
+          "installed": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Installed",
+                "description": "What the account has."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "description": "`container` (install here), `builtin` (the panel has it) or `unavailable`."
+          },
+          "license": {
+            "type": "string",
+            "description": "SPDX license."
+          },
+          "memory_mb": {
+            "type": "integer",
+            "format": "int32",
+            "description": "`container`: the memory it gets, MiB."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name."
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32",
+            "description": "`container`: the port inside the account's network."
+          },
+          "provided_by": {
+            "type": "string",
+            "description": "`builtin`: where in the panel."
+          },
+          "reason": {
+            "type": "string",
+            "description": "`unavailable`: why."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Identifier."
+          },
+          "usage": {
+            "type": "string",
+            "description": "`container`: how to reach it from the account's other applications."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version on offer."
+          }
+        }
+      },
       "SshSetting": {
         "type": "object",
         "description": "One SSH server setting.",
@@ -33200,6 +35959,398 @@
           }
         }
       },
+      "StudioErrorCode": {
+        "type": "string",
+        "description": "Why a request failed (it is the answer, not a transport error).",
+        "enum": [
+          "invalid",
+          "sql",
+          "not_found",
+          "too_large"
+        ]
+      },
+      "StudioRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The tables and views of the database.",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "tables"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The columns, keys and indexes of one table.",
+            "required": [
+              "table",
+              "type"
+            ],
+            "properties": {
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "describe"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A page of a table.",
+            "required": [
+              "table",
+              "offset",
+              "limit",
+              "type"
+            ],
+            "properties": {
+              "descending": {
+                "type": "boolean",
+                "description": "Descending when sorted."
+              },
+              "filters": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Filter"
+                },
+                "description": "Conditions, all of which must hold."
+              },
+              "limit": {
+                "type": "integer",
+                "format": "int32",
+                "description": "Rows to give (1..=[`MAX_PAGE_ROWS`]).",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "format": "int32",
+                "description": "Rows to skip.",
+                "minimum": 0
+              },
+              "order_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Sort by this column."
+              },
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rows"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Runs one SQL statement the client typed.",
+            "required": [
+              "sql",
+              "type"
+            ],
+            "properties": {
+              "sql": {
+                "type": "string",
+                "description": "The statement."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "query"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Adds a row (columns not named take their default).",
+            "required": [
+              "table",
+              "values",
+              "type"
+            ],
+            "properties": {
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "insert_row"
+                ]
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Assignment"
+                },
+                "description": "The values to put in."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Changes the one row whose primary key is `key`.",
+            "required": [
+              "table",
+              "key",
+              "values",
+              "type"
+            ],
+            "properties": {
+              "key": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/KeyPart"
+                },
+                "description": "The primary key."
+              },
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "update_row"
+                ]
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Assignment"
+                },
+                "description": "What to set."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Deletes the one row whose primary key is `key`.",
+            "required": [
+              "table",
+              "key",
+              "type"
+            ],
+            "properties": {
+              "key": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/KeyPart"
+                },
+                "description": "The primary key."
+              },
+              "table": {
+                "type": "string",
+                "description": "The table."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "delete_row"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "What a studio asks for."
+      },
+      "StudioResult": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The tables.",
+            "required": [
+              "tables",
+              "type"
+            ],
+            "properties": {
+              "tables": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TableInfo"
+                },
+                "description": "Them, by name."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "tables"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A table's structure.",
+            "required": [
+              "columns",
+              "indexes",
+              "create_sql",
+              "type"
+            ],
+            "properties": {
+              "columns": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ColumnInfo"
+                },
+                "description": "The columns, in order."
+              },
+              "create_sql": {
+                "type": "string",
+                "description": "The statement that makes the table."
+              },
+              "indexes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/IndexInfo"
+                },
+                "description": "The indexes."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "described"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A page of rows.",
+            "required": [
+              "grid",
+              "total",
+              "type"
+            ],
+            "properties": {
+              "grid": {
+                "$ref": "#/components/schemas/Grid",
+                "description": "The page."
+              },
+              "total": {
+                "type": "integer",
+                "format": "int64",
+                "description": "How many rows match (counted, not estimated).",
+                "minimum": 0
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rows"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A statement's outcome.",
+            "required": [
+              "affected",
+              "elapsed_ms",
+              "type"
+            ],
+            "properties": {
+              "affected": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Rows it changed, when it did not give a result set.",
+                "minimum": 0
+              },
+              "elapsed_ms": {
+                "type": "integer",
+                "format": "int64",
+                "description": "How long it ran, in milliseconds.",
+                "minimum": 0
+              },
+              "grid": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Grid",
+                    "description": "Rows, when the statement gave a result set."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "query"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A row was added, changed or deleted.",
+            "required": [
+              "affected",
+              "type"
+            ],
+            "properties": {
+              "affected": {
+                "type": "integer",
+                "format": "int64",
+                "description": "How many rows (0 when the key matched none).",
+                "minimum": 0
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "changed"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "It could not be done.",
+            "required": [
+              "code",
+              "message",
+              "type"
+            ],
+            "properties": {
+              "code": {
+                "$ref": "#/components/schemas/StudioErrorCode",
+                "description": "Which kind."
+              },
+              "message": {
+                "type": "string",
+                "description": "In words (the server's, for `sql`)."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "What a studio request came to."
+      },
       "SudoRequest": {
         "type": "object",
         "description": "Re-authentication to enter sudo mode.",
@@ -33299,33 +36450,54 @@
           }
         }
       },
-      "TemplateInput": {
+      "TableInfo": {
         "type": "object",
-        "description": "A template to write.",
+        "description": "A table or view.",
         "required": [
           "name",
-          "records"
+          "kind",
+          "rows",
+          "size_bytes"
         ],
         "properties": {
-          "description": {
+          "kind": {
             "type": "string",
-            "description": "What it is for."
-          },
-          "is_default": {
-            "type": "boolean",
-            "description": "Make it the template new zones start from."
+            "description": "`table` or `view`."
           },
           "name": {
             "type": "string",
-            "description": "Unique name: lower-case letters, digits and `_`, 2-32 characters.",
-            "example": "web_only"
+            "description": "Its name."
           },
-          "records": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TemplateLine"
-            },
-            "description": "The lines (at most 100)."
+          "rows": {
+            "type": "integer",
+            "format": "int64",
+            "description": "About how many rows (an estimate the server keeps).",
+            "minimum": 0
+          },
+          "size_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Data and index size, in bytes.",
+            "minimum": 0
+          }
+        }
+      },
+      "TemplateInput": {
+        "type": "object",
+        "description": "A template to save.",
+        "required": [
+          "name",
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "The configuration, up to 32 KiB."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name: letters, digits, spaces, `.`, `_` and `-`, up to 64.",
+            "example": "Default"
           }
         },
         "additionalProperties": false
@@ -33385,9 +36557,9 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/TemplateView"
+              "$ref": "#/components/schemas/TemplateSummary"
             },
-            "description": "The default first, then by name."
+            "description": "By name."
           }
         }
       },
@@ -33435,24 +36607,20 @@
       },
       "TemplateView": {
         "type": "object",
-        "description": "A zone template.",
+        "description": "A template with its text.",
         "required": [
           "id",
           "name",
-          "description",
-          "records",
+          "server",
           "is_default",
-          "built_in",
-          "updated_at"
+          "version",
+          "updated_at",
+          "body"
         ],
         "properties": {
-          "built_in": {
-            "type": "boolean",
-            "description": "Made by the installation: it can be changed but not deleted."
-          },
-          "description": {
+          "body": {
             "type": "string",
-            "description": "Description."
+            "description": "The configuration with `{{variables}}`: `domain`, `server_names`,\n`docroot`, `php_upstream`, `policy_http`, `policy` and `custom`."
           },
           "id": {
             "type": "string",
@@ -33461,24 +36629,25 @@
           },
           "is_default": {
             "type": "boolean",
-            "description": "New zones start from this one."
+            "description": "Whether new sites use it."
           },
           "name": {
             "type": "string",
-            "description": "Unique name.",
-            "example": "default"
+            "description": "Name."
           },
-          "records": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TemplateLine"
-            },
-            "description": "The lines."
+          "server": {
+            "type": "string",
+            "description": "The web server it is for (`nginx`)."
           },
           "updated_at": {
             "type": "string",
             "format": "date-time",
             "description": "Last change (RFC 3339, UTC)."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Which save it is."
           }
         }
       },
@@ -33530,6 +36699,17 @@
             "type": "string",
             "description": "`provisioning`, `active`, `suspended`, `deleting` or `failed`.",
             "example": "active"
+          },
+          "usage": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UsageShares",
+                "description": "What the account uses of its plan; only in the list of users."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "username": {
             "type": "string",
@@ -33626,6 +36806,137 @@
           "secret": {
             "type": "string",
             "description": "Base32 secret for manual entry."
+          }
+        }
+      },
+      "TrafficHourView": {
+        "type": "object",
+        "description": "One hour of traffic.",
+        "required": [
+          "at_ms",
+          "requests",
+          "bytes"
+        ],
+        "properties": {
+          "at_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The start of the hour (Unix milliseconds, UTC)."
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bytes sent in it.",
+            "minimum": 0
+          },
+          "requests": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Requests in it.",
+            "minimum": 0
+          }
+        }
+      },
+      "TrafficPathView": {
+        "type": "object",
+        "description": "A page and its requests.",
+        "required": [
+          "path",
+          "requests"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "The path (no query string)."
+          },
+          "requests": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Requests for it.",
+            "minimum": 0
+          }
+        }
+      },
+      "TrafficView": {
+        "type": "object",
+        "description": "An account's web traffic.",
+        "required": [
+          "range",
+          "requests",
+          "bytes",
+          "status_2xx",
+          "status_3xx",
+          "status_4xx",
+          "status_5xx",
+          "bots",
+          "hours",
+          "top_paths",
+          "partial"
+        ],
+        "properties": {
+          "bots": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Requests from robots (by their User-Agent).",
+            "minimum": 0
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bytes sent.",
+            "minimum": 0
+          },
+          "hours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrafficHourView"
+            },
+            "description": "Per hour, oldest first (hours without a request are left out)."
+          },
+          "partial": {
+            "type": "boolean",
+            "description": "The log held less than the range (the numbers are a lower bound)."
+          },
+          "range": {
+            "type": "string",
+            "description": "The range asked for."
+          },
+          "requests": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Requests counted.",
+            "minimum": 0
+          },
+          "status_2xx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Answers 200-299.",
+            "minimum": 0
+          },
+          "status_3xx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Answers 300-399.",
+            "minimum": 0
+          },
+          "status_4xx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Answers 400-499.",
+            "minimum": 0
+          },
+          "status_5xx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Answers 500-599.",
+            "minimum": 0
+          },
+          "top_paths": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrafficPathView"
+            },
+            "description": "The most asked pages, most first."
           }
         }
       },
@@ -33837,6 +37148,110 @@
         },
         "additionalProperties": false
       },
+      "UpdateHistoryItem": {
+        "type": "object",
+        "description": "One earlier update.",
+        "required": [
+          "id",
+          "from_version",
+          "to_version",
+          "channel",
+          "status",
+          "timestamp",
+          "details"
+        ],
+        "properties": {
+          "channel": {
+            "type": "string",
+            "description": "Always `stable`."
+          },
+          "details": {
+            "type": "string",
+            "description": "What happened."
+          },
+          "from_version": {
+            "type": "string",
+            "description": "The version before."
+          },
+          "id": {
+            "type": "string",
+            "description": "Id."
+          },
+          "status": {
+            "type": "string",
+            "description": "`success`, `rolled_back` or `failed`."
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "When it ended (RFC 3339, UTC)."
+          },
+          "to_version": {
+            "type": "string",
+            "description": "The version it went to."
+          }
+        }
+      },
+      "UpdateOffer": {
+        "type": "object",
+        "description": "A release that is newer than the installed one.",
+        "required": [
+          "version",
+          "release_date",
+          "channel",
+          "ed25519_signature",
+          "key_id",
+          "checksum_sha256",
+          "changelog",
+          "required_migrations",
+          "can_rollback"
+        ],
+        "properties": {
+          "can_rollback": {
+            "type": "boolean",
+            "description": "A release that does not start is put back by the installation itself."
+          },
+          "changelog": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What changed, one line each."
+          },
+          "channel": {
+            "type": "string",
+            "description": "Always `stable`."
+          },
+          "checksum_sha256": {
+            "type": "string",
+            "description": "SHA-256 of the release archive, when the release site shows it (else empty)."
+          },
+          "ed25519_signature": {
+            "type": "string",
+            "description": "The Ed25519 signature of the release manifest (the installation checks it before installing)."
+          },
+          "key_id": {
+            "type": "string",
+            "description": "The release key that signed it."
+          },
+          "release_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the release was made (RFC 3339, UTC)."
+          },
+          "required_migrations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Database migrations the release brings (not listed ahead of time: empty)."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version, `X.Y.Z`.",
+            "example": "0.1.15"
+          }
+        }
+      },
       "UpdateRecord": {
         "type": "object",
         "description": "Changes to a record (its name and type stay: remove it and add another).",
@@ -33890,6 +37305,121 @@
           }
         },
         "additionalProperties": false
+      },
+      "UpdateRun": {
+        "type": "object",
+        "description": "What the update service is doing, or did last.",
+        "required": [
+          "state",
+          "step",
+          "version",
+          "from_version",
+          "message",
+          "updated_at"
+        ],
+        "properties": {
+          "from_version": {
+            "type": "string",
+            "description": "The version it started from."
+          },
+          "message": {
+            "type": "string",
+            "description": "What happened, in a sentence."
+          },
+          "state": {
+            "type": "string",
+            "description": "`running`, `completed`, `rolled_back` or `failed`."
+          },
+          "step": {
+            "type": "string",
+            "description": "`request`, `downloading`, `verifying`, `completed`, `rolled_back` or `failed`."
+          },
+          "updated_at": {
+            "type": "string",
+            "description": "When this was written (RFC 3339, UTC)."
+          },
+          "version": {
+            "type": "string",
+            "description": "The version it is about."
+          }
+        }
+      },
+      "UpdateStatus": {
+        "type": "object",
+        "description": "The update page's numbers.",
+        "required": [
+          "current_version",
+          "channel",
+          "can_rollback",
+          "can_apply",
+          "auto",
+          "history"
+        ],
+        "properties": {
+          "auto": {
+            "$ref": "#/components/schemas/AutoUpdateView",
+            "description": "The automatic update."
+          },
+          "available_update": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UpdateOffer",
+                "description": "The newer release, if the last check found one."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "can_apply": {
+            "type": "boolean",
+            "description": "This server has the update service (installed by the installer from the release that brought it);\nwithout it a new version is installed by running the installer again."
+          },
+          "can_rollback": {
+            "type": "boolean",
+            "description": "Always false (see `previous_version`)."
+          },
+          "channel": {
+            "type": "string",
+            "description": "Always `stable`."
+          },
+          "current_version": {
+            "type": "string",
+            "description": "The version that runs."
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateHistoryItem"
+            },
+            "description": "Earlier updates, newest first."
+          },
+          "last_checked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the release site was last asked (RFC 3339, UTC); absent before the first check."
+          },
+          "previous_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Always absent: a release that does not start is put back at once, there is no later rollback."
+          },
+          "run": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UpdateRun",
+                "description": "What the update service is doing or did last."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
       },
       "UpdateUser": {
         "type": "object",
@@ -34030,6 +37560,44 @@
             "type": "integer",
             "format": "int32",
             "description": "Most processes."
+          }
+        }
+      },
+      "UsageShares": {
+        "type": "object",
+        "description": "How much of its plan a hosting account uses, in whole percent (above 100 when it is over). A\nfield is absent when the plan has no limit for it or nothing was measured lately.",
+        "properties": {
+          "cpu_percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "CPU (the newest reading, at most 15 minutes old)."
+          },
+          "disk_percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Disk space (as the node last measured it)."
+          },
+          "inodes_percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Files and folders (as the node last measured them)."
+          },
+          "memory_percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Memory (the newest reading, at most 15 minutes old)."
           }
         }
       },
@@ -34440,6 +38008,105 @@
           }
         }
       },
+      "WafEventList": {
+        "type": "object",
+        "description": "What the firewall stopped.",
+        "required": [
+          "range",
+          "available",
+          "items",
+          "partial"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "The node's web server has the firewall and its log; without, `items` is empty and says nothing."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WafEventView"
+            },
+            "description": "The newest first."
+          },
+          "partial": {
+            "type": "boolean",
+            "description": "There were more than were returned, or the log held less than the range."
+          },
+          "range": {
+            "type": "string",
+            "description": "The range asked for."
+          }
+        }
+      },
+      "WafEventView": {
+        "type": "object",
+        "description": "One request the firewall stopped.",
+        "required": [
+          "at_ms",
+          "method",
+          "host",
+          "uri",
+          "rule_id",
+          "message",
+          "blocked"
+        ],
+        "properties": {
+          "at_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "When (Unix milliseconds, UTC)."
+          },
+          "blocked": {
+            "type": "boolean",
+            "description": "The request was refused."
+          },
+          "host": {
+            "type": "string",
+            "description": "The name asked for."
+          },
+          "message": {
+            "type": "string",
+            "description": "What the rule says."
+          },
+          "method": {
+            "type": "string",
+            "description": "The request method."
+          },
+          "rule_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The rule that named the attack (0: not told).",
+            "minimum": 0
+          },
+          "uri": {
+            "type": "string",
+            "description": "The path and query asked for."
+          }
+        }
+      },
+      "WafPolicyView": {
+        "type": "object",
+        "description": "A policy as stored.",
+        "required": [
+          "mode",
+          "disabled_rules"
+        ],
+        "properties": {
+          "disabled_rules": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Rule ids that do not apply."
+          },
+          "mode": {
+            "type": "string",
+            "description": "`off`, `detect` or `block`."
+          }
+        }
+      },
       "WebhookAnswer": {
         "type": "object",
         "description": "What the webhook answers.",
@@ -34840,7 +38507,7 @@
       "session": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "__Host-dh_session",
+        "name": "__Host-bp_session",
         "description": "HttpOnly session cookie set by POST /api/v1/public/auth/login"
       }
     }

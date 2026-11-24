@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-mod-usage"
+name = "builtpanel-mod-usage"
 description = "Usage module: CPU, memory, network and disk over time, for accounts and nodes."
 version.workspace = true
 edition.workspace = true
@@ -11,10 +11,10 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-database.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-rbac.workspace = true
-dhpanel-session.workspace = true
+builtpanel-database.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-rbac.workspace = true
+builtpanel-session.workspace = true
 axum = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -23,10 +23,10 @@ uuid = { version = "1", features = ["serde", "v4"] }
 
 [dev-dependencies]
 secrecy = "0.10"
-dhpanel-kernel.workspace = true
-dhpanel-cache.workspace = true
-dhpanel-settings.workspace = true
-dhpanel-mod-auth.workspace = true
+builtpanel-kernel.workspace = true
+builtpanel-cache.workspace = true
+builtpanel-settings.workspace = true
+builtpanel-mod-auth.workspace = true
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "macros", "uuid", "json", "migrate"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 tower = { version = "0.5", features = ["util"] }

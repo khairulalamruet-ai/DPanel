@@ -7,8 +7,8 @@ import {
   DialogTitle,
   DialogFooter,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Globe, ShieldCheck } from "lucide-react";
 import { DomainType, CreateDomainPayload } from "./types";
 

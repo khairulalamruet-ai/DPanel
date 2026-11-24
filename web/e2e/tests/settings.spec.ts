@@ -44,7 +44,7 @@ test.describe("Settings UI (T03.13)", () => {
     const panelNameInput = page.getByLabel(/Panel Name/i);
     await expect(panelNameInput).toBeVisible();
 
-    await panelNameInput.fill("DHPanel Enterprise Cloud");
+    await panelNameInput.fill("Built Panel Enterprise Cloud");
 
     const saveBtn = page.getByRole("button", { name: /Save Changes|পরিবর্তন সংরক্ষণ করুন/i });
     await saveBtn.click();

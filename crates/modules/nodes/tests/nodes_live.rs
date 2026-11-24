@@ -10,10 +10,10 @@ use axum::{
     extract::connect_info::MockConnectInfo,
     http::{Request, StatusCode, header},
 };
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::{node_enrollments::consume_token, rbac::assign_role};
-use dhpanel_mod_nodes::{NodesState, router, token};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::{node_enrollments::consume_token, rbac::assign_role};
+use builtpanel_mod_nodes::{NodesState, router, token};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -55,10 +55,10 @@ fn env(pool: &PgPool, public_url: Option<&str>, sudo_secs: u64) -> Env {
             stream_url: None,
             token_ttl: Duration::from_secs(900),
             ca: None,
-            limiter: dhpanel_mod_nodes::enrollment_limiter(redis_for_limiter),
+            limiter: builtpanel_mod_nodes::enrollment_limiter(redis_for_limiter),
             gateway: None,
-            operations: dhpanel_operations::Operations::new(pool.clone()),
-            audit: dhpanel_audit::AuditWriter::new(pool.clone()),
+            operations: builtpanel_operations::Operations::new(pool.clone()),
+            audit: builtpanel_audit::AuditWriter::new(pool.clone()),
         })
         .layer(MockConnectInfo(std::net::SocketAddr::from((
             [198, 51, 100, 7],
@@ -268,7 +268,7 @@ async fn the_token_is_shown_once_and_only_its_hash_is_kept(pool: PgPool) {
     assert_eq!(body["expires_in"], 900);
     assert_eq!(
         body["enroll_command"],
-        format!("dhpanel-agent enroll --server https://panel.example.com:8443 --token {secret}")
+        format!("builtpanel-agent enroll --server https://panel.example.com:8443 --token {secret}")
     );
 
     // The database holds the hash of the token, and the token text appears nowhere.

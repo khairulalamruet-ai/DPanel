@@ -8,8 +8,8 @@ import {
   DialogDescription,
   Button,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Server, Save, Network, Shield } from "lucide-react";
 import { CreateDnsServerPayload, DnsServerRole, DnsSyncStrategy } from "./types";
 
@@ -138,7 +138,7 @@ export function AddDnsServerDialog({
                   setHostname(e.target.value);
                   if (error) setError(null);
                 }}
-                placeholder="e.g. ns2.dhpanel.net"
+                placeholder="e.g. ns2.builtpanel.net"
                 disabled={isSaving}
               />
             </div>

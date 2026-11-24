@@ -15,16 +15,16 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_auth_core::{
+use builtpanel_auth_core::{
     password::{Argon2Params, PasswordHasher},
     secretbox::MasterKey,
 };
-use dhpanel_cache::{
+use builtpanel_cache::{
     RedisHandle,
     lockout::{FailureLimiter, LockoutPolicy},
 };
-use dhpanel_http_kit::health::Readiness;
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_http_kit::health::Readiness;
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -63,41 +63,42 @@ async fn app(pool: &PgPool, spool: &std::path::Path) -> App {
         window: Duration::from_secs(900),
         lockout: Duration::from_secs(900),
     };
-    let auth = dhpanel_mod_auth::AuthState {
+    let auth = builtpanel_mod_auth::AuthState {
         db: pool.clone(),
         sessions: sessions.clone(),
         hasher: hasher.clone(),
-        limits: dhpanel_mod_auth::LoginLimits {
+        limits: builtpanel_mod_auth::LoginLimits {
             account: FailureLimiter::new(redis.clone(), format!("test:{ns}:account"), policy(5)),
             ip: FailureLimiter::new(redis.clone(), format!("test:{ns}:ip"), policy(10)),
         },
         trusted_proxies: Vec::new().into(),
         redis: redis.clone(),
         master_key: master_key.clone(),
-        totp_issuer: "DHPanel Test".into(),
-        audit: dhpanel_audit::AuditWriter::new(pool.clone()),
+        totp_issuer: "Built Panel Test".into(),
+        root_login: None,
+        audit: builtpanel_audit::AuditWriter::new(pool.clone()),
     };
-    let admin = dhpanel_mod_admin::AdminState {
+    let admin = builtpanel_mod_admin::AdminState {
         db: pool.clone(),
         sessions: sessions.clone(),
         hasher,
     };
-    let nodes = dhpanel_mod_nodes::NodesState {
+    let nodes = builtpanel_mod_nodes::NodesState {
         db: pool.clone(),
         sessions: sessions.clone(),
         public_url: Some("http://panel.test".into()),
         stream_url: None,
         token_ttl: Duration::from_secs(900),
         ca: None,
-        limiter: dhpanel_mod_nodes::enrollment_limiter(redis.clone()),
+        limiter: builtpanel_mod_nodes::enrollment_limiter(redis.clone()),
         gateway: None,
-        operations: dhpanel_operations::Operations::new(pool.clone()),
-        audit: dhpanel_audit::AuditWriter::new(pool.clone()),
+        operations: builtpanel_operations::Operations::new(pool.clone()),
+        audit: builtpanel_audit::AuditWriter::new(pool.clone()),
     };
     let license = Arc::new(
-        dhpanel_mod_license::service::LicenseService::new(
+        builtpanel_mod_license::service::LicenseService::new(
             pool.clone(),
-            &dhpanel_config::LicenseConfig::default(),
+            &builtpanel_config::LicenseConfig::default(),
         )
         .unwrap(),
     );
@@ -122,7 +123,7 @@ async fn app(pool: &PgPool, spool: &std::path::Path) -> App {
     modules::sync(pool, &registry).await.unwrap();
     modules::sync_permissions(pool, &registry).await.unwrap();
     mount.apply(
-        &dhpanel_database::modules::enabled_names(pool)
+        &builtpanel_database::modules::enabled_names(pool)
             .await
             .unwrap()
             .into_iter()
@@ -130,8 +131,8 @@ async fn app(pool: &PgPool, spool: &std::path::Path) -> App {
     );
     let router = app::router(
         mount.service().layer(axum::middleware::from_fn_with_state(
-            dhpanel_mod_license::Restrictor::new(pool.clone()),
-            dhpanel_mod_license::restrict,
+            builtpanel_mod_license::Restrictor::new(pool.clone()),
+            builtpanel_mod_license::restrict,
         )),
         Vec::new().into(),
     );
@@ -156,7 +157,7 @@ impl App {
         .fetch_one(&self.pool)
         .await
         .unwrap();
-        dhpanel_database::rbac::assign_role(&self.pool, id, "super_admin", None)
+        builtpanel_database::rbac::assign_role(&self.pool, id, "super_admin", None)
             .await
             .unwrap();
         let (token, data) = self
@@ -325,7 +326,7 @@ async fn wait_for_end(a: &App, root: &Who, id: &str) -> Value {
 #[sqlx::test(migrations = "../../migrations")]
 #[ignore = "needs PostgreSQL + Redis"]
 async fn a_real_import_makes_the_account_and_everything_in_it(pool: PgPool) {
-    let spool = std::env::temp_dir().join(format!("dh-import-{}", Uuid::new_v4()));
+    let spool = std::env::temp_dir().join(format!("bp-import-{}", Uuid::new_v4()));
     std::fs::create_dir_all(spool.join("migration")).unwrap();
     std::fs::write(spool.join("migration/cpmove-alice.tar.gz"), cpmove()).unwrap();
     let a = app(&pool, &spool).await;

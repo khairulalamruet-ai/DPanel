@@ -4,8 +4,8 @@
 
 use std::sync::Arc;
 
-use dhpanel_node_protocol::{AgentError, Operation, Output, ServerInfo};
-use dhpanel_priv_helper::protocol::Action;
+use builtpanel_node_protocol::{AgentError, Operation, Output, ServerInfo};
+use builtpanel_priv_helper::protocol::Action;
 
 use super::{
     sqlimport::{failed, invalid},
@@ -191,7 +191,7 @@ pub async fn set_swap(context: Arc<TenantContext>, op: Operation) -> Result<Outp
     let Operation::SetSwap { megabytes } = op else {
         return Err(super::wrong_operation());
     };
-    if megabytes > dhpanel_priv_helper::servertools::MAX_SWAP_MB {
+    if megabytes > builtpanel_priv_helper::servertools::MAX_SWAP_MB {
         return Err(invalid("the swap size is out of range"));
     }
     through_helper(&context, Action::SetSwap { megabytes }, "set_swap").await
@@ -210,7 +210,7 @@ pub async fn set_firewall_rules(
         return Err(super::wrong_operation());
     };
     let policy = policy.checked().map_err(|m| invalid(&m))?;
-    let rules = dhpanel_priv_helper::nodefw::rule_count(&policy);
+    let rules = builtpanel_priv_helper::nodefw::rule_count(&policy);
     through_helper(
         &context,
         Action::SetNodeFirewall { policy },

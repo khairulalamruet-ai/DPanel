@@ -1,0 +1,9 @@
+slug        = "nodejs-older"
+name        = "Node.js (older versions)"
+category    = "web_servers"
+kind        = "unavailable"
+description = "Earlier Node.js releases."
+license     = "MIT"
+homepage    = "https://nodejs.org"
+covers      = ["Node.js 14", "Node.js 16", "Node.js 17", "Node.js 18", "Node.js 19", "Node.js 20", "Node.js 21"]
+reason      = "this version no longer gets security fixes; a newer one is offered"

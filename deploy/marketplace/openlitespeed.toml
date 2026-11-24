@@ -1,0 +1,8 @@
+slug        = "openlitespeed"
+name        = "OpenLiteSpeed"
+category    = "web_servers"
+kind        = "unavailable"
+description = "A web server."
+license     = "BSD-2-Clause"
+covers      = ["OpenLiteSpeed (service)"]
+reason      = "the panel serves every site with its own web stack; a second web server for the whole account is not offered (run one yourself in Containers if you need it)"

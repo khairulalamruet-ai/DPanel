@@ -1,8 +1,8 @@
 //! Server-side sessions.
 //!
 //! * **Token**: 32 bytes from the OS CSPRNG, base64url-encoded, sent only in the
-//!   `__Host-dh_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`).
-//! * **Hot store**: Redis key `dhpanel:session:<sha256(token)>` holding
+//!   `__Host-bp_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`).
+//! * **Hot store**: Redis key `builtpanel:session:<sha256(token)>` holding
 //!   [`SessionData`] as JSON. The raw token is never stored anywhere.
 //! * **Expiry**: an idle timeout (sliding) and an absolute lifetime (fixed);
 //!   the Redis TTL is always the smaller of the two remaining windows. Activity
@@ -35,8 +35,8 @@ use axum::{
     http::{HeaderMap, Method, header, request::Parts},
 };
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use dhpanel_cache::{RedisHandle, redis::AsyncCommands as _};
-use dhpanel_http_kit::AppError;
+use builtpanel_cache::{RedisHandle, redis::AsyncCommands as _};
+use builtpanel_http_kit::AppError;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
@@ -45,10 +45,10 @@ use uuid::Uuid;
 
 /// Cookie name. The `__Host-` prefix makes browsers require `Secure`,
 /// `Path=/` and no `Domain`, so subdomains cannot set or read it.
-pub const COOKIE_NAME: &str = "__Host-dh_session";
+pub const COOKIE_NAME: &str = "__Host-bp_session";
 /// Raw token length in bytes (256 bits).
 pub const TOKEN_BYTES: usize = 32;
-const KEY_PREFIX: &str = "dhpanel:session:";
+const KEY_PREFIX: &str = "builtpanel:session:";
 /// Maximum stored user-agent length in characters (matches the DB CHECK).
 pub const MAX_USER_AGENT: usize = 512;
 /// Request header carrying the CSRF token.
@@ -214,10 +214,10 @@ pub enum SessionError {
     Rng,
     /// Redis failure.
     #[error("session store: {0}")]
-    Cache(#[from] dhpanel_cache::CacheError),
+    Cache(#[from] builtpanel_cache::CacheError),
     /// Redis command failure.
     #[error("session store: {0}")]
-    Redis(#[from] dhpanel_cache::redis::RedisError),
+    Redis(#[from] builtpanel_cache::redis::RedisError),
     /// PostgreSQL failure.
     #[error("session history: {0}")]
     Database(#[from] sqlx::Error),
@@ -292,7 +292,7 @@ fn secs(d: Duration) -> i64 {
 
 /// How long an impersonation token can be used after it is issued.
 pub const IMPERSONATION_TTL_SECS: u64 = 60;
-const IMPERSONATION_PREFIX: &str = "dhpanel:impersonation:";
+const IMPERSONATION_PREFIX: &str = "builtpanel:impersonation:";
 
 /// Who may open a session as whom, held until the token is spent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -500,7 +500,7 @@ impl SessionStore {
             return Ok(None);
         };
         let mut conn = self.redis.connection().await?;
-        let payload: Option<String> = dhpanel_cache::redis::cmd("GETDEL")
+        let payload: Option<String> = builtpanel_cache::redis::cmd("GETDEL")
             .arg(impersonation_key(&token_hash(&raw)))
             .query_async(&mut conn)
             .await?;
@@ -537,7 +537,7 @@ impl SessionStore {
             let payload = serde_json::to_string(&data).map_err(|_| SessionError::Corrupt)?;
             let ttl = self.ttl_from(now, data.absolute_expires_at);
             // XX: only refresh if it still exists (a concurrent revoke wins).
-            let _: Option<String> = dhpanel_cache::redis::cmd("SET")
+            let _: Option<String> = builtpanel_cache::redis::cmd("SET")
                 .arg(&key)
                 .arg(payload)
                 .arg("EX")
@@ -574,7 +574,7 @@ impl SessionStore {
         data.auth_time = now;
         let payload = serde_json::to_string(&data).map_err(|_| SessionError::Corrupt)?;
         // XX + KEEPTTL: never resurrect a revoked session, never extend its life.
-        let updated: Option<String> = dhpanel_cache::redis::cmd("SET")
+        let updated: Option<String> = builtpanel_cache::redis::cmd("SET")
             .arg(&key)
             .arg(payload)
             .arg("XX")
@@ -643,7 +643,7 @@ impl SessionStore {
             .map(|r| key_from_hash_bytes(&r.token_sha256).unwrap_or_default())
             .collect();
         let mut conn = self.redis.connection().await?;
-        let payloads: Vec<Option<String>> = dhpanel_cache::redis::cmd("MGET")
+        let payloads: Vec<Option<String>> = builtpanel_cache::redis::cmd("MGET")
             .arg(&keys)
             .query_async(&mut conn)
             .await?;
@@ -737,7 +737,7 @@ impl SessionStore {
             .collect();
         if !keys.is_empty() {
             let mut conn = self.redis.connection().await?;
-            let _: u64 = dhpanel_cache::redis::cmd("DEL")
+            let _: u64 = builtpanel_cache::redis::cmd("DEL")
                 .arg(&keys)
                 .query_async(&mut conn)
                 .await?;
@@ -841,7 +841,7 @@ mod tests {
         let token = SessionToken(SecretString::from("abc".to_owned()));
         let c = set_cookie(&token);
         for attr in [
-            "__Host-dh_session=abc",
+            "__Host-bp_session=abc",
             "Path=/",
             "Secure",
             "HttpOnly",
@@ -937,8 +937,8 @@ mod tests {
     fn redis_key_uses_hash_not_token() {
         let raw = [1u8; TOKEN_BYTES];
         let key = redis_key(&token_hash(&raw));
-        assert!(key.starts_with("dhpanel:session:"));
-        assert_eq!(key.len(), "dhpanel:session:".len() + 64);
+        assert!(key.starts_with("builtpanel:session:"));
+        assert_eq!(key.len(), "builtpanel:session:".len() + 64);
         assert!(!key.contains(&URL_SAFE_NO_PAD.encode(raw)));
     }
 
@@ -947,11 +947,11 @@ mod tests {
         let mut h = HeaderMap::new();
         h.append(
             header::COOKIE,
-            HeaderValue::from_static("a=1; __Host-dh_session=tok; b=2"),
+            HeaderValue::from_static("a=1; __Host-bp_session=tok; b=2"),
         );
         assert_eq!(cookie_value(&h), Some("tok"));
         let mut h = HeaderMap::new();
-        h.append(header::COOKIE, HeaderValue::from_static("dh_session=spoof"));
+        h.append(header::COOKIE, HeaderValue::from_static("bp_session=spoof"));
         assert_eq!(cookie_value(&h), None);
     }
 }

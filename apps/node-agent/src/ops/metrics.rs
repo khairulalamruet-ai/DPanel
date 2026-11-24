@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use dhpanel_node_protocol::{
+use builtpanel_node_protocol::{
     AgentError, ContainerMetrics, MAX_METRIC_CONTAINERS, NodeMetrics, Operation, Output,
 };
 

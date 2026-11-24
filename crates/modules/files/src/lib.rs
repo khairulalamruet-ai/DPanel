@@ -35,22 +35,22 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     accounts::DbAccountKind,
     operations::{self, EnqueueError, NewOperation, Status},
     plans,
     sqlx::PgPool,
     tenants, users,
 };
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_node_protocol::{
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_node_protocol::{
     Operation,
     files::{ArchiveFormat, FileErrorCode, FileRequest, FileResult, MAX_EDIT_BYTES},
 };
-use dhpanel_rbac::Principal;
-use dhpanel_session::SessionStore;
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_rbac::Principal;
+use builtpanel_session::SessionStore;
+use builtpanel_settings::{Scope, SettingsRegistry};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use uuid::Uuid;
@@ -76,7 +76,7 @@ pub struct FilesState {
     /// How long a request waits for the node before answering `202`.
     pub wait: Duration,
     /// Seals the tokens of transfers until the node has them.
-    pub master_key: dhpanel_auth_core::secretbox::MasterKey,
+    pub master_key: builtpanel_auth_core::secretbox::MasterKey,
     /// Where big files wait for the node, or for the client (`imports.spool_dir`).
     pub spool_dir: PathBuf,
     /// Where nodes reach this panel (`agent.public_url`); without it no transfers.
@@ -202,7 +202,7 @@ struct Limits {
 
 async fn limits(state: &FilesState) -> Result<Limits, AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "files", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "files", Scope::Global)
         .await
         .map_err(internal)?;
     let int = |key: &str, default: u64| {
@@ -305,8 +305,8 @@ pub struct Pending {
     pub operation_id: Uuid,
 }
 
-fn kind_name(kind: dhpanel_node_protocol::files::EntryKind) -> &'static str {
-    use dhpanel_node_protocol::files::EntryKind as K;
+fn kind_name(kind: builtpanel_node_protocol::files::EntryKind) -> &'static str {
+    use builtpanel_node_protocol::files::EntryKind as K;
     match kind {
         K::File => "file",
         K::Dir => "dir",
@@ -315,10 +315,10 @@ fn kind_name(kind: dhpanel_node_protocol::files::EntryKind) -> &'static str {
     }
 }
 
-fn entry_view(e: dhpanel_node_protocol::files::FileEntry) -> EntryView {
+fn entry_view(e: builtpanel_node_protocol::files::FileEntry) -> EntryView {
     EntryView {
         kind: kind_name(e.kind).to_owned(),
-        modified_at: dhpanel_session::rfc3339(e.mtime),
+        modified_at: builtpanel_session::rfc3339(e.mtime),
         name: e.name,
         size: e.size,
         mode: e.mode,
@@ -328,7 +328,7 @@ fn entry_view(e: dhpanel_node_protocol::files::FileEntry) -> EntryView {
 /// A refused request, as an error.
 fn file_error(code: FileErrorCode, message: String) -> AppError {
     let field = |c: &'static str| {
-        AppError::validation(vec![dhpanel_http_kit::FieldError::new(
+        AppError::validation(vec![builtpanel_http_kit::FieldError::new(
             "path",
             c,
             message.clone(),
@@ -394,7 +394,7 @@ fn respond(result: FileResult) -> Result<Response, AppError> {
                     path: i.path,
                     kind: kind_name(i.kind).to_owned(),
                     size: i.size,
-                    deleted_at: dhpanel_session::rfc3339(i.deleted_at),
+                    deleted_at: builtpanel_session::rfc3339(i.deleted_at),
                 })
                 .collect(),
         })
@@ -457,7 +457,7 @@ async fn run(
     })?;
     let id = queued.operation().id;
     if let Some((action, metadata)) = audited {
-        dhpanel_audit::insert(&mut *tx, &audit(action, who, hosting, metadata))
+        builtpanel_audit::insert(&mut *tx, &audit(action, who, hosting, metadata))
             .await
             .map_err(internal)?;
     }
@@ -1053,7 +1053,7 @@ pub async fn archive(
         "tar_gz" => ArchiveFormat::TarGz,
         _ => {
             return Err(AppError::validation(vec![
-                dhpanel_http_kit::FieldError::new(
+                builtpanel_http_kit::FieldError::new(
                     "format",
                     "invalid_format",
                     "The format is `zip` or `tar_gz`.",
@@ -1197,12 +1197,12 @@ pub async fn usage(
     who: Principal,
 ) -> Result<Json<DiskUsageView>, AppError> {
     let h = client_hosting(&state, &who).await?;
-    let found = dhpanel_database::file_transfers::usage_of(&state.db, h.tenant.id)
+    let found = builtpanel_database::file_transfers::usage_of(&state.db, h.tenant.id)
         .await
         .map_err(internal)?;
     Ok(Json(match found {
         Some(u) => DiskUsageView {
-            measured_at: Some(dhpanel_session::rfc3339(u.measured_at)),
+            measured_at: Some(builtpanel_session::rfc3339(u.measured_at)),
             total_bytes: u.total_bytes,
             inodes: u.inodes,
             partial: u.partial,
@@ -1288,7 +1288,7 @@ async fn queue_usage(
 /// # Errors
 /// Database errors.
 pub async fn measure_usage(db: &PgPool) -> Result<usize, AppError> {
-    let rows: Vec<(Uuid, Uuid, i32)> = dhpanel_database::sqlx::query_as(
+    let rows: Vec<(Uuid, Uuid, i32)> = builtpanel_database::sqlx::query_as(
         "SELECT id, node_id, uid FROM tenants WHERE status = 'active'",
     )
     .fetch_all(db)
@@ -1300,7 +1300,7 @@ pub async fn measure_usage(db: &PgPool) -> Result<usize, AppError> {
     let mut queued = 0;
     for (tenant_id, node_id, uid) in rows {
         let key = format!("du:{}:{slot}", tenant_id.simple());
-        let before: Option<Uuid> = dhpanel_database::sqlx::query_scalar(
+        let before: Option<Uuid> = builtpanel_database::sqlx::query_scalar(
             "SELECT id FROM operations WHERE node_id = $1 AND idempotency_key = $2",
         )
         .bind(node_id)
@@ -1329,7 +1329,7 @@ pub async fn measure_usage(db: &PgPool) -> Result<usize, AppError> {
 /// Database errors.
 pub async fn purge_trash(db: &PgPool, settings: &SettingsRegistry) -> Result<usize, AppError> {
     let mut conn = db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(settings, &mut conn, "files", Scope::Global)
+    let values = builtpanel_settings::get(settings, &mut conn, "files", Scope::Global)
         .await
         .map_err(internal)?;
     drop(conn);
@@ -1341,7 +1341,7 @@ pub async fn purge_trash(db: &PgPool, settings: &SettingsRegistry) -> Result<usi
     if days == 0 {
         return Ok(0);
     }
-    let rows: Vec<(Uuid, Uuid, i32)> = dhpanel_database::sqlx::query_as(
+    let rows: Vec<(Uuid, Uuid, i32)> = builtpanel_database::sqlx::query_as(
         "SELECT id, node_id, uid FROM tenants WHERE status = 'active'",
     )
     .fetch_all(db)
@@ -1401,7 +1401,7 @@ pub async fn purge_trash(db: &PgPool, settings: &SettingsRegistry) -> Result<usi
         EntryView, DirectoryPage, FileContent, TrashEntry, TrashList, Changed, Pending, SaveFile,
         OnePath, FromTo, SetMode, PackRequest, UnpackRequest, FolderUse, DiskUsageView, ftp::FtpAccountView, ftp::FtpAccountList, ftp::AddFtpAccount,
         ftp::ChangeFtpAccount, ftp::NewFtpPassword, ftp::FtpAccountCreated, transfers::StartUpload,
-        transfers::TransferView, transfers::DownloadLink
+        transfers::TransferView, transfers::FileDownloadLink
     )),
     tags((name = "files", description = "The file manager"))
 )]

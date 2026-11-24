@@ -383,13 +383,13 @@ mod tests {
     /// would make `--include-ignored` integration runs crawl).
     ///
     /// Calibrate on the target server:
-    /// `DHPANEL_BENCH_ARGON2=65536,3,1 cargo test -p dhpanel-auth-core --release -- --ignored --nocapture benchmark`
+    /// `BUILTPANEL_BENCH_ARGON2=65536,3,1 cargo test -p builtpanel-auth-core --release -- --ignored --nocapture benchmark`
     /// (memory KiB, iterations, parallelism; defaults to the production defaults).
     #[cfg(not(debug_assertions))]
     #[test]
     #[ignore = "benchmark; run explicitly with --release --ignored --nocapture"]
     fn benchmark_argon2_params() {
-        let params = std::env::var("DHPANEL_BENCH_ARGON2")
+        let params = std::env::var("BUILTPANEL_BENCH_ARGON2")
             .ok()
             .and_then(|v| {
                 let n: Vec<u32> = v.split(',').filter_map(|x| x.trim().parse().ok()).collect();

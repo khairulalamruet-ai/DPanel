@@ -17,7 +17,7 @@
 use std::{future::Future, net::IpAddr, pin::Pin, sync::Arc, time::Duration};
 
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use dhpanel_http_kit::AppError;
+use builtpanel_http_kit::AppError;
 use serde::Deserialize;
 use ureq::{
     Error as UreqError,

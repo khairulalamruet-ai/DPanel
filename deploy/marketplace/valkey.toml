@@ -1,0 +1,8 @@
+slug        = "valkey"
+name        = "Valkey"
+category    = "databases"
+kind        = "unavailable"
+description = "A Redis-compatible in-memory data store."
+license     = "BSD-3-Clause"
+homepage    = "https://valkey.io"
+reason      = "its image starts as root and then switches to its own user; Redis is offered"

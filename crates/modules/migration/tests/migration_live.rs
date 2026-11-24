@@ -11,11 +11,11 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::modules as db;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_migration::{MigrationState, admin_router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::modules as db;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_migration::{MigrationState, admin_router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -57,7 +57,7 @@ async fn env_with(pool: &PgPool, local: bool) -> Env {
     let url = std::env::var("REDIS_URL").expect("REDIS_URL must be set");
     let redis = RedisHandle::new(&SecretString::from(url)).expect("valid REDIS_URL");
     let sessions = SessionStore::new(redis, pool.clone(), SessionConfig::default());
-    let spool = std::env::temp_dir().join(format!("dh-migration-{}", Uuid::new_v4()));
+    let spool = std::env::temp_dir().join(format!("bp-migration-{}", Uuid::new_v4()));
     std::fs::create_dir_all(spool.join("migration")).unwrap();
     let manifest = Manifest::parse(
         "migration",
@@ -170,7 +170,7 @@ async fn account(pool: &PgPool, kind: &str, name: &str, roles: &[&str]) -> Uuid 
     .await
     .unwrap();
     for role in roles {
-        dhpanel_database::rbac::assign_role(pool, id, role, None)
+        builtpanel_database::rbac::assign_role(pool, id, role, None)
             .await
             .unwrap();
     }
@@ -441,7 +441,7 @@ fn code(body: &Value) -> &str {
 #[sqlx::test(migrations = "../../../migrations")]
 #[ignore = "needs PostgreSQL + Redis"]
 async fn a_failed_import_goes_on_from_its_step_and_a_dry_run_starts_over(pool: PgPool) {
-    use dhpanel_database::migration_transfers as store;
+    use builtpanel_database::migration_transfers as store;
     let admin = account(&pool, "admin", "rootuser", &["super_admin"]).await;
     let made = store::insert(
         &pool,

@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-mod-nodes"
+name = "builtpanel-mod-nodes"
 description = "Nodes module: add servers to the panel with one-time enrollment tokens."
 version.workspace = true
 edition.workspace = true
@@ -11,16 +11,16 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-audit.workspace = true
-dhpanel-cache.workspace = true
-dhpanel-database.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-node-gateway.workspace = true
-dhpanel-operations.workspace = true
-dhpanel-node-protocol = { workspace = true, features = ["openapi"] }
-dhpanel-pki.workspace = true
-dhpanel-rbac.workspace = true
-dhpanel-session.workspace = true
+builtpanel-audit.workspace = true
+builtpanel-cache.workspace = true
+builtpanel-database.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-node-gateway.workspace = true
+builtpanel-operations.workspace = true
+builtpanel-node-protocol = { workspace = true, features = ["openapi"] }
+builtpanel-pki.workspace = true
+builtpanel-rbac.workspace = true
+builtpanel-session.workspace = true
 axum = "0.8"
 base64 = "0.23"
 getrandom = "0.4"

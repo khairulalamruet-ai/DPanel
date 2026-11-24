@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { apiFetch } from "@dhpanel/api";
-import { Badge, Button, useToast } from "@dhpanel/ui";
+import { listPages, savePage, resetPage } from "./api";
+import { Badge, Button, useToast } from "@builtpanel/ui";
 import {
   Globe,
   UserX,
@@ -9,11 +9,11 @@ import {
   Columns,
   Maximize2,
 } from "lucide-react";
-import { PageTemplateItem, PageTemplateListResponse, PageTemplateType } from "./types";
+import { PageTemplateItem, PageTemplateType } from "./types";
 import { PageTemplateEditor } from "./PageTemplateEditor";
 import { PageTemplatePreview } from "./PageTemplatePreview";
 import { PageTemplateResetDialog } from "./PageTemplateResetDialog";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 export function ErrorPagesPage() {
   const { t } = useTranslation();
@@ -35,7 +35,7 @@ export function ErrorPagesPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiFetch<PageTemplateListResponse>("/api/v1/admin/templates/pages");
+      const res = await listPages();
       setTemplates(res.items);
       const initialDrafts: Record<string, string> = {};
       res.items.forEach((item: PageTemplateItem) => {
@@ -72,13 +72,7 @@ export function ErrorPagesPage() {
     if (!currentTemplate) return;
     try {
       setIsSaving(true);
-      const updated = await apiFetch<PageTemplateItem>(
-        `/api/v1/admin/templates/pages/${currentTemplate.type}`,
-        {
-          method: "PUT",
-          body: JSON.stringify({ content: activeContent }),
-        }
-      );
+      const updated = await savePage(currentTemplate.type, activeContent);
       setTemplates((prev) =>
         prev.map((item: PageTemplateItem) => (item.type === updated.type ? updated : item))
       );
@@ -104,12 +98,7 @@ export function ErrorPagesPage() {
     if (!currentTemplate) return;
     try {
       setIsResetting(true);
-      const updated = await apiFetch<PageTemplateItem>(
-        `/api/v1/admin/templates/pages/${currentTemplate.type}/reset`,
-        {
-          method: "POST",
-        }
-      );
+      const updated = await resetPage(currentTemplate.type);
       setTemplates((prev) =>
         prev.map((item: PageTemplateItem) => (item.type === updated.type ? updated : item))
       );

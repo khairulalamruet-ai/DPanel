@@ -1,0 +1,16 @@
+slug        = "rspamd"
+name        = "Rspamd"
+category    = "utilities"
+kind        = "container"
+description = "A spam filtering system."
+license     = "Apache-2.0"
+homepage    = "https://rspamd.com"
+covers      = ["Rspamd"]
+version     = "4.3.0"
+image       = "docker.io/rspamd/rspamd"
+track       = ""
+tag         = "4.3.0"
+digest      = "sha256:0d89891908f93ab1ce53c17fa90430130b48ad720216192ec44e646997c0a8e1"
+port        = 11333
+memory_mb   = 512
+usage       = "Scan mail from your own applications on host \"rspamd\", port 11333, from inside your account."

@@ -1,7 +1,7 @@
 //! The license authority (T17.01): the central service that issues and checks licenses.
 //!
 //! It runs on its own server with its own database and its own signing key, apart from any
-//! DHPanel control plane. Administrators manage customers, plans and licenses
+//! Built Panel control plane. Administrators manage customers, plans and licenses
 //! ([`admin`]); installations activate and refresh over a public API ([`public`]) and prove
 //! they hold their own private key before anything is signed for them.
 
@@ -21,9 +21,9 @@ use axum::{
     http::{header, request::Parts},
     routing::get,
 };
-use dhpanel_auth_core::password::PasswordHasher;
-use dhpanel_http_kit::AppError;
-use dhpanel_license::SigningKey;
+use builtpanel_auth_core::password::PasswordHasher;
+use builtpanel_http_kit::AppError;
+use builtpanel_license::SigningKey;
 use serde::Serialize;
 use sha2::{Digest as _, Sha256};
 use sqlx::PgPool;
@@ -122,7 +122,7 @@ impl FromRef<LaState> for PgPool {
 /// A name as it is compared everywhere in the binding: lower case, no trailing dot.
 #[must_use]
 pub fn binding_name(name: &str) -> String {
-    dhpanel_license::normalize_name(name)
+    builtpanel_license::normalize_name(name)
 }
 
 /// The SHA-256 of a text (license keys and bearer tokens are only ever kept as this).

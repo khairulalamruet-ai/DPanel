@@ -5,15 +5,19 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Tmpfs};
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Tmpfs};
+use builtpanel_node_agent::ops::{
     cron::{report_cron_runs, run_cron_job, run_forever, sync_cron_jobs},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{CronJobSpec, CronRun, CronStatus, ErrorCode, Operation, Output};
+use builtpanel_node_protocol::{CronJobSpec, CronRun, CronStatus, ErrorCode, Operation, Output};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -73,8 +77,8 @@ async fn jobs_run_in_the_accounts_container_on_demand_and_on_schedule() {
     .unwrap();
     docker.pull_image(&image).await.unwrap();
     let username = format!("cr{}x", std::process::id());
-    let container = dhpanel_tenant_stack::php_container_name(
-        &dhpanel_domain::TenantUsername::parse(&username).unwrap(),
+    let container = builtpanel_tenant_stack::php_container_name(
+        &builtpanel_domain::TenantUsername::parse(&username).unwrap(),
     )
     .unwrap();
     let _ = docker.remove(&container, true).await;
@@ -86,7 +90,7 @@ async fn jobs_run_in_the_accounts_container_on_demand_and_on_schedule() {
     });
     docker.create_container(&spec).await.unwrap();
     docker.start(&container).await.unwrap();
-    let base = std::env::temp_dir().join(format!("dh-cron-live-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("bp-cron-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     std::fs::create_dir_all(&base).unwrap();
     let context = Arc::new(TenantContext {

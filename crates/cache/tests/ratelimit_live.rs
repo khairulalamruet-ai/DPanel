@@ -5,7 +5,7 @@
 
 use std::time::Duration;
 
-use dhpanel_cache::{RedisHandle, ratelimit::RateLimiter};
+use builtpanel_cache::{RedisHandle, ratelimit::RateLimiter};
 use secrecy::SecretString;
 
 fn limiter(limit: u32, window_ms: u64) -> RateLimiter {

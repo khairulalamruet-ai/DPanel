@@ -48,7 +48,7 @@ describe("JsonSchemaForm (T03.13)", () => {
     render(
       <JsonSchemaForm
         schema={sampleSchema}
-        initialValues={{ site_title: "DHPanel" }}
+        initialValues={{ site_title: "Built Panel" }}
         onSubmit={vi.fn()}
       />
     );
@@ -155,7 +155,7 @@ describe("JsonSchemaForm (T03.13)", () => {
       <JsonSchemaForm
         schema={sampleSchema}
         initialValues={{
-          site_title: "My Custom DHPanel",
+          site_title: "My Custom Built Panel",
           admin_email: "superadmin@example.com",
           max_upload_size: 100,
           enable_registration: true,
@@ -170,7 +170,7 @@ describe("JsonSchemaForm (T03.13)", () => {
 
     await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledWith({
-        site_title: "My Custom DHPanel",
+        site_title: "My Custom Built Panel",
         admin_email: "superadmin@example.com",
         max_upload_size: 100,
         enable_registration: true,

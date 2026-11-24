@@ -1,4 +1,4 @@
-//! DHPanel node agent.
+//! Built Panel node agent.
 //!
 //! The agent runs on every hosting server and does exactly what the control
 //! plane's typed operations ask (ADR 0004). It never runs a shell.
@@ -12,6 +12,7 @@ pub mod identity;
 pub mod ops;
 pub mod stream;
 pub mod verify;
+pub mod wafevents;
 pub mod web;
 
 /// Version of this agent build, reported to the control plane.

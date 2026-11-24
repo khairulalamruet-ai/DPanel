@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useTranslation } from "@dhpanel/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from "@dhpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from "@builtpanel/ui";
 import {
   KeyRound,
   Copy,
@@ -50,7 +50,7 @@ export function LicenseDetailsCard({
     setTimeout(() => setCopiedInstallId(false), 2000);
   };
 
-  const maskedKey = license.license_key.replace(
+  const maskedKey = (license.license_key || "").replace(
     /^(DHP-[A-Z0-9]+-)(.+)(-[A-Z0-9]+)$/,
     (_, p1, p2, p3) => `${p1}${"•".repeat(p2.length)}${p3}`
   );
@@ -111,6 +111,7 @@ export function LicenseDetailsCard({
         {/* Keys & Identity Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* License Key */}
+          {license.license_key && (
           <div className="p-3 rounded-lg border bg-muted/20 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
@@ -142,6 +143,7 @@ export function LicenseDetailsCard({
               {showKey ? license.license_key : maskedKey}
             </div>
           </div>
+          )}
 
           {/* Installation ID */}
           <div className="p-3 rounded-lg border bg-muted/20 space-y-1.5">

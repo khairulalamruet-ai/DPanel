@@ -4,9 +4,9 @@
 
 use std::{path::PathBuf, process::Command};
 
-use dhpanel_backup::{Manifest, StreamReader};
-use dhpanel_backup_dest::{Destination as _, local::Local};
-use dhpanel_system_backup::{Connection, Job, PART, derive_key, run_job, unpack};
+use builtpanel_backup::{Manifest, StreamReader};
+use builtpanel_backup_dest::{Destination as _, local::Local};
+use builtpanel_system_backup::{Connection, Job, PART, derive_key, run_job, unpack};
 
 fn psql(url: &str, sql: &str) -> String {
     let out = Command::new("psql")
@@ -48,7 +48,7 @@ fn a_system_backup_is_stored_opened_and_restored_into_a_new_database() {
         "CREATE TABLE accounts (id serial PRIMARY KEY, name text); INSERT INTO accounts (name) VALUES ('alice'), ('bob')",
     );
 
-    let dir = std::env::temp_dir().join(format!("dh-sysbk-live-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-sysbk-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("ca")).unwrap();
     std::fs::create_dir_all(dir.join("dest")).unwrap();

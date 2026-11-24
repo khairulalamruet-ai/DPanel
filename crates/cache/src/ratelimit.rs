@@ -54,7 +54,7 @@ impl RateLimiter {
     /// # Errors
     /// Connection or command failures.
     pub async fn hit(&self, subject: &str) -> Result<bool, CacheError> {
-        let key = format!("dhpanel:ratelimit:{}:{subject}", self.namespace);
+        let key = format!("builtpanel:ratelimit:{}:{subject}", self.namespace);
         let window_ms = u64::try_from(self.window.as_millis())
             .unwrap_or(u64::MAX)
             .max(1);

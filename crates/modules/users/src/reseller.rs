@@ -28,9 +28,9 @@ use axum::{
     http::StatusCode,
     routing::{get, post, put},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_auth_core::policy::PasswordPolicy;
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_auth_core::policy::PasswordPolicy;
+use builtpanel_database::{
     accounts::{self, DbAccountKind, InsertAccountError, NewAccount},
     plans::{self, Plan},
     rbac::{self, AssignRole},
@@ -38,13 +38,13 @@ use dhpanel_database::{
     sqlx::PgConnection,
     users,
 };
-use dhpanel_domain::{AccountKind, Email, Username};
-use dhpanel_http_kit::{AppError, FieldError};
-use dhpanel_rbac::{
+use builtpanel_domain::{AccountKind, Email, Username};
+use builtpanel_http_kit::{AppError, FieldError};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{ResellersManage, ResellersRead},
 };
-use dhpanel_session::rfc3339;
+use builtpanel_session::rfc3339;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -410,7 +410,7 @@ pub async fn create_package(
         )]),
         PackageError::Database(db) => internal(db),
     })?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit(
             "admin.reseller_package_created",
@@ -459,7 +459,7 @@ pub async fn delete_package(
         }
         PackageDelete::Deleted => {}
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit(
             "admin.reseller_package_deleted",
@@ -593,7 +593,7 @@ pub async fn create_reseller(
     resellers::insert(&mut tx, id, company, req.package_id, &json!({}))
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit("admin.reseller_created", &who, "reseller", id).metadata(json!({
             "username": username.as_str(),
@@ -653,7 +653,7 @@ pub async fn set_reseller_status(
     {
         return Err(AppError::not_found("reseller"));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit("admin.reseller_status_changed", &who, "reseller", id)
             .metadata(json!({ "status": status })),
@@ -711,7 +711,7 @@ pub async fn delete_reseller(
     users::set_account_status(&mut tx, id, "disabled")
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit("admin.reseller_deleted", &who, "reseller", id),
     )
@@ -878,7 +878,7 @@ pub async fn put_branding(
     resellers::set_branding(&mut tx, r.id, &branding)
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit("reseller.branding_changed", &who, "reseller", r.id),
     )
@@ -1167,7 +1167,7 @@ pub async fn create_my_plan(
     )
     .await
     .map_err(internal)?;
-    dhpanel_audit::insert(&mut *tx, &audit("reseller.plan_created", &who, "plan", id))
+    builtpanel_audit::insert(&mut *tx, &audit("reseller.plan_created", &who, "plan", id))
         .await
         .map_err(internal)?;
     tx.commit().await.map_err(internal)?;
@@ -1207,7 +1207,7 @@ pub async fn delete_my_plan(
         }
         PlanDelete::Deleted => {}
     }
-    dhpanel_audit::insert(&mut *tx, &audit("reseller.plan_deleted", &who, "plan", id))
+    builtpanel_audit::insert(&mut *tx, &audit("reseller.plan_deleted", &who, "plan", id))
         .await
         .map_err(internal)?;
     tx.commit().await.map_err(internal)?;

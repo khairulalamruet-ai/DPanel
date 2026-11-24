@@ -19,9 +19,9 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{delete, get, post},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_session::{Authenticated, RevokeReason, SessionInfo, clear_cookie, rfc3339};
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_session::{Authenticated, RevokeReason, SessionInfo, clear_cookie, rfc3339};
 use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;

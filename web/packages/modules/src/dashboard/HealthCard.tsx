@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { api } from "@dhpanel/api";
-import { Card, CardHeader, CardTitle, CardContent, Badge } from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+import { api } from "@builtpanel/api";
+import { Card, CardHeader, CardTitle, CardContent, Badge } from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Activity, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface HealthState {

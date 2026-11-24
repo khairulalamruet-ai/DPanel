@@ -28,8 +28,8 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_cache::RedisHandle;
-use dhpanel_http_kit::AppError;
+use builtpanel_cache::RedisHandle;
+use builtpanel_http_kit::AppError;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -142,7 +142,7 @@ pub trait SnapshotCache: Send + Sync + 'static {
     fn forget(&self, tenant: Uuid) -> BoxFuture<'_, Result<(), String>>;
 }
 
-/// Snapshots in Redis, under `dh:plan:<tenant>`.
+/// Snapshots in Redis, under `bp:plan:<tenant>`.
 #[derive(Clone)]
 pub struct RedisCache {
     redis: RedisHandle,
@@ -156,7 +156,7 @@ impl RedisCache {
     }
 
     fn key(tenant: Uuid) -> String {
-        format!("dh:plan:{tenant}")
+        format!("bp:plan:{tenant}")
     }
 }
 

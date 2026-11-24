@@ -1,0 +1,8 @@
+slug        = "hypertable"
+name        = "Hypertable"
+category    = "databases"
+kind        = "unavailable"
+description = "Hypertable."
+license     = "Apache-2.0"
+covers      = ["Hypertable"]
+reason      = "the project is discontinued and no longer gets security fixes"

@@ -312,12 +312,12 @@ async fn docroots_status_and_redirects_are_checked(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 #[ignore = "needs PostgreSQL"]
 async fn the_default_vhost_template_is_the_one_in_the_code_and_there_is_only_one(pool: PgPool) {
-    let t = dhpanel_database::vhost_templates::default_for(&pool, "nginx")
+    let t = builtpanel_database::vhost_templates::default_for(&pool, "nginx")
         .await
         .unwrap()
         .expect("seeded");
-    assert_eq!(t.body, dhpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE);
-    dhpanel_domain::vhost::check_template(&t.body).unwrap();
+    assert_eq!(t.body, builtpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE);
+    builtpanel_domain::vhost::check_template(&t.body).unwrap();
     // A second default for the same server is refused; a non-default is fine.
     let second = sqlx::query(
         "INSERT INTO vhost_templates (name, body, is_default) VALUES ('Other', 'x', true)",

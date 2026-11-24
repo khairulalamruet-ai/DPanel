@@ -7,9 +7,9 @@
 //! a move's operation has succeeded, switches the tenant over and asks the node to remove the
 //! old copies. A move that failed for good is tried again after a while.
 
-use dhpanel_database::tenant_db::{self, Candidate};
-use dhpanel_node_protocol::{DbEngine, MigrateGrant, MigrateRemote, Operation};
-use dhpanel_operations::{Enqueued, Request, Status};
+use builtpanel_database::tenant_db::{self, Candidate};
+use builtpanel_node_protocol::{DbEngine, MigrateGrant, MigrateRemote, Operation};
+use builtpanel_operations::{Enqueued, Request, Status};
 use uuid::Uuid;
 
 use crate::Dispatcher;
@@ -165,7 +165,7 @@ impl Dispatcher {
                 .map_err(|e| e.to_string())?;
             return Ok(true);
         };
-        let status = dhpanel_database::operations::get(db, id)
+        let status = builtpanel_database::operations::get(db, id)
             .await
             .map_err(|e| e.to_string())?
             .map(|o| o.status);

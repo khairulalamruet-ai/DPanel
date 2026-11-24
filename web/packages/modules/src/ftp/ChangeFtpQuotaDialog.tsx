@@ -8,11 +8,11 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { changeFtpQuota } from "./api";
 import { HardDrive } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
-import { FtpAccount, UpdateFtpQuotaPayload } from "./types";
+import { useTranslation } from "@builtpanel/i18n";
+import { FtpAccount } from "./types";
 
 interface ChangeFtpQuotaDialogProps {
   open: boolean;
@@ -52,12 +52,7 @@ export function ChangeFtpQuotaDialog({
 
     try {
       setIsSubmitting(true);
-      await apiFetch(`/api/v1/client/ftp/accounts/${encodeURIComponent(account.id)}/quota`, {
-        method: "PUT",
-        body: JSON.stringify({
-          quota_mb: quotaUnlimited ? -1 : Number(quotaMb),
-        } as UpdateFtpQuotaPayload),
-      });
+      await changeFtpQuota(account.id, quotaUnlimited ? null : Number(quotaMb));
 
       toast({
         title: t("common.success"),

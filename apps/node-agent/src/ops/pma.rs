@@ -1,6 +1,6 @@
 //! phpMyAdmin for clients (T07.09), signed in without a password.
 //!
-//! One container, `dh-pma`, runs the node's phpMyAdmin in single-sign-on mode:
+//! One container, `bp-pma`, runs the node's phpMyAdmin in single-sign-on mode:
 //! it has no sign-in form and no server list, it only takes what a sign-in page of
 //! our own hands it. A client asks the control plane for a link; the control plane
 //! makes a token, keeps it to itself and tells the node only its SHA-256. The node
@@ -16,12 +16,12 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_docker_manager::{
+use builtpanel_docker_manager::{
     Capability, ContainerSpec, DockerError, Network, PublishedPort, Restart, Tmpfs, VolumeMount,
 };
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role};
 use mysql_async::prelude::Queryable as _;
 
 use super::{
@@ -31,17 +31,17 @@ use super::{
 };
 
 /// The container's name.
-pub const CONTAINER: &str = "dh-pma";
+pub const CONTAINER: &str = "bp-pma";
 /// The network the web server joins to reach it.
-pub const FRONT_NETWORK: &str = "dh-pma-net";
+pub const FRONT_NETWORK: &str = "bp-pma-net";
 const MIB: u64 = 1024 * 1024;
 /// How long a link works after it was made.
 const LINK_SECS: i64 = 300;
 
-/// Loopback port of the container (`DHPANEL_AGENT_PMA_PORT`).
+/// Loopback port of the container (`BUILTPANEL_AGENT_PMA_PORT`).
 #[must_use]
 pub fn port() -> u16 {
-    std::env::var("DHPANEL_AGENT_PMA_PORT")
+    std::env::var("BUILTPANEL_AGENT_PMA_PORT")
         .ok()
         .and_then(|p| p.parse().ok())
         .filter(|p| *p >= 1024)
@@ -56,7 +56,7 @@ fn sessions_dir(context: &TenantContext) -> PathBuf {
     base(context).join("sessions")
 }
 
-fn accounts_dir(context: &TenantContext) -> PathBuf {
+pub(super) fn accounts_dir(context: &TenantContext) -> PathBuf {
     base(context).join("accounts")
 }
 
@@ -71,7 +71,7 @@ $cfg['Servers'][1]['auth_type'] = 'signon';
 $cfg['Servers'][1]['SignonSession'] = 'DHSIGNON';
 $cfg['Servers'][1]['SignonURL'] = '/index.php?dhsignon=ended';
 $cfg['Servers'][1]['LogoutURL'] = '/index.php?dhsignon=bye';
-$cfg['Servers'][1]['host'] = 'dh-db';
+$cfg['Servers'][1]['host'] = 'bp-db';
 $cfg['Servers'][1]['port'] = 3306;
 $cfg['Servers'][1]['AllowNoPassword'] = false;
 $cfg['AllowArbitraryServer'] = false;
@@ -154,7 +154,7 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
                 .parent()
                 .ok_or_else(|| failed("the state folder is unknown"))?
                 .to_path_buf();
-            let volume = db::name("dh-pma-sessions")?;
+            let volume = db::name("bp-pma-sessions")?;
             docker
                 .create_bind_volume(&volume, &sessions, &state)
                 .await
@@ -173,7 +173,7 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
             let mut spec = ContainerSpec::new(container.clone(), image);
             // The node's web server reaches phpMyAdmin on the machine's loopback address (a port
             // Docker picks; the agent reads it back), the same way it reaches a site.
-            spec.ports = vec![dhpanel_docker_manager::PublishedPort {
+            spec.ports = vec![builtpanel_docker_manager::PublishedPort {
                 container_port: 80,
                 host_port: 0,
                 host_ip: std::net::IpAddr::from([127, 0, 0, 1]),
@@ -220,7 +220,7 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
                 Err(e) => return Err(docker_error(&e)),
             }
             docker
-                .connect_network(&container, &front, "dh-pma")
+                .connect_network(&container, &front, "bp-pma")
                 .await
                 .map_err(|e| docker_error(&e))?;
         }
@@ -288,7 +288,8 @@ pub async fn open_phpmyadmin(
         return Err(super::wrong_operation());
     };
     TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
-    dhpanel_domain::databases::check_identifier(&database).map_err(|e| invalid(&e.to_string()))?;
+    builtpanel_domain::databases::check_identifier(&database)
+        .map_err(|e| invalid(&e.to_string()))?;
     if token_hash.len() != 64
         || !token_hash
             .bytes()
@@ -329,7 +330,7 @@ pub async fn open_phpmyadmin(
             ))
             .await
             .map_err(|e| failed(&server_words(&e)))?;
-        let privileges = dhpanel_domain::databases::Access::All
+        let privileges = builtpanel_domain::databases::Access::All
             .privileges()
             .join(", ");
         admin

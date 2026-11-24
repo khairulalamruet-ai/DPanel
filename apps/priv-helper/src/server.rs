@@ -20,8 +20,8 @@ use crate::{
     tenant::{self, TenantEnv},
 };
 
-/// Default socket path (the systemd unit creates `/run/dhpanel`).
-pub const DEFAULT_SOCKET: &str = "/run/dhpanel/priv-helper.sock";
+/// Default socket path (the systemd unit creates `/run/builtpanel`).
+pub const DEFAULT_SOCKET: &str = "/run/builtpanel/priv-helper.sock";
 /// How long a caller has to send its request and take the answer.
 const IO_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -37,7 +37,7 @@ pub struct StderrLog;
 impl Log for StderrLog {
     #[allow(clippy::print_stderr)]
     fn line(&self, text: &str) {
-        eprintln!("dhpanel-priv-helper: {text}");
+        eprintln!("builtpanel-priv-helper: {text}");
     }
 }
 
@@ -381,10 +381,11 @@ mod tests {
     fn test_tenants(gid: u32) -> TenantEnv {
         TenantEnv {
             root: std::env::temp_dir().join(format!("dhph-srv-tenants-{}", std::process::id())),
-            agent_name: "dhpanel-agent".into(),
+            agent_name: "builtpanel-agent".into(),
             subuid_file: "/nonexistent".into(),
             agent_gid: gid,
             mountinfo: "/nonexistent".into(),
+            identity: false,
         }
     }
 
@@ -451,8 +452,11 @@ mod tests {
 
         fn ask(&self, line: &[u8]) -> Response {
             let mut stream = UnixStream::connect(&self.config.socket).unwrap();
-            stream.write_all(line).unwrap();
-            stream.write_all(b"\n").unwrap();
+            // One write: a second one, after the helper has answered and closed, could be
+            // answered with a reset that breaks the read below.
+            let mut request = line.to_vec();
+            request.push(b'\n');
+            stream.write_all(&request).unwrap();
             let mut answer = String::new();
             BufReader::new(stream).read_line(&mut answer).unwrap();
             serde_json::from_str(&answer).unwrap()
@@ -624,10 +628,10 @@ mod tests {
 
     #[test]
     fn users_are_found_in_passwd_text() {
-        let passwd = "root:x:0:0:root:/root:/bin/bash\ndhpanel-agent:x:999:987::/var/lib/dhpanel-agent/home:/usr/sbin/nologin\nbroken:x:abc:1::/:/bin/sh\n";
-        assert_eq!(lookup_user(passwd, "dhpanel-agent"), Some((999, 987)));
+        let passwd = "root:x:0:0:root:/root:/bin/bash\nbuiltpanel-agent:x:999:987::/var/lib/builtpanel-agent/home:/usr/sbin/nologin\nbroken:x:abc:1::/:/bin/sh\n";
+        assert_eq!(lookup_user(passwd, "builtpanel-agent"), Some((999, 987)));
         assert_eq!(lookup_user(passwd, "root"), Some((0, 0)));
-        assert_eq!(lookup_user(passwd, "dhpanel"), None, "no prefix matches");
+        assert_eq!(lookup_user(passwd, "builtpanel"), None, "no prefix matches");
         assert_eq!(lookup_user(passwd, "broken"), None);
         assert_eq!(lookup_user(passwd, "nobody"), None);
     }

@@ -1,7 +1,7 @@
 //! The file manager's requests and answers (T08.02-T08.06).
 //!
 //! Every path is relative to the tenant's files and is checked again where it is
-//! used (`dhpanel-safe-fs`). A request and its answer travel as one JSON object
+//! used (`builtpanel-safe-fs`). A request and its answer travel as one JSON object
 //! each, so both stay small: file contents here are text for the editor, and
 //! uploads and downloads of bulk data use their own channel.
 

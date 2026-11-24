@@ -1,6 +1,6 @@
 [package]
-name = "dhpanel-priv-helper"
-description = "DHPanel minimal privileged helper for an allowlisted set of host operations."
+name = "builtpanel-priv-helper"
+description = "Built Panel minimal privileged helper for an allowlisted set of host operations."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,21 +8,21 @@ license.workspace = true
 publish.workspace = true
 
 [lib]
-name = "dhpanel_priv_helper"
+name = "builtpanel_priv_helper"
 path = "src/lib.rs"
 
 [[bin]]
-name = "dhpanel-priv-helper"
+name = "builtpanel-priv-helper"
 path = "src/main.rs"
 
 # Kept deliberately small: this program runs as root. No async runtime, no
 # network stack, no argument-parsing framework.
 [dependencies]
-dhpanel-common.workspace = true
-dhpanel-backup.workspace = true
-dhpanel-fileops.workspace = true
-dhpanel-node-protocol.workspace = true
-dhpanel-safe-fs.workspace = true
+builtpanel-common.workspace = true
+builtpanel-backup.workspace = true
+builtpanel-fileops.workspace = true
+builtpanel-node-protocol.workspace = true
+builtpanel-safe-fs.workspace = true
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2.0.21"

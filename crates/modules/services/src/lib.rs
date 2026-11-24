@@ -31,19 +31,19 @@ use axum::{
     response::{IntoResponse as _, Response},
     routing::{get, post},
 };
-use dhpanel_database::{
+use builtpanel_database::{
     accounts::DbAccountKind,
     operations::{self, NewOperation, Status},
     sqlx::PgPool,
     tenants, users,
 };
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_node_protocol::{Operation, Output};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_node_protocol::{Operation, Output};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{NodesManage, NodesRead, ServerManage, ServerRead},
 };
-use dhpanel_session::SessionStore;
+use builtpanel_session::SessionStore;
 use serde::Serialize;
 use utoipa::{OpenApi, ToSchema};
 use uuid::Uuid;
@@ -124,7 +124,7 @@ fn internal(err: impl Into<Box<dyn std::error::Error + Send + Sync + 'static>>) 
 /// One of the account's containers.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ServiceView {
-    /// Its name (`dh-<account>-<role>`).
+    /// Its name (`bp-<account>-<role>`).
     pub name: String,
     /// What it is for (`web`, `php`).
     pub role: String,
@@ -147,7 +147,7 @@ pub struct ServiceList {
 
 /// A restarted service.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct Restarted {
+pub struct ServiceRestarted {
     /// The container.
     pub name: String,
     /// Its state now.
@@ -305,7 +305,7 @@ pub async fn list_services(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Restarted", body = Restarted),
+        (status = 200, description = "ServiceRestarted", body = ServiceRestarted),
         (status = 202, description = "The node is slow; the restart goes on", body = Pending),
         (status = 404, description = "The account has no such service", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`tenant_not_running`", body = ProblemDetails, content_type = "application/problem+json"),
@@ -330,8 +330,8 @@ pub async fn restart_service(
     };
     match ask(&state, &tenant, &who, &op).await? {
         Ok(Output::ContainerRestarted { name, state: s }) => {
-            dhpanel_audit_entry(&state, &who, &tenant, &name).await?;
-            Ok(Json(Restarted { name, state: s }).into_response())
+            builtpanel_audit_entry(&state, &who, &tenant, &name).await?;
+            Ok(Json(ServiceRestarted { name, state: s }).into_response())
         }
         Ok(_) => Err(internal(std::io::Error::other("an unexpected answer"))),
         Err(operation_id) => {
@@ -340,7 +340,7 @@ pub async fn restart_service(
     }
 }
 
-async fn dhpanel_audit_entry(
+async fn builtpanel_audit_entry(
     state: &ServicesState,
     who: &Principal,
     tenant: &tenants::Tenant,
@@ -356,10 +356,10 @@ async fn sqlx_insert_audit(
     who: &Principal,
     tenant: &tenants::Tenant,
     name: &str,
-) -> Result<(), dhpanel_database::sqlx::Error> {
-    dhpanel_audit::insert(
+) -> Result<(), builtpanel_database::sqlx::Error> {
+    builtpanel_audit::insert(
         db,
-        &dhpanel_audit::AuditEntry::new("service.restarted", dhpanel_audit::Outcome::Success)
+        &builtpanel_audit::AuditEntry::new("service.restarted", builtpanel_audit::Outcome::Success)
             .actor(who.account_id())
             .tenant(tenant.id)
             .metadata(serde_json::json!({ "container": name })),
@@ -497,13 +497,13 @@ pub async fn signal_process(
         "kill" => true,
         _ => {
             return Err(AppError::validation(vec![
-                dhpanel_http_kit::FieldError::new("signal", "invalid", "term or kill."),
+                builtpanel_http_kit::FieldError::new("signal", "invalid", "term or kill."),
             ]));
         }
     };
     if pid < 2 {
         return Err(AppError::validation(vec![
-            dhpanel_http_kit::FieldError::new(
+            builtpanel_http_kit::FieldError::new(
                 "pid",
                 "invalid",
                 "Process 1 cannot be ended: restart the service instead.",
@@ -519,11 +519,11 @@ pub async fn signal_process(
     };
     match ask(&state, &tenant, &who, &op).await? {
         Ok(Output::ProcessSignalled { pid, outcome }) => {
-            dhpanel_audit::insert(
+            builtpanel_audit::insert(
                 &state.db,
-                &dhpanel_audit::AuditEntry::new(
+                &builtpanel_audit::AuditEntry::new(
                     "process.signalled",
-                    dhpanel_audit::Outcome::Success,
+                    builtpanel_audit::Outcome::Success,
                 )
                 .actor(who.account_id())
                 .tenant(tenant.id)
@@ -534,10 +534,10 @@ pub async fn signal_process(
             .await
             .map_err(internal)?;
             let outcome = match outcome {
-                dhpanel_node_protocol::SignalOutcome::Exited => "exited",
-                dhpanel_node_protocol::SignalOutcome::Killed => "killed",
-                dhpanel_node_protocol::SignalOutcome::NotFound => "not_found",
-                dhpanel_node_protocol::SignalOutcome::StillRunning => "still_running",
+                builtpanel_node_protocol::SignalOutcome::Exited => "exited",
+                builtpanel_node_protocol::SignalOutcome::Killed => "killed",
+                builtpanel_node_protocol::SignalOutcome::NotFound => "not_found",
+                builtpanel_node_protocol::SignalOutcome::StillRunning => "still_running",
             };
             Ok(Json(Signalled {
                 pid,
@@ -672,12 +672,15 @@ async fn server_action(
 ) -> Result<Response, AppError> {
     match ask_node(state, id, who, &op).await? {
         Ok(Output::ServerActionDone { action }) => {
-            dhpanel_audit::insert(
+            builtpanel_audit::insert(
                 &state.db,
-                &dhpanel_audit::AuditEntry::new(audit_action, dhpanel_audit::Outcome::Success)
-                    .actor(who.account_id())
-                    .target("node", id)
-                    .metadata(detail),
+                &builtpanel_audit::AuditEntry::new(
+                    audit_action,
+                    builtpanel_audit::Outcome::Success,
+                )
+                .actor(who.account_id())
+                .target("node", id)
+                .metadata(detail),
             )
             .await
             .map_err(internal)?;
@@ -749,7 +752,11 @@ pub async fn set_swap(
 ) -> Result<Response, AppError> {
     if req.megabytes > 32_768 {
         return Err(AppError::validation(vec![
-            dhpanel_http_kit::FieldError::new("megabytes", "out_of_range", "Between 0 and 32768."),
+            builtpanel_http_kit::FieldError::new(
+                "megabytes",
+                "out_of_range",
+                "Between 0 and 32768.",
+            ),
         ]));
     }
     server_action(
@@ -819,7 +826,7 @@ pub async fn reboot_node(
     Json(req): Json<RebootRequest>,
 ) -> Result<Response, AppError> {
     let name: Option<String> =
-        dhpanel_database::sqlx::query_scalar("SELECT name FROM nodes WHERE id = $1")
+        builtpanel_database::sqlx::query_scalar("SELECT name FROM nodes WHERE id = $1")
             .bind(id)
             .fetch_optional(&state.db)
             .await
@@ -827,7 +834,7 @@ pub async fn reboot_node(
     let name = name.ok_or_else(|| AppError::not_found("node"))?;
     if req.confirm != name {
         return Err(AppError::validation(vec![
-            dhpanel_http_kit::FieldError::new(
+            builtpanel_http_kit::FieldError::new(
                 "confirm",
                 "mismatch",
                 "Type the node's name to confirm the reboot.",
@@ -885,7 +892,7 @@ pub async fn node_services(
     _who: Require<NodesRead>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<NodeServiceList>, AppError> {
-    let items = dhpanel_database::node_services::list(&state.db, id)
+    let items = builtpanel_database::node_services::list(&state.db, id)
         .await
         .map_err(internal)?
         .into_iter()
@@ -960,7 +967,7 @@ async fn ask_node(
                         AppError::not_found("service")
                     } else if refused {
                         // The node refused what was asked: its words say what is wrong.
-                        AppError::validation(vec![dhpanel_http_kit::FieldError::new(
+                        AppError::validation(vec![builtpanel_http_kit::FieldError::new(
                             "value",
                             "refused_by_node",
                             &message,
@@ -995,7 +1002,7 @@ async fn ask_node(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Restarted", body = Restarted),
+        (status = 200, description = "ServiceRestarted", body = ServiceRestarted),
         (status = 202, description = "The node is slow; the restart goes on", body = Pending),
         (status = 404, description = "No such node, service, or it is not installed there", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 503, description = "`node_unavailable`", body = ProblemDetails, content_type = "application/problem+json")
@@ -1009,11 +1016,11 @@ pub async fn restart_node_service(
     let op = Operation::RestartNodeService { name: name.clone() };
     match ask_node(&state, id, &who.0, &op).await? {
         Ok(Output::ContainerRestarted { name, state: s }) => {
-            dhpanel_audit::insert(
+            builtpanel_audit::insert(
                 &state.db,
-                &dhpanel_audit::AuditEntry::new(
+                &builtpanel_audit::AuditEntry::new(
                     "node_service.restarted",
-                    dhpanel_audit::Outcome::Success,
+                    builtpanel_audit::Outcome::Success,
                 )
                 .actor(who.0.account_id())
                 .target("node", id)
@@ -1021,7 +1028,7 @@ pub async fn restart_node_service(
             )
             .await
             .map_err(internal)?;
-            Ok(Json(Restarted { name, state: s }).into_response())
+            Ok(Json(ServiceRestarted { name, state: s }).into_response())
         }
         Ok(_) => Err(internal(std::io::Error::other("an unexpected answer"))),
         Err(operation_id) => {
@@ -1081,9 +1088,13 @@ pub async fn node_service_log(
     axum::extract::Query(q): axum::extract::Query<ServiceLogQuery>,
 ) -> Result<Response, AppError> {
     let lines = q.lines.unwrap_or(200);
-    if !(1..=dhpanel_node_protocol::MAX_LOG_LINES).contains(&lines) {
+    if !(1..=builtpanel_node_protocol::MAX_LOG_LINES).contains(&lines) {
         return Err(AppError::validation(vec![
-            dhpanel_http_kit::FieldError::new("lines", "out_of_range", "Between 1 and 2000 lines."),
+            builtpanel_http_kit::FieldError::new(
+                "lines",
+                "out_of_range",
+                "Between 1 and 2000 lines.",
+            ),
         ]));
     }
     let op = Operation::ReadServiceLog { name, tail: lines };
@@ -1114,7 +1125,7 @@ pub async fn node_service_log(
         set_timezone, set_swap, drop_caches, reboot_node, node_services, restart_node_service, node_service_log
     ),
     components(schemas(
-        ServiceView, ServiceList, Restarted, Pending, ProcessView, ProcessList, SignalRequest,
+        ServiceView, ServiceList, ServiceRestarted, Pending, ProcessView, ProcessList, SignalRequest,
         Signalled, ServerInfoView, SshSetting, TimezoneRequest, SwapRequest, RebootRequest,
         ServerActionView, NodeServiceView, NodeServiceList,
         ServiceLogLine, ServiceLog

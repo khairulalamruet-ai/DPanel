@@ -1,17 +1,17 @@
 //! Makes and removes the panel's own backups (T09.08).
 //!
-//! The runner of `dhpanel-mod-backups` only writes rows (a schedule that is due, or an
+//! The runner of `builtpanel-mod-backups` only writes rows (a schedule that is due, or an
 //! administrator's request, makes a `system` backup `queued`; retention makes one `deleting`).
 //! This executor does the work **here**, on the control host, because the data (the control
 //! database, the configuration, the node CA) is here and no node can reach it: `pg_dump`, the
-//! archive of `dhpanel-system-backup`, then the destination.
+//! archive of `builtpanel-system-backup`, then the destination.
 
 use std::{path::PathBuf, sync::Arc};
 
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_config::{CONFIG_PATH_ENV, ControlConfig, DEFAULT_CONTROL_CONFIG};
-use dhpanel_database::{backups as store, sqlx::PgPool};
-use dhpanel_system_backup::{Connection, Job, derive_key, run_job};
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_config::{CONFIG_PATH_ENV, ControlConfig, DEFAULT_CONTROL_CONFIG};
+use builtpanel_database::{backups as store, sqlx::PgPool};
+use builtpanel_system_backup::{Connection, Job, derive_key, run_job};
 use secrecy::ExposeSecret as _;
 use uuid::Uuid;
 
@@ -167,7 +167,7 @@ impl Executor {
         let (kind, settings, secrets) = self.destination(destination).await?;
         let prefix = format!("{}/", id.simple());
         tokio::task::spawn_blocking(move || -> Result<(), String> {
-            let dest = dhpanel_backup_dest::open::open(&kind, &settings, &secrets)
+            let dest = builtpanel_backup_dest::open::open(&kind, &settings, &secrets)
                 .map_err(|e| e.to_string())?;
             for name in dest.list(&prefix).map_err(|e| e.to_string())? {
                 if name.starts_with(&prefix) {

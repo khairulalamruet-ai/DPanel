@@ -1,7 +1,7 @@
 # The PHP-FPM image tenants run (T06.01): the official PHP image plus the
 # extensions most sites need. Built and published by .github/workflows/rust-images.yml.
 #
-#   docker build --build-arg PHP_VERSION=8.4 -t dhpanel-php:8.4 deploy/images/php
+#   docker build --build-arg PHP_VERSION=8.4 -t builtpanel-php:8.4 deploy/images/php
 #
 # Nothing here runs as root at run time: the panel starts the container as the
 # tenant's own user id, and the image needs no capability.
@@ -21,7 +21,7 @@ RUN install-php-extensions \
     && rm -f /usr/local/bin/install-php-extensions \
     && rm -rf /tmp/* /var/cache/apk/*
 
-LABEL org.opencontainers.image.title="DHPanel PHP-FPM" \
+LABEL org.opencontainers.image.title="Built Panel PHP-FPM" \
       org.opencontainers.image.description="PHP-FPM with the extensions hosting sites usually need" \
-      org.opencontainers.image.source="https://github.com/dhpanel"
+      org.opencontainers.image.source="https://github.com/builtpanel"
 EXPOSE 9000

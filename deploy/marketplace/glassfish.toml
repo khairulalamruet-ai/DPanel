@@ -1,0 +1,9 @@
+slug        = "glassfish"
+name        = "GlassFish"
+category    = "java_containers"
+kind        = "unavailable"
+description = "The Jakarta EE reference server."
+license     = "EPL-2.0"
+homepage    = "https://glassfish.org"
+covers      = ["GlassFish"]
+reason      = "not packaged for the panel yet"

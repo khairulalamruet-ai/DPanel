@@ -9,7 +9,7 @@ Use `crates/modules/cron` as the smallest complete example and copy its layout.
    category, `core`, `depends_on`), `[permissions]`, `[features]` (plan feature keys), `[limits]`
    (plan limits with `default` and `unlimited`) and `[ui]` (navigation). Unknown keys are errors.
    Every problem is reported at once at start-up.
-2. **Crate** `crates/modules/<name>/Cargo.toml` named `dhpanel-mod-<name>`, with `[lints] workspace =
+2. **Crate** `crates/modules/<name>/Cargo.toml` named `builtpanel-mod-<name>`, with `[lints] workspace =
    true`, and add it to the workspace `members` in the root `Cargo.toml` (dependency changes go in
    their own small PR, newest stable versions).
 3. **`lib.rs`** exports `MANIFEST` (`include_str!` of the manifest), an optional `SETTINGS_SCHEMA`
@@ -17,7 +17,7 @@ Use `crates/modules/cron` as the smallest complete example and copy its layout.
    needed, with `FromRef` for the pool), and `client_router()` / `admin_router()` / `public_router()`
    returning `Router<State>`.
 4. **Paths** are full: `/api/v1/client/...`, `/api/v1/admin/...`, `/api/v1/public/...`. A handler
-   checks the session, the permission (`dhpanel_rbac::Principal`), the plan feature
+   checks the session, the permission (`builtpanel_rbac::Principal`), the plan feature
    (`plans::includes_feature`) and that the thing belongs to the caller (answer `404`, not `403`,
    for another account's id).
 5. **Wire it** in `apps/control-api/src/modules.rs`: add the manifest to `EMBEDDED`, a match arm

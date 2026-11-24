@@ -17,10 +17,10 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use dhpanel_database::error_pages as store;
-use dhpanel_domain::error_pages::{self, KINDS, Kind, MAX_PAGE_BYTES};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_database::error_pages as store;
+use builtpanel_domain::error_pages::{self, KINDS, Kind, MAX_PAGE_BYTES};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
@@ -93,10 +93,10 @@ fn kind_of(text: &str) -> Result<Kind, AppError> {
 
 fn audit(
     action: &'static str,
-    who: &dhpanel_rbac::Principal,
+    who: &builtpanel_rbac::Principal,
     kind: &str,
-) -> dhpanel_audit::AuditEntry {
-    dhpanel_audit::AuditEntry::new(action, dhpanel_audit::Outcome::Success)
+) -> builtpanel_audit::AuditEntry {
+    builtpanel_audit::AuditEntry::new(action, builtpanel_audit::Outcome::Success)
         .actor(who.account_id())
         .metadata(serde_json::json!({ "kind": kind }))
 }
@@ -153,7 +153,7 @@ pub async fn set(
     store::set(&mut tx, kind.as_str(), &input.html, Some(who.account_id()))
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit("admin.error_page_changed", &who, kind.as_str()),
     )
@@ -191,7 +191,7 @@ pub async fn reset(
         .await
         .map_err(internal)?
     {
-        dhpanel_audit::insert(
+        builtpanel_audit::insert(
             &mut *tx,
             &audit("admin.error_page_reset", &who, kind.as_str()),
         )

@@ -4,14 +4,18 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name};
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name};
+use builtpanel_node_agent::ops::{
     nodeservices::{read_service_log_of, report_services_of, restart_node_service_of},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -32,9 +36,9 @@ async fn core_services_are_reported_restarted_and_read_and_nothing_else_can_be_n
     docker.pull_image(&image).await.unwrap();
     let pid = std::process::id();
     let (db, pma, sftp) = (
-        format!("dh-nsdb{pid}"),
-        format!("dh-nspma{pid}"),
-        format!("dh-nssftp{pid}"),
+        format!("bp-nsdb{pid}"),
+        format!("bp-nspma{pid}"),
+        format!("bp-nssftp{pid}"),
     );
     let containers = [
         ("database", db.as_str()),
@@ -51,7 +55,7 @@ async fn core_services_are_reported_restarted_and_read_and_nothing_else_can_be_n
         docker.start(&name).await.unwrap();
     }
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-    let base = std::env::temp_dir().join(format!("dh-nodeservices-live-{pid}"));
+    let base = std::env::temp_dir().join(format!("bp-nodeservices-live-{pid}"));
     let context = Arc::new(TenantContext {
         helper_socket: base.join("none.sock"),
         tenants_root: base.join("tenants"),
@@ -129,7 +133,7 @@ async fn core_services_are_reported_restarted_and_read_and_nothing_else_can_be_n
     );
     // A bad count, a name that is not a core service (even a real container), one not installed.
     assert_eq!(log(0).await.unwrap_err().code, ErrorCode::InvalidArguments);
-    for name in ["caddy", "agent", &db, "../etc", "dh-db"] {
+    for name in ["caddy", "agent", &db, "../etc", "bp-db"] {
         let e = restart_node_service_of(
             context.clone(),
             Operation::RestartNodeService { name: name.into() },

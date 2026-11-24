@@ -8,14 +8,14 @@
 //!   [`Require<P>`]; a permission type is declared with [`permission!`]:
 //!
 //! ```
-//! dhpanel_rbac::permission!(
+//! builtpanel_rbac::permission!(
 //!     /// Create, change and remove roles.
 //!     pub RolesManage = "admin.roles.manage"
 //! );
 //! // async fn create_role(Require(who, ..): Require<RolesManage>, ...) { ... }
 //! ```
 //!
-//! [`Require`] does everything [`dhpanel_session::Authenticated`] does
+//! [`Require`] does everything [`builtpanel_session::Authenticated`] does
 //! (session, CSRF on state-changing methods), then loads the account's roles
 //! and answers:
 //! * 401 when the account no longer exists or is not active (and ends the session),
@@ -37,13 +37,13 @@ use axum::{
     extract::{FromRef, FromRequestParts},
     http::request::Parts,
 };
-use dhpanel_database::{
+use builtpanel_database::{
     accounts::{DbAccountKind, DbAccountStatus},
     rbac::load_access,
     sqlx::PgPool,
 };
-use dhpanel_http_kit::AppError;
-use dhpanel_session::{Authenticated, RevokeReason, SessionData, SessionStore, cookie_value};
+use builtpanel_http_kit::AppError;
+use builtpanel_session::{Authenticated, RevokeReason, SessionData, SessionStore, cookie_value};
 use uuid::Uuid;
 
 /// Core permission keys that exist before any feature module is loaded.

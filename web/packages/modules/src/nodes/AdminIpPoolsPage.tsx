@@ -15,9 +15,9 @@ import {
   Badge,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
 import {
   Globe,
   Plus,

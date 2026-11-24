@@ -8,7 +8,7 @@ use base64::{
     Engine as _,
     engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
 };
-use dhpanel_license::{FileSigningKey, KeyError, SigningKey as _};
+use builtpanel_license::{FileSigningKey, KeyError, SigningKey as _};
 use uuid::Uuid;
 
 /// The file with the installation's id.
@@ -109,7 +109,7 @@ impl Identity {
         nonce: &str,
         extra: Option<&str>,
     ) -> Result<String, IdentityError> {
-        let mut m = format!("dhpanel-{purpose}-v1\n{nonce}\n{}", self.installation_id);
+        let mut m = format!("builtpanel-{purpose}-v1\n{nonce}\n{}", self.installation_id);
         if let Some(extra) = extra {
             m.push('\n');
             m.push_str(extra);
@@ -128,7 +128,7 @@ mod tests {
     use super::*;
 
     fn dir() -> std::path::PathBuf {
-        std::env::temp_dir().join(format!("dh-identity-{}", Uuid::new_v4().simple()))
+        std::env::temp_dir().join(format!("bp-identity-{}", Uuid::new_v4().simple()))
     }
 
     #[test]

@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
+import { ToastProvider } from "@builtpanel/ui";
 import { ApiTokensPage } from "./ApiTokensPage";
 import { CreateTokenDialog } from "./CreateTokenDialog";
 import { ApiDocsExplorer } from "./ApiDocsExplorer";
@@ -60,7 +60,7 @@ const mockApiFetch = vi.fn(async (url: string, opts?: any) => {
   return { ok: true };
 });
 
-vi.mock("@dhpanel/api", () => ({
+vi.mock("@builtpanel/api", () => ({
   apiFetch: (url: string, opts?: any) => mockApiFetch(url, opts),
 }));
 

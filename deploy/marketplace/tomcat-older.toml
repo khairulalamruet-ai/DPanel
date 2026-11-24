@@ -1,0 +1,9 @@
+slug        = "tomcat-older"
+name        = "Apache Tomcat (older versions)"
+category    = "java_containers"
+kind        = "unavailable"
+description = "Tomcat 6 and 8."
+license     = "Apache-2.0"
+homepage    = "https://tomcat.apache.org"
+covers      = ["Tomcat 6", "Tomcat 8"]
+reason      = "this version no longer gets security fixes; a newer one is offered"

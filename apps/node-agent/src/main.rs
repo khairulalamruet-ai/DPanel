@@ -1,10 +1,10 @@
-//! `dhpanel-agent`: the DHPanel node agent (typed operations only, never a shell).
+//! `builtpanel-agent`: the Built Panel node agent (typed operations only, never a shell).
 //!
 //! ```text
-//! dhpanel-agent enroll --server https://panel.example.com:8443 \
+//! builtpanel-agent enroll --server https://panel.example.com:8443 \
 //!                      --ca-fingerprint sha256:… --token dhn_…   # once, as the agent user
-//! dhpanel-agent status                                            # who am I, when does my certificate expire
-//! dhpanel-agent run                                               # the service (systemd)
+//! builtpanel-agent status                                            # who am I, when does my certificate expire
+//! builtpanel-agent run                                               # the service (systemd)
 //! ```
 //!
 //! Exit codes follow sysexits.h: 64 bad usage, 65 the answer or state is
@@ -13,8 +13,7 @@
 
 use std::{path::PathBuf, process::ExitCode};
 
-use clap::{Parser, Subcommand};
-use dhpanel_node_agent::{
+use builtpanel_node_agent::{
     AGENT_VERSION,
     enroll::{self, EnrollError, Options},
     identity::{DEFAULT_STATE_DIR, StateDir, StateError},
@@ -25,6 +24,7 @@ use dhpanel_node_agent::{
     stream,
     verify::VerifyError,
 };
+use clap::{Parser, Subcommand};
 use secrecy::SecretString;
 
 const EXIT_USAGE: u8 = 64;
@@ -36,10 +36,10 @@ const EXIT_NOPERM: u8 = 77;
 const EXIT_CONFIG: u8 = 78;
 
 #[derive(Debug, Parser)]
-#[command(name = "dhpanel-agent", version, about = "DHPanel node agent")]
+#[command(name = "builtpanel-agent", version, about = "Built Panel node agent")]
 struct Cli {
     /// Directory holding this node's key, certificate and identity.
-    #[arg(long, global = true, env = "DHPANEL_AGENT_STATE_DIR", default_value = DEFAULT_STATE_DIR)]
+    #[arg(long, global = true, env = "BUILTPANEL_AGENT_STATE_DIR", default_value = DEFAULT_STATE_DIR)]
     state_dir: PathBuf,
     #[command(subcommand)]
     command: Command,
@@ -56,7 +56,7 @@ struct EnrollArgs {
     ca_fingerprint: String,
     /// The one-time token. Prefer --token-file or the environment on shared
     /// machines: command lines are visible to other users.
-    #[arg(long, env = "DHPANEL_ENROLL_TOKEN", hide_env_values = true)]
+    #[arg(long, env = "BUILTPANEL_ENROLL_TOKEN", hide_env_values = true)]
     token: Option<String>,
     /// Read the token from this file (first line).
     #[arg(long, conflicts_with = "token")]
@@ -84,13 +84,13 @@ enum Command {
     Run {
         /// Where to connect (`https://host:port`), when the control plane did
         /// not say at enrolment.
-        #[arg(long, env = "DHPANEL_AGENT_STREAM_URL")]
+        #[arg(long, env = "BUILTPANEL_AGENT_STREAM_URL")]
         stream_url: Option<String>,
     },
 }
 
 fn fail(code: u8, message: &str) -> ExitCode {
-    eprintln!("dhpanel-agent: {message}");
+    eprintln!("builtpanel-agent: {message}");
     ExitCode::from(code)
 }
 
@@ -126,7 +126,7 @@ fn read_token(token: Option<String>, file: Option<PathBuf>) -> Result<SecretStri
             .map_err(|e| format!("cannot read the token file {}: {e}", path.display()))?,
         (None, None) => {
             return Err(
-                "give the token with --token, --token-file or DHPANEL_ENROLL_TOKEN".to_owned(),
+                "give the token with --token, --token-file or BUILTPANEL_ENROLL_TOKEN".to_owned(),
             );
         }
     };
@@ -190,21 +190,23 @@ fn enroll_command(state_dir: PathBuf, args: EnrollArgs) -> ExitCode {
                 ..
             } = &err
             {
-                eprintln!("dhpanel-agent: {err}\ndhpanel-agent: try again in {seconds} seconds");
+                eprintln!(
+                    "builtpanel-agent: {err}\nbuiltpanel-agent: try again in {seconds} seconds"
+                );
                 return ExitCode::from(code);
             }
             if matches!(err, EnrollError::Verify(ref v) if *v != VerifyError::BadPin) {
                 // The control plane has already answered, so it used up the token and
                 // created the node; this agent refused to trust the answer.
                 eprintln!(
-                    "dhpanel-agent: {err}\ndhpanel-agent: nothing was stored. The token is used up and the control plane \
+                    "builtpanel-agent: {err}\nbuiltpanel-agent: nothing was stored. The token is used up and the control plane \
                      may list this node: remove it in the panel, check the CA fingerprint, and add the node again"
                 );
                 return ExitCode::from(code);
             }
             if matches!(err, EnrollError::Rejected { status: 401, .. }) {
                 eprintln!(
-                    "dhpanel-agent: {err}\ndhpanel-agent: tokens work once and for 15 minutes; add the node again in the panel to get a new one"
+                    "builtpanel-agent: {err}\nbuiltpanel-agent: tokens work once and for 15 minutes; add the node again in the panel to get a new one"
                 );
                 return ExitCode::from(code);
             }
@@ -259,7 +261,7 @@ fn run_command(state_dir: PathBuf, stream_url: Option<String>) -> ExitCode {
         Err(err) => {
             return fail(
                 state_code(&err),
-                &format!("{err}. Enrol first: dhpanel-agent enroll --help"),
+                &format!("{err}. Enrol first: builtpanel-agent enroll --help"),
             );
         }
     };
@@ -295,7 +297,7 @@ fn run_command(state_dir: PathBuf, stream_url: Option<String>) -> ExitCode {
         (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => return fail(EXIT_IOERR, &e),
     };
     println!(
-        "dhpanel-agent {AGENT_VERSION}: node '{}' ({}), control plane {address}",
+        "builtpanel-agent {AGENT_VERSION}: node '{}' ({}), control plane {address}",
         id.name, id.node_id
     );
     let runtime = match tokio::runtime::Builder::new_current_thread()
@@ -312,8 +314,8 @@ fn run_command(state_dir: PathBuf, stream_url: Option<String>) -> ExitCode {
                 Err(err) => return fail(70, &format!("cannot listen for signals: {err}")),
             };
         // The web server (Caddy) is driven only when its admin address is given.
-        let web = dhpanel_node_agent::web::Settings::from_env()
-            .map(|s| dhpanel_node_agent::web::WebContext::new(s, &state_dir));
+        let web = builtpanel_node_agent::web::Settings::from_env()
+            .map(|s| builtpanel_node_agent::web::WebContext::new(s, &state_dir));
         if let Some(web) = &web {
             // Sites are reached on the loopback port their container is published on.
             if let Some(context) = tenant_context(&state_dir) {
@@ -324,9 +326,11 @@ fn run_command(state_dir: PathBuf, stream_url: Option<String>) -> ExitCode {
         // phpMyAdmin's temporary accounts are dropped when their time is up.
         if let Some(context) = tenant_context(&state_dir) {
             let context = std::sync::Arc::new(context);
-            tokio::spawn(dhpanel_node_agent::ops::pma::sweep_forever(context.clone()));
+            tokio::spawn(builtpanel_node_agent::ops::pma::sweep_forever(
+                context.clone(),
+            ));
             // The accounts' cron jobs (T10.02).
-            tokio::spawn(dhpanel_node_agent::ops::cron::run_forever(context));
+            tokio::spawn(builtpanel_node_agent::ops::cron::run_forever(context));
         }
         let executor = open_executor(&state_dir, web);
         // Forget old results once an hour.
@@ -337,7 +341,7 @@ fn run_command(state_dir: PathBuf, stream_url: Option<String>) -> ExitCode {
                 loop {
                     tick.tick().await;
                     if let Err(err) = executor.cache().prune(now_unix()) {
-                        eprintln!("dhpanel-agent: {err}");
+                        eprintln!("builtpanel-agent: {err}");
                     }
                 }
             }
@@ -382,11 +386,11 @@ fn tenant_context(state_dir: &std::path::Path) -> Option<ops::tenant::TenantCont
     let socket = std::env::var("DOCKER_HOST")
         .ok()
         .and_then(|host| host.strip_prefix("unix://").map(PathBuf::from))?;
-    let docker = dhpanel_docker_manager::DockerManager::connect(&socket).ok()?;
+    let docker = builtpanel_docker_manager::DockerManager::connect(&socket).ok()?;
     Some(ops::tenant::TenantContext {
-        helper_socket: std::env::var_os("DHPANEL_AGENT_HELPER_SOCKET")
-            .map_or_else(|| "/run/dhpanel/priv-helper.sock".into(), PathBuf::from),
-        tenants_root: std::env::var_os("DHPANEL_AGENT_TENANTS_ROOT")
+        helper_socket: std::env::var_os("BUILTPANEL_AGENT_HELPER_SOCKET")
+            .map_or_else(|| "/run/builtpanel/priv-helper.sock".into(), PathBuf::from),
+        tenants_root: std::env::var_os("BUILTPANEL_AGENT_TENANTS_ROOT")
             .map_or_else(|| "/srv/tenants".into(), PathBuf::from),
         docker,
         vhosts_root: state_dir.join("vhosts"),
@@ -399,7 +403,7 @@ fn tenant_context(state_dir: &std::path::Path) -> Option<ops::tenant::TenantCont
 /// before, which the log line makes visible.
 fn open_executor(
     state_dir: &std::path::Path,
-    web: Option<std::sync::Arc<dhpanel_node_agent::web::WebContext>>,
+    web: Option<std::sync::Arc<builtpanel_node_agent::web::WebContext>>,
 ) -> std::sync::Arc<Executor> {
     let path = state_dir.join(CACHE_FILE);
     let cache = match ResultCache::open(&path) {
@@ -407,18 +411,20 @@ fn open_executor(
         Err(first) => {
             let aside = state_dir.join(format!("{CACHE_FILE}.unusable-{}", now_unix()));
             eprintln!(
-                "dhpanel-agent: {first}; moving {} to {} and starting an empty cache",
+                "builtpanel-agent: {first}; moving {} to {} and starting an empty cache",
                 path.display(),
                 aside.display()
             );
             let _ = std::fs::rename(&path, &aside);
             match ResultCache::open(&path).or_else(|second| {
-                eprintln!("dhpanel-agent: {second}; results are kept in memory only until restart");
+                eprintln!(
+                    "builtpanel-agent: {second}; results are kept in memory only until restart"
+                );
                 ResultCache::in_memory()
             }) {
                 Ok(cache) => cache,
                 Err(err) => {
-                    eprintln!("dhpanel-agent: {err}");
+                    eprintln!("builtpanel-agent: {err}");
                     std::process::exit(i32::from(EXIT_IOERR));
                 }
             }
@@ -456,7 +462,7 @@ mod tests {
     #[test]
     fn the_command_the_panel_prints_parses() {
         let cli = Cli::try_parse_from([
-            "dhpanel-agent",
+            "builtpanel-agent",
             "enroll",
             "--server",
             "https://panel.example.com:8443",
@@ -470,16 +476,26 @@ mod tests {
             if a.server == "https://panel.example.com:8443" && a.token.as_deref() == Some("dhn_secret")));
         // Pin and server are required; the token must come from somewhere (checked at run time).
         assert!(
-            Cli::try_parse_from(["dhpanel-agent", "enroll", "--server", "https://x.example"])
-                .is_err()
-        );
-        assert!(
-            Cli::try_parse_from(["dhpanel-agent", "enroll", "--ca-fingerprint", "sha256:ab"])
-                .is_err()
+            Cli::try_parse_from([
+                "builtpanel-agent",
+                "enroll",
+                "--server",
+                "https://x.example"
+            ])
+            .is_err()
         );
         assert!(
             Cli::try_parse_from([
-                "dhpanel-agent",
+                "builtpanel-agent",
+                "enroll",
+                "--ca-fingerprint",
+                "sha256:ab"
+            ])
+            .is_err()
+        );
+        assert!(
+            Cli::try_parse_from([
+                "builtpanel-agent",
                 "enroll",
                 "--server",
                 "https://x.example",

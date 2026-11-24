@@ -1,0 +1,9 @@
+slug        = "imagemagick"
+name        = "ImageMagick, GD and image libraries"
+category    = "libraries"
+kind        = "unavailable"
+description = "Image libraries of the server."
+license     = "Apache-2.0"
+homepage    = "https://imagemagick.org"
+covers      = ["ImageMagick (library)", "ImageMagick712 (library)", "graphicsmagick (library)", "GD (library)", "PNG (library)", "JPEG (library)", "WebP (library)", "FreeType (library)", "LIBAVIF (library)", "Libheif (library)", "Libde265 (library)"]
+reason      = "a system library belongs to the server's operating system and needs root to install; the panel's PHP and Node.js images already include what sites need and a container brings its own (the PHP images have GD and ImageMagick)"

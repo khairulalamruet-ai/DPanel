@@ -1,0 +1,8 @@
+slug        = "linux-environment-security"
+name        = "Linux Environment Security"
+category    = "security"
+kind        = "unavailable"
+description = "Linux Environment Security."
+license     = "GPL-2.0-only"
+covers      = ["Linux Environment Security"]
+reason      = "it works on the whole server and needs root, which an account never has; the panel's own firewall and login protection do this for the server"

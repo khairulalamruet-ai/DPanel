@@ -51,6 +51,18 @@ export interface WordPressTheme {
   active: boolean;
 }
 
+export interface WordPressScan {
+  checksums_ok: boolean;
+  config_mode: string;
+  debug: boolean;
+  extra: string[];
+  file_edit_allowed: boolean;
+  missing: string[];
+  modified: string[];
+  world_writable: number;
+  xmlrpc_disabled: boolean;
+}
+
 export interface WordPressDetails {
   app_id: string;
   core_version: string;
@@ -58,7 +70,8 @@ export interface WordPressDetails {
   maintenance_mode: boolean;
   xmlrpc_disabled: boolean;
   debug_mode: boolean;
-  staging_url?: string;
+  /** What the last security scan found. */
+  scan?: WordPressScan | null;
   plugins: WordPressPlugin[];
   themes: WordPressTheme[];
 }

@@ -2,7 +2,7 @@
 //! control plane in chunks.
 //!
 //! The dump is made by `mariadb-dump` inside the database container (a fixed
-//! command, see [`dhpanel_docker_manager::DockerManager::dump_database`]) as a
+//! command, see [`builtpanel_docker_manager::DockerManager::dump_database`]) as a
 //! temporary account that can only read that one database; the account and the
 //! local file are gone when this ends, whatever the outcome.
 
@@ -13,8 +13,8 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{AgentError, Operation, Output};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{AgentError, Operation, Output};
 use mysql_async::prelude::Queryable as _;
 use sha2::{Digest as _, Sha256};
 use uuid::Uuid;
@@ -55,8 +55,9 @@ pub async fn export_sql(context: Arc<TenantContext>, op: Operation) -> Result<Ou
         return Err(super::wrong_operation());
     };
     TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
-    dhpanel_domain::databases::check_identifier(&database).map_err(|e| invalid(&e.to_string()))?;
-    if engine == dhpanel_node_protocol::DbEngine::Postgres {
+    builtpanel_domain::databases::check_identifier(&database)
+        .map_err(|e| invalid(&e.to_string()))?;
+    if engine == builtpanel_node_protocol::DbEngine::Postgres {
         super::pg::identifier(&database)?;
     }
     let local = url.starts_with("http://127.0.0.1")
@@ -94,12 +95,12 @@ pub async fn export_sql(context: Arc<TenantContext>, op: Operation) -> Result<Ou
 /// The server failing, or the disk.
 pub(super) async fn dump_to_file(
     context: &TenantContext,
-    engine: dhpanel_node_protocol::DbEngine,
+    engine: builtpanel_node_protocol::DbEngine,
     database: &str,
     tag: &str,
     path: &Path,
 ) -> Result<(), AgentError> {
-    if engine == dhpanel_node_protocol::DbEngine::Postgres {
+    if engine == builtpanel_node_protocol::DbEngine::Postgres {
         // A temporary account that can only read this database, for the dump only.
         super::pg::ensure_server(context).await?;
         let password = random_password()
@@ -129,7 +130,7 @@ pub(super) async fn dump_to_file(
 
 async fn run(
     context: &TenantContext,
-    engine: dhpanel_node_protocol::DbEngine,
+    engine: builtpanel_node_protocol::DbEngine,
     database: &str,
     export_id: Uuid,
     url: &str,
@@ -208,7 +209,7 @@ pub(super) async fn drop_account(context: &TenantContext, account: &str) {
 /// Runs the dump into the gzip file at `path`.
 async fn dump(
     context: &TenantContext,
-    engine: dhpanel_node_protocol::DbEngine,
+    engine: builtpanel_node_protocol::DbEngine,
     database: &str,
     account: &str,
     password: &str,
@@ -235,15 +236,15 @@ async fn dump(
         gz.finish()?.flush()?;
         Ok(raw)
     });
-    let ran = if engine == dhpanel_node_protocol::DbEngine::Postgres {
-        let container = dhpanel_docker_manager::Name::parse(&super::pg::container_name())
+    let ran = if engine == builtpanel_node_protocol::DbEngine::Postgres {
+        let container = builtpanel_docker_manager::Name::parse(&super::pg::container_name())
             .map_err(|e| failed(&e.to_string()))?;
         context
             .docker
             .dump_pg_database(&container, database, account, password, tx, MAX_DURATION)
             .await
     } else {
-        let container = dhpanel_docker_manager::Name::parse(&db::container_name())
+        let container = builtpanel_docker_manager::Name::parse(&db::container_name())
             .map_err(|e| failed(&e.to_string()))?;
         context
             .docker

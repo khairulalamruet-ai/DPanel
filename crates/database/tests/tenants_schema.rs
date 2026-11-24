@@ -2,8 +2,8 @@
 //! Ignored by default; see tests/migrations.rs for how to run.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use dhpanel_database::tenants::{self, CreateError, NewTenant};
-use dhpanel_domain::TenantStatus;
+use builtpanel_database::tenants::{self, CreateError, NewTenant};
+use builtpanel_domain::TenantStatus;
 use sqlx::{PgPool, types::Uuid};
 
 const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA";

@@ -87,8 +87,8 @@ impl FailureLimiter {
 
     fn keys(&self, subject: &str) -> (String, String) {
         (
-            format!("dhpanel:lockout:{}:fail:{subject}", self.namespace),
-            format!("dhpanel:lockout:{}:lock:{subject}", self.namespace),
+            format!("builtpanel:lockout:{}:fail:{subject}", self.namespace),
+            format!("builtpanel:lockout:{}:lock:{subject}", self.namespace),
         )
     }
 

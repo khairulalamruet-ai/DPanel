@@ -29,23 +29,23 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_backup::crypto::new_key;
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_backup::crypto::new_key;
+use builtpanel_database::{
     backups as backup_store,
     operations::{self, NewOperation, Status},
     sqlx::PgPool,
     tenant_db, tenants,
     transfers::{self as store, CreateError, Extras, Transfer},
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::Operation;
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::Operation;
+use builtpanel_rbac::{
     Principal, Require,
     permissions::{BackupsManage, BackupsRead},
 };
-use dhpanel_session::rfc3339;
+use builtpanel_session::rfc3339;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -62,7 +62,7 @@ const OP_TTL_SECS: i32 = 6 * 3600;
 pub enum TickError {
     /// The database.
     #[error(transparent)]
-    Database(#[from] dhpanel_database::sqlx::Error),
+    Database(#[from] builtpanel_database::sqlx::Error),
     /// The ledger refused an operation.
     #[error("cannot queue an operation: {0}")]
     Queue(String),
@@ -116,7 +116,7 @@ async fn operation_wait(db: &PgPool, id: Uuid) -> Result<Wait, TickError> {
 }
 
 async fn backup_wait(db: &PgPool, id: Uuid) -> Result<Wait, TickError> {
-    let row = dhpanel_database::sqlx::query_as::<_, (String, Option<String>)>(
+    let row = builtpanel_database::sqlx::query_as::<_, (String, Option<String>)>(
         "SELECT status, error FROM backups WHERE id = $1",
     )
     .bind(id)
@@ -133,7 +133,7 @@ async fn backup_wait(db: &PgPool, id: Uuid) -> Result<Wait, TickError> {
 }
 
 async fn restore_wait(db: &PgPool, id: Uuid) -> Result<Wait, TickError> {
-    let row = dhpanel_database::sqlx::query_as::<_, (String, Option<String>)>(
+    let row = builtpanel_database::sqlx::query_as::<_, (String, Option<String>)>(
         "SELECT status, error FROM backup_restores WHERE id = $1",
     )
     .bind(id)
@@ -277,7 +277,7 @@ async fn step(db: &PgPool, master_key: &MasterKey, t: &Transfer) -> Result<(), T
     };
     match t.state.as_str() {
         "requested" => {
-            let plan = dhpanel_database::plans::get(db, tenant.plan_id)
+            let plan = builtpanel_database::plans::get(db, tenant.plan_id)
                 .await?
                 .ok_or_else(|| TickError::Queue("the plan is gone".to_owned()))?;
             let id = queue(
@@ -413,7 +413,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
     let mut tx = db.begin().await?;
     // 1. Whose it is, and what is sent again: web routes (the dispatcher sends a tenant whose
     // routes version moved), PHP containers (a state version nobody applied yet).
-    dhpanel_database::sqlx::query(
+    builtpanel_database::sqlx::query(
         "UPDATE tenants SET node_id = $2, routes_version = routes_version + 1,
                 php_state_version = php_state_version + 1
          WHERE id = $1",
@@ -423,14 +423,14 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
     .execute(&mut *tx)
     .await?;
     // 2. DNS: records that name the old node's address name the new node's.
-    let old: Option<String> = dhpanel_database::sqlx::query_scalar(
+    let old: Option<String> = builtpanel_database::sqlx::query_scalar(
         "SELECT host(public_ip) FROM nodes WHERE id = $1 AND public_ip IS NOT NULL",
     )
     .bind(t.from_node)
     .fetch_optional(&mut *tx)
     .await?
     .flatten();
-    let new: Option<String> = dhpanel_database::sqlx::query_scalar(
+    let new: Option<String> = builtpanel_database::sqlx::query_scalar(
         "SELECT host(public_ip) FROM nodes WHERE id = $1 AND public_ip IS NOT NULL",
     )
     .bind(t.to_node)
@@ -438,7 +438,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
     .await?
     .flatten();
     if let (Some(old), Some(new)) = (old, new) {
-        let zones: Vec<Uuid> = dhpanel_database::sqlx::query_scalar(
+        let zones: Vec<Uuid> = builtpanel_database::sqlx::query_scalar(
             "UPDATE dns_records r SET content = $3, updated_at = now()
              FROM dns_zones z JOIN domains d ON d.id = z.domain_id
              WHERE r.zone_id = z.id AND d.tenant_id = $1 AND r.rtype IN ('A', 'AAAA')
@@ -453,7 +453,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
         let mut seen = Vec::new();
         for zone in zones {
             if !seen.contains(&zone) {
-                dhpanel_database::dns::mark_changed(&mut tx, zone).await?;
+                builtpanel_database::dns::mark_changed(&mut tx, zone).await?;
                 seen.push(zone);
             }
         }
@@ -462,7 +462,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
 
     // 3. What the new node does not know yet: the jobs, the grants, the remote addresses.
     let key = |what: &str| format!("transfer:{}:{what}", t.id.simple());
-    let jobs = dhpanel_database::cron_jobs::list(db, t.tenant_id).await?;
+    let jobs = builtpanel_database::cron_jobs::list(db, t.tenant_id).await?;
     queue(
         db,
         t.to_node,
@@ -472,7 +472,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
             username: tenant.username.clone(),
             jobs: jobs
                 .iter()
-                .map(|j| dhpanel_node_protocol::CronJobSpec {
+                .map(|j| builtpanel_node_protocol::CronJobSpec {
                     id: j.id,
                     schedule: j.schedule.clone(),
                     command: j.command.clone(),
@@ -494,7 +494,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
                 database: database.clone(),
                 user: user.clone(),
                 access: access.clone(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
             &key(&format!("grant:{database}:{user}")),
@@ -510,7 +510,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
                 username: tenant.username.clone(),
                 name: user.clone(),
                 cidrs: cidrs.clone(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
             &key(&format!("remote:{user}")),
@@ -520,7 +520,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
     // Both nodes' lists of who may reach their database server from outside change.
     for node in [t.from_node, t.to_node] {
         let mut conn = db.acquire().await?;
-        let cidrs = dhpanel_database::databases::remote_union(&mut conn, node, "mysql").await?;
+        let cidrs = builtpanel_database::databases::remote_union(&mut conn, node, "mysql").await?;
         drop(conn);
         queue(
             db,
@@ -528,7 +528,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
             t.tenant_id,
             &Operation::SetDbRemoteAccess {
                 cidrs,
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
             },
             &key(&format!("access:{}", node.simple())),
         )
@@ -546,7 +546,7 @@ async fn switch(db: &PgPool, t: &Transfer, tenant: &tenants::Tenant) -> Result<(
 
 /// A transfer of an account to another node.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct TransferView {
+pub struct NodeTransferView {
     /// Id.
     pub id: Uuid,
     /// The account.
@@ -576,8 +576,8 @@ pub struct TransferView {
     pub updated_at: String,
 }
 
-fn view(t: Transfer) -> TransferView {
-    TransferView {
+fn view(t: Transfer) -> NodeTransferView {
+    NodeTransferView {
         id: t.id,
         tenant_id: t.tenant_id,
         from_node: t.from_node,
@@ -625,14 +625,14 @@ pub struct StartTransfer {
     operation_id = "adminListNodeTransfers",
     security(("session" = [])),
     responses(
-        (status = 200, description = "The newest first", body = Vec<TransferView>),
+        (status = 200, description = "The newest first", body = Vec<NodeTransferView>),
         (status = 403, description = "`permission_denied`", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
 pub async fn list(
     State(state): State<BackupsState>,
     _who: Require<BackupsRead>,
-) -> Result<Json<Vec<TransferView>>, AppError> {
+) -> Result<Json<Vec<NodeTransferView>>, AppError> {
     Ok(Json(
         store::list(&state.db, 100)
             .await
@@ -652,7 +652,7 @@ pub async fn list(
     security(("session" = [])),
     params(("id" = Uuid, Path, description = "Transfer id")),
     responses(
-        (status = 200, description = "The transfer", body = TransferView),
+        (status = 200, description = "The transfer", body = NodeTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
@@ -660,7 +660,7 @@ pub async fn show(
     State(state): State<BackupsState>,
     _who: Require<BackupsRead>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -679,7 +679,7 @@ pub async fn show(
     params(("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
     request_body = StartTransfer,
     responses(
-        (status = 201, description = "Started", body = TransferView),
+        (status = 201, description = "Started", body = NodeTransferView),
         (status = 404, description = "No such account, node or destination", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`transfer_active`, `same_node`, `node_unavailable`, `tenant_not_active` or `transfer_unsupported` (the account has what a transfer cannot carry yet)", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -688,12 +688,12 @@ pub async fn start(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
     Json(req): Json<StartTransfer>,
-) -> Result<(StatusCode, Json<TransferView>), AppError> {
+) -> Result<(StatusCode, Json<NodeTransferView>), AppError> {
     let tenant = tenants::get(&state.db, req.tenant_id)
         .await
         .map_err(internal)?
         .ok_or_else(|| AppError::not_found("account"))?;
-    if tenant.status != dhpanel_domain::TenantStatus::Active {
+    if tenant.status != builtpanel_domain::TenantStatus::Active {
         return Err(AppError::conflict(
             "tenant_not_active",
             "Only a running account can be moved.",
@@ -705,12 +705,13 @@ pub async fn start(
             "The account is on that node already.",
         ));
     }
-    let node_ok: Option<bool> =
-        dhpanel_database::sqlx::query_scalar("SELECT status = 'online' FROM nodes WHERE id = $1")
-            .bind(req.to_node_id)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(internal)?;
+    let node_ok: Option<bool> = builtpanel_database::sqlx::query_scalar(
+        "SELECT status = 'online' FROM nodes WHERE id = $1",
+    )
+    .bind(req.to_node_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(internal)?;
     match node_ok {
         None => return Err(AppError::not_found("node")),
         Some(false) => {
@@ -758,7 +759,7 @@ pub async fn start(
         }
         CreateError::Database(e) => internal(e),
     })?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &entry("node_transfer.started", &who.0, made.id).metadata(serde_json::json!({
             "tenant_id": tenant.id,
@@ -778,7 +779,7 @@ async fn transition(
     allowed: &[&str],
     to: &str,
     action: &'static str,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     let t = store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -792,7 +793,7 @@ async fn transition(
     match to {
         // The last pass: the loop takes it from here.
         "cutover" => {
-            dhpanel_database::sqlx::query(
+            builtpanel_database::sqlx::query(
                 "UPDATE tenant_transfers SET auto_cutover = true, updated_at = now() WHERE id = $1",
             )
             .bind(id)
@@ -867,7 +868,7 @@ async fn transition(
             ))));
         }
     }
-    dhpanel_audit::insert(&state.db, &entry(action, who, id))
+    builtpanel_audit::insert(&state.db, &entry(action, who, id))
         .await
         .map_err(internal)?;
     store::get(&state.db, id)
@@ -891,7 +892,7 @@ async fn transition(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Going on", body = TransferView),
+        (status = 200, description = "Going on", body = NodeTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`wrong_state`: the first copy is not there yet, or it is over", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -900,7 +901,7 @@ pub async fn cutover(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     transition(
         &state,
         &who.0,
@@ -924,7 +925,7 @@ pub async fn cutover(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Being removed", body = TransferView),
+        (status = 200, description = "Being removed", body = NodeTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`wrong_state`: the account has not been switched", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -933,7 +934,7 @@ pub async fn cleanup(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     transition(
         &state,
         &who.0,
@@ -957,7 +958,7 @@ pub async fn cleanup(
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "Being cancelled", body = TransferView),
+        (status = 200, description = "Being cancelled", body = NodeTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`wrong_state`: it is switched or over", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -966,7 +967,7 @@ pub async fn cancel(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<NodeTransferView>, AppError> {
     transition(
         &state,
         &who.0,

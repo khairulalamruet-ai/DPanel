@@ -42,11 +42,11 @@ jobs:
           context: deploy/images/php
           build-args: PHP_VERSION=${{ matrix.php }}
           load: true
-          tags: dhpanel-php:${{ matrix.php }}
+          tags: builtpanel-php:${{ matrix.php }}
       - name: Scan (a critical vulnerability stops the publish)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: dhpanel-php:${{ matrix.php }}
+          image-ref: builtpanel-php:${{ matrix.php }}
           severity: CRITICAL
           exit-code: "1"
           ignore-unfixed: true
@@ -57,9 +57,9 @@ jobs:
           context: deploy/images/php
           build-args: PHP_VERSION=${{ matrix.php }}
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/dhpanel-php:${{ matrix.php }}
+          tags: ghcr.io/${{ github.repository_owner }}/builtpanel-php:${{ matrix.php }}
       - name: Digest to pin
-        run: echo "ghcr.io/${{ github.repository_owner }}/dhpanel-php@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "ghcr.io/${{ github.repository_owner }}/builtpanel-php@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
 
   # The web server, database, database browser and SFTP images: the official image pinned in
   # deploy/stack/images.toml with its operating system packages upgraded (and, for the database
@@ -93,11 +93,11 @@ jobs:
           context: deploy/images/${{ matrix.role }}
           build-args: BASE=${{ steps.base.outputs.ref }}
           load: true
-          tags: dhpanel-${{ matrix.role }}:test
+          tags: builtpanel-${{ matrix.role }}:test
       - name: Scan (a critical vulnerability that has a fix stops the publish)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: dhpanel-${{ matrix.role }}:test
+          image-ref: builtpanel-${{ matrix.role }}:test
           severity: CRITICAL
           exit-code: "1"
           ignore-unfixed: true
@@ -108,10 +108,10 @@ jobs:
           context: deploy/images/${{ matrix.role }}
           build-args: BASE=${{ steps.base.outputs.ref }}
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/dhpanel-${{ matrix.role }}:latest
+          tags: ghcr.io/${{ github.repository_owner }}/builtpanel-${{ matrix.role }}:latest
       - name: Digest to pin
         run: |
-          echo "${{ matrix.role }} ghcr.io/${{ github.repository_owner }}/dhpanel-${{ matrix.role }}@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ matrix.role }} ghcr.io/${{ github.repository_owner }}/builtpanel-${{ matrix.role }}@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
 
   caddy-waf:
     runs-on: ubuntu-latest
@@ -128,13 +128,13 @@ jobs:
         with:
           context: deploy/caddy
           load: true
-          tags: dhpanel-caddy-waf:test
+          tags: builtpanel-caddy-waf:test
       - name: The WAF blocks what it should (deploy/dev/waf-live.sh)
         run: bash deploy/dev/waf-live.sh
       - name: Scan (a critical vulnerability stops the publish)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: dhpanel-caddy-waf:test
+          image-ref: builtpanel-caddy-waf:test
           severity: CRITICAL
           exit-code: "1"
           ignore-unfixed: true
@@ -144,6 +144,6 @@ jobs:
         with:
           context: deploy/caddy
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/dhpanel-caddy-waf:latest
+          tags: ghcr.io/${{ github.repository_owner }}/builtpanel-caddy-waf:latest
       - name: Digest to pin
-        run: echo "ghcr.io/${{ github.repository_owner }}/dhpanel-caddy-waf@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "ghcr.io/${{ github.repository_owner }}/builtpanel-caddy-waf@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"

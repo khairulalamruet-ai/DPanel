@@ -1,0 +1,8 @@
+slug        = "fossil"
+name        = "Fossil"
+category    = "version_control"
+kind        = "unavailable"
+description = "Fossil."
+license     = "GPL-2.0-or-later"
+covers      = ["Fossil"]
+reason      = "an account has no shell on the server to run command-line tools; Git is offered"

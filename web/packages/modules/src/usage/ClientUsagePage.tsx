@@ -7,9 +7,9 @@ import {
   Button,
   Badge,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { loadClientUsage } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   Cpu,
   HardDrive,
@@ -34,9 +34,7 @@ export function ClientUsagePage() {
   const fetchUsage = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<ClientUsageSummary>(
-        `/api/v1/client/usage?range=${encodeURIComponent(range)}`
-      );
+      const res = await loadClientUsage(range);
       setData(res);
     } catch (err: any) {
       toast({

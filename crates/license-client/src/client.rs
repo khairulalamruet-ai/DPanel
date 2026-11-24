@@ -6,7 +6,7 @@
 
 use std::time::Duration;
 
-use dhpanel_license::{Claims, Document, DocumentError, Expect, PublicKeys};
+use builtpanel_license::{Claims, Document, DocumentError, Expect, PublicKeys};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -227,7 +227,7 @@ impl LicenseClient {
     /// # Errors
     /// [`ClientError::Invalid`] when no domain is configured; [`ClientError::Identity`].
     pub fn domain_proof(&self, nonce: &str) -> Result<DomainProof, ClientError> {
-        let domain = dhpanel_license::normalize_name(&self.domain);
+        let domain = builtpanel_license::normalize_name(&self.domain);
         if domain.is_empty() {
             return Err(ClientError::Invalid("no domain is configured".into()));
         }
@@ -244,8 +244,8 @@ impl LicenseClient {
     fn host_proof(&self) -> String {
         format!(
             "{}\n{}",
-            dhpanel_license::normalize_name(&self.hostname),
-            dhpanel_license::normalize_name(&self.domain)
+            builtpanel_license::normalize_name(&self.hostname),
+            builtpanel_license::normalize_name(&self.domain)
         )
     }
 
@@ -313,7 +313,7 @@ impl LicenseClient {
             audience: &self.audience,
             installation_id: self.identity.installation_id,
             clock_skew: 300,
-            host: dhpanel_license::HostFacts {
+            host: builtpanel_license::HostFacts {
                 hostname: &self.hostname,
                 domain: &self.domain,
             },
@@ -429,7 +429,7 @@ impl LicenseClient {
         let signature = self.identity.prove(
             "integrity-report",
             &scan.nonce,
-            Some(&dhpanel_license::integrity_report_text(
+            Some(&builtpanel_license::integrity_report_text(
                 &scan.scan_id.to_string(),
                 files,
             )),
@@ -465,7 +465,7 @@ mod sha2_hex {
 
     /// `text`'s SHA-256 in lower-case hex.
     pub fn hex_sha256(text: &str) -> String {
-        let digest = dhpanel_license::sha256(text.as_bytes());
+        let digest = builtpanel_license::sha256(text.as_bytes());
         digest.iter().fold(String::new(), |mut s, b| {
             let _ = write!(s, "{b:02x}");
             s

@@ -1,7 +1,7 @@
-//! DHPanel background job runner and scheduler.
+//! Built Panel background job runner and scheduler.
 //!
 //! Skeleton binary created in T00.02; real startup logic arrives in later roadmap tasks.
 
 fn main() {
-    println!("{}", dhpanel_common::build_banner("worker"));
+    println!("{}", builtpanel_common::build_banner("worker"));
 }

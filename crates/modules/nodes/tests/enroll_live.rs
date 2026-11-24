@@ -10,14 +10,14 @@ use axum::{
     extract::connect_info::MockConnectInfo,
     http::{Request, StatusCode, header},
 };
-use dhpanel_cache::{
+use builtpanel_cache::{
     RedisHandle,
     lockout::{FailureLimiter, LockoutPolicy},
 };
-use dhpanel_database::{node_enrollments::insert_token, rbac::assign_role};
-use dhpanel_mod_nodes::{ENROLL_MAX_FAILURES, NodesState, router, token};
-use dhpanel_pki::CertificateAuthority;
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_database::{node_enrollments::insert_token, rbac::assign_role};
+use builtpanel_mod_nodes::{ENROLL_MAX_FAILURES, NodesState, router, token};
+use builtpanel_pki::CertificateAuthority;
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use rcgen::{
     BasicConstraints, CertificateParams, DnType, ExtendedKeyUsagePurpose, IsCa, KeyPair,
     KeyUsagePurpose,
@@ -75,12 +75,12 @@ fn env(pool: &PgPool, with_ca: bool) -> Env {
             ca: ca.clone(),
             limiter,
             gateway: None,
-            operations: dhpanel_operations::Operations::new(pool.clone()),
-            audit: dhpanel_audit::AuditWriter::new(pool.clone()),
+            operations: builtpanel_operations::Operations::new(pool.clone()),
+            audit: builtpanel_audit::AuditWriter::new(pool.clone()),
         })
         .layer(axum::middleware::from_fn_with_state(
             Arc::<[std::net::IpAddr]>::from(Vec::new()),
-            dhpanel_http_kit::client_ip::client_ip_layer,
+            builtpanel_http_kit::client_ip::client_ip_layer,
         ))
         .layer(MockConnectInfo(SocketAddr::from(([203, 0, 113, 9], 5000))));
     Env {
@@ -240,7 +240,9 @@ async fn an_agent_enrols_and_gets_an_identity_the_ca_vouches_for(pool: PgPool) {
         .value
         .general_names;
     assert_eq!(sans.len(), 1);
-    assert!(matches!(&sans[0], GeneralName::URI(u) if *u == format!("urn:dhpanel:node:{node_id}")));
+    assert!(
+        matches!(&sans[0], GeneralName::URI(u) if *u == format!("urn:builtpanel:node:{node_id}"))
+    );
     assert_eq!(
         cert.public_key().subject_public_key.data.as_ref(),
         agent_key.public_key_raw()
@@ -587,7 +589,7 @@ async fn the_whole_journey_from_the_admin_screen_to_an_enrolled_node(pool: PgPoo
     assert_eq!(
         created["enroll_command"],
         format!(
-            "dhpanel-agent enroll --server https://panel.example.com:8443 --ca-fingerprint sha256:{fp} --token {secret}"
+            "builtpanel-agent enroll --server https://panel.example.com:8443 --ca-fingerprint sha256:{fp} --token {secret}"
         )
     );
 

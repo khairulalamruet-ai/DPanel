@@ -8,8 +8,8 @@ import {
   DialogFooter,
   Button,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation, useFormatters } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation, useFormatters } from "@builtpanel/i18n";
 import { Server, Cpu, HardDrive, Shield, Activity, Fingerprint, Layers, Users } from "lucide-react";
 import type { NodeItem } from "./types";
 import { computeNodeSaturation, getSaturationColor } from "./capacity";

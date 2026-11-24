@@ -3,8 +3,8 @@
 //! rootless Docker and these (the test's own high ports):
 //!
 //! ```text
-//! DHPANEL_AGENT_MAIL_API_PORT=18089 DHPANEL_AGENT_MAIL_SMTP_PORT=12525 \
-//!   DHPANEL_AGENT_MAIL_SUBMISSION_PORT=12465 DHPANEL_AGENT_MAIL_IMAP_PORT=12993
+//! BUILTPANEL_AGENT_MAIL_API_PORT=18089 BUILTPANEL_AGENT_MAIL_SMTP_PORT=12525 \
+//!   BUILTPANEL_AGENT_MAIL_SUBMISSION_PORT=12465 BUILTPANEL_AGENT_MAIL_IMAP_PORT=12993
 //! ```
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
@@ -14,8 +14,8 @@ use std::{
     sync::Arc,
 };
 
-use dhpanel_docker_manager::DockerManager;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::DockerManager;
+use builtpanel_node_agent::ops::{
     mail::{
         CONTAINER, drop_mailbox, ensure_mail_server, mail_queue_action, remove_mail_domain,
         report_mail, set_mail_autoresponder, set_mail_domain, set_mail_forwarders, upsert_mailbox,
@@ -23,9 +23,13 @@ use dhpanel_node_agent::ops::{
     tenant::TenantContext,
     webmail,
 };
-use dhpanel_node_protocol::{DbPassword, ErrorCode, MailForwarder, Operation, Output};
+use builtpanel_node_protocol::{DbPassword, ErrorCode, MailForwarder, Operation, Output};
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -88,7 +92,7 @@ elif cmd == "webmail":
     import urllib.request, urllib.error, http.cookiejar
     jar = http.cookiejar.CookieJar()
     web = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
-    url = "http://dh-webmail:80/?_dhsignon=" + sys.argv[2]
+    url = "http://bp-webmail:80/?_dhsignon=" + sys.argv[2]
     deadline = time.time() + 300
     while True:
         try:
@@ -154,12 +158,12 @@ fn heads(v: &serde_json::Value) -> Vec<(String, String)> {
 #[allow(clippy::too_many_lines)]
 async fn the_mail_server_is_set_up_and_takes_domains_mailboxes_forwarders_and_replies() {
     let socket = docker_socket();
-    if !socket.exists() || std::env::var_os("DHPANEL_AGENT_MAIL_API_PORT").is_none() {
+    if !socket.exists() || std::env::var_os("BUILTPANEL_AGENT_MAIL_API_PORT").is_none() {
         eprintln!("skipped: no Docker, or the ports are not set (see the file header)");
         return;
     }
     let docker = DockerManager::connect(&socket).unwrap();
-    let root = std::env::temp_dir().join(format!("dh-mail-live-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bp-mail-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root).unwrap();
     let script = root.join("probe.py");
@@ -171,19 +175,19 @@ async fn the_mail_server_is_set_up_and_takes_domains_mailboxes_forwarders_and_re
         vhosts_root: root.join("vhosts"),
     });
     let _ = Command::new("docker")
-        .args(["rm", "-f", CONTAINER, "dh-webmail"])
+        .args(["rm", "-f", CONTAINER, "bp-webmail"])
         .output();
     for v in [
-        "dh-webmail-sessions",
-        "dh-webmail-tasks",
-        "dh-webmail-config",
-        "dh-webmail-data",
+        "bp-webmail-sessions",
+        "bp-webmail-tasks",
+        "bp-webmail-config",
+        "bp-webmail-data",
     ] {
         let _ = Command::new("docker")
             .args(["volume", "rm", "-f", v])
             .output();
     }
-    for v in ["dh-mail-etc", "dh-mail-data"] {
+    for v in ["bp-mail-etc", "bp-mail-data"] {
         let _ = Command::new("docker")
             .args(["volume", "rm", "-f", v])
             .output();
@@ -223,7 +227,7 @@ async fn the_mail_server_is_set_up_and_takes_domains_mailboxes_forwarders_and_re
             "-c",
             &format!(
                 "echo QUIT | timeout 8 openssl s_client -connect 127.0.0.1:{} -servername mail.example.com 2>/dev/null | grep -E 'subject='",
-                std::env::var("DHPANEL_AGENT_MAIL_IMAP_PORT").unwrap()
+                std::env::var("BUILTPANEL_AGENT_MAIL_IMAP_PORT").unwrap()
             ),
         ])
         .output()
@@ -442,7 +446,7 @@ async fn the_mail_server_is_set_up_and_takes_domains_mailboxes_forwarders_and_re
         let again = probe(&script, &["webmail", &token]);
         assert_eq!(again["http"], 403, "{again}");
         let _ = Command::new("docker")
-            .args(["rm", "-f", "dh-webmail"])
+            .args(["rm", "-f", "bp-webmail"])
             .output();
     }
     // Mail arrives, also under an alias; a test spam is marked for what it is.
@@ -781,7 +785,7 @@ async fn the_mail_server_is_set_up_and_takes_domains_mailboxes_forwarders_and_re
                 &body.to_string(),
                 &format!(
                     "http://127.0.0.1:{}/jmap/",
-                    dhpanel_node_agent::ops::mail::api_port()
+                    builtpanel_node_agent::ops::mail::api_port()
                 ),
             ])
             .output()
@@ -791,7 +795,7 @@ async fn the_mail_server_is_set_up_and_takes_domains_mailboxes_forwarders_and_re
             .as_array()
             .unwrap()
             .iter()
-            .find(|t| t["description"] == "dhpanel:clientmail.org")
+            .find(|t| t["description"] == "builtpanel:clientmail.org")
             .map(|t| {
                 (
                     t["rate"]["count"].as_u64().unwrap(),
@@ -879,13 +883,13 @@ async fn the_mail_server_is_set_up_and_takes_domains_mailboxes_forwarders_and_re
     let _ = Command::new("docker")
         .args(["rm", "-f", CONTAINER])
         .output();
-    for v in ["dh-mail-etc", "dh-mail-data"] {
+    for v in ["bp-mail-etc", "bp-mail-data"] {
         let _ = Command::new("docker")
             .args(["volume", "rm", "-f", v])
             .output();
     }
     let _ = Command::new("docker")
-        .args(["network", "rm", "dh-mail-net"])
+        .args(["network", "rm", "bp-mail-net"])
         .output();
     let _ = std::fs::remove_dir_all(&root);
 }

@@ -16,5 +16,5 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=gosu /go/bin/gosu /usr/local/bin/gosu
 RUN gosu --version && gosu nobody true
-LABEL org.opencontainers.image.title="DHPanel database (MariaDB)" \
+LABEL org.opencontainers.image.title="Built Panel database (MariaDB)" \
       org.opencontainers.image.description="The official MariaDB with its OS packages upgraded and gosu rebuilt"

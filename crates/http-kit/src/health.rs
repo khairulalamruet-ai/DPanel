@@ -184,7 +184,7 @@ pub struct Liveness {
 pub async fn liveness() -> Json<Liveness> {
     Json(Liveness {
         status: "ok",
-        version: dhpanel_version(),
+        version: builtpanel_version(),
     })
 }
 
@@ -210,7 +210,7 @@ pub async fn readiness(State(readiness): State<Readiness>) -> (StatusCode, Json<
     (code, Json(report))
 }
 
-fn dhpanel_version() -> &'static str {
+fn builtpanel_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 

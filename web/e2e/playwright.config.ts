@@ -22,7 +22,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm --filter @dhpanel/admin dev --port 5173",
+    command: "pnpm --filter @builtpanel/admin dev --port 5173",
     url: "http://localhost:5173",
     reuseExistingServer: true,
     timeout: 60000,

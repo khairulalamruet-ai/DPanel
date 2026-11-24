@@ -2,7 +2,7 @@
 
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use dhpanel_domain::{DnsRecord, DnsRecordType, DnsTemplateRecord};
+use builtpanel_domain::{DnsRecord, DnsRecordType, DnsTemplateRecord};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgConnection, PgPool, types::Uuid};
 
@@ -539,7 +539,7 @@ pub async fn restore_records(
             match parsed {
                 Ok(record)
                     if accepted.len() < MAX_RECORDS_PER_ZONE
-                        && dhpanel_domain::check_dns_conflicts(accepted.iter(), &record)
+                        && builtpanel_domain::check_dns_conflicts(accepted.iter(), &record)
                             .is_ok() =>
                 {
                     accepted.push(record);

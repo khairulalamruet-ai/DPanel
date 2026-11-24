@@ -9,13 +9,13 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::{modules as db, rbac::assign_role};
-use dhpanel_dns::mock::MockResolver;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_domains::{DomainsState, SETTINGS_SCHEMA, admin_router, client_router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::{modules as db, rbac::assign_role};
+use builtpanel_dns::mock::MockResolver;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_domains::{DomainsState, SETTINGS_SCHEMA, admin_router, client_router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_settings::{Scope, SettingsRegistry};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -79,16 +79,16 @@ async fn env_limited(pool: &PgPool, ask_limit: u32) -> Env {
         .unwrap(),
     );
     let resolver = MockResolver::new();
-    let ask_limiter = dhpanel_cache::ratelimit::RateLimiter::new(
+    let ask_limiter = builtpanel_cache::ratelimit::RateLimiter::new(
         redis.clone(),
         format!("test-{}", Uuid::now_v7().simple()),
         ask_limit,
         std::time::Duration::from_secs(60),
     );
-    let restart_limiter = dhpanel_cache::ratelimit::RateLimiter::new(
+    let restart_limiter = builtpanel_cache::ratelimit::RateLimiter::new(
         redis.clone(),
         format!("test-restart-{}", Uuid::now_v7().simple()),
-        dhpanel_mod_domains::services::RESTARTS_PER_MINUTE,
+        builtpanel_mod_domains::services::RESTARTS_PER_MINUTE,
         std::time::Duration::from_secs(60),
     );
     let domains = Arc::new(Fake {
@@ -110,12 +110,12 @@ async fn env_limited(pool: &PgPool, ask_limit: u32) -> Env {
                     resolver: Arc::new(resolver.clone()),
                     ask_limiter: ask_limiter.clone(),
                     restart_limiter: restart_limiter.clone(),
-                    master_key: dhpanel_auth_core::secretbox::MasterKey::from_bytes(&[7u8; 32]),
+                    master_key: builtpanel_auth_core::secretbox::MasterKey::from_bytes(&[7u8; 32]),
                 };
                 ModuleRoutes {
                     admin: Some(admin_router().with_state(state.clone())),
                     client: Some(client_router().with_state(state.clone())),
-                    public: Some(dhpanel_mod_domains::tls::public_router().with_state(state)),
+                    public: Some(builtpanel_mod_domains::tls::public_router().with_state(state)),
                 }
             }
         }),
@@ -613,7 +613,7 @@ async fn one_account_cannot_see_or_touch_or_build_below_anothers_domains(pool: P
 
     // With sharing permitted by the administrator, he may host a subdomain of hers.
     let mut tx = pool.begin().await.unwrap();
-    dhpanel_settings::set(
+    builtpanel_settings::set(
         &e.settings,
         &mut tx,
         "domains",
@@ -770,7 +770,7 @@ async fn blocked_names_are_refused_and_administrators_manage_any_domain(pool: Pg
 
     // Blocked by the administrator: the name and everything below it.
     let mut tx = pool.begin().await.unwrap();
-    dhpanel_settings::set(
+    builtpanel_settings::set(
         &e.settings,
         &mut tx,
         "domains",
@@ -1932,7 +1932,7 @@ async fn dns_records_are_added_changed_and_removed_with_clear_errors(pool: PgPoo
 
 async fn set_nameservers(e: &Env, pool: &PgPool, values: Value) {
     let mut tx = pool.begin().await.unwrap();
-    dhpanel_settings::set(
+    builtpanel_settings::set(
         &e.settings,
         &mut tx,
         "domains",
@@ -2019,7 +2019,7 @@ async fn clients_are_told_the_name_servers_and_can_check_their_domains(pool: PgP
     );
     // Only valid host names can be saved.
     let mut tx = pool.begin().await.unwrap();
-    let bad = dhpanel_settings::set(
+    let bad = builtpanel_settings::set(
         &e.settings,
         &mut tx,
         "domains",
@@ -2090,7 +2090,7 @@ async fn clients_are_told_the_name_servers_and_can_check_their_domains(pool: PgP
     // A resolver that cannot be asked is a 503, not a guess.
     e.resolver.answer(
         "example.com",
-        Err(dhpanel_dns::DnsError::Unavailable("timeout".into())),
+        Err(builtpanel_dns::DnsError::Unavailable("timeout".into())),
     );
     sqlx::query("UPDATE dns_zones SET delegation_checked_at = now() - interval '1 minute'")
         .execute(&pool)
@@ -2507,7 +2507,7 @@ async fn an_uploaded_certificate_is_checked_kept_sealed_and_never_given_back(poo
         .await;
     assert!(!got.to_string().contains("PRIVATE"));
     // It can be opened with the panel's key and the domain, and not with another domain.
-    let master = dhpanel_auth_core::secretbox::MasterKey::from_bytes(&[7u8; 32]);
+    let master = builtpanel_auth_core::secretbox::MasterKey::from_bytes(&[7u8; 32]);
     let ctx = format!("certificate-key:{id}");
     let opened = master.open(ctx.as_bytes(), &sealed).unwrap();
     assert!(
@@ -3019,7 +3019,7 @@ async fn an_owner_sees_its_web_server_file_and_adds_only_allowed_directives(pool
         "{config}"
     );
     assert!(
-        config.contains("fastcgi_pass dh-alice-php:9000;"),
+        config.contains("fastcgi_pass bp-alice-php:9000;"),
         "{config}"
     );
     assert_eq!(view["custom_block"], "");
@@ -3164,7 +3164,10 @@ async fn administrators_keep_versions_of_the_web_server_templates_and_apply_them
             false,
         )
         .await;
-    assert_eq!(full["body"], dhpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE);
+    assert_eq!(
+        full["body"],
+        builtpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE
+    );
 
     // Bad texts are refused with the reason; nothing is saved.
     for (body, why) in [
@@ -3284,7 +3287,7 @@ async fn administrators_keep_versions_of_the_web_server_templates_and_apply_them
             Some(&root),
             "POST",
             &format!("{T}/preview"),
-            Some(json!({"body": dhpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE})),
+            Some(json!({"body": builtpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE})),
             true,
         )
         .await;
@@ -3561,7 +3564,7 @@ async fn an_account_and_its_domains_choose_php_versions_within_what_is_on_offer(
         .unwrap(),
         ["8.2"]
     );
-    let extra = dhpanel_database::php::extra_versions(&pool, tenant)
+    let extra = builtpanel_database::php::extra_versions(&pool, tenant)
         .await
         .unwrap();
     assert_eq!(extra, ["8.2"]);
@@ -3574,7 +3577,7 @@ async fn an_account_and_its_domains_choose_php_versions_within_what_is_on_offer(
     )
     .await;
     assert_eq!(
-        dhpanel_database::php::extra_versions(&pool, tenant)
+        builtpanel_database::php::extra_versions(&pool, tenant)
             .await
             .unwrap(),
         ["8.2"],
@@ -3632,7 +3635,7 @@ async fn an_account_and_its_domains_choose_php_versions_within_what_is_on_offer(
         .await;
     assert_eq!(status, StatusCode::OK, "{back}");
     assert_eq!(
-        dhpanel_database::php::extra_versions(&pool, tenant)
+        builtpanel_database::php::extra_versions(&pool, tenant)
             .await
             .unwrap(),
         ["8.4", "8.5"]
@@ -3640,7 +3643,7 @@ async fn an_account_and_its_domains_choose_php_versions_within_what_is_on_offer(
 
     // The administrator narrows what is on offer; the account keeps what it runs.
     let mut tx = pool.begin().await.unwrap();
-    dhpanel_settings::set(
+    builtpanel_settings::set(
         &e.settings,
         &mut tx,
         "domains",
@@ -4189,7 +4192,7 @@ async fn a_preview_link_shows_the_site_until_it_expires(pool: PgPool) {
         (StatusCode::CONFLICT, "previews_off")
     );
     let mut tx = pool.begin().await.unwrap();
-    dhpanel_settings::set(
+    builtpanel_settings::set(
         &e.settings,
         &mut tx,
         "domains",
@@ -4231,7 +4234,7 @@ async fn a_preview_link_shows_the_site_until_it_expires(pool: PgPool) {
     assert!(after > before, "the web server is told");
 
     // While it lives the site answers for it (like an alias), and a certificate may be made.
-    let routed = dhpanel_database::routes::domains(&pool, tenant)
+    let routed = builtpanel_database::routes::domains(&pool, tenant)
         .await
         .unwrap();
     let preview = routed.iter().find(|d| d.fqdn == host).unwrap();
@@ -4239,7 +4242,7 @@ async fn a_preview_link_shows_the_site_until_it_expires(pool: PgPool) {
         (preview.kind.as_str(), preview.parent_id),
         ("alias", Some(main["id"].as_str().unwrap().parse().unwrap()))
     );
-    let files = dhpanel_web_config::site_files(&pool, tenant, "alice", "active")
+    let files = builtpanel_web_config::site_files(&pool, tenant, "alice", "active")
         .await
         .unwrap();
     assert!(
@@ -4251,7 +4254,7 @@ async fn a_preview_link_shows_the_site_until_it_expires(pool: PgPool) {
         files[0].1
     );
     assert!(
-        dhpanel_database::domains::certificate_allowed(&pool, &host)
+        builtpanel_database::domains::certificate_allowed(&pool, &host)
             .await
             .unwrap()
     );
@@ -4319,7 +4322,7 @@ async fn a_preview_link_shows_the_site_until_it_expires(pool: PgPool) {
         StatusCode::NOT_FOUND
     );
     assert!(
-        !dhpanel_database::domains::certificate_allowed(&pool, &host)
+        !builtpanel_database::domains::certificate_allowed(&pool, &host)
             .await
             .unwrap()
     );
@@ -4332,7 +4335,7 @@ async fn a_preview_link_shows_the_site_until_it_expires(pool: PgPool) {
         .unwrap();
     let (_, list) = e.call(Some(&a), "GET", &path, None, false).await;
     assert_eq!(list["items"], json!([]));
-    let routed = dhpanel_database::routes::domains(&pool, tenant)
+    let routed = builtpanel_database::routes::domains(&pool, tenant)
         .await
         .unwrap();
     assert!(
@@ -4342,7 +4345,7 @@ async fn a_preview_link_shows_the_site_until_it_expires(pool: PgPool) {
     );
     let (_, files) = (
         0,
-        dhpanel_web_config::site_files(&pool, tenant, "alice", "active")
+        builtpanel_web_config::site_files(&pool, tenant, "alice", "active")
             .await
             .unwrap(),
     );
@@ -4352,7 +4355,7 @@ async fn a_preview_link_shows_the_site_until_it_expires(pool: PgPool) {
         .await
         .unwrap();
     assert!(
-        !dhpanel_database::domains::certificate_allowed(&pool, &other)
+        !builtpanel_database::domains::certificate_allowed(&pool, &other)
             .await
             .unwrap()
     );
@@ -4362,7 +4365,7 @@ async fn a_preview_link_shows_the_site_until_it_expires(pool: PgPool) {
         .await
         .unwrap();
     assert_eq!(
-        dhpanel_database::previews::remove_expired(&pool)
+        builtpanel_database::previews::remove_expired(&pool)
             .await
             .unwrap(),
         4
@@ -4402,7 +4405,7 @@ async fn a_domains_page_cache_is_switched_purged_and_changes_the_web_file(pool: 
     let file = || {
         let pool = pool.clone();
         async move {
-            dhpanel_web_config::site_files(&pool, tenant, "alice", "active")
+            builtpanel_web_config::site_files(&pool, tenant, "alice", "active")
                 .await
                 .unwrap()
                 .into_iter()

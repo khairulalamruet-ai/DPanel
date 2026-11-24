@@ -8,11 +8,11 @@
 
 use std::{os::unix::fs::PermissionsExt as _, path::Path, sync::Arc, time::Duration};
 
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{
     AgentError, AppDefinition, AppStep, ErrorCode, Operation, Output, WpDatabase,
 };
-use dhpanel_tenant_stack::{Allowlist, Role};
+use builtpanel_tenant_stack::{Allowlist, Role};
 
 use super::{
     db,
@@ -171,7 +171,7 @@ pub fn script_for(definition: &AppDefinition) -> String {
             AppStep::Remove { path } => s.push_str(&format!("rm -rf -- '{path}'\n")),
         }
     }
-    s.push_str("echo DH_DONE\n");
+    s.push_str("echo BP_DONE\n");
     s
 }
 
@@ -366,7 +366,7 @@ pub async fn install_app_as(
     cleanup(&secrets);
     let _ = context
         .docker
-        .remove_volume(&db::name(&format!("dh-wpi-{short}"))?)
+        .remove_volume(&db::name(&format!("bp-wpi-{short}"))?)
         .await;
     let done = outcome?;
     if done.exit_code != 0 {

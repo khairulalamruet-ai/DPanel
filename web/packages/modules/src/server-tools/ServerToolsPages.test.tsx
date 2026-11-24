@@ -8,14 +8,14 @@ import { SwapCard } from "./SwapCard";
 import { DropCachesCard } from "./DropCachesCard";
 import { SshConfigCard } from "./SshConfigCard";
 
-// Mock @dhpanel/api
+// Mock @builtpanel/api
 const mockApiFetch = vi.fn();
-vi.mock("@dhpanel/api", () => ({
+vi.mock("@builtpanel/api", () => ({
   apiFetch: (...args: any[]) => mockApiFetch(...args),
 }));
 
-// Mock @dhpanel/i18n
-vi.mock("@dhpanel/i18n", () => ({
+// Mock @builtpanel/i18n
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, any>) => {
       if (params) {
@@ -30,10 +30,10 @@ vi.mock("@dhpanel/i18n", () => ({
   }),
 }));
 
-// Mock @dhpanel/ui toast
+// Mock @builtpanel/ui toast
 const mockToast = vi.fn();
-vi.mock("@dhpanel/ui", async () => {
-  const actual = await vi.importActual<any>("@dhpanel/ui");
+vi.mock("@builtpanel/ui", async () => {
+  const actual = await vi.importActual<any>("@builtpanel/ui");
   return {
     ...actual,
     useToast: () => ({ toast: mockToast }),
@@ -47,7 +47,7 @@ describe("Server Tools & Maintenance UI (T10.15)", () => {
 
   const mockOverview = {
     node_id: "node-1",
-    hostname: "node-1.dhpanel.internal",
+    hostname: "node-1.builtpanel.internal",
     os: "Ubuntu 24.04.1 LTS",
     kernel: "6.8.0-45-generic",
     uptime_seconds: 432000,
@@ -93,9 +93,32 @@ describe("Server Tools & Maintenance UI (T10.15)", () => {
 
   it("renders AdminServerToolsPage and displays server health overview and cards", async () => {
     mockApiFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/v1/admin/server/overview")) return Promise.resolve(mockOverview);
-      if (url.includes("/api/v1/admin/server/ssh-config")) return Promise.resolve(mockSshConfig);
-      if (url.includes("/api/v1/admin/server/audit-events")) return Promise.resolve(mockAuditEvents);
+      if (url === "/api/v1/admin/nodes") {
+        return Promise.resolve({ items: [{ id: "node-1", name: "node-1", status: "online" }] });
+      }
+      if (url === "/api/v1/admin/nodes/node-1/server") {
+        return Promise.resolve({
+          hostname: mockOverview.hostname,
+          os: mockOverview.os,
+          kernel: mockOverview.kernel,
+          uptime_seconds: mockOverview.uptime_seconds,
+          timezone: mockOverview.timezone,
+          memory_total_bytes: mockOverview.memory.total_mb * 1048576,
+          memory_available_bytes: mockOverview.memory.available_mb * 1048576,
+          swap_total_bytes: mockOverview.swap.total_mb * 1048576,
+          swap_used_bytes: mockOverview.swap.used_mb * 1048576,
+          ssh: [
+            { name: "Port", value: "22" },
+            { name: "PermitRootLogin", value: "no" },
+            { name: "PasswordAuthentication", value: "no" },
+          ],
+        });
+      }
+      if (url.startsWith("/api/v1/admin/audit-logs")) {
+        return Promise.resolve({
+          items: mockAuditEvents.map((e) => ({ id: e.id, action: e.action, at: e.created_at, outcome: "success", metadata: {} })),
+        });
+      }
       return Promise.resolve({});
     });
 
@@ -103,7 +126,7 @@ describe("Server Tools & Maintenance UI (T10.15)", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("server-tools-title")).toBeInTheDocument();
-      expect(screen.getByTestId("text-node-hostname")).toHaveTextContent("node-1.dhpanel.internal");
+      expect(screen.getByTestId("text-node-hostname")).toHaveTextContent("node-1.builtpanel.internal");
       expect(screen.getByTestId("title-timezone-config")).toBeInTheDocument();
       expect(screen.getByTestId("title-swap-management")).toBeInTheDocument();
       expect(screen.getByTestId("title-drop-caches")).toBeInTheDocument();
@@ -211,7 +234,7 @@ describe("Server Tools & Maintenance UI (T10.15)", () => {
       <RebootDialog
         open={true}
         onOpenChange={vi.fn()}
-        nodeHostname="node-1.dhpanel.internal"
+        nodeHostname="node-1.builtpanel.internal"
         onConfirm={onConfirm}
       />
     );

@@ -6,9 +6,9 @@
 
 use std::sync::Arc;
 
-use dhpanel_settings::SettingsRegistry;
+use builtpanel_settings::SettingsRegistry;
 
-use dhpanel_kernel::{
+use builtpanel_kernel::{
     Manifest, ManifestError, ManifestOnly, Module, ModuleMount, ModuleRoutes, Registry,
 };
 
@@ -18,24 +18,24 @@ const EMBEDDED: &[(&str, &str)] = &[
     ("rbac", include_str!("../../../modules/rbac/module.toml")),
     ("audit", include_str!("../../../modules/audit/module.toml")),
     ("nodes", include_str!("../../../modules/nodes/module.toml")),
-    ("system", dhpanel_mod_system::MANIFEST),
-    ("plans", dhpanel_mod_plans::MANIFEST),
-    ("users", dhpanel_mod_users::MANIFEST),
-    ("resellers", dhpanel_mod_users::reseller::MANIFEST),
-    ("domains", dhpanel_mod_domains::MANIFEST),
-    ("databases", dhpanel_mod_databases::MANIFEST),
-    ("files", dhpanel_mod_files::MANIFEST),
-    ("backups", dhpanel_mod_backups::MANIFEST),
-    ("cron", dhpanel_mod_cron::MANIFEST),
-    ("mail", dhpanel_mod_mail::MANIFEST),
-    ("migration", dhpanel_mod_migration::MANIFEST),
-    ("logs", dhpanel_mod_logs::MANIFEST),
-    ("usage", dhpanel_mod_usage::MANIFEST),
-    ("services", dhpanel_mod_services::MANIFEST),
-    ("security", dhpanel_mod_security::MANIFEST),
-    ("apps", dhpanel_mod_apps::MANIFEST),
-    ("license", dhpanel_mod_license::MANIFEST),
-    ("notifications", dhpanel_mod_notifications::MANIFEST),
+    ("system", builtpanel_mod_system::MANIFEST),
+    ("plans", builtpanel_mod_plans::MANIFEST),
+    ("users", builtpanel_mod_users::MANIFEST),
+    ("resellers", builtpanel_mod_users::reseller::MANIFEST),
+    ("domains", builtpanel_mod_domains::MANIFEST),
+    ("databases", builtpanel_mod_databases::MANIFEST),
+    ("files", builtpanel_mod_files::MANIFEST),
+    ("backups", builtpanel_mod_backups::MANIFEST),
+    ("cron", builtpanel_mod_cron::MANIFEST),
+    ("mail", builtpanel_mod_mail::MANIFEST),
+    ("migration", builtpanel_mod_migration::MANIFEST),
+    ("logs", builtpanel_mod_logs::MANIFEST),
+    ("usage", builtpanel_mod_usage::MANIFEST),
+    ("services", builtpanel_mod_services::MANIFEST),
+    ("security", builtpanel_mod_security::MANIFEST),
+    ("apps", builtpanel_mod_apps::MANIFEST),
+    ("license", builtpanel_mod_license::MANIFEST),
+    ("notifications", builtpanel_mod_notifications::MANIFEST),
 ];
 
 /// Days the data of a deleted user is kept before it is purged.
@@ -49,7 +49,7 @@ struct Wired {
     manifest: Manifest,
     routes: Box<dyn Fn() -> ModuleRoutes + Send + Sync>,
     /// The notifications module turns events into notifications.
-    notifications: Option<dhpanel_mod_notifications::NotificationsState>,
+    notifications: Option<builtpanel_mod_notifications::NotificationsState>,
 }
 
 impl Module for Wired {
@@ -63,22 +63,23 @@ impl Module for Wired {
 
     fn on_event<'a>(
         &'a self,
-        event: &'a dhpanel_kernel::Event,
-    ) -> dhpanel_kernel::module::BoxFuture<'a, Result<(), dhpanel_kernel::module::EventError>> {
+        event: &'a builtpanel_kernel::Event,
+    ) -> builtpanel_kernel::module::BoxFuture<'a, Result<(), builtpanel_kernel::module::EventError>>
+    {
         match &self.notifications {
-            Some(state) => Box::pin(dhpanel_mod_notifications::handle_event(state, event)),
+            Some(state) => Box::pin(builtpanel_mod_notifications::handle_event(state, event)),
             None => Box::pin(async { Ok(()) }),
         }
     }
 
     fn settings_schema(&self) -> Option<serde_json::Value> {
         match self.manifest.module.name.as_str() {
-            "system" => serde_json::from_str(dhpanel_mod_system::SETTINGS_SCHEMA).ok(),
-            "domains" => serde_json::from_str(dhpanel_mod_domains::SETTINGS_SCHEMA).ok(),
-            "databases" => serde_json::from_str(dhpanel_mod_databases::SETTINGS_SCHEMA).ok(),
-            "files" => serde_json::from_str(dhpanel_mod_files::SETTINGS_SCHEMA).ok(),
-            "cron" => serde_json::from_str(dhpanel_mod_cron::SETTINGS_SCHEMA).ok(),
-            "mail" => serde_json::from_str(dhpanel_mod_mail::SETTINGS_SCHEMA).ok(),
+            "system" => serde_json::from_str(builtpanel_mod_system::SETTINGS_SCHEMA).ok(),
+            "domains" => serde_json::from_str(builtpanel_mod_domains::SETTINGS_SCHEMA).ok(),
+            "databases" => serde_json::from_str(builtpanel_mod_databases::SETTINGS_SCHEMA).ok(),
+            "files" => serde_json::from_str(builtpanel_mod_files::SETTINGS_SCHEMA).ok(),
+            "cron" => serde_json::from_str(builtpanel_mod_cron::SETTINGS_SCHEMA).ok(),
+            "mail" => serde_json::from_str(builtpanel_mod_mail::SETTINGS_SCHEMA).ok(),
             _ => None,
         }
     }
@@ -117,15 +118,15 @@ pub fn settings(registry: &Registry) -> Result<SettingsRegistry, Vec<String>> {
 /// The state each module's routes need.
 pub struct States {
     /// Sign-in and sessions (also carries what the audit viewer needs).
-    pub auth: dhpanel_mod_auth::AuthState,
+    pub auth: builtpanel_mod_auth::AuthState,
     /// Administrators and roles.
-    pub admin: dhpanel_mod_admin::AdminState,
+    pub admin: builtpanel_mod_admin::AdminState,
     /// Nodes and operations.
-    pub nodes: dhpanel_mod_nodes::NodesState,
+    pub nodes: builtpanel_mod_nodes::NodesState,
     /// Where uploaded SQL dumps wait for the node.
     pub spool_dir: std::path::PathBuf,
     /// This installation's license.
-    pub license: Arc<dhpanel_mod_license::service::LicenseService>,
+    pub license: Arc<builtpanel_mod_license::service::LicenseService>,
 }
 
 /// Builds the registry of this binary with every module's routes attached,
@@ -144,25 +145,25 @@ pub fn mount(
     // exists only after the registry does.
     let late_mount: Arc<std::sync::OnceLock<ModuleMount>> = Arc::default();
     // Asks the public DNS about domains' name servers (set up on first use).
-    let resolver: Arc<dyn dhpanel_dns::resolver::NsResolver> =
-        Arc::new(dhpanel_dns::resolver::SystemResolver::new());
+    let resolver: Arc<dyn builtpanel_dns::resolver::NsResolver> =
+        Arc::new(builtpanel_dns::resolver::SystemResolver::new());
     // Likewise the settings schemas come from the modules once they exist.
     let late_settings: Arc<std::sync::OnceLock<Arc<SettingsRegistry>>> = Arc::default();
     // One cache for every rebuild of the system routes, so it survives a module switch.
-    let branding: Arc<dhpanel_mod_system::bootstrap::BrandingCache> = Arc::default();
+    let branding: Arc<builtpanel_mod_system::bootstrap::BrandingCache> = Arc::default();
     let (db, sessions) = (states.auth.db.clone(), states.auth.sessions.clone());
     let master_key = states.auth.master_key.clone();
     // One counter for the whole panel, so the limit holds across instances.
-    let ask_limiter = dhpanel_cache::ratelimit::RateLimiter::new(
+    let ask_limiter = builtpanel_cache::ratelimit::RateLimiter::new(
         states.auth.redis.clone(),
         "tls-ask",
-        dhpanel_mod_domains::tls::ASK_LIMIT_PER_MINUTE,
+        builtpanel_mod_domains::tls::ASK_LIMIT_PER_MINUTE,
         std::time::Duration::from_secs(60),
     );
-    let restart_limiter = dhpanel_cache::ratelimit::RateLimiter::new(
+    let restart_limiter = builtpanel_cache::ratelimit::RateLimiter::new(
         states.auth.redis.clone(),
         "service-restart",
-        dhpanel_mod_domains::services::RESTARTS_PER_MINUTE,
+        builtpanel_mod_domains::services::RESTARTS_PER_MINUTE,
         std::time::Duration::from_secs(60),
     );
     let States {
@@ -173,7 +174,7 @@ pub fn mount(
         license,
     } = states;
     let agent_url: Option<String> = nodes.public_url.as_deref().map(str::to_owned);
-    let notifications_state = dhpanel_mod_notifications::NotificationsState {
+    let notifications_state = builtpanel_mod_notifications::NotificationsState {
         db: db.clone(),
         sessions: sessions.clone(),
         settings: late_settings.clone(),
@@ -190,14 +191,14 @@ pub fn mount(
                 "auth" => {
                     let auth = auth.clone();
                     Box::new(move || ModuleRoutes {
-                        public: Some(dhpanel_mod_auth::router().with_state(auth.clone())),
+                        public: Some(builtpanel_mod_auth::router().with_state(auth.clone())),
                         ..ModuleRoutes::none()
                     })
                 }
                 "rbac" => {
                     let admin = admin.clone();
                     Box::new(move || ModuleRoutes {
-                        admin: Some(dhpanel_mod_admin::router().with_state(admin.clone())),
+                        admin: Some(builtpanel_mod_admin::router().with_state(admin.clone())),
                         ..ModuleRoutes::none()
                     })
                 }
@@ -205,7 +206,7 @@ pub fn mount(
                     let auth = auth.clone();
                     Box::new(move || ModuleRoutes {
                         admin: Some(
-                            dhpanel_audit::router::<dhpanel_mod_auth::AuthState>()
+                            builtpanel_audit::router::<builtpanel_mod_auth::AuthState>()
                                 .with_state(auth.clone()),
                         ),
                         ..ModuleRoutes::none()
@@ -214,7 +215,7 @@ pub fn mount(
                 "nodes" => {
                     let nodes = nodes.clone();
                     Box::new(move || ModuleRoutes {
-                        admin: Some(dhpanel_mod_nodes::router().with_state(nodes.clone())),
+                        admin: Some(builtpanel_mod_nodes::router().with_state(nodes.clone())),
                         ..ModuleRoutes::none()
                     })
                 }
@@ -227,18 +228,40 @@ pub fn mount(
                     );
                     let branding = branding.clone();
                     Box::new(move || match (late_mount.get(), late_settings.get()) {
-                        (Some(mount), Some(settings)) => ModuleRoutes {
-                            admin: Some(dhpanel_mod_system::router().with_state(
-                                dhpanel_mod_system::SystemState {
-                                    db: db.clone(),
-                                    sessions: sessions.clone(),
-                                    mount: mount.clone(),
-                                    settings: settings.clone(),
-                                    branding: branding.clone(),
-                                },
-                            )),
-                            ..ModuleRoutes::none()
-                        },
+                        (Some(mount), Some(settings)) => {
+                            let state = builtpanel_mod_system::SystemState {
+                                db: db.clone(),
+                                sessions: sessions.clone(),
+                                mount: mount.clone(),
+                                settings: settings.clone(),
+                                branding: branding.clone(),
+                            };
+                            ModuleRoutes {
+                                admin: Some(
+                                    builtpanel_mod_system::router()
+                                        .with_state(state.clone())
+                                        .merge(
+                                            builtpanel_mod_system::update::router().with_state(
+                                                builtpanel_mod_system::update::UpdateState {
+                                                    db: db.clone(),
+                                                    sessions: sessions.clone(),
+                                                    config: std::sync::Arc::new(
+                                                        builtpanel_mod_system::update::UpdateConfig::from_env(),
+                                                    ),
+                                                    settings: settings.clone(),
+                                                },
+                                            ),
+                                        ),
+                                ),
+                                client: Some(
+                                    builtpanel_mod_system::client_router()
+                                        .with_state(state.clone()),
+                                ),
+                                public: Some(
+                                    builtpanel_mod_system::public_router().with_state(state),
+                                ),
+                            }
+                        }
                         _ => ModuleRoutes::none(),
                     })
                 }
@@ -247,8 +270,8 @@ pub fn mount(
                         (db.clone(), sessions.clone(), late_mount.clone());
                     Box::new(move || match late_mount.get() {
                         Some(mount) => ModuleRoutes {
-                            admin: Some(dhpanel_mod_plans::router().with_state(
-                                dhpanel_mod_plans::PlansState {
+                            admin: Some(builtpanel_mod_plans::router().with_state(
+                                builtpanel_mod_plans::PlansState {
                                     db: db.clone(),
                                     sessions: sessions.clone(),
                                     mount: mount.clone(),
@@ -263,16 +286,16 @@ pub fn mount(
                     let (db, sessions, hasher) =
                         (db.clone(), sessions.clone(), admin.hasher.clone());
                     Box::new(move || ModuleRoutes {
-                        admin: Some(dhpanel_mod_users::reseller::admin_router().with_state(
-                            dhpanel_mod_users::UsersState {
+                        admin: Some(builtpanel_mod_users::reseller::admin_router().with_state(
+                            builtpanel_mod_users::UsersState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 hasher: hasher.clone(),
                                 purge_after_days: PURGE_AFTER_DAYS,
                             },
                         )),
-                        client: Some(dhpanel_mod_users::reseller::portal_router().with_state(
-                            dhpanel_mod_users::UsersState {
+                        client: Some(builtpanel_mod_users::reseller::portal_router().with_state(
+                            builtpanel_mod_users::UsersState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 hasher: hasher.clone(),
@@ -286,8 +309,8 @@ pub fn mount(
                     let (db, sessions, hasher) =
                         (db.clone(), sessions.clone(), admin.hasher.clone());
                     Box::new(move || ModuleRoutes {
-                        admin: Some(dhpanel_mod_users::router().with_state(
-                            dhpanel_mod_users::UsersState {
+                        admin: Some(builtpanel_mod_users::router().with_state(
+                            builtpanel_mod_users::UsersState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 hasher: hasher.clone(),
@@ -317,7 +340,7 @@ pub fn mount(
                     );
                     Box::new(move || match late_settings.get() {
                         Some(settings) => {
-                            let state = dhpanel_mod_domains::DomainsState {
+                            let state = builtpanel_mod_domains::DomainsState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 settings: settings.clone(),
@@ -328,13 +351,13 @@ pub fn mount(
                             };
                             ModuleRoutes {
                                 admin: Some(
-                                    dhpanel_mod_domains::admin_router().with_state(state.clone()),
+                                    builtpanel_mod_domains::admin_router().with_state(state.clone()),
                                 ),
                                 client: Some(
-                                    dhpanel_mod_domains::client_router().with_state(state.clone()),
+                                    builtpanel_mod_domains::client_router().with_state(state.clone()),
                                 ),
                                 public: Some(
-                                    dhpanel_mod_domains::tls::public_router().with_state(state),
+                                    builtpanel_mod_domains::tls::public_router().with_state(state),
                                 ),
                             }
                         }
@@ -351,7 +374,7 @@ pub fn mount(
                     let (spool_dir, agent_url) = (spool_dir.clone(), agent_url.clone());
                     Box::new(move || match late_settings.get() {
                         Some(settings) => {
-                            let state = dhpanel_mod_databases::DatabasesState {
+                            let state = builtpanel_mod_databases::DatabasesState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 settings: settings.clone(),
@@ -361,14 +384,14 @@ pub fn mount(
                             };
                             ModuleRoutes {
                                 admin: Some(
-                                    dhpanel_mod_databases::admin_router().with_state(state.clone()),
+                                    builtpanel_mod_databases::admin_router().with_state(state.clone()),
                                 ),
                                 client: Some(
-                                    dhpanel_mod_databases::client_router()
+                                    builtpanel_mod_databases::client_router()
                                         .with_state(state.clone()),
                                 ),
                                 public: Some(
-                                    dhpanel_mod_databases::public_router().with_state(state),
+                                    builtpanel_mod_databases::public_router().with_state(state),
                                 ),
                             }
                         }
@@ -385,23 +408,23 @@ pub fn mount(
                     let (spool_dir, agent_url) = (spool_dir.clone(), agent_url.clone());
                     Box::new(move || match late_settings.get() {
                         Some(settings) => {
-                            let state = dhpanel_mod_files::FilesState {
+                            let state = builtpanel_mod_files::FilesState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 settings: settings.clone(),
-                                wait: dhpanel_mod_files::DEFAULT_WAIT,
+                                wait: builtpanel_mod_files::DEFAULT_WAIT,
                                 master_key: master_key.clone(),
                                 spool_dir: spool_dir.clone(),
                                 agent_url: agent_url.clone(),
                             };
                             ModuleRoutes {
                                 admin: Some(
-                                    dhpanel_mod_files::admin_router().with_state(state.clone()),
+                                    builtpanel_mod_files::admin_router().with_state(state.clone()),
                                 ),
                                 client: Some(
-                                    dhpanel_mod_files::client_router().with_state(state.clone()),
+                                    builtpanel_mod_files::client_router().with_state(state.clone()),
                                 ),
-                                public: Some(dhpanel_mod_files::public_router().with_state(state)),
+                                public: Some(builtpanel_mod_files::public_router().with_state(state)),
                             }
                         }
                         None => ModuleRoutes::none(),
@@ -416,7 +439,7 @@ pub fn mount(
                     );
                     Box::new(move || match late_settings.get() {
                         Some(settings) => {
-                            let state = dhpanel_mod_backups::BackupsState {
+                            let state = builtpanel_mod_backups::BackupsState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 settings: settings.clone(),
@@ -424,10 +447,10 @@ pub fn mount(
                             };
                             ModuleRoutes {
                                 admin: Some(
-                                    dhpanel_mod_backups::admin_router().with_state(state.clone()),
+                                    builtpanel_mod_backups::admin_router().with_state(state.clone()),
                                 ),
                                 client: Some(
-                                    dhpanel_mod_backups::client_router().with_state(state),
+                                    builtpanel_mod_backups::client_router().with_state(state),
                                 ),
                                 ..ModuleRoutes::none()
                             }
@@ -440,11 +463,11 @@ pub fn mount(
                         db.clone(),
                         sessions.clone(),
                         spool_dir.clone(),
-                        dhpanel_mod_migration::exec::Loopback(late_mount.clone()),
+                        builtpanel_mod_migration::exec::Loopback(late_mount.clone()),
                     );
                     Box::new(move || ModuleRoutes {
-                        admin: Some(dhpanel_mod_migration::admin_router().with_state(
-                            dhpanel_mod_migration::MigrationState {
+                        admin: Some(builtpanel_mod_migration::admin_router().with_state(
+                            builtpanel_mod_migration::MigrationState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 spool_dir: spool_dir.clone(),
@@ -461,8 +484,8 @@ pub fn mount(
                         (db.clone(), sessions.clone(), late_settings.clone());
                     Box::new(move || match late_settings.get() {
                         Some(settings) => ModuleRoutes {
-                            client: Some(dhpanel_mod_cron::client_router().with_state(
-                                dhpanel_mod_cron::CronState {
+                            client: Some(builtpanel_mod_cron::client_router().with_state(
+                                builtpanel_mod_cron::CronState {
                                     db: db.clone(),
                                     sessions: sessions.clone(),
                                     settings: settings.clone(),
@@ -482,7 +505,7 @@ pub fn mount(
                     );
                     Box::new(move || match late_settings.get() {
                         Some(settings) => {
-                            let state = dhpanel_mod_mail::MailState {
+                            let state = builtpanel_mod_mail::MailState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 settings: settings.clone(),
@@ -490,9 +513,9 @@ pub fn mount(
                             };
                             ModuleRoutes {
                                 admin: Some(
-                                    dhpanel_mod_mail::admin_router().with_state(state.clone()),
+                                    builtpanel_mod_mail::admin_router().with_state(state.clone()),
                                 ),
-                                client: Some(dhpanel_mod_mail::client_router().with_state(state)),
+                                client: Some(builtpanel_mod_mail::client_router().with_state(state)),
                                 ..ModuleRoutes::none()
                             }
                         }
@@ -502,11 +525,11 @@ pub fn mount(
                 "logs" => {
                     let (db, sessions) = (db.clone(), sessions.clone());
                     Box::new(move || ModuleRoutes {
-                        client: Some(dhpanel_mod_logs::client_router().with_state(
-                            dhpanel_mod_logs::LogsState {
+                        client: Some(builtpanel_mod_logs::client_router().with_state(
+                            builtpanel_mod_logs::LogsState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
-                                wait: dhpanel_mod_logs::DEFAULT_WAIT,
+                                wait: builtpanel_mod_logs::DEFAULT_WAIT,
                             },
                         )),
                         ..ModuleRoutes::none()
@@ -516,10 +539,10 @@ pub fn mount(
                     let state = notifications_state.clone();
                     Box::new(move || ModuleRoutes {
                         admin: Some(
-                            dhpanel_mod_notifications::admin_router().with_state(state.clone()),
+                            builtpanel_mod_notifications::admin_router().with_state(state.clone()),
                         ),
                         client: Some(
-                            dhpanel_mod_notifications::client_router().with_state(state.clone()),
+                            builtpanel_mod_notifications::client_router().with_state(state.clone()),
                         ),
                         ..ModuleRoutes::none()
                     })
@@ -527,15 +550,15 @@ pub fn mount(
                 "usage" => {
                     let (db, sessions) = (db.clone(), sessions.clone());
                     Box::new(move || {
-                        let state = dhpanel_mod_usage::UsageState {
+                        let state = builtpanel_mod_usage::UsageState {
                             db: db.clone(),
                             sessions: sessions.clone(),
                         };
                         ModuleRoutes {
                             admin: Some(
-                                dhpanel_mod_usage::admin_router().with_state(state.clone()),
+                                builtpanel_mod_usage::admin_router().with_state(state.clone()),
                             ),
-                            client: Some(dhpanel_mod_usage::client_router().with_state(state)),
+                            client: Some(builtpanel_mod_usage::client_router().with_state(state)),
                             ..ModuleRoutes::none()
                         }
                     })
@@ -543,16 +566,16 @@ pub fn mount(
                 "services" => {
                     let (db, sessions) = (db.clone(), sessions.clone());
                     Box::new(move || {
-                        let state = dhpanel_mod_services::ServicesState {
+                        let state = builtpanel_mod_services::ServicesState {
                             db: db.clone(),
                             sessions: sessions.clone(),
-                            wait: dhpanel_mod_services::DEFAULT_WAIT,
+                            wait: builtpanel_mod_services::DEFAULT_WAIT,
                         };
                         ModuleRoutes {
                             admin: Some(
-                                dhpanel_mod_services::admin_router().with_state(state.clone()),
+                                builtpanel_mod_services::admin_router().with_state(state.clone()),
                             ),
-                            client: Some(dhpanel_mod_services::client_router().with_state(state)),
+                            client: Some(builtpanel_mod_services::client_router().with_state(state)),
                             ..ModuleRoutes::none()
                         }
                     })
@@ -560,15 +583,15 @@ pub fn mount(
                 "security" => {
                     let (db, sessions) = (db.clone(), sessions.clone());
                     Box::new(move || {
-                        let state = dhpanel_mod_security::SecurityState {
+                        let state = builtpanel_mod_security::SecurityState {
                             db: db.clone(),
                             sessions: sessions.clone(),
                         };
                         ModuleRoutes {
                             admin: Some(
-                                dhpanel_mod_security::admin_router().with_state(state.clone()),
+                                builtpanel_mod_security::admin_router().with_state(state.clone()),
                             ),
-                            client: Some(dhpanel_mod_security::client_router().with_state(state)),
+                            client: Some(builtpanel_mod_security::client_router().with_state(state)),
                             ..ModuleRoutes::none()
                         }
                     })
@@ -576,15 +599,15 @@ pub fn mount(
                 "license" => {
                     let (db, sessions, service) = (db.clone(), sessions.clone(), license.clone());
                     Box::new(move || ModuleRoutes {
-                        admin: Some(dhpanel_mod_license::admin_router().with_state(
-                            dhpanel_mod_license::LicenseState {
+                        admin: Some(builtpanel_mod_license::admin_router().with_state(
+                            builtpanel_mod_license::LicenseState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 service: service.clone(),
                             },
                         )),
-                        public: Some(dhpanel_mod_license::public_router().with_state(
-                            dhpanel_mod_license::LicenseState {
+                        public: Some(builtpanel_mod_license::public_router().with_state(
+                            builtpanel_mod_license::LicenseState {
                                 db: db.clone(),
                                 sessions: sessions.clone(),
                                 service: service.clone(),
@@ -598,27 +621,27 @@ pub fn mount(
                         (db.clone(), sessions.clone(), master_key.clone());
                     // Built-in applications, and any the operator put in a directory.
                     let catalog = Arc::new(
-                        match std::env::var_os("DHPANEL_CATALOG_DIR") {
-                            Some(dir) => dhpanel_catalog::Catalog::with_dir(std::path::Path::new(&dir)),
-                            None => dhpanel_catalog::Catalog::embedded(),
+                        match std::env::var_os("BUILTPANEL_CATALOG_DIR") {
+                            Some(dir) => builtpanel_catalog::Catalog::with_dir(std::path::Path::new(&dir)),
+                            None => builtpanel_catalog::Catalog::embedded(),
                         }
                         .unwrap_or_else(|e| {
                             tracing::error!(error = %e, "the application catalog is not valid; using none");
-                            dhpanel_catalog::Catalog::default()
+                            builtpanel_catalog::Catalog::default()
                         }),
                     );
                     Box::new(move || {
-                        let state = dhpanel_mod_apps::AppsState {
+                        let state = builtpanel_mod_apps::AppsState {
                             db: db.clone(),
                             sessions: sessions.clone(),
                             master_key: master_key.clone(),
-                            wait: dhpanel_mod_apps::DEFAULT_WAIT,
+                            wait: builtpanel_mod_apps::DEFAULT_WAIT,
                             catalog: catalog.clone(),
                         };
                         ModuleRoutes {
-                            admin: Some(dhpanel_mod_apps::admin_router().with_state(state.clone())),
-                            client: Some(dhpanel_mod_apps::client_router().with_state(state.clone())),
-                            public: Some(dhpanel_mod_apps::public_router().with_state(state)),
+                            admin: Some(builtpanel_mod_apps::admin_router().with_state(state.clone())),
+                            client: Some(builtpanel_mod_apps::client_router().with_state(state.clone())),
+                            public: Some(builtpanel_mod_apps::public_router().with_state(state)),
                         }
                     })
                 }
@@ -648,7 +671,7 @@ pub fn mount(
 /// database answers, then every `every` (which also picks up a change made by
 /// another control plane instance).
 pub async fn follow_enabled(
-    db: dhpanel_database::sqlx::PgPool,
+    db: builtpanel_database::sqlx::PgPool,
     mount: ModuleMount,
     every: std::time::Duration,
 ) {
@@ -656,7 +679,7 @@ pub async fn follow_enabled(
     tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     loop {
         tick.tick().await;
-        match dhpanel_database::modules::enabled_names(&db).await {
+        match builtpanel_database::modules::enabled_names(&db).await {
             Ok(names) => {
                 if mount.apply(&names.into_iter().collect()) {
                     tracing::info!(active = ?mount.mounted(), "module routes follow the modules table");
@@ -732,9 +755,9 @@ pub fn registry_from(sources: &[(&str, &str)]) -> Result<Registry, Vec<String>> 
 /// # Errors
 /// Database errors (the caller retries; the API works without the sync).
 pub async fn sync(
-    db: &dhpanel_database::sqlx::PgPool,
+    db: &builtpanel_database::sqlx::PgPool,
     registry: &Registry,
-) -> Result<dhpanel_database::modules::SyncReport, dhpanel_database::sqlx::Error> {
+) -> Result<builtpanel_database::modules::SyncReport, builtpanel_database::sqlx::Error> {
     let manifests: Vec<(&Manifest, serde_json::Value)> = registry
         .modules()
         .iter()
@@ -743,17 +766,19 @@ pub async fn sync(
             (manifest, serde_json::to_value(manifest).unwrap_or_default())
         })
         .collect();
-    let records: Vec<dhpanel_database::modules::ModuleRecord<'_>> = manifests
+    let records: Vec<builtpanel_database::modules::ModuleRecord<'_>> = manifests
         .iter()
-        .map(|(manifest, json)| dhpanel_database::modules::ModuleRecord {
-            name: &manifest.module.name,
-            version: &manifest.module.version,
-            category: manifest.module.category.as_str(),
-            core: manifest.module.core,
-            manifest: json,
-        })
+        .map(
+            |(manifest, json)| builtpanel_database::modules::ModuleRecord {
+                name: &manifest.module.name,
+                version: &manifest.module.version,
+                category: manifest.module.category.as_str(),
+                core: manifest.module.core,
+                manifest: json,
+            },
+        )
         .collect();
-    dhpanel_database::modules::sync(db, &records).await
+    builtpanel_database::modules::sync(db, &records).await
 }
 
 /// Writes the permission keys the manifests declare into the catalogue (T03.06).
@@ -761,9 +786,9 @@ pub async fn sync(
 /// # Errors
 /// Database errors.
 pub async fn sync_permissions(
-    db: &dhpanel_database::sqlx::PgPool,
+    db: &builtpanel_database::sqlx::PgPool,
     registry: &Registry,
-) -> Result<dhpanel_database::permissions::SyncReport, dhpanel_database::sqlx::Error> {
+) -> Result<builtpanel_database::permissions::SyncReport, builtpanel_database::sqlx::Error> {
     let keys: Vec<(&str, &str)> = registry
         .modules()
         .iter()
@@ -776,12 +801,12 @@ pub async fn sync_permissions(
                 .map(|key| (key.as_str(), manifest.module.name.as_str()))
         })
         .collect();
-    dhpanel_database::permissions::sync(db, &keys).await
+    builtpanel_database::permissions::sync(db, &keys).await
 }
 
 /// Runs [`sync`] until it succeeds once (the database may come up after the
 /// API does), logging what changed.
-pub async fn sync_until_done(db: dhpanel_database::sqlx::PgPool, registry: Registry) {
+pub async fn sync_until_done(db: builtpanel_database::sqlx::PgPool, registry: Registry) {
     let mut wait = std::time::Duration::from_secs(1);
     loop {
         match sync_permissions(&db, &registry).await {
@@ -937,7 +962,7 @@ mod tests {
 
     #[test]
     fn every_permission_the_code_checks_is_declared_by_a_manifest() {
-        use dhpanel_rbac::{PermissionKey as _, permissions as p};
+        use builtpanel_rbac::{PermissionKey as _, permissions as p};
         let declared: Vec<String> = load()
             .unwrap()
             .into_iter()

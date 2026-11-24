@@ -7,9 +7,11 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name, Network, VolumeMount};
-use dhpanel_node_agent::ops::tenant::{TenantContext, create_tenant};
-use dhpanel_node_protocol::{Operation, Output};
+use builtpanel_docker_manager::{
+    ContainerSpec, DockerManager, ImageRef, Name, Network, VolumeMount,
+};
+use builtpanel_node_agent::ops::tenant::{TenantContext, create_tenant};
+use builtpanel_node_protocol::{Operation, Output};
 use uuid::Uuid;
 
 const BUSYBOX: &str =
@@ -24,6 +26,10 @@ struct Tenant {
 }
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -69,7 +75,7 @@ fn spec(
     script: &str,
 ) -> ContainerSpec {
     let mut spec = ContainerSpec::new(
-        Name::parse(&format!("dh-{}-{name}", who.username)).unwrap(),
+        Name::parse(&format!("bp-{}-{name}", who.username)).unwrap(),
         ImageRef::parse(BUSYBOX).unwrap(),
     );
     spec.command = vec!["sh".into(), "-c".into(), script.into()];
@@ -97,8 +103,8 @@ async fn run(docker: &DockerManager, spec: &ContainerSpec) -> (i64, String) {
 #[ignore = "needs the privileged helper running as root and Docker"]
 async fn one_tenant_cannot_reach_another_tenants_files_network_or_processes() {
     let (Some(helper_socket), Some(tenants_root)) = (
-        std::env::var_os("DHPANEL_TEST_HELPER_SOCKET"),
-        std::env::var_os("DHPANEL_TEST_TENANTS_ROOT"),
+        std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET"),
+        std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT"),
     ) else {
         eprintln!("skipped: no helper (see the live script)");
         return;
@@ -108,7 +114,7 @@ async fn one_tenant_cannot_reach_another_tenants_files_network_or_processes() {
         helper_socket: PathBuf::from(helper_socket),
         tenants_root: PathBuf::from(tenants_root),
         docker: docker.clone(),
-        vhosts_root: std::env::temp_dir().join(format!("dh-vhosts-{}", std::process::id())),
+        vhosts_root: std::env::temp_dir().join(format!("bp-vhosts-{}", std::process::id())),
     });
     docker
         .pull_image(&ImageRef::parse(BUSYBOX).unwrap())

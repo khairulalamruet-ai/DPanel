@@ -14,9 +14,9 @@ import {
   CardTitle,
   CardContent,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { listFolder, listTrash, deleteItem, uploadFile } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   Folder,
   FolderPlus,
@@ -75,7 +75,7 @@ export function FileManagerPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [currentPath, setCurrentPath] = useState<string>("/home/demo/public_html");
+  const [currentPath, setCurrentPath] = useState<string>("/");
   const [data, setData] = useState<FileListResponse | null>(null);
   const [trashCount, setTrashCount] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,9 +97,7 @@ export function FileManagerPage() {
   const fetchFiles = useCallback(async (path: string) => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<FileListResponse>(
-        `/api/v1/client/files?path=${encodeURIComponent(path)}`
-      );
+      const res = await listFolder(path);
       setData(res);
       setCurrentPath(res.current_path);
       setSelectedIds(new Set());
@@ -116,7 +114,7 @@ export function FileManagerPage() {
 
   const fetchTrashCount = useCallback(async () => {
     try {
-      const res = await apiFetch<TrashListResponse>("/api/v1/client/files/trash");
+      const res = await listTrash();
       setTrashCount(res.total_items ?? (res.items ? res.items.length : 0));
     } catch {
       // Ignore count fetch errors
@@ -163,9 +161,7 @@ export function FileManagerPage() {
     }
 
     try {
-      await apiFetch(`/api/v1/client/files?path=${encodeURIComponent(item.path)}`, {
-        method: "DELETE",
-      });
+      await deleteItem(item.path);
 
       toast({
         title: t("common.success"),
@@ -189,14 +185,7 @@ export function FileManagerPage() {
       setIsUploading(true);
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const formData = new FormData();
-        formData.append("path", currentPath);
-        formData.append("file", file);
-
-        await apiFetch("/api/v1/client/files/upload", {
-          method: "POST",
-          body: formData,
-        });
+        await uploadFile(currentPath, file);
       }
 
       toast({
@@ -328,20 +317,20 @@ export function FileManagerPage() {
             <CardContent className="p-2 space-y-1">
               <button
                 type="button"
-                onClick={() => handleNavigate("/home/demo")}
+                onClick={() => handleNavigate("/")}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-muted/80 transition-colors ${
-                  currentPath === "/home/demo" ? "bg-muted font-semibold text-primary" : "text-muted-foreground"
+                  currentPath === "/" ? "bg-muted font-semibold text-primary" : "text-muted-foreground"
                 }`}
                 data-testid="shortcut-home"
               >
                 <Home className="w-4 h-4 shrink-0" />
-                <span>Home (/home/demo)</span>
+                <span>Home (/)</span>
               </button>
               <button
                 type="button"
-                onClick={() => handleNavigate("/home/demo/public_html")}
+                onClick={() => handleNavigate("/public_html")}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-muted/80 transition-colors ${
-                  currentPath === "/home/demo/public_html" ? "bg-muted font-semibold text-primary" : "text-muted-foreground"
+                  currentPath === "/public_html" ? "bg-muted font-semibold text-primary" : "text-muted-foreground"
                 }`}
                 data-testid="shortcut-public-html"
               >
@@ -350,9 +339,9 @@ export function FileManagerPage() {
               </button>
               <button
                 type="button"
-                onClick={() => handleNavigate("/home/demo/logs")}
+                onClick={() => handleNavigate("/logs")}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-muted/80 transition-colors ${
-                  currentPath === "/home/demo/logs" ? "bg-muted font-semibold text-primary" : "text-muted-foreground"
+                  currentPath === "/logs" ? "bg-muted font-semibold text-primary" : "text-muted-foreground"
                 }`}
                 data-testid="shortcut-logs"
               >
@@ -361,9 +350,9 @@ export function FileManagerPage() {
               </button>
               <button
                 type="button"
-                onClick={() => handleNavigate("/home/demo/ssl")}
+                onClick={() => handleNavigate("/ssl")}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-muted/80 transition-colors ${
-                  currentPath === "/home/demo/ssl" ? "bg-muted font-semibold text-primary" : "text-muted-foreground"
+                  currentPath === "/ssl" ? "bg-muted font-semibold text-primary" : "text-muted-foreground"
                 }`}
                 data-testid="shortcut-ssl"
               >
@@ -474,7 +463,7 @@ export function FileManagerPage() {
           {/* Breadcrumbs Navigation */}
           <div className="flex items-center gap-1.5 px-3 py-2 bg-muted/40 border rounded-lg text-sm font-mono overflow-x-auto">
             <button
-              onClick={() => handleNavigate("/home/demo")}
+              onClick={() => handleNavigate("/")}
               className="hover:text-primary transition-colors flex items-center gap-1"
               title="Home"
             >

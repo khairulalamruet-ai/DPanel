@@ -2,7 +2,7 @@
 //! compressed, encrypted and stored at a destination.
 //!
 //! * The **files** are packed by the privileged helper as the tenant's own user (see
-//!   `dhpanel_fileops::backup`) into a staged file in the agent's transfer folder, then
+//!   `builtpanel_fileops::backup`) into a staged file in the agent's transfer folder, then
 //!   stored and the staged file removed.
 //! * Each **database** is dumped by `mariadb-dump` in the database container as a
 //!   temporary read-only account (a consistent snapshot: `--single-transaction`) and flows
@@ -20,15 +20,15 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use dhpanel_backup::{
+use builtpanel_backup::{
     KEY_LEN, Manifest, Part, PartKind, StreamReader, StreamWriter,
     manifest::{Counting, hex},
 };
-use dhpanel_backup_dest::Destination;
-use dhpanel_node_protocol::{
+use builtpanel_backup_dest::Destination;
+use builtpanel_node_protocol::{
     AgentError, BackupPartInfo, BackupTarget, DbPassword, Operation, Output,
 };
-use dhpanel_priv_helper::protocol::Action;
+use builtpanel_priv_helper::protocol::Action;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
@@ -43,7 +43,7 @@ use super::{
 pub(super) type Shared = Arc<Mutex<Box<dyn Destination>>>;
 
 fn transfers_dir(context: &TenantContext) -> PathBuf {
-    std::env::var_os("DHPANEL_AGENT_TRANSFERS").map_or_else(
+    std::env::var_os("BUILTPANEL_AGENT_TRANSFERS").map_or_else(
         || context.vhosts_root.with_file_name("transfers"),
         PathBuf::from,
     )
@@ -61,10 +61,14 @@ pub(super) fn open_destination(
         })
         .transpose()?
         .unwrap_or(serde_json::Value::Null);
-    dhpanel_backup_dest::open::open(&target.kind, &target.settings, &secrets).map_err(|e| match e {
-        dhpanel_backup_dest::open::OpenError::Settings(_) => invalid(&e.to_string()),
-        dhpanel_backup_dest::open::OpenError::Destination(_) => failed(&e.to_string()).retryable(),
-    })
+    builtpanel_backup_dest::open::open(&target.kind, &target.settings, &secrets).map_err(
+        |e| match e {
+            builtpanel_backup_dest::open::OpenError::Settings(_) => invalid(&e.to_string()),
+            builtpanel_backup_dest::open::OpenError::Destination(_) => {
+                failed(&e.to_string()).retryable()
+            }
+        },
+    )
 }
 
 /// Reads another reader and counts and hashes what passes (the stored size and checksum).
@@ -202,8 +206,8 @@ async fn database_part(
             )
         })
     };
-    let container =
-        dhpanel_docker_manager::Name::parse(db::CONTAINER).map_err(|e| failed(&e.to_string()))?;
+    let container = builtpanel_docker_manager::Name::parse(db::CONTAINER)
+        .map_err(|e| failed(&e.to_string()))?;
     let ran = context
         .docker
         .dump_database(&container, database, &account, &password, tx, MAX_DURATION)
@@ -255,12 +259,12 @@ pub async fn create_backup(
         return Err(super::wrong_operation());
     };
     let tenant =
-        dhpanel_domain::TenantUsername::parse(&account).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_domain::TenantUsername::parse(&account).map_err(|e| invalid(&e.to_string()))?;
     if db_users.len() > 200 {
         return Err(invalid("too many database users"));
     }
     for d in &databases {
-        dhpanel_domain::databases::check_identifier(d).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_domain::databases::check_identifier(d).map_err(|e| invalid(&e.to_string()))?;
     }
     if databases.len() > 100 {
         return Err(invalid("too many databases"));
@@ -275,13 +279,13 @@ pub async fn create_backup(
     if !db_users.is_empty() {
         let mut carried = Vec::new();
         for user in &db_users {
-            dhpanel_domain::databases::check_identifier(&user.name)
+            builtpanel_domain::databases::check_identifier(&user.name)
                 .map_err(|e| invalid(&e.to_string()))?;
             let credential = match user.engine {
-                dhpanel_node_protocol::DbEngine::Mysql => {
+                builtpanel_node_protocol::DbEngine::Mysql => {
                     db::user_hash(&context, &tenant, &user.name).await?
                 }
-                dhpanel_node_protocol::DbEngine::Postgres => {
+                builtpanel_node_protocol::DbEngine::Postgres => {
                     super::pg::user_verifier(&context, &user.name).await?
                 }
             };
@@ -592,9 +596,9 @@ pub async fn restore_backup(
         return Err(super::wrong_operation());
     };
     let tenant =
-        dhpanel_domain::TenantUsername::parse(&account).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_domain::TenantUsername::parse(&account).map_err(|e| invalid(&e.to_string()))?;
     for d in &databases {
-        dhpanel_domain::databases::check_identifier(d).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_domain::databases::check_identifier(d).map_err(|e| invalid(&e.to_string()))?;
     }
     if databases.len() > 100 {
         return Err(invalid("too many databases"));
@@ -738,7 +742,7 @@ pub async fn restore_backup(
                 context.clone(),
                 Operation::CreateDatabase {
                     name: database.clone(),
-                    engine: dhpanel_node_protocol::DbEngine::Mysql,
+                    engine: builtpanel_node_protocol::DbEngine::Mysql,
                     dedicated: None,
                 },
             )
@@ -768,7 +772,7 @@ pub async fn restore_backup(
             ) else {
                 continue;
             };
-            dhpanel_domain::databases::check_identifier(user_name)
+            builtpanel_domain::databases::check_identifier(user_name)
                 .map_err(|e| invalid(&e.to_string()))?;
             // Only MariaDB users are carried by a restore today.
             if user
@@ -1025,7 +1029,7 @@ pub async fn export_backup(
         return Err(super::wrong_operation());
     };
     if header.len() > 16 * 1024
-        || dhpanel_backup::export::Header::from_reader(header.as_bytes()).is_err()
+        || builtpanel_backup::export::Header::from_reader(header.as_bytes()).is_err()
     {
         return Err(invalid("the export header is not usable"));
     }
@@ -1038,14 +1042,14 @@ pub async fn export_backup(
     let (staged2, object2) = (staged.clone(), object.clone());
     let result = tokio::task::spawn_blocking(move || -> Result<u64, AgentError> {
         let dest = open_destination(&target, credentials.as_ref())?;
-        let dest_error = |e: dhpanel_backup_dest::DestError| failed(&e.to_string()).retryable();
+        let dest_error = |e: builtpanel_backup_dest::DestError| failed(&e.to_string()).retryable();
         let names = dest.list(&format!("{id}/")).map_err(dest_error)?;
         let mut parts: Vec<String> = Vec::new();
         for name in names {
             let Some(plain) = name.strip_prefix(&format!("{id}/")) else {
                 continue;
             };
-            if plain == "manifest.json.enc" || dhpanel_backup::manifest::valid_part_name(plain) {
+            if plain == "manifest.json.enc" || builtpanel_backup::manifest::valid_part_name(plain) {
                 parts.push(plain.to_owned());
             }
         }
@@ -1077,7 +1081,7 @@ pub async fn export_backup(
         };
         add(
             &mut tar,
-            dhpanel_backup::export::HEADER,
+            builtpanel_backup::export::HEADER,
             header.len() as u64,
             &mut header.as_bytes(),
         )?;
@@ -1085,7 +1089,7 @@ pub async fn export_backup(
             let object_name = format!("{id}/{plain}");
             // The size first (the tar header needs it), then the bytes.
             let (size, _) =
-                dhpanel_backup::manifest::hash_of(dest.get(&object_name).map_err(dest_error)?)
+                builtpanel_backup::manifest::hash_of(dest.get(&object_name).map_err(dest_error)?)
                     .map_err(io)?;
             let mut data = dest.get(&object_name).map_err(dest_error)?;
             add(&mut tar, plain, size, &mut data)?;
@@ -1131,7 +1135,7 @@ pub async fn import_export(op: Operation) -> Result<Output, AgentError> {
     let id = backup_id.simple().to_string();
     tokio::task::spawn_blocking(move || -> Result<Output, AgentError> {
         let dest = open_destination(&target, credentials.as_ref())?;
-        let dest_error = |e: dhpanel_backup_dest::DestError| failed(&e.to_string()).retryable();
+        let dest_error = |e: builtpanel_backup_dest::DestError| failed(&e.to_string()).retryable();
         if !dest.list(&format!("{id}/")).map_err(dest_error)?.is_empty() {
             return Err(invalid("a backup with this id is there already"));
         }
@@ -1151,13 +1155,13 @@ pub async fn import_export(op: Operation) -> Result<Output, AgentError> {
                     .map_err(|_| invalid("this is not an export file"))?
                     .to_string_lossy()
                     .into_owned();
-                if name == dhpanel_backup::export::HEADER {
+                if name == builtpanel_backup::export::HEADER {
                     seen_header = true;
                     continue;
                 }
                 if !seen_header
                     || !(name == "manifest.json.enc"
-                        || dhpanel_backup::manifest::valid_part_name(&name))
+                        || builtpanel_backup::manifest::valid_part_name(&name))
                 {
                     return Err(invalid("this is not an export file"));
                 }

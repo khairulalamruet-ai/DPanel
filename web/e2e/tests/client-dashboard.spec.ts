@@ -80,7 +80,7 @@ test.describe("Client Dashboard UI (T04.18)", () => {
     await expect(page.getByText("alpha-hosting.com").first()).toBeVisible();
     await expect(page.getByText(/public_html/)).toBeVisible();
     await expect(page.getByText(/Let's Encrypt Authority X3/)).toBeVisible();
-    await expect(page.getByText("ns1.dhpanel.net, ns2.dhpanel.net")).toBeVisible();
+    await expect(page.getByText("ns1.builtpanel.net, ns2.builtpanel.net")).toBeVisible();
 
     // Recent activity stream
     await expect(page.getByText(/Recent Stack Events|সাম্প্রতিক স্ট্যাক ইভেন্ট/i)).toBeVisible();
@@ -113,7 +113,7 @@ test.describe("Client Dashboard UI (T04.18)", () => {
     await cronStarBtn.click();
 
     // Check localStorage in browser
-    const stored = await page.evaluate(() => localStorage.getItem("dhpanel-client-favorites"));
+    const stored = await page.evaluate(() => localStorage.getItem("builtpanel-client-favorites"));
     expect(stored).toBeTruthy();
   });
 

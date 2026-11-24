@@ -59,7 +59,7 @@ test.describe("User Create Wizard (T04.16)", () => {
 
     // Verify Operation Progress and DoD: "container running"
     await expect(page.getByText("container running")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("dh-tenant-e2etenant")).toBeVisible();
+    await expect(page.getByText("bp-tenant-e2etenant")).toBeVisible();
     await expect(
       page.getByText(/Tenant Created & Container Running!|টেন্যান্ট তৈরি সম্পন্ন এবং কন্টেইনার চলছে!/i)
     ).toBeVisible();

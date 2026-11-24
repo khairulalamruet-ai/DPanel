@@ -1,0 +1,8 @@
+slug        = "artifactory"
+name        = "Artifactory"
+category    = "java_tools"
+kind        = "unavailable"
+description = "Artifactory."
+license     = "Apache-2.0"
+covers      = ["Artifactory"]
+reason      = "not packaged for the panel yet"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
 import {
   Table,
   TableHeader,
@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import {
   Briefcase,
   Package,
@@ -33,6 +33,7 @@ import {
 import { ResellerAccount, ResellerPackage } from "./types";
 import { CreateResellerDialog } from "./CreateResellerDialog";
 import { CreateResellerPackageDialog } from "./CreateResellerPackageDialog";
+import { AccountsTabs } from "../accounts/AccountsTabs";
 
 export function AdminResellersPage() {
   const { t } = useTranslation();
@@ -160,6 +161,7 @@ export function AdminResellersPage() {
 
   return (
     <div className="space-y-6" data-testid="admin-resellers-page">
+      <AccountsTabs active="resellers" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

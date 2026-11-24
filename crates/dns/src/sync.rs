@@ -14,7 +14,7 @@
 
 use std::{sync::Arc, time::Duration};
 
-use dhpanel_database::{dns as store, sqlx::PgPool};
+use builtpanel_database::{dns as store, sqlx::PgPool};
 use tokio::sync::watch;
 use uuid::Uuid;
 
@@ -224,5 +224,5 @@ pub enum SyncError {
     Dns(#[from] DnsError),
     /// The database.
     #[error(transparent)]
-    Database(#[from] dhpanel_database::sqlx::Error),
+    Database(#[from] builtpanel_database::sqlx::Error),
 }

@@ -533,6 +533,1225 @@ dependencies = [
 ]
 
 [[package]]
+name = "builtpanel-audit"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "tower",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-auth-core"
+version = "0.1.19"
+dependencies = [
+ "argon2",
+ "base64 0.23.1",
+ "chacha20poly1305",
+ "getrandom 0.4.3",
+ "secrecy",
+ "sha2 0.11.1",
+ "thiserror",
+ "tokio",
+ "totp-rs",
+ "zxcvbn",
+]
+
+[[package]]
+name = "builtpanel-backup"
+version = "0.1.19"
+dependencies = [
+ "chacha20poly1305",
+ "getrandom 0.4.3",
+ "hmac",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "thiserror",
+]
+
+[[package]]
+name = "builtpanel-backup-dest"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-safe-fs",
+ "hmac",
+ "rustix",
+ "serde_json",
+ "sha2 0.11.1",
+ "ssh2",
+ "thiserror",
+ "ureq",
+]
+
+[[package]]
+name = "builtpanel-bpctl"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-auth-core",
+ "builtpanel-common",
+ "builtpanel-config",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-license",
+ "builtpanel-pki",
+ "builtpanel-system-backup",
+ "clap",
+ "rpassword",
+ "secrecy",
+ "serde_json",
+ "time",
+ "tokio",
+]
+
+[[package]]
+name = "builtpanel-cache"
+version = "0.1.19"
+dependencies = [
+ "redis",
+ "secrecy",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "builtpanel-catalog"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-node-protocol",
+ "serde",
+ "toml 1.2.1+spec-1.1.0",
+]
+
+[[package]]
+name = "builtpanel-common"
+version = "0.1.19"
+
+[[package]]
+name = "builtpanel-config"
+version = "0.1.19"
+dependencies = [
+ "figment",
+ "secrecy",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "builtpanel-control-api"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-backup",
+ "builtpanel-backup-dest",
+ "builtpanel-cache",
+ "builtpanel-catalog",
+ "builtpanel-common",
+ "builtpanel-config",
+ "builtpanel-database",
+ "builtpanel-dispatcher",
+ "builtpanel-dns",
+ "builtpanel-events",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-admin",
+ "builtpanel-mod-apps",
+ "builtpanel-mod-auth",
+ "builtpanel-mod-backups",
+ "builtpanel-mod-cron",
+ "builtpanel-mod-databases",
+ "builtpanel-mod-domains",
+ "builtpanel-mod-files",
+ "builtpanel-mod-license",
+ "builtpanel-mod-logs",
+ "builtpanel-mod-mail",
+ "builtpanel-mod-migration",
+ "builtpanel-mod-nodes",
+ "builtpanel-mod-notifications",
+ "builtpanel-mod-plans",
+ "builtpanel-mod-security",
+ "builtpanel-mod-services",
+ "builtpanel-mod-system",
+ "builtpanel-mod-usage",
+ "builtpanel-mod-users",
+ "builtpanel-node-gateway",
+ "builtpanel-node-protocol",
+ "builtpanel-observability",
+ "builtpanel-operations",
+ "builtpanel-pki",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "builtpanel-system-backup",
+ "flate2",
+ "secrecy",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "tar",
+ "time",
+ "tokio",
+ "tower",
+ "tower-http 0.7.1",
+ "tracing",
+ "utoipa",
+ "utoipa-scalar",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-database"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-domain",
+ "builtpanel-rbac",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-dispatcher"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-cache",
+ "builtpanel-catalog",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-events",
+ "builtpanel-kernel",
+ "builtpanel-node-agent",
+ "builtpanel-node-gateway",
+ "builtpanel-node-protocol",
+ "builtpanel-operations",
+ "builtpanel-pki",
+ "builtpanel-tenant-stack",
+ "builtpanel-web-config",
+ "futures-util",
+ "rcgen",
+ "rustls",
+ "secrecy",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "tokio-rustls",
+ "tokio-tungstenite",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-dns"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-database",
+ "builtpanel-domain",
+ "hickory-resolver",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "ureq",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-docker-manager"
+version = "0.1.19"
+dependencies = [
+ "bollard",
+ "futures-util",
+ "thiserror",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-domain"
+version = "0.1.19"
+dependencies = [
+ "idna",
+ "psl",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-events"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-database",
+ "builtpanel-kernel",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-feature-gate"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-cache",
+ "builtpanel-http-kit",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-fileops"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-backup",
+ "builtpanel-node-protocol",
+ "builtpanel-safe-fs",
+ "flate2",
+ "rustix",
+ "serde_json",
+ "tar",
+ "zip",
+ "zstd",
+]
+
+[[package]]
+name = "builtpanel-http-kit"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-observability",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tower",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-import"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-domain",
+ "flate2",
+ "roxmltree",
+ "serde",
+ "serde_json",
+ "tar",
+ "thiserror",
+]
+
+[[package]]
+name = "builtpanel-kernel"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "toml 1.2.1+spec-1.1.0",
+ "tower",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-license"
+version = "0.1.19"
+dependencies = [
+ "base64 0.23.1",
+ "ring",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-license-authority"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "builtpanel-auth-core",
+ "builtpanel-http-kit",
+ "builtpanel-license",
+ "builtpanel-license-client",
+ "builtpanel-observability",
+ "figment",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tower",
+ "tracing",
+ "ureq",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-license-client"
+version = "0.1.19"
+dependencies = [
+ "base64 0.23.1",
+ "builtpanel-license",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "ureq",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-admin"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-http-kit",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-apps"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-catalog",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-tenant-stack",
+ "ring",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-auth"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-http-kit",
+ "builtpanel-session",
+ "getrandom 0.4.3",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tower",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-backups"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-backup",
+ "builtpanel-backup-dest",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tar",
+ "thiserror",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-cron"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-backup",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-databases"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "tokio",
+ "tower",
+ "tower-http 0.7.1",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-domains"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-dns",
+ "builtpanel-domain",
+ "builtpanel-events",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-node-protocol",
+ "builtpanel-pki",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "builtpanel-tenant-stack",
+ "builtpanel-web-config",
+ "rcgen",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-files"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-fileops",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-safe-fs",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "tokio",
+ "tower",
+ "tower-http 0.7.1",
+ "utoipa",
+ "uuid",
+ "zip",
+]
+
+[[package]]
+name = "builtpanel-mod-license"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-config",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-license",
+ "builtpanel-license-authority",
+ "builtpanel-license-client",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tower",
+ "tracing",
+ "ureq",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-logs"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-mail"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tower",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-migration"
+version = "0.1.19"
+dependencies = [
+ "anyhow",
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-http-kit",
+ "builtpanel-import",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "flate2",
+ "rand 0.10.3",
+ "russh",
+ "russh-sftp",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "tar",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-nodes"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "builtpanel-audit",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-node-gateway",
+ "builtpanel-node-protocol",
+ "builtpanel-operations",
+ "builtpanel-pki",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "getrandom 0.4.3",
+ "rcgen",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "time",
+ "tokio",
+ "tower",
+ "tracing",
+ "utoipa",
+ "uuid",
+ "x509-parser",
+]
+
+[[package]]
+name = "builtpanel-mod-notifications"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "lettre",
+ "ring",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tower",
+ "tracing",
+ "ureq",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-plans"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-security"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-services"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-system"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "builtpanel-audit",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-events",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-observability",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "tracing",
+ "tracing-subscriber",
+ "ureq",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-usage"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-mod-auth",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "builtpanel-settings",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-mod-users"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-auth-core",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-http-kit",
+ "builtpanel-kernel",
+ "builtpanel-node-protocol",
+ "builtpanel-rbac",
+ "builtpanel-session",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-node-agent"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-audit",
+ "builtpanel-backup",
+ "builtpanel-backup-dest",
+ "builtpanel-cache",
+ "builtpanel-catalog",
+ "builtpanel-common",
+ "builtpanel-database",
+ "builtpanel-docker-manager",
+ "builtpanel-domain",
+ "builtpanel-http-kit",
+ "builtpanel-mod-nodes",
+ "builtpanel-node-gateway",
+ "builtpanel-node-protocol",
+ "builtpanel-operations",
+ "builtpanel-pki",
+ "builtpanel-priv-helper",
+ "builtpanel-session",
+ "builtpanel-tenant-stack",
+ "bytes",
+ "clap",
+ "flate2",
+ "futures-util",
+ "mysql_async",
+ "postgres-protocol",
+ "rcgen",
+ "redb",
+ "rustix",
+ "rustls",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "tar",
+ "thiserror",
+ "time",
+ "tokio",
+ "tokio-postgres",
+ "tokio-rustls",
+ "tokio-tungstenite",
+ "ureq",
+ "uuid",
+ "x509-parser",
+ "zstd",
+]
+
+[[package]]
+name = "builtpanel-node-gateway"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-database",
+ "builtpanel-node-protocol",
+ "futures-util",
+ "rustls",
+ "sha2 0.11.1",
+ "thiserror",
+ "tokio",
+ "tokio-rustls",
+ "tokio-tungstenite",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-node-protocol"
+version = "0.1.19"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-observability"
+version = "0.1.19"
+dependencies = [
+ "metrics",
+ "metrics-exporter-prometheus",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "thiserror",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "builtpanel-operations"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-database",
+ "builtpanel-node-protocol",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-pki"
+version = "0.1.19"
+dependencies = [
+ "getrandom 0.4.3",
+ "rcgen",
+ "secrecy",
+ "sha2 0.11.1",
+ "thiserror",
+ "time",
+ "uuid",
+ "x509-parser",
+]
+
+[[package]]
+name = "builtpanel-priv-helper"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-backup",
+ "builtpanel-common",
+ "builtpanel-fileops",
+ "builtpanel-node-protocol",
+ "builtpanel-safe-fs",
+ "rustix",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "builtpanel-rbac"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "builtpanel-cache",
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "builtpanel-session",
+ "secrecy",
+ "sqlx",
+ "tokio",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-root-auth"
+version = "0.1.19"
+dependencies = [
+ "rustix",
+ "sha-crypt",
+ "yescrypt",
+ "zeroize",
+]
+
+[[package]]
+name = "builtpanel-safe-fs"
+version = "0.1.19"
+dependencies = [
+ "rustix",
+ "thiserror",
+]
+
+[[package]]
+name = "builtpanel-session"
+version = "0.1.19"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "builtpanel-cache",
+ "builtpanel-http-kit",
+ "getrandom 0.4.3",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "thiserror",
+ "time",
+ "tokio",
+ "tower",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-settings"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-database",
+ "builtpanel-http-kit",
+ "jsonschema",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-system-backup"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-backup",
+ "builtpanel-backup-dest",
+ "serde_json",
+ "sha2 0.11.1",
+ "tar",
+ "thiserror",
+ "zstd",
+]
+
+[[package]]
+name = "builtpanel-tenant-stack"
+version = "0.1.19"
+dependencies = [
+ "bollard",
+ "builtpanel-docker-manager",
+ "builtpanel-domain",
+ "serde",
+ "thiserror",
+ "tokio",
+ "toml 1.2.1+spec-1.1.0",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-web-config"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-database",
+ "builtpanel-domain",
+ "builtpanel-node-protocol",
+ "builtpanel-tenant-stack",
+ "uuid",
+]
+
+[[package]]
+name = "builtpanel-worker"
+version = "0.1.19"
+dependencies = [
+ "builtpanel-common",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1124,1209 +2343,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dhpanel-audit"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-rbac",
- "dhpanel-session",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "time",
- "tokio",
- "tower",
- "tracing",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-auth-core"
-version = "0.1.0"
-dependencies = [
- "argon2",
- "base64 0.23.1",
- "chacha20poly1305",
- "getrandom 0.4.3",
- "secrecy",
- "sha2 0.11.1",
- "thiserror",
- "tokio",
- "totp-rs",
- "zxcvbn",
-]
-
-[[package]]
-name = "dhpanel-backup"
-version = "0.1.0"
-dependencies = [
- "chacha20poly1305",
- "getrandom 0.4.3",
- "hmac",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "thiserror",
-]
-
-[[package]]
-name = "dhpanel-backup-dest"
-version = "0.1.0"
-dependencies = [
- "dhpanel-safe-fs",
- "hmac",
- "rustix",
- "serde_json",
- "sha2 0.11.1",
- "ssh2",
- "thiserror",
- "ureq",
-]
-
-[[package]]
-name = "dhpanel-cache"
-version = "0.1.0"
-dependencies = [
- "redis",
- "secrecy",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "dhpanel-catalog"
-version = "0.1.0"
-dependencies = [
- "dhpanel-node-protocol",
- "toml 1.2.1+spec-1.1.0",
-]
-
-[[package]]
-name = "dhpanel-common"
-version = "0.1.0"
-
-[[package]]
-name = "dhpanel-config"
-version = "0.1.0"
-dependencies = [
- "figment",
- "secrecy",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "dhpanel-control-api"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-backup",
- "dhpanel-backup-dest",
- "dhpanel-cache",
- "dhpanel-catalog",
- "dhpanel-common",
- "dhpanel-config",
- "dhpanel-database",
- "dhpanel-dispatcher",
- "dhpanel-dns",
- "dhpanel-events",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-admin",
- "dhpanel-mod-apps",
- "dhpanel-mod-auth",
- "dhpanel-mod-backups",
- "dhpanel-mod-cron",
- "dhpanel-mod-databases",
- "dhpanel-mod-domains",
- "dhpanel-mod-files",
- "dhpanel-mod-license",
- "dhpanel-mod-logs",
- "dhpanel-mod-mail",
- "dhpanel-mod-migration",
- "dhpanel-mod-nodes",
- "dhpanel-mod-notifications",
- "dhpanel-mod-plans",
- "dhpanel-mod-security",
- "dhpanel-mod-services",
- "dhpanel-mod-system",
- "dhpanel-mod-usage",
- "dhpanel-mod-users",
- "dhpanel-node-gateway",
- "dhpanel-node-protocol",
- "dhpanel-observability",
- "dhpanel-operations",
- "dhpanel-pki",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "dhpanel-system-backup",
- "flate2",
- "secrecy",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "tar",
- "time",
- "tokio",
- "tower",
- "tower-http 0.7.1",
- "tracing",
- "utoipa",
- "utoipa-scalar",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-database"
-version = "0.1.0"
-dependencies = [
- "dhpanel-domain",
- "dhpanel-rbac",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "dhpanel-dhctl"
-version = "0.1.0"
-dependencies = [
- "clap",
- "dhpanel-auth-core",
- "dhpanel-common",
- "dhpanel-config",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-license",
- "dhpanel-pki",
- "dhpanel-system-backup",
- "rpassword",
- "secrecy",
- "serde_json",
- "time",
- "tokio",
-]
-
-[[package]]
-name = "dhpanel-dispatcher"
-version = "0.1.0"
-dependencies = [
- "dhpanel-cache",
- "dhpanel-catalog",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-events",
- "dhpanel-kernel",
- "dhpanel-node-agent",
- "dhpanel-node-gateway",
- "dhpanel-node-protocol",
- "dhpanel-operations",
- "dhpanel-pki",
- "dhpanel-tenant-stack",
- "dhpanel-web-config",
- "futures-util",
- "rcgen",
- "rustls",
- "secrecy",
- "serde_json",
- "sqlx",
- "time",
- "tokio",
- "tokio-rustls",
- "tokio-tungstenite",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-dns"
-version = "0.1.0"
-dependencies = [
- "dhpanel-database",
- "dhpanel-domain",
- "hickory-resolver",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "tracing",
- "ureq",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-docker-manager"
-version = "0.1.0"
-dependencies = [
- "bollard",
- "futures-util",
- "thiserror",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-domain"
-version = "0.1.0"
-dependencies = [
- "idna",
- "psl",
- "serde_json",
- "thiserror",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-events"
-version = "0.1.0"
-dependencies = [
- "dhpanel-database",
- "dhpanel-kernel",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-feature-gate"
-version = "0.1.0"
-dependencies = [
- "dhpanel-cache",
- "dhpanel-http-kit",
- "secrecy",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-fileops"
-version = "0.1.0"
-dependencies = [
- "dhpanel-backup",
- "dhpanel-node-protocol",
- "dhpanel-safe-fs",
- "flate2",
- "rustix",
- "serde_json",
- "tar",
- "zip",
- "zstd",
-]
-
-[[package]]
-name = "dhpanel-http-kit"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-observability",
- "metrics",
- "metrics-exporter-prometheus",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tower",
- "tracing",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-import"
-version = "0.1.0"
-dependencies = [
- "dhpanel-domain",
- "flate2",
- "roxmltree",
- "serde",
- "serde_json",
- "tar",
- "thiserror",
-]
-
-[[package]]
-name = "dhpanel-kernel"
-version = "0.1.0"
-dependencies = [
- "axum",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "toml 1.2.1+spec-1.1.0",
- "tower",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-license"
-version = "0.1.0"
-dependencies = [
- "base64 0.23.1",
- "ring",
- "serde",
- "serde_json",
- "thiserror",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-license-authority"
-version = "0.1.0"
-dependencies = [
- "axum",
- "base64 0.23.1",
- "dhpanel-auth-core",
- "dhpanel-http-kit",
- "dhpanel-license",
- "dhpanel-license-client",
- "dhpanel-observability",
- "figment",
- "secrecy",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "thiserror",
- "tokio",
- "tower",
- "tracing",
- "ureq",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-license-client"
-version = "0.1.0"
-dependencies = [
- "base64 0.23.1",
- "dhpanel-license",
- "serde",
- "serde_json",
- "thiserror",
- "ureq",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-admin"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-http-kit",
- "dhpanel-rbac",
- "dhpanel-session",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "tracing",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-apps"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-catalog",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-tenant-stack",
- "ring",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-auth"
-version = "0.1.0"
-dependencies = [
- "axum",
- "base64 0.23.1",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-http-kit",
- "dhpanel-session",
- "getrandom 0.4.3",
- "secrecy",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "tokio",
- "tower",
- "tracing",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-backups"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-backup",
- "dhpanel-backup-dest",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tar",
- "thiserror",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-cron"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-backup",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-databases"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "tokio",
- "tower",
- "tower-http 0.7.1",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-domains"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-dns",
- "dhpanel-domain",
- "dhpanel-events",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-node-protocol",
- "dhpanel-pki",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "dhpanel-tenant-stack",
- "dhpanel-web-config",
- "rcgen",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "time",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-files"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-fileops",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-safe-fs",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "tokio",
- "tower",
- "tower-http 0.7.1",
- "utoipa",
- "uuid",
- "zip",
-]
-
-[[package]]
-name = "dhpanel-mod-license"
-version = "0.1.0"
-dependencies = [
- "axum",
- "base64 0.23.1",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-config",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-license",
- "dhpanel-license-authority",
- "dhpanel-license-client",
- "dhpanel-rbac",
- "dhpanel-session",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "tower",
- "tracing",
- "ureq",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-logs"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-mail"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "thiserror",
- "tokio",
- "tower",
- "tracing",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-migration"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "dhpanel-audit",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-http-kit",
- "dhpanel-import",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-rbac",
- "dhpanel-session",
- "flate2",
- "rand 0.10.3",
- "russh",
- "russh-sftp",
- "secrecy",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "tar",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-nodes"
-version = "0.1.0"
-dependencies = [
- "axum",
- "base64 0.23.1",
- "dhpanel-audit",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-node-gateway",
- "dhpanel-node-protocol",
- "dhpanel-operations",
- "dhpanel-pki",
- "dhpanel-rbac",
- "dhpanel-session",
- "getrandom 0.4.3",
- "rcgen",
- "secrecy",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "time",
- "tokio",
- "tower",
- "tracing",
- "utoipa",
- "uuid",
- "x509-parser",
-]
-
-[[package]]
-name = "dhpanel-mod-notifications"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "lettre",
- "ring",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "tower",
- "tracing",
- "ureq",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-plans"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-rbac",
- "dhpanel-session",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-security"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-services"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-system"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-events",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-observability",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "tracing",
- "tracing-subscriber",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-usage"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-mod-auth",
- "dhpanel-rbac",
- "dhpanel-session",
- "dhpanel-settings",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-mod-users"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-audit",
- "dhpanel-auth-core",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-http-kit",
- "dhpanel-kernel",
- "dhpanel-node-protocol",
- "dhpanel-rbac",
- "dhpanel-session",
- "secrecy",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-node-agent"
-version = "0.1.0"
-dependencies = [
- "axum",
- "bytes",
- "clap",
- "dhpanel-audit",
- "dhpanel-backup",
- "dhpanel-backup-dest",
- "dhpanel-cache",
- "dhpanel-catalog",
- "dhpanel-common",
- "dhpanel-database",
- "dhpanel-docker-manager",
- "dhpanel-domain",
- "dhpanel-http-kit",
- "dhpanel-mod-nodes",
- "dhpanel-node-gateway",
- "dhpanel-node-protocol",
- "dhpanel-operations",
- "dhpanel-pki",
- "dhpanel-priv-helper",
- "dhpanel-session",
- "dhpanel-tenant-stack",
- "flate2",
- "futures-util",
- "mysql_async",
- "postgres-protocol",
- "rcgen",
- "redb",
- "rustix",
- "rustls",
- "secrecy",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "tar",
- "thiserror",
- "time",
- "tokio",
- "tokio-postgres",
- "tokio-rustls",
- "tokio-tungstenite",
- "ureq",
- "uuid",
- "x509-parser",
- "zstd",
-]
-
-[[package]]
-name = "dhpanel-node-gateway"
-version = "0.1.0"
-dependencies = [
- "dhpanel-database",
- "dhpanel-node-protocol",
- "futures-util",
- "rustls",
- "sha2 0.11.1",
- "thiserror",
- "tokio",
- "tokio-rustls",
- "tokio-tungstenite",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-node-protocol"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror",
- "utoipa",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-observability"
-version = "0.1.0"
-dependencies = [
- "metrics",
- "metrics-exporter-prometheus",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "thiserror",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "dhpanel-operations"
-version = "0.1.0"
-dependencies = [
- "dhpanel-database",
- "dhpanel-node-protocol",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-pki"
-version = "0.1.0"
-dependencies = [
- "getrandom 0.4.3",
- "rcgen",
- "secrecy",
- "sha2 0.11.1",
- "thiserror",
- "time",
- "uuid",
- "x509-parser",
-]
-
-[[package]]
-name = "dhpanel-priv-helper"
-version = "0.1.0"
-dependencies = [
- "dhpanel-backup",
- "dhpanel-common",
- "dhpanel-fileops",
- "dhpanel-node-protocol",
- "dhpanel-safe-fs",
- "rustix",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "dhpanel-rbac"
-version = "0.1.0"
-dependencies = [
- "axum",
- "dhpanel-cache",
- "dhpanel-database",
- "dhpanel-http-kit",
- "dhpanel-session",
- "secrecy",
- "sqlx",
- "tokio",
- "tower",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-safe-fs"
-version = "0.1.0"
-dependencies = [
- "rustix",
- "thiserror",
-]
-
-[[package]]
-name = "dhpanel-session"
-version = "0.1.0"
-dependencies = [
- "axum",
- "base64 0.23.1",
- "dhpanel-cache",
- "dhpanel-http-kit",
- "getrandom 0.4.3",
- "secrecy",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "thiserror",
- "time",
- "tokio",
- "tower",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-settings"
-version = "0.1.0"
-dependencies = [
- "dhpanel-database",
- "dhpanel-http-kit",
- "jsonschema",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-system-backup"
-version = "0.1.0"
-dependencies = [
- "dhpanel-backup",
- "dhpanel-backup-dest",
- "serde_json",
- "sha2 0.11.1",
- "tar",
- "thiserror",
- "zstd",
-]
-
-[[package]]
-name = "dhpanel-tenant-stack"
-version = "0.1.0"
-dependencies = [
- "bollard",
- "dhpanel-docker-manager",
- "dhpanel-domain",
- "serde",
- "thiserror",
- "tokio",
- "toml 1.2.1+spec-1.1.0",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-web-config"
-version = "0.1.0"
-dependencies = [
- "dhpanel-database",
- "dhpanel-domain",
- "dhpanel-node-protocol",
- "dhpanel-tenant-stack",
- "uuid",
-]
-
-[[package]]
-name = "dhpanel-worker"
-version = "0.1.0"
-dependencies = [
- "dhpanel-common",
-]
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2671,9 +2687,9 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "form_urlencoded"
-version = "1.2.2"
+version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
+checksum = "afa489199eaffb1211795df1c6236ce1ad0d41a6fa45250add73e3b02420f06e"
 dependencies = [
  "percent-encoding",
 ]
@@ -3570,9 +3586,9 @@ dependencies = [
 
 [[package]]
 name = "lettre"
-version = "0.11.23"
+version = "0.11.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2c646bd5cc763b1087b15493e29a64be6147ba8f19342004fa52048ee596eae"
+checksum = "f294f3d7cdb313e578acef7d7727d4e8d897e0fcd0d6d58c19959cec95073f19"
 dependencies = [
  "base64 0.23.1",
  "email-encoding",
@@ -3712,6 +3728,15 @@ name = "matchit"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
+
+[[package]]
+name = "mcf"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2044bdbade272ded4a1529324f4f30ca7b0c5b496541f2a9095bbd1c9d03cb06"
+dependencies = [
+ "base64ct",
+]
 
 [[package]]
 name = "md-5"
@@ -5365,6 +5390,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha-crypt"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32ee31e0190f9dc366d26b032ac36a99328532f40a237a79385a20d2d7f29810"
+dependencies = [
+ "base64ct",
+ "ctutils",
+ "mcf",
+ "password-hash",
+ "sha2 0.11.1",
+]
+
+[[package]]
 name = "sha1"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5946,7 +5984,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -6527,9 +6565,9 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "2.5.8"
+version = "2.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed"
+checksum = "f00cd2407bb42c0ef17be88d4cf020f5cceffd121665bac9b8b9493a369b3b1a"
 dependencies = [
  "form_urlencoded",
  "idna",
@@ -7171,6 +7209,21 @@ checksum = "b5f6765e852b9b4dc8e2a76843e4d64d1cea8e79bcde0b6901aea8e7c7f08282"
 dependencies = [
  "bit-vec 0.9.1",
  "time",
+]
+
+[[package]]
+name = "yescrypt"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f02bbacd58fdb2f95e4f18bb76819d9a9bfa9b2df0774ae294428652782862a6"
+dependencies = [
+ "ctutils",
+ "hmac",
+ "mcf",
+ "password-hash",
+ "pbkdf2",
+ "salsa20",
+ "sha2 0.11.1",
 ]
 
 [[package]]

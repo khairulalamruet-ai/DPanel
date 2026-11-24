@@ -7,7 +7,7 @@
 //!    node CA with client-authentication usage ([`tls`]).
 //! 2. **Known certificate.** The certificate's fingerprint must belong to a
 //!    node that is not revoked, and the certificate itself must be unrevoked and
-//!    inside its validity window ([`dhpanel_database::nodes::node_for_certificate`]).
+//!    inside its validity window ([`builtpanel_database::nodes::node_for_certificate`]).
 //!    Revoking a node or a certificate therefore stops it at its next connect.
 //! 3. **WebSocket upgrade** on [`STREAM_PATH`] only.
 //! 4. **`Hello` / `Welcome`**: the protocol version is negotiated.
@@ -19,7 +19,7 @@
 //! lost without a goodbye, or `online` rows left by a control plane that was
 //! stopped). One node has one session: a new connection replaces the old one.
 //!
-//! Frames are JSON text ([`dhpanel_node_protocol`]); anything else, or a frame
+//! Frames are JSON text ([`builtpanel_node_protocol`]); anything else, or a frame
 //! over [`MAX_FRAME_BYTES`], ends the session.
 
 mod registry;
@@ -28,8 +28,8 @@ pub mod tls;
 
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use dhpanel_database::{nodes, sqlx::PgPool};
-pub use dhpanel_node_protocol::{
+use builtpanel_database::{nodes, sqlx::PgPool};
+pub use builtpanel_node_protocol::{
     HEARTBEAT_INTERVAL_SECS, LIVENESS_TIMEOUT_SECS, MAX_FRAME_BYTES, STREAM_PATH,
 };
 use tokio::{
@@ -41,7 +41,7 @@ use uuid::Uuid;
 
 use crate::registry::Registry;
 pub use crate::registry::SendError;
-use dhpanel_node_protocol::OperationResult;
+use builtpanel_node_protocol::OperationResult;
 use std::sync::Mutex;
 
 /// Timing and limits. The defaults are what production uses; tests shorten them.

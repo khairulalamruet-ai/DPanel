@@ -1,6 +1,6 @@
 //! Session store against real PostgreSQL and Redis.
 //! Ignored by default. Run with DATABASE_URL (superuser, CREATEDB) and REDIS_URL:
-//! `eval "$(deploy/dev/devenv.sh test-env)" && cargo test -p dhpanel-session -- --include-ignored`
+//! `eval "$(deploy/dev/devenv.sh test-env)" && cargo test -p builtpanel-session -- --include-ignored`
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::time::Duration;
@@ -12,8 +12,8 @@ use axum::{
     http::{Request, StatusCode, header},
     routing::{get, post},
 };
-use dhpanel_cache::RedisHandle;
-use dhpanel_session::{
+use builtpanel_cache::RedisHandle;
+use builtpanel_session::{
     Authenticated, CSRF_HEADER, MAX_USER_AGENT, NewSession, RecentAuth, RevokeReason,
     SessionConfig, SessionStore, set_cookie,
 };
@@ -224,12 +224,12 @@ async fn missing_forged_or_unknown_cookies_are_401(pool: PgPool) {
     let app = Router::new()
         .route("/me", get(whoami))
         .with_state(State { sessions: s });
-    let forged = "__Host-dh_session=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    let forged = "__Host-bp_session=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     for cookie in [
         None,
-        Some("__Host-dh_session=garbage"),
+        Some("__Host-bp_session=garbage"),
         Some(forged),
-        Some("dh_session=x"),
+        Some("bp_session=x"),
     ] {
         let (status, _) = call(app.clone(), cookie).await;
         assert_eq!(status, StatusCode::UNAUTHORIZED, "{cookie:?}");
@@ -380,7 +380,7 @@ async fn sensitive_routes_need_recent_authentication(pool: PgPool) {
 
     // No session, no sudo: unauthenticated stays 401, and a revoked session cannot be revived.
     assert_eq!(
-        get_path(app.clone(), "/sensitive", "__Host-dh_session=garbage")
+        get_path(app.clone(), "/sensitive", "__Host-bp_session=garbage")
             .await
             .0,
         StatusCode::UNAUTHORIZED

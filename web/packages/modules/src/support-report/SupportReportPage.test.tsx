@@ -8,22 +8,22 @@ import {
   scrubString,
   MOCK_DIAGNOSTIC_BUNDLE,
 } from "./types";
-import { useToast } from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+import { useToast } from "@builtpanel/ui";
+import { apiFetch } from "@builtpanel/api";
 
-vi.mock("@dhpanel/ui", async () => {
-  const actual = await vi.importActual<any>("@dhpanel/ui");
+vi.mock("@builtpanel/ui", async () => {
+  const actual = await vi.importActual<any>("@builtpanel/ui");
   return {
     ...actual,
     useToast: vi.fn(),
   };
 });
 
-vi.mock("@dhpanel/api", () => ({
+vi.mock("@builtpanel/api", () => ({
   apiFetch: vi.fn(),
 }));
 
-vi.mock("@dhpanel/i18n", () => ({
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: { language: "en" },
@@ -33,10 +33,10 @@ vi.mock("@dhpanel/i18n", () => ({
 describe("Support Report & Zero-Secrets Verification (T18.12 DoD)", () => {
   describe("scrubString & sanitizeSupportBundle", () => {
     it("scrubs database connection passwords from URIs", () => {
-      const rawUri = "postgres://root:p@ssw0rd123!@10.0.0.5:5432/dhpanel_prod";
+      const rawUri = "postgres://root:p@ssw0rd123!@10.0.0.5:5432/builtpanel_prod";
       const scrubbed = scrubString(rawUri);
       expect(scrubbed).not.toContain("p@ssw0rd123!");
-      expect(scrubbed).toContain("postgres://root:[REDACTED_PASSWORD]@10.0.0.5:5432/dhpanel_prod");
+      expect(scrubbed).toContain("postgres://root:[REDACTED_PASSWORD]@10.0.0.5:5432/builtpanel_prod");
     });
 
     it("scrubs Bearer JWT authorization tokens", () => {

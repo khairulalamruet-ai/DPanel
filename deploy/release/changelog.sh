@@ -7,7 +7,7 @@ set -euo pipefail
 tag="${1:?usage: changelog.sh TAG [PREVIOUS_TAG]}"
 prev="${2:-$(git describe --tags --abbrev=0 "$tag^" 2> /dev/null || true)}"
 range="${prev:+$prev..}$tag"
-echo "# DHPanel ${tag#v}"
+echo "# Built Panel ${tag#v}"
 echo
 echo "Changes since ${prev:-the beginning}:"
 for entry in "feat:New" "fix:Fixed" "perf:Faster" "security:Security" "test:Tests" "docs:Documentation" "refactor:Internal" "chore:Maintenance" "build:Build" "ci:Build"; do

@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-catalog"
+name = "builtpanel-catalog"
 description = "The catalog of applications the panel installs: data files, read and checked."
 version.workspace = true
 edition.workspace = true
@@ -11,5 +11,6 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-node-protocol.workspace = true
+builtpanel-node-protocol.workspace = true
+serde = { version = "1", features = ["derive"] }
 toml = "1"

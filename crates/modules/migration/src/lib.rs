@@ -9,7 +9,7 @@
 //!
 //! A transfer reads a backup file that waits in the panel's import folder
 //! (`<imports.spool_dir>/migration/<file>`), works out what importing it would do
-//! ([`dhpanel_import::plan`], a pure function: nothing is written) and keeps the answer, the
+//! ([`builtpanel_import::plan`], a pure function: nothing is written) and keeps the answer, the
 //! steps and a log. A dry run ends there. Fetching the backup from another server (T15.05) and
 //! the real import (the executor) come on top of this record.
 
@@ -24,18 +24,18 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     migration_transfers::{self as store, NewTransfer, Progress, Transfer},
     sqlx::PgPool,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_import::{Existing, Include, Limits, OnConflict, Options, SourceKind};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_import::{Existing, Include, Limits, OnConflict, Options, SourceKind};
+use builtpanel_rbac::{
     Principal, Require,
     permissions::{MigrationManage, MigrationRead},
 };
-use dhpanel_session::{SessionStore, rfc3339};
+use builtpanel_session::{SessionStore, rfc3339};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use utoipa::{OpenApi, ToSchema};
@@ -118,10 +118,10 @@ pub struct StepView {
 
 /// A transfer.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct TransferView {
+pub struct MigrationTransferView {
     /// Id.
     pub id: Uuid,
-    /// `cpanel`, `cyberpanel`, `openpanel` or `dhpanel_archive`.
+    /// `cpanel`, `cyberpanel`, `openpanel` or `builtpanel_archive`.
     pub source_type: String,
     /// The server it was fetched from.
     pub source_host: Option<String>,
@@ -174,8 +174,8 @@ fn steps_of(v: &Value) -> Vec<StepView> {
         .unwrap_or_default()
 }
 
-fn view(t: Transfer) -> TransferView {
-    TransferView {
+fn view(t: Transfer) -> MigrationTransferView {
+    MigrationTransferView {
         id: t.id,
         source_type: t.source_type,
         source_host: t.source_host,
@@ -208,7 +208,7 @@ fn view(t: Transfer) -> TransferView {
 
 /// What a dry run found.
 struct Planned {
-    plan: dhpanel_import::Plan,
+    plan: builtpanel_import::Plan,
     size: i64,
 }
 
@@ -257,7 +257,7 @@ async fn dry_run(state: &MigrationState, t: &Transfer) -> Result<Planned, String
         let size = file
             .metadata()
             .map_or(0, |m| i64::try_from(m.len()).unwrap_or(i64::MAX));
-        let model = dhpanel_import::read_backup(BufReader::new(file), Limits::default())
+        let model = builtpanel_import::read_backup(BufReader::new(file), Limits::default())
             .map_err(|e| e.to_string())?;
         let found = kind_name(model.source.kind);
         if found != source_type {
@@ -269,7 +269,7 @@ async fn dry_run(state: &MigrationState, t: &Transfer) -> Result<Planned, String
             db_names: taken.db_names.into_iter().collect(),
         };
         Ok(Planned {
-            plan: dhpanel_import::plan(&model, &existing, &options),
+            plan: builtpanel_import::plan(&model, &existing, &options),
             size,
         })
     })
@@ -277,8 +277,8 @@ async fn dry_run(state: &MigrationState, t: &Transfer) -> Result<Planned, String
     .map_err(|e| format!("reading the backup stopped: {e}"))?
 }
 
-fn describe(step: &dhpanel_import::Step) -> String {
-    use dhpanel_import::Action::{
+fn describe(step: &builtpanel_import::Step) -> String {
+    use builtpanel_import::Action::{
         AddCronJob, AddDomain, CreateAccount, CreateDatabase, CreateDbUser, CreateDnsZone,
         CreateForwarder, CreateMailbox, ImportDump, RestoreFiles,
     };
@@ -556,14 +556,14 @@ async fn fetch_then_start(state: MigrationState, t: Transfer, source: remote::So
     get, path = "/api/v1/admin/migration/transfers", tag = "migration",
     operation_id = "listMigrationTransfers", security(("session" = [])),
     responses(
-        (status = 200, description = "The transfers", body = Vec<TransferView>),
+        (status = 200, description = "The transfers", body = Vec<MigrationTransferView>),
         (status = 403, description = "`permission_denied`", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
 pub async fn list(
     State(state): State<MigrationState>,
     Require(_who, _): Require<MigrationRead>,
-) -> Result<Json<Vec<TransferView>>, AppError> {
+) -> Result<Json<Vec<MigrationTransferView>>, AppError> {
     let rows = store::list(&state.db, LIST_LIMIT).await.map_err(internal)?;
     Ok(Json(rows.into_iter().map(view).collect()))
 }
@@ -574,7 +574,7 @@ pub async fn list(
     operation_id = "getMigrationTransfer", security(("session" = [])),
     params(("id" = Uuid, Path, description = "Transfer id")),
     responses(
-        (status = 200, description = "The transfer", body = TransferView),
+        (status = 200, description = "The transfer", body = MigrationTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
@@ -582,7 +582,7 @@ pub async fn show(
     State(state): State<MigrationState>,
     Require(_who, _): Require<MigrationRead>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<MigrationTransferView>, AppError> {
     let t = store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -595,7 +595,7 @@ pub async fn show(
 /// used for that one connection and is kept nowhere.
 #[derive(Deserialize, ToSchema)]
 pub struct CreateTransfer {
-    /// `cpanel` or `cyberpanel` (`openpanel` and `dhpanel_archive` are not readable yet).
+    /// `cpanel` or `cyberpanel` (`openpanel` and `builtpanel_archive` are not readable yet).
     pub source_type: String,
     /// The backup's file name in the import folder (not with `remote_host`).
     #[serde(default)]
@@ -654,7 +654,7 @@ fn yes() -> bool {
     operation_id = "createMigrationTransfer", security(("session" = [])),
     request_body = CreateTransfer,
     responses(
-        (status = 201, description = "Created and, for a dry run, finished", body = TransferView),
+        (status = 201, description = "Created and, for a dry run, finished", body = MigrationTransferView),
         (status = 409, description = "`import_unavailable`: this panel cannot run imports", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 422, description = "Invalid input", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -663,7 +663,7 @@ pub async fn create(
     State(state): State<MigrationState>,
     Require(who, _): Require<MigrationManage>,
     Json(req): Json<CreateTransfer>,
-) -> Result<(StatusCode, Json<TransferView>), AppError> {
+) -> Result<(StatusCode, Json<MigrationTransferView>), AppError> {
     let mut errors = Vec::new();
     if !matches!(req.source_type.as_str(), "cpanel" | "cyberpanel") {
         errors.push(FieldError::new(
@@ -685,14 +685,15 @@ pub async fn create(
         }
         None
     };
-    if dhpanel_domain::TenantUsername::parse(&req.tenant_username.to_ascii_lowercase()).is_err() {
+    if builtpanel_domain::TenantUsername::parse(&req.tenant_username.to_ascii_lowercase()).is_err()
+    {
         errors.push(FieldError::new(
             "tenant_username",
             "invalid_username",
             "Use 3 to 32 lower-case letters and digits, starting with a letter.",
         ));
     }
-    if dhpanel_domain::Fqdn::parse(&req.target_domain.to_ascii_lowercase()).is_err() {
+    if builtpanel_domain::Fqdn::parse(&req.target_domain.to_ascii_lowercase()).is_err() {
         errors.push(FieldError::new(
             "target_domain",
             "invalid_domain",
@@ -736,7 +737,7 @@ pub async fn create(
     )
     .await
     .map_err(internal)?;
-    dhpanel_audit::insert(&state.db, &audit("migration.transfer_started", &who, t.id))
+    builtpanel_audit::insert(&state.db, &audit("migration.transfer_started", &who, t.id))
         .await
         .map_err(internal)?;
     match remote {
@@ -772,7 +773,7 @@ pub async fn create(
     operation_id = "retryMigrationTransfer", security(("session" = [])),
     params(("id" = Uuid, Path, description = "Transfer id")),
     responses(
-        (status = 200, description = "Run again", body = TransferView),
+        (status = 200, description = "Run again", body = MigrationTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`not_retryable`", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -781,7 +782,7 @@ pub async fn retry(
     State(state): State<MigrationState>,
     Require(who, _): Require<MigrationManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<MigrationTransferView>, AppError> {
     let existing = store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -805,7 +806,7 @@ pub async fn retry(
         && state.loopback.0.get().is_some()
         && store::resume(&state.db, id).await.map_err(internal)?;
     if resumed {
-        dhpanel_audit::insert(&state.db, &audit("migration.transfer_retried", &who, id))
+        builtpanel_audit::insert(&state.db, &audit("migration.transfer_retried", &who, id))
             .await
             .map_err(internal)?;
         store::append_log(
@@ -827,7 +828,7 @@ pub async fn retry(
             .await
             .map_err(internal)?
             .ok_or_else(|| AppError::not_found("transfer"))?;
-        dhpanel_audit::insert(&state.db, &audit("migration.transfer_retried", &who, id))
+        builtpanel_audit::insert(&state.db, &audit("migration.transfer_retried", &who, id))
             .await
             .map_err(internal)?;
         store::append_log(
@@ -852,7 +853,7 @@ pub async fn retry(
     operation_id = "cancelMigrationTransfer", security(("session" = [])),
     params(("id" = Uuid, Path, description = "Transfer id")),
     responses(
-        (status = 200, description = "Cancelled", body = TransferView),
+        (status = 200, description = "Cancelled", body = MigrationTransferView),
         (status = 404, description = "No such transfer", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`not_cancellable`", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -861,7 +862,7 @@ pub async fn cancel(
     State(state): State<MigrationState>,
     Require(who, _): Require<MigrationManage>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TransferView>, AppError> {
+) -> Result<Json<MigrationTransferView>, AppError> {
     store::get(&state.db, id)
         .await
         .map_err(internal)?
@@ -872,7 +873,7 @@ pub async fn cancel(
             "This transfer has already ended.",
         ));
     }
-    dhpanel_audit::insert(&state.db, &audit("migration.transfer_cancelled", &who, id))
+    builtpanel_audit::insert(&state.db, &audit("migration.transfer_cancelled", &who, id))
         .await
         .map_err(internal)?;
     let t = store::get(&state.db, id)
@@ -908,7 +909,7 @@ pub async fn remove(
             "Cancel the transfer before deleting it.",
         ));
     }
-    dhpanel_audit::insert(&state.db, &audit("migration.transfer_deleted", &who, id))
+    builtpanel_audit::insert(&state.db, &audit("migration.transfer_deleted", &who, id))
         .await
         .map_err(internal)?;
     Ok(StatusCode::NO_CONTENT)
@@ -918,7 +919,7 @@ pub async fn remove(
 #[derive(OpenApi)]
 #[openapi(
     paths(list, show, create, retry, cancel, remove),
-    components(schemas(TransferView, StepView, CreateTransfer)),
+    components(schemas(MigrationTransferView, StepView, CreateTransfer)),
     tags((name = "migration", description = "Bring an account over from another hosting panel"))
 )]
 pub struct MigrationApi;

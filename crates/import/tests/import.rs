@@ -3,7 +3,7 @@
 
 use std::io::Write as _;
 
-use dhpanel_import::{
+use builtpanel_import::{
     DomainKind, Engine, ImportError, Limits, SourceKind, parse_zone, read_backup,
 };
 
@@ -195,7 +195,7 @@ fn a_cpanel_backup_becomes_the_common_model() {
     // Valid, and the JSON form round-trips.
     m.validate().unwrap();
     let json = serde_json::to_string(&m).unwrap();
-    let back: dhpanel_import::ImportModel = serde_json::from_str(&json).unwrap();
+    let back: builtpanel_import::ImportModel = serde_json::from_str(&json).unwrap();
     assert_eq!(back, m);
 }
 
@@ -348,20 +348,20 @@ fn archive_paths_cannot_leave_the_archive() {
         "..",
         "a/.",
     ] {
-        assert!(dhpanel_import::ArchivePath::new(bad).is_err(), "{bad}");
+        assert!(builtpanel_import::ArchivePath::new(bad).is_err(), "{bad}");
     }
-    assert!(dhpanel_import::ArchivePath::new("homedir/mail/x.com/info").is_ok());
-    assert!(serde_json::from_str::<dhpanel_import::ArchivePath>("\"../x\"").is_err());
+    assert!(builtpanel_import::ArchivePath::new("homedir/mail/x.com/info").is_ok());
+    assert!(serde_json::from_str::<builtpanel_import::ArchivePath>("\"../x\"").is_err());
 }
 
 mod dry_run {
     use std::collections::BTreeSet;
 
-    use dhpanel_import::{
+    use builtpanel_import::{
         Action, Existing, Limits, OnConflict, Options, Resolution, plan, read_backup,
     };
 
-    fn model() -> dhpanel_import::ImportModel {
+    fn model() -> builtpanel_import::ImportModel {
         read_backup(super::cpmove().as_slice(), Limits::default()).unwrap()
     }
 
@@ -616,7 +616,7 @@ mod dry_run {
             &model(),
             &Existing::default(),
             &Options {
-                include: dhpanel_import::Include {
+                include: builtpanel_import::Include {
                     files: false,
                     databases: false,
                     dns: false,
@@ -643,14 +643,14 @@ mod dry_run {
 fn a_file_and_a_folder_can_be_taken_out_of_the_archive() {
     let archive = cpmove();
     let mut dump = Vec::new();
-    let n = dhpanel_import::copy_file(&archive[..], "mysql/alice_wp.sql", &mut dump).unwrap();
+    let n = builtpanel_import::copy_file(&archive[..], "mysql/alice_wp.sql", &mut dump).unwrap();
     assert_eq!(dump, b"-- dump\nCREATE TABLE t (id int);\n");
     assert_eq!(n, dump.len() as u64);
-    assert!(dhpanel_import::copy_file(&archive[..], "mysql/none.sql", &mut Vec::new()).is_err());
+    assert!(builtpanel_import::copy_file(&archive[..], "mysql/none.sql", &mut Vec::new()).is_err());
 
     // The files under public_html, packed again without that folder.
     let mut packed = Vec::new();
-    let done = dhpanel_import::repack(
+    let done = builtpanel_import::repack(
         &archive[..],
         |p| p.strip_prefix("homedir/public_html/").map(str::to_owned),
         &mut packed,
@@ -670,7 +670,7 @@ fn a_file_and_a_folder_can_be_taken_out_of_the_archive() {
 #[test]
 fn repacking_refuses_a_mapping_that_leaves_the_folder() {
     let archive = cpmove();
-    let result = dhpanel_import::repack(
+    let result = builtpanel_import::repack(
         &archive[..],
         |p| {
             p.strip_prefix("homedir/public_html/")

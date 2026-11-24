@@ -20,16 +20,16 @@ use axum::{
     extract::{Path, State},
     routing::{get, put},
 };
-use dhpanel_database::{php as store, plans, routes};
-use dhpanel_domain::DomainKind;
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::MAX_EXTRA_PHP_VERSIONS;
-use dhpanel_rbac::{
+use builtpanel_database::{php as store, plans, routes};
+use builtpanel_domain::DomainKind;
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::MAX_EXTRA_PHP_VERSIONS;
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
-use dhpanel_settings::Scope;
-use dhpanel_tenant_stack::Allowlist;
+use builtpanel_settings::Scope;
+use builtpanel_tenant_stack::Allowlist;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -96,7 +96,7 @@ async fn offered(state: &DomainsState) -> Result<Vec<String>, AppError> {
     let list = Allowlist::embedded().map_err(internal)?;
     let all: Vec<String> = list.php_versions().into_iter().map(str::to_owned).collect();
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "domains", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "domains", Scope::Global)
         .await
         .map_err(internal)?;
     let wanted: Vec<&str> = values
@@ -223,12 +223,15 @@ async fn set_account(
         .await
         .map_err(internal)?;
     if changed {
-        dhpanel_audit::insert(
+        builtpanel_audit::insert(
             &mut *tx,
-            &dhpanel_audit::AuditEntry::new("php.version_changed", dhpanel_audit::Outcome::Success)
-                .actor(who.account_id())
-                .tenant(hosting.tenant.id)
-                .metadata(serde_json::json!({ "from": current.version, "to": version })),
+            &builtpanel_audit::AuditEntry::new(
+                "php.version_changed",
+                builtpanel_audit::Outcome::Success,
+            )
+            .actor(who.account_id())
+            .tenant(hosting.tenant.id)
+            .metadata(serde_json::json!({ "from": current.version, "to": version })),
         )
         .await
         .map_err(internal)?;
@@ -289,7 +292,7 @@ async fn set_domain(
         .await
         .map_err(internal)?;
     if before != req.version {
-        dhpanel_audit::insert(
+        builtpanel_audit::insert(
             &mut *tx,
             &entry("domain.php_changed", who, hosting, id).metadata(serde_json::json!({
                 "fqdn": domain.domain.fqdn,

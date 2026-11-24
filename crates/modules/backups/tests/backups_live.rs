@@ -9,13 +9,13 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::modules as db;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_backups::{BackupsState, admin_router, client_router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
-use dhpanel_settings::SettingsRegistry;
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::modules as db;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_backups::{BackupsState, admin_router, client_router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_settings::SettingsRegistry;
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -167,7 +167,7 @@ async fn admin(pool: &PgPool, name: &str, roles: &[&str]) -> Uuid {
     .await
     .unwrap();
     for role in roles {
-        dhpanel_database::rbac::assign_role(pool, id, role, None)
+        builtpanel_database::rbac::assign_role(pool, id, role, None)
             .await
             .unwrap();
     }
@@ -191,7 +191,7 @@ async fn destinations_keep_their_secrets_sealed_and_never_show_them(pool: PgPool
     assert_eq!(status, StatusCode::FORBIDDEN);
 
     // A folder on the node: nothing secret; the first one is the default.
-    let (status, local) = e.call(&root, "POST", path, Some(json!({"name": "Disk", "kind": "local", "settings": {"path": "/var/backups/dhpanel"}}))).await;
+    let (status, local) = e.call(&root, "POST", path, Some(json!({"name": "Disk", "kind": "local", "settings": {"path": "/var/backups/builtpanel"}}))).await;
     assert_eq!(status, StatusCode::CREATED, "{local}");
     assert_eq!(
         (
@@ -206,7 +206,7 @@ async fn destinations_keep_their_secrets_sealed_and_never_show_them(pool: PgPool
         .call(&root, "POST", path, Some(json!({
             "name": "Offsite",
             "kind": "s3",
-            "settings": {"endpoint": "https://s3.example.com", "bucket": "dh-backups", "prefix": "/panel/", "ignored": "x"},
+            "settings": {"endpoint": "https://s3.example.com", "bucket": "bp-backups", "prefix": "/panel/", "ignored": "x"},
             "credentials": {"access_key": "AKIAEXAMPLE", "secret_key": secret}
         })))
         .await;
@@ -217,7 +217,7 @@ async fn destinations_keep_their_secrets_sealed_and_never_show_them(pool: PgPool
     );
     assert_eq!(
         s3["settings"],
-        json!({"endpoint": "https://s3.example.com", "bucket": "dh-backups", "region": "us-east-1", "prefix": "panel", "path_style": true})
+        json!({"endpoint": "https://s3.example.com", "bucket": "bp-backups", "region": "us-east-1", "prefix": "panel", "path_style": true})
     );
     let id: Uuid = s3["id"].as_str().unwrap().parse().unwrap();
     // Nowhere in the database or the answers is the secret in plain.
@@ -236,7 +236,10 @@ async fn destinations_keep_their_secrets_sealed_and_never_show_them(pool: PgPool
             .unwrap();
     assert!(!everything.contains(secret) && !everything.contains("AKIAEXAMPLE"));
     let opened = MasterKey::from_bytes(&KEY)
-        .open(&dhpanel_database::backups::credentials_context(id), &stored)
+        .open(
+            &builtpanel_database::backups::credentials_context(id),
+            &stored,
+        )
         .unwrap();
     assert_eq!(
         serde_json::from_slice::<Value>(&opened).unwrap()["secret_key"],
@@ -248,7 +251,7 @@ async fn destinations_keep_their_secrets_sealed_and_never_show_them(pool: PgPool
     assert!(
         MasterKey::from_bytes(&KEY)
             .open(
-                &dhpanel_database::backups::credentials_context(Uuid::new_v4()),
+                &builtpanel_database::backups::credentials_context(Uuid::new_v4()),
                 &stored
             )
             .is_err()
@@ -428,7 +431,7 @@ async fn an_owner_makes_lists_restores_and_removes_backups_and_sets_a_schedule(p
         "POST",
         "/api/v1/admin/backup-destinations",
         Some(
-            json!({"name": "Disk", "kind": "local", "settings": {"path": "/var/backups/dhpanel"}}),
+            json!({"name": "Disk", "kind": "local", "settings": {"path": "/var/backups/builtpanel"}}),
         ),
     )
     .await;
@@ -629,7 +632,7 @@ async fn administrators_make_list_and_remove_system_backups_and_set_their_schedu
         "POST",
         "/api/v1/admin/backup-destinations",
         Some(
-            json!({"name": "Disk", "kind": "local", "settings": {"path": "/var/backups/dhpanel"}}),
+            json!({"name": "Disk", "kind": "local", "settings": {"path": "/var/backups/builtpanel"}}),
         ),
     )
     .await;
@@ -700,7 +703,7 @@ async fn administrators_make_list_and_remove_system_backups_and_set_their_schedu
 #[sqlx::test(migrations = "../../../migrations")]
 #[ignore = "needs PostgreSQL + Redis"]
 async fn an_account_export_is_asked_for_and_turned_into_a_backup_of_the_same_account(pool: PgPool) {
-    use dhpanel_backup::export::Header;
+    use builtpanel_backup::export::Header;
     let e = env(&pool).await;
     let (alice_account, alice_tenant) = client(&pool, "alice", 10_000).await;
     let (_, bob_tenant) = client(&pool, "bob", 10_001).await;
@@ -708,7 +711,7 @@ async fn an_account_export_is_asked_for_and_turned_into_a_backup_of_the_same_acc
     let root = e
         .sign_in(admin(&pool, "rootuser", &["super_admin"]).await)
         .await;
-    let dir = std::env::temp_dir().join(format!("dh-export-api-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-export-api-{}", std::process::id()));
     std::fs::create_dir_all(dir.join("exports")).unwrap();
     let (_, dest) = e
         .call(&root, "POST", "/api/v1/admin/backup-destinations", Some(json!({"name": "Disk", "kind": "local", "settings": {"path": dir.to_str().unwrap()}})))
@@ -726,9 +729,9 @@ async fn an_account_export_is_asked_for_and_turned_into_a_backup_of_the_same_acc
     .await
     .unwrap();
     let sealed = MasterKey::from_bytes(&KEY)
-        .seal(&dhpanel_database::backups::key_context(backup), &key)
+        .seal(&builtpanel_database::backups::key_context(backup), &key)
         .unwrap();
-    dhpanel_database::backups::keep_key(&pool, backup, &sealed)
+    builtpanel_database::backups::keep_key(&pool, backup, &sealed)
         .await
         .unwrap();
 
@@ -782,7 +785,7 @@ async fn an_account_export_is_asked_for_and_turned_into_a_backup_of_the_same_acc
     assert_eq!(list["items"].as_array().unwrap().len(), 1);
     // The runner gives it to the node, without the credentials in the ledger.
     let master = MasterKey::from_bytes(&KEY);
-    dhpanel_mod_backups::runner::tick(&pool, &master, 1_710_000_000)
+    builtpanel_mod_backups::runner::tick(&pool, &master, 1_710_000_000)
         .await
         .unwrap();
     let op: (String, String) =
@@ -912,13 +915,13 @@ async fn an_account_export_is_asked_for_and_turned_into_a_backup_of_the_same_acc
         (StatusCode::CONFLICT, "backup_exists")
     );
     // Its key is the other panel's, sealed with this one's master key.
-    let opened = dhpanel_mod_backups::runner::fill(
+    let opened = builtpanel_mod_backups::runner::fill(
         &pool,
         &master,
-        dhpanel_node_protocol::Operation::ImportExport {
+        builtpanel_node_protocol::Operation::ImportExport {
             object: "exports/fromother.tar".into(),
             backup_id: other_backup,
-            target: dhpanel_node_protocol::BackupTarget {
+            target: builtpanel_node_protocol::BackupTarget {
                 kind: "local".into(),
                 settings: json!({}),
             },
@@ -929,7 +932,7 @@ async fn an_account_export_is_asked_for_and_turned_into_a_backup_of_the_same_acc
     .unwrap();
     assert!(matches!(
         opened,
-        dhpanel_node_protocol::Operation::ImportExport { .. }
+        builtpanel_node_protocol::Operation::ImportExport { .. }
     ));
     let sealed: Vec<u8> = sqlx::query_scalar("SELECT sealed_key FROM backups WHERE id = $1")
         .bind(other_backup)
@@ -939,14 +942,14 @@ async fn an_account_export_is_asked_for_and_turned_into_a_backup_of_the_same_acc
     assert_eq!(
         master
             .open(
-                &dhpanel_database::backups::key_context(other_backup),
+                &builtpanel_database::backups::key_context(other_backup),
                 &sealed
             )
             .unwrap(),
         [8u8; 32]
     );
     // The runner queues the unpacking; the answer makes the backup ready.
-    dhpanel_mod_backups::runner::tick(&pool, &master, 1_710_000_000)
+    builtpanel_mod_backups::runner::tick(&pool, &master, 1_710_000_000)
         .await
         .unwrap();
     let id: Uuid = sqlx::query_scalar("SELECT id FROM operations WHERE kind = 'import_export'")
@@ -1005,7 +1008,7 @@ async fn node_did(pool: &PgPool, kind: &str, node: Uuid) -> Value {
         .await
         .unwrap();
     assert!(
-        dhpanel_database::operations::succeed(pool, id, &json!({}))
+        builtpanel_database::operations::succeed(pool, id, &json!({}))
             .await
             .unwrap()
     );
@@ -1028,7 +1031,7 @@ async fn node_failed(pool: &PgPool, kind: &str, node: Uuid, message: &str) {
         .execute(pool)
         .await
         .unwrap();
-    dhpanel_database::operations::fail(
+    builtpanel_database::operations::fail(
         pool,
         id,
         &json!({"code": "internal", "message": message, "retryable": false}),
@@ -1043,7 +1046,7 @@ async fn node_failed(pool: &PgPool, kind: &str, node: Uuid, message: &str) {
 async fn an_account_is_copied_to_another_node_while_it_runs_then_frozen_for_the_last_pass_and_switched(
     pool: PgPool,
 ) {
-    use dhpanel_mod_backups::{runner, transfer};
+    use builtpanel_mod_backups::{runner, transfer};
     let e = env(&pool).await;
     let root = e
         .sign_in(admin(&pool, "rootuser", &["super_admin"]).await)
@@ -1401,7 +1404,7 @@ async fn an_account_is_copied_to_another_node_while_it_runs_then_frozen_for_the_
 async fn a_failure_after_the_freeze_gives_the_old_node_its_account_back_and_a_cancel_removes_the_copy(
     pool: PgPool,
 ) {
-    use dhpanel_mod_backups::{runner, transfer};
+    use builtpanel_mod_backups::{runner, transfer};
     let e = env(&pool).await;
     let root = e
         .sign_in(admin(&pool, "rootuser", &["super_admin"]).await)

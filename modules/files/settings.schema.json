@@ -76,8 +76,8 @@
       "x-scope": "global",
       "x-title": { "en": "SFTP port", "bn": "SFTP পোর্ট" },
       "x-description": {
-        "en": "The port shown to clients. It must match the node agent's DHPANEL_AGENT_SFTP_PORT (default 2222), and the node's firewall must allow it.",
-        "bn": "ক্লায়েন্টদের যে পোর্ট দেখানো হয়। এটি নোড এজেন্টের DHPANEL_AGENT_SFTP_PORT (ডিফল্ট 2222)-এর সাথে মিলতে হবে, আর নোডের firewall-এ খোলা থাকতে হবে।"
+        "en": "The port shown to clients. It must match the node agent's BUILTPANEL_AGENT_SFTP_PORT (default 2222), and the node's firewall must allow it.",
+        "bn": "ক্লায়েন্টদের যে পোর্ট দেখানো হয়। এটি নোড এজেন্টের BUILTPANEL_AGENT_SFTP_PORT (ডিফল্ট 2222)-এর সাথে মিলতে হবে, আর নোডের firewall-এ খোলা থাকতে হবে।"
       }
     },
     "ftp_port": {
@@ -89,8 +89,8 @@
       "x-scope": "global",
       "x-title": { "en": "FTP port", "bn": "FTP পোর্ট" },
       "x-description": {
-        "en": "The FTP (explicit FTPS) port shown to clients. It must match DHPANEL_AGENT_FTP_PORT (default 2121); the passive data ports 21100-21119 must be open too.",
-        "bn": "ক্লায়েন্টদের দেখানো FTP (explicit FTPS) পোর্ট। এটি DHPANEL_AGENT_FTP_PORT (ডিফল্ট 2121)-এর সাথে মিলতে হবে; passive data পোর্ট 21100-21119-ও খোলা থাকতে হবে।"
+        "en": "The FTP (explicit FTPS) port shown to clients. It must match BUILTPANEL_AGENT_FTP_PORT (default 2121); the passive data ports 21100-21119 must be open too.",
+        "bn": "ক্লায়েন্টদের দেখানো FTP (explicit FTPS) পোর্ট। এটি BUILTPANEL_AGENT_FTP_PORT (ডিফল্ট 2121)-এর সাথে মিলতে হবে; passive data পোর্ট 21100-21119-ও খোলা থাকতে হবে।"
       }
     },
     "max_upload_mb": {

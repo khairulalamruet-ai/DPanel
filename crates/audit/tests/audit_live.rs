@@ -9,11 +9,11 @@ use axum::{
     http::{Request, StatusCode, header},
     routing::post,
 };
-use dhpanel_audit::{AuditEntry, AuditWriter, Outcome, insert};
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::rbac::assign_role;
-use dhpanel_http_kit::{client_ip::client_ip_layer, request_id::correlation_id_layer};
-use dhpanel_session::{NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_audit::{AuditEntry, AuditWriter, Outcome, insert};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::rbac::assign_role;
+use builtpanel_http_kit::{client_ip::client_ip_layer, request_id::correlation_id_layer};
+use builtpanel_session::{NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -55,7 +55,7 @@ fn build(pool: &PgPool, peer: &str, trusted: &[IpAddr]) -> (Router, SessionStore
     let redis = RedisHandle::new(&SecretString::from(url)).expect("valid REDIS_URL");
     let sessions = SessionStore::new(redis, pool.clone(), SessionConfig::default());
     let trusted: Arc<[IpAddr]> = trusted.to_vec().into();
-    let router = dhpanel_audit::router::<AppState>()
+    let router = builtpanel_audit::router::<AppState>()
         .route("/act", post(act))
         .with_state(AppState {
             sessions: sessions.clone(),

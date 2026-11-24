@@ -15,7 +15,7 @@
 //!   `permit_subdomain_sharing`, off by default).
 //! * One `primary` per tenant.
 
-use dhpanel_domain::{Docroot, DomainKind, DomainStatus, Fqdn};
+use builtpanel_domain::{Docroot, DomainKind, DomainStatus, Fqdn};
 use sqlx::{PgConnection, PgPool, types::Uuid};
 
 /// A domain row.

@@ -9,8 +9,8 @@ import {
   Button,
   Input,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { CheckSquare, Square, Layers, Save } from "lucide-react";
 import { FeatureSet, CreateFeatureSetPayload, FeatureCategoryKey } from "./types";
 import { AVAILABLE_FEATURES, CATEGORY_ORDER } from "./feature-definitions";

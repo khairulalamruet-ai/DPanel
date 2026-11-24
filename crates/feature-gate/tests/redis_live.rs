@@ -10,8 +10,8 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_cache::RedisHandle;
-use dhpanel_feature_gate::{
+use builtpanel_cache::RedisHandle;
+use builtpanel_feature_gate::{
     BoxFuture, FeatureGate, GateError, Limit, PlanSnapshot, PlanSource, RedisCache, SnapshotCache,
 };
 use secrecy::SecretString;
@@ -70,7 +70,7 @@ async fn snapshots_are_shared_through_redis_and_forgotten_on_invalidate() {
     let cache = RedisCache::new(redis());
     redis()
         .set_ex(
-            &format!("dh:plan:{tenant}"),
+            &format!("bp:plan:{tenant}"),
             "{not json",
             Duration::from_secs(30),
         )

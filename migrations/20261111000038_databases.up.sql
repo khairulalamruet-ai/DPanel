@@ -1,5 +1,5 @@
 -- T07.02: the databases, database users and grants of an account (see
--- dhpanel_domain::databases for the naming rules). Passwords are never kept: the
+-- builtpanel_domain::databases for the naming rules). Passwords are never kept: the
 -- node gets one when a user is made or changed and forgets it.
 CREATE TABLE databases (
     id              uuid PRIMARY KEY DEFAULT uuidv7(),

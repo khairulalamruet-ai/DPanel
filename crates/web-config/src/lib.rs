@@ -3,9 +3,9 @@
 //! Used by the dispatcher (to send the files to the node) and by the API (to show
 //! a person the file their site runs on).
 
-use dhpanel_database::{domain_policies::DomainPolicy, routes::RoutedDomain};
-use dhpanel_domain::{Docroot, Fqdn, TenantUsername, vhost};
-use dhpanel_node_protocol::MAX_HOSTS_PER_TENANT;
+use builtpanel_database::{domain_policies::DomainPolicy, routes::RoutedDomain};
+use builtpanel_domain::{Docroot, Fqdn, TenantUsername, vhost};
+use builtpanel_node_protocol::MAX_HOSTS_PER_TENANT;
 use uuid::Uuid;
 
 /// The configuration of every site of a tenant: `(domain, file content)`, in the
@@ -25,7 +25,7 @@ pub fn build(
     domains: &[RoutedDomain],
     policies: &[(Uuid, DomainPolicy)],
     customs: &[(Uuid, String)],
-    caches: &[(Uuid, dhpanel_database::page_cache::PageCache)],
+    caches: &[(Uuid, builtpanel_database::page_cache::PageCache)],
 ) -> Vec<(String, String)> {
     if !matches!(tenant_status, "active" | "suspended") {
         return Vec::new();
@@ -84,9 +84,11 @@ pub fn build(
             .unwrap_or("");
         // The PHP container of the site's version: the account's own, or the one
         // its domain asked for.
-        let Ok(php_upstream) =
-            dhpanel_tenant_stack::php_upstream_for(username, d.php_version.as_deref(), account_php)
-        else {
+        let Ok(php_upstream) = builtpanel_tenant_stack::php_upstream_for(
+            username,
+            d.php_version.as_deref(),
+            account_php,
+        ) else {
             continue;
         };
         let site = vhost::Site {
@@ -112,30 +114,30 @@ pub fn build(
 /// # Errors
 /// A database error, as text.
 pub async fn site_files(
-    db: &dhpanel_database::sqlx::PgPool,
+    db: &builtpanel_database::sqlx::PgPool,
     tenant_id: Uuid,
     username: &str,
     status: &str,
 ) -> Result<Vec<(String, String)>, String> {
-    let username = dhpanel_domain::TenantUsername::parse(username).map_err(|e| e.to_string())?;
-    let template = dhpanel_database::vhost_templates::default_for(db, "nginx")
+    let username = builtpanel_domain::TenantUsername::parse(username).map_err(|e| e.to_string())?;
+    let template = builtpanel_database::vhost_templates::default_for(db, "nginx")
         .await
         .map_err(|e| e.to_string())?
         .map_or_else(|| vhost::DEFAULT_NGINX_TEMPLATE.to_owned(), |t| t.body);
-    let account_php = dhpanel_database::php::state(db, tenant_id)
+    let account_php = builtpanel_database::php::state(db, tenant_id)
         .await
         .map_err(|e| e.to_string())?
         .map_or_else(|| "8.4".to_owned(), |s| s.version);
-    let domains = dhpanel_database::routes::domains(db, tenant_id)
+    let domains = builtpanel_database::routes::domains(db, tenant_id)
         .await
         .map_err(|e| e.to_string())?;
-    let policies = dhpanel_database::domain_policies::of_tenant(db, tenant_id)
+    let policies = builtpanel_database::domain_policies::of_tenant(db, tenant_id)
         .await
         .map_err(|e| e.to_string())?;
-    let customs = dhpanel_database::domain_policies::custom_blocks_of_tenant(db, tenant_id)
+    let customs = builtpanel_database::domain_policies::custom_blocks_of_tenant(db, tenant_id)
         .await
         .map_err(|e| e.to_string())?;
-    let caches = dhpanel_database::page_cache::of_tenant(db, tenant_id)
+    let caches = builtpanel_database::page_cache::of_tenant(db, tenant_id)
         .await
         .map_err(|e| e.to_string())?;
     Ok(build(
@@ -153,7 +155,7 @@ pub async fn site_files(
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
-    use dhpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE;
+    use builtpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE;
     use uuid::Uuid;
 
     use super::*;
@@ -180,7 +182,7 @@ mod tests {
     #[test]
     fn a_domain_with_a_running_application_is_passed_on_to_it() {
         let mut app = dom(1, "app.example.com", "primary", None, "");
-        app.app_upstream = Some("dh-alice-app-api:3000".into());
+        app.app_upstream = Some("bp-alice-app-api:3000".into());
         let files = build(
             "active",
             DEFAULT_NGINX_TEMPLATE,
@@ -193,7 +195,7 @@ mod tests {
         );
         assert_eq!(files.len(), 2);
         let by = |name: &str| files.iter().find(|(d, _)| d == name).unwrap().1.clone();
-        assert!(by("app.example.com").contains("proxy_pass http://dh-alice-app-api:3000;"));
+        assert!(by("app.example.com").contains("proxy_pass http://bp-alice-app-api:3000;"));
         assert!(!by("app.example.com").contains("fastcgi_pass"));
         // The other site is still served from its files.
         assert!(by("www.example.com").contains("fastcgi_pass"));
@@ -225,7 +227,7 @@ mod tests {
             "{main}"
         );
         assert!(main.contains("root /var/www/html/public_html;"));
-        assert!(main.contains("fastcgi_pass dh-alice-php:9000;"));
+        assert!(main.contains("fastcgi_pass bp-alice-php:9000;"));
         assert!(files[2].1.contains("root /var/www/html/shop;"));
     }
 
@@ -299,7 +301,7 @@ mod tests {
 
     #[test]
     fn a_domains_policy_goes_into_its_file_only() {
-        use dhpanel_database::domain_policies::StoredHeader;
+        use builtpanel_database::domain_policies::StoredHeader;
         let domains = vec![
             dom(1, "example.com", "primary", None, ""),
             dom(2, "other.org", "addon", None, ""),
@@ -361,10 +363,10 @@ mod tests {
             &[],
         );
         let of = |name: &str| &files.iter().find(|(d, _)| d == name).unwrap().1;
-        assert!(of("example.com").contains("fastcgi_pass dh-alice-php:9000;"));
-        assert!(of("old.org").contains("fastcgi_pass dh-alice-php-8-3:9000;"));
+        assert!(of("example.com").contains("fastcgi_pass bp-alice-php:9000;"));
+        assert!(of("old.org").contains("fastcgi_pass bp-alice-php-8-3:9000;"));
         assert!(
-            of("same.org").contains("fastcgi_pass dh-alice-php:9000;"),
+            of("same.org").contains("fastcgi_pass bp-alice-php:9000;"),
             "the account's own version is the main container"
         );
         // After the account moves to 8.3, the domain that asked for it follows the
@@ -380,8 +382,8 @@ mod tests {
             &[],
         );
         let of = |name: &str| &moved.iter().find(|(d, _)| d == name).unwrap().1;
-        assert!(of("old.org").contains("fastcgi_pass dh-alice-php:9000;"));
-        assert!(of("example.com").contains("fastcgi_pass dh-alice-php:9000;"));
-        assert!(of("same.org").contains("fastcgi_pass dh-alice-php-8-4:9000;"));
+        assert!(of("old.org").contains("fastcgi_pass bp-alice-php:9000;"));
+        assert!(of("example.com").contains("fastcgi_pass bp-alice-php:9000;"));
+        assert!(of("same.org").contains("fastcgi_pass bp-alice-php-8-4:9000;"));
     }
 }

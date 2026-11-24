@@ -7,8 +7,8 @@
 
 use std::{sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{DockerError, Name};
-use dhpanel_node_protocol::{
+use builtpanel_docker_manager::{DockerError, Name};
+use builtpanel_node_protocol::{
     AgentError, LogLine, MAX_LOG_LINES, NODE_SERVICES, Operation, Output, ServiceStatus,
 };
 

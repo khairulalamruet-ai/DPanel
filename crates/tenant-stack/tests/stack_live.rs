@@ -4,13 +4,13 @@
 
 use std::{path::PathBuf, time::Duration};
 
-use dhpanel_docker_manager::DockerManager;
-use dhpanel_domain::{TenantUsername, UidRange};
-use dhpanel_tenant_stack::{Allowlist, PlanResources, Tenant, render};
+use builtpanel_docker_manager::DockerManager;
+use builtpanel_domain::{TenantUsername, UidRange};
+use builtpanel_tenant_stack::{Allowlist, PlanResources, Tenant, render};
 use uuid::Uuid;
 
 fn socket() -> PathBuf {
-    if let Ok(path) = std::env::var("DHPANEL_TEST_DOCKER_SOCKET") {
+    if let Ok(path) = std::env::var("BUILTPANEL_TEST_DOCKER_SOCKET") {
         return path.into();
     }
     let uid = std::fs::read_to_string("/proc/self/status")
@@ -27,7 +27,7 @@ fn socket() -> PathBuf {
     ]
     .into_iter()
     .find(|p| p.exists())
-    .expect("no Docker socket found; set DHPANEL_TEST_DOCKER_SOCKET")
+    .expect("no Docker socket found; set BUILTPANEL_TEST_DOCKER_SOCKET")
 }
 
 #[tokio::test]
@@ -36,8 +36,8 @@ async fn the_stack_starts_as_the_tenant_not_as_root_and_nothing_is_left_behind()
     let list = Allowlist::embedded().unwrap();
     let manager = DockerManager::connect(&socket()).unwrap();
     for role in [
-        dhpanel_tenant_stack::Role::Web,
-        dhpanel_tenant_stack::Role::Php,
+        builtpanel_tenant_stack::Role::Web,
+        builtpanel_tenant_stack::Role::Php,
     ] {
         manager
             .pull_image(list.current(role).unwrap())

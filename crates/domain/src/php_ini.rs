@@ -389,7 +389,8 @@ impl IniSettings {
     /// are now (a plan that was lowered after the choice lowers what is used).
     #[must_use]
     pub fn render(&self, caps: &Caps) -> String {
-        let mut out = String::from("; Managed by DHPanel. Changes made here are overwritten.\n");
+        let mut out =
+            String::from("; Managed by Built Panel. Changes made here are overwritten.\n");
         for option in OPTIONS {
             let Some(text) = self.0.get(option.key) else {
                 continue;
@@ -508,7 +509,7 @@ mod tests {
         assert_eq!(s.values()["upload_max_filesize"], "32M");
         assert_eq!(
             s.render(&Caps::DEFAULT),
-            "; Managed by DHPanel. Changes made here are overwritten.\n\
+            "; Managed by Built Panel. Changes made here are overwritten.\n\
              memory_limit = 256M\n\
              upload_max_filesize = 32M\n\
              post_max_size = 40M\n\

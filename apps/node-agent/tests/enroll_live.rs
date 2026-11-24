@@ -14,19 +14,19 @@ use std::{
 };
 
 use axum::{Router, http::StatusCode, routing::post};
-use dhpanel_cache::{
+use builtpanel_cache::{
     RedisHandle,
     lockout::{FailureLimiter, LockoutPolicy},
 };
-use dhpanel_database::node_enrollments::insert_token;
-use dhpanel_mod_nodes::{ENROLL_MAX_FAILURES, NodesState, router, token};
-use dhpanel_node_agent::{
+use builtpanel_database::node_enrollments::insert_token;
+use builtpanel_mod_nodes::{ENROLL_MAX_FAILURES, NodesState, router, token};
+use builtpanel_node_agent::{
     enroll::{EnrollError, Options, enroll},
     identity::{CA_FILE, CERT_FILE, IDENTITY_FILE, KEY_FILE, StateDir},
     verify::VerifyError,
 };
-use dhpanel_pki::CertificateAuthority;
-use dhpanel_session::{SessionConfig, SessionStore};
+use builtpanel_pki::CertificateAuthority;
+use builtpanel_session::{SessionConfig, SessionStore};
 use rcgen::KeyPair;
 use secrecy::{ExposeSecret as _, SecretString};
 use sqlx::PgPool;
@@ -72,14 +72,14 @@ async fn control_plane(pool: &PgPool) -> Control {
             },
         ),
         gateway: None,
-        operations: dhpanel_operations::Operations::new(pool.clone()),
-        audit: dhpanel_audit::AuditWriter::new(pool.clone()),
+        operations: builtpanel_operations::Operations::new(pool.clone()),
+        audit: builtpanel_audit::AuditWriter::new(pool.clone()),
     };
     let app = router()
         .with_state(state)
         .layer(axum::middleware::from_fn_with_state(
             Arc::<[std::net::IpAddr]>::from(Vec::new()),
-            dhpanel_http_kit::client_ip::client_ip_layer,
+            builtpanel_http_kit::client_ip::client_ip_layer,
         ));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
@@ -136,7 +136,9 @@ impl Control {
 }
 
 /// The agent's `enroll` blocks, so it runs off the async runtime like in `main`.
-async fn run_enroll(options: Options) -> Result<dhpanel_node_agent::enroll::Enrolled, EnrollError> {
+async fn run_enroll(
+    options: Options,
+) -> Result<builtpanel_node_agent::enroll::Enrolled, EnrollError> {
     tokio::task::spawn_blocking(move || enroll(&options))
         .await
         .unwrap()
@@ -144,7 +146,7 @@ async fn run_enroll(options: Options) -> Result<dhpanel_node_agent::enroll::Enro
 
 fn temp_dir(tag: &str) -> PathBuf {
     std::env::temp_dir().join(format!(
-        "dhpanel-agent-live-{tag}-{}",
+        "builtpanel-agent-live-{tag}-{}",
         Uuid::now_v7().simple()
     ))
 }
@@ -218,9 +220,15 @@ async fn the_agent_enrols_for_real_and_keeps_its_key_to_itself(pool: PgPool) {
         .await
         .unwrap();
     assert_eq!(node_id, id.node_id);
-    assert_eq!(fingerprint, dhpanel_node_agent::verify::fingerprint(&der));
+    assert_eq!(
+        fingerprint,
+        builtpanel_node_agent::verify::fingerprint(&der)
+    );
     assert_eq!(hostname.as_deref(), Some("agent-box.example.com"));
-    assert_eq!(version.as_deref(), Some(dhpanel_node_agent::AGENT_VERSION));
+    assert_eq!(
+        version.as_deref(),
+        Some(builtpanel_node_agent::AGENT_VERSION)
+    );
     // The private key exists nowhere on the control plane side.
     let leaked: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM nodes n WHERE row_to_json(n)::text LIKE '%PRIVATE%'",

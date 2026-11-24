@@ -45,7 +45,7 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           mkdir out
-          gh release download "v$VERSION" --dir out --pattern "dhpanel-$VERSION-linux-x86_64.tar.gz" --pattern manifest.json --pattern manifest.json.sigstore --pattern release-manifest.json
+          gh release download "v$VERSION" --dir out --pattern "builtpanel-$VERSION-linux-x86_64.tar.gz" --pattern manifest.json --pattern manifest.json.sigstore --pattern release-manifest.json
       - name: The manifest was signed by the release workflow of this tag, and the archive is in it
         env:
           VERSION: ${{ inputs.version }}
@@ -57,7 +57,7 @@ jobs:
           python3 - "$VERSION" <<'PY'
           import hashlib, json, sys
           version = sys.argv[1]
-          name = f"dhpanel-{version}-linux-x86_64.tar.gz"
+          name = f"builtpanel-{version}-linux-x86_64.tar.gz"
           manifest = json.load(open("manifest.json"))
           entry = next((f for f in manifest["files"] if f["name"] == name), None)
           assert entry, f"{name} is not in the signed manifest"
@@ -71,6 +71,6 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: deploy/release/remote-deploy.sh "out/dhpanel-${{ inputs.version }}-linux-x86_64.tar.gz" out/release-manifest.json
+        run: deploy/release/remote-deploy.sh "out/builtpanel-${{ inputs.version }}-linux-x86_64.tar.gz" out/release-manifest.json
       - name: Smoke test
         run: deploy/release/smoke.sh "${{ vars.PANEL_URL }}"

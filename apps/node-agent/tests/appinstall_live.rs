@@ -9,14 +9,18 @@ use std::{
     time::{Duration, Instant},
 };
 
-use dhpanel_docker_manager::{Capability, ContainerSpec, DockerManager, Name, Network};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_agent::ops::{appinstall::install_app_as, tenant::TenantContext};
-use dhpanel_node_protocol::{AppSite, DbPassword, ErrorCode, Operation, Output, WpDatabase};
-use dhpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
+use builtpanel_docker_manager::{Capability, ContainerSpec, DockerManager, Name, Network};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_agent::ops::{appinstall::install_app_as, tenant::TenantContext};
+use builtpanel_node_protocol::{AppSite, DbPassword, ErrorCode, Operation, Output, WpDatabase};
+use builtpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -40,7 +44,7 @@ struct Rig {
 const ROOT_PW: &str = "rootpw-for-the-test";
 
 async fn rig(tag: &str) -> Rig {
-    let base = std::env::temp_dir().join(format!("dh-appinstall-{tag}"));
+    let base = std::env::temp_dir().join(format!("bp-appinstall-{tag}"));
     let _ = std::fs::remove_dir_all(&base);
     let tenants = base.join("tenants");
     let state = base.join("state");
@@ -48,11 +52,16 @@ async fn rig(tag: &str) -> Rig {
     let tenant = Uuid::now_v7();
     let www = tenants.join(tenant.to_string()).join("www");
     std::fs::create_dir_all(&www).unwrap();
+    // A root engine (Kiri) has no user-id shift: the tenant's id must be allowed into the folder.
+    if std::env::var_os("BUILTPANEL_TEST_UID_IDENTITY").is_some() {
+        use std::os::unix::fs::PermissionsExt as _;
+        std::fs::set_permissions(&www, std::fs::Permissions::from_mode(0o777)).unwrap();
+    }
     let username = TenantUsername::parse("alice").unwrap();
     let docker = DockerManager::connect(&docker_socket()).unwrap();
     let network = network_name(&username).unwrap();
     let files = files_volume_name(&username).unwrap();
-    let db = Name::parse("dh-apit-db").unwrap();
+    let db = Name::parse("bp-apit-db").unwrap();
     let _ = docker.remove(&db, true).await;
     let _ = docker.remove_volume(&files).await;
     docker.ensure_network(&network, false).await.unwrap();
@@ -75,7 +84,7 @@ async fn rig(tag: &str) -> Rig {
         Capability::Setgid,
         Capability::Setuid,
     ];
-    let aux = Name::parse("dh-apit-aux").unwrap();
+    let aux = Name::parse("bp-apit-aux").unwrap();
     docker.ensure_network(&aux, false).await.unwrap();
     spec.network = Network::Named(aux);
     docker.create_container(&spec).await.unwrap();
@@ -137,7 +146,7 @@ impl Rig {
     }
 
     fn op(&self, slug: &str, path: &str, db: Option<&str>, password: &str) -> Operation {
-        let definition = dhpanel_catalog::Catalog::embedded()
+        let definition = builtpanel_catalog::Catalog::embedded()
             .unwrap()
             .get(slug)
             .unwrap()
@@ -186,15 +195,19 @@ async fn a_static_site_is_made_from_its_steps_alone_and_a_used_folder_is_refused
     let page = std::fs::read_to_string(rig.www.join("site").join("index.html")).unwrap();
     assert!(page.contains("<h1>Alice App</h1>"), "{page}");
     // A folder with something in it is refused; a default index page does not count.
-    std::fs::write(rig.www.join("site").join("mine.txt"), "mine").unwrap();
-    let e = install_app_as(
-        rig.context.clone(),
-        rig.op("static-site", "site", None, ""),
-        (0, 0),
-    )
-    .await
-    .unwrap_err();
-    assert_eq!(e.code, ErrorCode::InvalidArguments, "{e:?}");
+    // (Under a root engine the folder belongs to the tenant's id and this user cannot write in it.)
+    if std::fs::write(rig.www.join("site").join("mine.txt"), "mine").is_ok() {
+        let e = install_app_as(
+            rig.context.clone(),
+            rig.op("static-site", "site", None, ""),
+            (0, 0),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(e.code, ErrorCode::InvalidArguments, "{e:?}");
+    } else {
+        eprintln!("skipped the used-folder check: the folder is not writable here");
+    }
     // A folder that climbs out and a definition that is not valid are refused before anything runs.
     let e = install_app_as(
         rig.context.clone(),
@@ -206,9 +219,11 @@ async fn a_static_site_is_made_from_its_steps_alone_and_a_used_folder_is_refused
     assert_eq!(e.code, ErrorCode::InvalidArguments);
     let mut bad = rig.op("static-site", "other", None, "");
     if let Operation::InstallApp { definition, .. } = &mut bad {
-        definition.steps.push(dhpanel_node_protocol::AppStep::Php {
-            args: vec!["{{shell}}".into()],
-        });
+        definition
+            .steps
+            .push(builtpanel_node_protocol::AppStep::Php {
+                args: vec!["{{shell}}".into()],
+            });
     }
     let e = install_app_as(rig.context.clone(), bad, (0, 0))
         .await

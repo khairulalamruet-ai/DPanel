@@ -1,0 +1,9 @@
+slug        = "php-8-3"
+name        = "PHP 8.3"
+category    = "server_side_scripting"
+kind        = "builtin"
+description = "The PHP language; choose the version of each site."
+license     = "PHP-3.01"
+homepage    = "https://www.php.net"
+covers      = ["PHP 8.3"]
+provided_by = "Websites > PHP version"

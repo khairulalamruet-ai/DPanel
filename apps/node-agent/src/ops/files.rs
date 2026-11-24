@@ -1,13 +1,13 @@
 //! `file_op` (T08.02-T08.06): one file manager request, done by the privileged
-//! helper as the tenant's own user id (see `dhpanel_priv_helper::files`).
+//! helper as the tenant's own user id (see `builtpanel_priv_helper::files`).
 
 use std::sync::Arc;
 
-use dhpanel_node_protocol::{
+use builtpanel_node_protocol::{
     AgentError, ErrorCode, Operation, Output,
     files::{FileErrorCode, FileResult},
 };
-use dhpanel_priv_helper::protocol::Action;
+use builtpanel_priv_helper::protocol::Action;
 
 use super::tenant::{TenantContext, ask_helper_data};
 

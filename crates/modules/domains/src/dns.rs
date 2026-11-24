@@ -17,22 +17,22 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     dns::{self as store, DeleteOutcome, StoredLine, Template, TemplateError},
     domains::Domain,
     sqlx::PgConnection,
 };
-use dhpanel_domain::{
+use builtpanel_domain::{
     DnsRecord, DnsTemplateRecord, DnsVariables, DomainKind, Fqdn, check_dns_template,
     render_dns_template,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
-use dhpanel_session::rfc3339;
+use builtpanel_session::rfc3339;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -201,7 +201,7 @@ impl From<TemplateLine> for StoredLine {
 
 /// A zone template.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct TemplateView {
+pub struct DnsTemplateView {
     /// Id.
     pub id: Uuid,
     /// Unique name.
@@ -220,8 +220,8 @@ pub struct TemplateView {
     pub updated_at: String,
 }
 
-fn view(t: Template) -> TemplateView {
-    TemplateView {
+fn view(t: Template) -> DnsTemplateView {
+    DnsTemplateView {
         id: t.id,
         name: t.name,
         description: t.description,
@@ -234,15 +234,15 @@ fn view(t: Template) -> TemplateView {
 
 /// The templates.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct TemplateList {
+pub struct DnsTemplateList {
     /// The default first, then by name.
-    pub items: Vec<TemplateView>,
+    pub items: Vec<DnsTemplateView>,
 }
 
 /// A template to write.
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
-pub struct TemplateInput {
+pub struct DnsTemplateInput {
     /// Unique name: lower-case letters, digits and `_`, 2-32 characters.
     #[schema(example = "web_only")]
     pub name: String,
@@ -256,7 +256,7 @@ pub struct TemplateInput {
     pub is_default: bool,
 }
 
-fn checked(input: &TemplateInput) -> Result<Vec<StoredLine>, AppError> {
+fn checked(input: &DnsTemplateInput) -> Result<Vec<StoredLine>, AppError> {
     let mut errors = Vec::new();
     let name_ok = (2..=32).contains(&input.name.len())
         && input.name.starts_with(|c: char| c.is_ascii_lowercase())
@@ -309,7 +309,12 @@ fn write_error(err: TemplateError) -> AppError {
     }
 }
 
-fn audit(action: &'static str, who: &dhpanel_rbac::Principal, id: Uuid, name: &str) -> AuditEntry {
+fn audit(
+    action: &'static str,
+    who: &builtpanel_rbac::Principal,
+    id: Uuid,
+    name: &str,
+) -> AuditEntry {
     AuditEntry::new(action, Outcome::Success)
         .actor(who.account_id())
         .target("dns_template", id)
@@ -324,15 +329,15 @@ fn audit(action: &'static str, who: &dhpanel_rbac::Principal, id: Uuid, name: &s
     operation_id = "listDnsTemplates",
     security(("session" = [])),
     responses(
-        (status = 200, description = "The templates", body = TemplateList),
+        (status = 200, description = "The templates", body = DnsTemplateList),
         (status = 403, description = "`permission_denied` (needs admin.domains.read)", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
 pub async fn list_templates(
     State(state): State<DomainsState>,
     _who: Require<DomainsRead>,
-) -> Result<Json<TemplateList>, AppError> {
-    Ok(Json(TemplateList {
+) -> Result<Json<DnsTemplateList>, AppError> {
+    Ok(Json(DnsTemplateList {
         items: store::templates(&state.db)
             .await
             .map_err(internal)?
@@ -351,7 +356,7 @@ pub async fn list_templates(
     security(("session" = [])),
     params(("id" = Uuid, Path, description = "Template id")),
     responses(
-        (status = 200, description = "The template", body = TemplateView),
+        (status = 200, description = "The template", body = DnsTemplateView),
         (status = 403, description = "`permission_denied`", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 404, description = "No such template", body = ProblemDetails, content_type = "application/problem+json")
     )
@@ -360,7 +365,7 @@ pub async fn get_template(
     State(state): State<DomainsState>,
     _who: Require<DomainsRead>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TemplateView>, AppError> {
+) -> Result<Json<DnsTemplateView>, AppError> {
     store::template(&state.db, id)
         .await
         .map_err(internal)?
@@ -377,9 +382,9 @@ pub async fn get_template(
     operation_id = "createDnsTemplate",
     security(("session" = [])),
     params(("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
-    request_body = TemplateInput,
+    request_body = DnsTemplateInput,
     responses(
-        (status = 201, description = "Created", body = TemplateView),
+        (status = 201, description = "Created", body = DnsTemplateView),
         (status = 403, description = "`permission_denied`, `reauth_required` or `csrf_failed`", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`template_name_taken`", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 422, description = "Invalid name or records (the message names the record)", body = ProblemDetails, content_type = "application/problem+json")
@@ -388,8 +393,8 @@ pub async fn get_template(
 pub async fn create_template(
     State(state): State<DomainsState>,
     RequireRecent(who, _): RequireRecent<DomainsManage>,
-    Json(input): Json<TemplateInput>,
-) -> Result<(StatusCode, Json<TemplateView>), AppError> {
+    Json(input): Json<DnsTemplateInput>,
+) -> Result<(StatusCode, Json<DnsTemplateView>), AppError> {
     let lines = checked(&input)?;
     let mut tx = state.db.begin().await.map_err(internal)?;
     let id = store::create_template(
@@ -401,7 +406,7 @@ pub async fn create_template(
     )
     .await
     .map_err(write_error)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit("admin.dns_template_created", &who, id, &input.name),
     )
@@ -426,9 +431,9 @@ pub async fn create_template(
         ("id" = Uuid, Path, description = "Template id"),
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
-    request_body = TemplateInput,
+    request_body = DnsTemplateInput,
     responses(
-        (status = 200, description = "Saved", body = TemplateView),
+        (status = 200, description = "Saved", body = DnsTemplateView),
         (status = 403, description = "`permission_denied`, `reauth_required` or `csrf_failed`", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 404, description = "No such template", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`template_name_taken`", body = ProblemDetails, content_type = "application/problem+json"),
@@ -439,8 +444,8 @@ pub async fn update_template(
     State(state): State<DomainsState>,
     RequireRecent(who, _): RequireRecent<DomainsManage>,
     Path(id): Path<Uuid>,
-    Json(input): Json<TemplateInput>,
-) -> Result<Json<TemplateView>, AppError> {
+    Json(input): Json<DnsTemplateInput>,
+) -> Result<Json<DnsTemplateView>, AppError> {
     let lines = checked(&input)?;
     let existing = store::template(&state.db, id)
         .await
@@ -468,7 +473,7 @@ pub async fn update_template(
     {
         return Err(AppError::not_found("template"));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit("admin.dns_template_updated", &who, id, &input.name),
     )
@@ -531,7 +536,7 @@ pub async fn delete_template(
             ));
         }
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit("admin.dns_template_deleted", &who, id, &name),
     )

@@ -1,0 +1,8 @@
+slug        = "python-3-12"
+name        = "Python 3.12"
+category    = "server_side_scripting"
+kind        = "builtin"
+description = "The Python language; applications run on it from Applications."
+license     = "PSF-2.0"
+homepage    = "https://www.python.org"
+provided_by = "Applications > Python (version 3.12)"

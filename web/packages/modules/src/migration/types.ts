@@ -1,4 +1,4 @@
-export type MigrationSourceType = "cpanel" | "cyberpanel" | "openpanel" | "dhpanel_archive";
+export type MigrationSourceType = "cpanel" | "cyberpanel" | "openpanel" | "builtpanel_archive";
 
 export type TransferStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 

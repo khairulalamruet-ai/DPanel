@@ -1,5 +1,5 @@
 {
-  "name": "@dhpanel/admin",
+  "name": "@builtpanel/admin",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,12 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@dhpanel/api": "workspace:*",
-    "@dhpanel/auth": "workspace:*",
-    "@dhpanel/i18n": "workspace:*",
-    "@dhpanel/modules": "workspace:*",
-    "@dhpanel/shell": "workspace:*",
-    "@dhpanel/ui": "workspace:*",
+    "@builtpanel/api": "workspace:*",
+    "@builtpanel/auth": "workspace:*",
+    "@builtpanel/i18n": "workspace:*",
+    "@builtpanel/modules": "workspace:*",
+    "@builtpanel/shell": "workspace:*",
+    "@builtpanel/ui": "workspace:*",
     "@tanstack/react-router": "^1.114.0",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",

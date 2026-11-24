@@ -1,14 +1,14 @@
 # ০৯ — License ও Anti-Nulled Architecture
 
-`doc-guide/complete_license_anti_nulled_architecture.pdf`-এর সারাংশ, DHPanel-এর জন্য সাজানো।
+`doc-guide/complete_license_anti_nulled_architecture.pdf`-এর সারাংশ, Built Panel-এর জন্য সাজানো।
 
 ## দুটো আলাদা জিনিস
 | | কোথায় চলে | কী করে |
 |---|---|---|
 | **License Authority (LA)** | আপনার (বিক্রেতার) central server | গ্রাহক, product, plan, license, activation, signing, release registry, integrity event |
-| **License client + Security agent** | গ্রাহকের DHPanel installation-এ | entitlement যাচাই, heartbeat, daily integrity report |
+| **License client + Security agent** | গ্রাহকের Built Panel installation-এ | entitlement যাচাই, heartbeat, daily integrity report |
 
-LA আর DHPanel control plane আলাদা codebase-এ বা অন্তত আলাদা `apps/license-authority`-তে থাকবে, আর আলাদা server-এ deploy হবে।
+LA আর Built Panel control plane আলাদা codebase-এ বা অন্তত আলাদা `apps/license-authority`-তে থাকবে, আর আলাদা server-এ deploy হবে।
 
 ## Cryptography
 | বিষয় | পদ্ধতি |
@@ -22,10 +22,10 @@ LA আর DHPanel control plane আলাদা codebase-এ বা অন্ত
 
 ## Lifecycle
 1. LA-তে admin license তৈরি করেন।
-2. DHPanel install-এর সময় `installation_id` (UUID) + key pair তৈরি হয়।
+2. Built Panel install-এর সময় `installation_id` (UUID) + key pair তৈরি হয়।
 3. `POST /api/v1/licenses/activate`। Proof of possession (nonce সই করে)।
 4. LA transaction-এ যাচাই করে (status, activation limit) → signed entitlement দেয় (`iss, aud, license_id, installation_id, features, iat, exp, jti, kid`)।
-5. DHPanel public key দিয়ে যাচাই করে → `license_state`-এ রাখে → feature-gate-এ ব্যবহার করে।
+5. Built Panel public key দিয়ে যাচাই করে → `license_state`-এ রাখে → feature-gate-এ ব্যবহার করে।
 6. Heartbeat হয় প্রতি ৬ ঘণ্টায়, entitlement refresh প্রতি ১২ ঘণ্টায়, offline grace ৭২ ঘণ্টা (সব configurable)।
 
 ## Daily integrity

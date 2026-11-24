@@ -4,15 +4,15 @@
 # `deploy/dev/remote.sh sh "bash deploy/dev/waf-live.sh"`
 set -uo pipefail
 cd "$(dirname "$0")/../caddy"
-docker build -q -t dh-caddy-waf:test . > /dev/null || { echo "build FAILED"; exit 1; }
+docker build -q -t bp-caddy-waf:test . > /dev/null || { echo "build FAILED"; exit 1; }
 fail=0
 check() { # name expected actual
     if [ "$2" = "$3" ]; then echo "ok   $1 -> $3"; else echo "FAIL $1: wanted $2, got $3"; fail=1; fi
 }
 run() { # mode port
-    docker rm -f "dh-waf-$1" > /dev/null 2>&1
-    docker run -d --name "dh-waf-$1" -p "$2:8080" -e "WAF_MODE=$3" \
-        -v "$PWD/waf-test.Caddyfile:/etc/caddy/Caddyfile:ro" dh-caddy-waf:test > /dev/null
+    docker rm -f "bp-waf-$1" > /dev/null 2>&1
+    docker run -d --name "bp-waf-$1" -p "$2:8080" -e "WAF_MODE=$3" \
+        -v "$PWD/waf-test.Caddyfile:/etc/caddy/Caddyfile:ro" bp-caddy-waf:test > /dev/null
     for _ in $(seq 1 40); do curl -s -o /dev/null "http://127.0.0.1:$2/" && break; sleep 0.5; done
 }
 code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
@@ -27,5 +27,5 @@ check "path traversal" 403 "$(code --path-as-is 'http://127.0.0.1:18081/../../et
 check "an ordinary post" 200 "$(code -X POST --data-urlencode 'comment=hello there' http://127.0.0.1:18081/)"
 run detect 18082 DetectionOnly
 check "detection only lets SQL injection through" 200 "$(code --get --data-urlencode "id=1' OR '1'='1" http://127.0.0.1:18082/)"
-docker rm -f dh-waf-block dh-waf-detect > /dev/null 2>&1
+docker rm -f bp-waf-block bp-waf-detect > /dev/null 2>&1
 [ "$fail" = 0 ] && echo "WAF: all checks passed" || { echo "WAF: FAILED"; exit 1; }

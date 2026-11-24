@@ -1,4 +1,4 @@
-UPDATE vhost_templates SET body = $old$# Managed by DHPanel for {{domain}}. Changes made here are overwritten.
+UPDATE vhost_templates SET body = $old$# Managed by Built Panel for {{domain}}. Changes made here are overwritten.
 {{policy_http}}
 server {
     listen 8080;
@@ -23,7 +23,7 @@ server {
     }
 }
 $old$
- WHERE server = 'nginx' AND name = 'Default' AND body = $new$# Managed by DHPanel for {{domain}}. Changes made here are overwritten.
+ WHERE server = 'nginx' AND name = 'Default' AND body = $new$# Managed by Built Panel for {{domain}}. Changes made here are overwritten.
 {{policy_http}}
 server {
     listen 8080;

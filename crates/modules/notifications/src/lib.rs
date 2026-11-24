@@ -29,20 +29,20 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_database::{
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_database::{
     accounts::DbAccountKind,
     notifications::{self as store, NewNotification, Quiet},
     sqlx::PgPool,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_kernel::{Event, module::EventError};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_kernel::{Event, module::EventError};
+use builtpanel_rbac::{
     Principal, Require,
     permissions::{SettingsManage, SettingsRead},
 };
-use dhpanel_session::SessionStore;
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_session::SessionStore;
+use builtpanel_settings::{Scope, SettingsRegistry};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use uuid::Uuid;
@@ -92,16 +92,16 @@ fn now() -> i64 {
         .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0))
 }
 
-/// The panel's name (its branding), or `DHPanel` when it cannot be read.
+/// The panel's name (its branding), or `Built Panel` when it cannot be read.
 async fn panel_name(state: &NotificationsState) -> String {
-    let fallback = || "DHPanel".to_owned();
+    let fallback = || "Built Panel".to_owned();
     let Some(registry) = state.settings.get() else {
         return fallback();
     };
     let Ok(mut conn) = state.db.acquire().await else {
         return fallback();
     };
-    dhpanel_settings::get(registry, &mut conn, "system", Scope::Global)
+    builtpanel_settings::get(registry, &mut conn, "system", Scope::Global)
         .await
         .ok()
         .and_then(|values| {
@@ -123,7 +123,7 @@ async fn panel_name(state: &NotificationsState) -> String {
 /// # Errors
 /// [`EventError`] when the database fails (the event is then delivered again).
 pub async fn handle_event(state: &NotificationsState, event: &Event) -> Result<(), EventError> {
-    let fail = |e: dhpanel_database::sqlx::Error| EventError(e.to_string());
+    let fail = |e: builtpanel_database::sqlx::Error| EventError(e.to_string());
     let panel = panel_name(state).await;
     let node_name = match event {
         Event::NodeServiceDown { node_id, .. } | Event::NodeServiceRecovered { node_id, .. } => {
@@ -641,7 +641,7 @@ pub struct NewChannel {
 pub struct CreatedChannel {
     /// The channel.
     pub channel: ChannelView,
-    /// A webhook's signing secret: shown this once (the calls carry `X-DHPanel-Signature`, the
+    /// A webhook's signing secret: shown this once (the calls carry `X-BuiltPanel-Signature`, the
     /// HMAC-SHA256 of the body under it).
     pub secret: Option<String>,
 }

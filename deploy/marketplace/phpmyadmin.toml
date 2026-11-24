@@ -1,0 +1,9 @@
+slug        = "phpmyadmin"
+name        = "phpMyAdmin"
+category    = "utilities"
+kind        = "builtin"
+description = "The database browser for MariaDB; sign in from the panel."
+license     = "GPL-2.0-only"
+homepage    = "https://www.phpmyadmin.net"
+covers      = ["phpMyAdmin (library)"]
+provided_by = "Databases > phpMyAdmin"

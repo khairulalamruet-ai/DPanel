@@ -20,9 +20,10 @@ import {
   DialogTitle,
   DialogFooter,
   useToast,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { useOptionalSession } from "@builtpanel/auth";
+import { loadClientDomains, createDomain, updateDocroot, setRedirect, deleteDomain } from "./api";
 import {
   Globe,
   Plus,
@@ -61,10 +62,10 @@ export function ClientDomainsPage() {
   const { toast } = useToast();
 
   const [domains, setDomains] = useState<ClientDomainItem[]>([]);
-  const [limits, setLimits] = useState<{ max_domains: number; used_domains: number }>({
-    max_domains: -1,
-    used_domains: 0,
-  });
+  // How many domains the plan allows comes with the customer bootstrap (`-1`: no limit).
+  const maxDomains = useOptionalSession()?.data?.limits?.max_domains ?? -1;
+  const [usedDomains, setUsedDomains] = useState(0);
+  const limits = { max_domains: maxDomains, used_domains: usedDomains };
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,11 +85,9 @@ export function ClientDomainsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiFetch<ClientDomainsResponse>("/api/v1/client/domains");
-      setDomains(res.items || []);
-      if (res.limits) {
-        setLimits(res.limits);
-      }
+      const res = await loadClientDomains();
+      setDomains(res.items);
+      setUsedDomains(res.total);
     } catch (err: any) {
       setError(err?.message || t("domains.errors.loadFailed", "Failed to load domains"));
     } finally {
@@ -101,10 +100,7 @@ export function ClientDomainsPage() {
   }, []);
 
   const handleCreateDomain = async (payload: CreateDomainPayload) => {
-    await apiFetch("/api/v1/client/domains", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    await createDomain(payload);
     toast({
       title: t("common.success", "Success"),
       description: t("domains.toast.createdSuccess", "Domain {{name}} added successfully", {
@@ -115,10 +111,7 @@ export function ClientDomainsPage() {
   };
 
   const handleUpdateDocroot = async (domainId: string, docroot: string) => {
-    await apiFetch(`/api/v1/client/domains/${domainId}/docroot`, {
-      method: "PUT",
-      body: JSON.stringify({ docroot } as UpdateDocrootPayload),
-    });
+    await updateDocroot(domainId, docroot);
     toast({
       title: t("common.success", "Success"),
       description: t("domains.toast.docrootUpdated", "Document root updated successfully"),
@@ -127,10 +120,7 @@ export function ClientDomainsPage() {
   };
 
   const handleUpdateRedirect = async (domainId: string, payload: UpdateRedirectPayload) => {
-    await apiFetch(`/api/v1/client/domains/${domainId}/redirect`, {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    });
+    await setRedirect(domainId, payload);
     toast({
       title: t("common.success", "Success"),
       description: t("domains.toast.redirectUpdated", "Redirection updated successfully"),
@@ -142,9 +132,7 @@ export function ClientDomainsPage() {
     if (!deletingDomain) return;
     try {
       setIsDeleting(true);
-      await apiFetch(`/api/v1/client/domains/${deletingDomain.id}`, {
-        method: "DELETE",
-      });
+      await deleteDomain(deletingDomain.id);
       toast({
         title: t("common.success", "Success"),
         description: t("domains.toast.deletedSuccess", "Domain deleted successfully"),

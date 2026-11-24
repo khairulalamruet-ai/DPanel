@@ -1,5 +1,5 @@
 import React from "react";
-import { useTheme } from "@dhpanel/ui";
+import { useTheme } from "@builtpanel/ui";
 import { Sun, Moon } from "lucide-react";
 
 export function ThemeToggle() {

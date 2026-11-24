@@ -1,0 +1,8 @@
+slug        = "sphinx-extension"
+name        = "Sphinx Extension"
+category    = "modules"
+kind        = "unavailable"
+description = "A PHP module."
+license     = "PHP-3.01"
+covers      = ["Sphinx Extension"]
+reason      = "not packaged for the panel yet"

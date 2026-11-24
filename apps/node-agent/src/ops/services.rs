@@ -1,13 +1,13 @@
 //! `list_containers` and `restart_container` (T10.12): an account's own services.
 //!
-//! The account is known by the label `dhpanel.tenant` that every container of its stack
+//! The account is known by the label `builtpanel.tenant` that every container of its stack
 //! carries, so a name that belongs to another account (or to the node: the database, phpMyAdmin,
 //! the file server) is refused, not guessed from its spelling.
 
 use std::{sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{DockerError, Name};
-use dhpanel_node_protocol::{
+use builtpanel_docker_manager::{DockerError, Name};
+use builtpanel_node_protocol::{
     AgentError, ContainerItem, Operation, Output, ProcessItem, SignalOutcome,
 };
 
@@ -68,7 +68,7 @@ pub async fn restart_container(
     })?;
     let mine = info
         .labels
-        .get(dhpanel_docker_manager::TENANT_LABEL)
+        .get(builtpanel_docker_manager::TENANT_LABEL)
         .is_some_and(|t| *t == tenant_id.to_string());
     if !mine {
         // The same answer as for a container that is not there: nothing is given away.
@@ -194,7 +194,7 @@ pub async fn signal_process(
     })?;
     if info
         .labels
-        .get(dhpanel_docker_manager::TENANT_LABEL)
+        .get(builtpanel_docker_manager::TENANT_LABEL)
         .is_none_or(|t| *t != tenant_id.to_string())
     {
         return Err(invalid("this account has no such container"));
@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn the_listing_is_read_line_by_line_and_junk_is_left_out() {
         let text = "1\t10001\tS (sleeping)\tsleep 600\n17\t10001\tR (running)\tphp-fpm: pool www \nnot a line\n18\tx\tS\tbad uid\n";
-        let found = parse_processes("dh-a-php", text);
+        let found = parse_processes("bp-a-php", text);
         assert_eq!(found.len(), 2);
         assert_eq!(
             (found[1].pid, found[1].command.as_str()),

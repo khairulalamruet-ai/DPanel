@@ -1,0 +1,9 @@
+slug        = "mariadb-older"
+name        = "MariaDB (older versions)"
+category    = "databases"
+kind        = "unavailable"
+description = "Earlier MariaDB releases."
+license     = "GPL-2.0-only"
+homepage    = "https://mariadb.org"
+covers      = ["MariaDB 10.0", "MariaDB 10.1", "MariaDB 10.2", "MariaDB 10.3", "MariaDB 10.4 (service)", "MariaDB 10.5", "MariaDB 10.6", "MariaDB 10.7 (service)", "MariaDB 10.8 (service)", "MariaDB 10.9 (service)", "MariaDB 10.11 (service)", "MariaDB 11.1 (service)", "MariaDB 11.2 (service)", "MariaDB 11.3 (service)", "MariaDB 11.4 (service)", "MariaDB 11.6 (service)", "MariaDB 11.7 (service)"]
+reason      = "the panel runs one MariaDB (12.3 LTS), which is compatible with these; a database made there works with the same clients"

@@ -15,7 +15,7 @@ const mockLicense: LicenseState = {
   installation_id: "7b4c9102-4d82-41e9-9a21-fa9921bc901a",
   customer_name: "Acme Web Services LLC",
   customer_email: "billing@acmeweb.com",
-  product_name: "DHPanel Enterprise Edition",
+  product_name: "Built Panel Enterprise Edition",
   plan_tier: "enterprise",
   status: "active",
   issued_at: "2026-01-01T00:00:00Z",

@@ -1,4 +1,4 @@
-//! License documents shared by the license authority and the DHPanel installations (T17.03,
+//! License documents shared by the license authority and the Built Panel installations (T17.03,
 //! T17.04, T17.09): deterministic JSON ([`canonical`]), Ed25519 keys ([`keys`]) and the signed
 //! entitlement ([`document`]).
 

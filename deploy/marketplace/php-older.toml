@@ -1,0 +1,9 @@
+slug        = "php-older"
+name        = "PHP (older versions)"
+category    = "server_side_scripting"
+kind        = "unavailable"
+description = "PHP 5.3 to 8.1."
+license     = "PHP-3.01"
+homepage    = "https://www.php.net"
+covers      = ["PHP 5.3", "PHP 5.4", "PHP 5.5", "PHP 5.6", "PHP 7.0", "PHP 7.1", "PHP 7.2", "PHP 7.3", "PHP 7.4", "PHP 8.0", "PHP 8.1", "PHP-common (library)"]
+reason      = "this version no longer gets security fixes; a newer one is offered"

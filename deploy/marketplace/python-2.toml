@@ -1,0 +1,9 @@
+slug        = "python-2"
+name        = "Python 2"
+category    = "server_side_scripting"
+kind        = "unavailable"
+description = "The old Python 2 line."
+license     = "PSF-2.0"
+homepage    = "https://www.python.org"
+covers      = ["Python 2"]
+reason      = "this version no longer gets security fixes; a newer one is offered"

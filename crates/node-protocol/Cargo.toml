@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-node-protocol"
+name = "builtpanel-node-protocol"
 description = "Wire types shared by the control plane and the node agent (ADR 0004)."
 version.workspace = true
 edition.workspace = true

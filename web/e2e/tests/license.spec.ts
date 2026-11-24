@@ -15,7 +15,7 @@ test.describe("License Authority & Entitlement UI (T17.13)", () => {
     await expect(page.getByTestId("license-details-card")).toBeVisible();
     await expect(page.getByTestId("text-installation-id")).toContainText("8c4d9102");
     await expect(page.getByTestId("text-customer-name")).toContainText("Apex Cloud Services LLC");
-    await expect(page.getByTestId("text-product-name")).toContainText("DHPanel Enterprise Edition");
+    await expect(page.getByTestId("text-product-name")).toContainText("Built Panel Enterprise Edition");
 
     // Mask / Unmask key
     const keyDisplay = page.getByTestId("text-license-key");

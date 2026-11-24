@@ -5,8 +5,8 @@ import {
   Badge,
   Button,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Check, X, Pencil, Trash2 } from "lucide-react";
 import type { DnsRecord, DnsRecordType, UpdateDnsRecordPayload } from "./types";
 

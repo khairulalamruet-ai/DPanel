@@ -10,14 +10,14 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::modules as db;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_files::{FilesState, SETTINGS_SCHEMA, client_router, public_router};
-use dhpanel_node_protocol::{Operation, Output};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::modules as db;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_files::{FilesState, SETTINGS_SCHEMA, client_router, public_router};
+use builtpanel_node_protocol::{Operation, Output};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_settings::{Scope, SettingsRegistry};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -27,7 +27,7 @@ use uuid::Uuid;
 const KEY: [u8; 32] = [9u8; 32];
 
 fn spool_dir() -> PathBuf {
-    std::env::temp_dir().join(format!("dh-files-spool-{}", std::process::id()))
+    std::env::temp_dir().join(format!("bp-files-spool-{}", std::process::id()))
 }
 
 const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA";
@@ -203,7 +203,7 @@ impl Env {
 
     async fn set(&self, pool: &PgPool, values: Value) {
         let mut tx = pool.begin().await.unwrap();
-        dhpanel_settings::set(
+        builtpanel_settings::set(
             &self.settings,
             &mut tx,
             "files",
@@ -280,10 +280,10 @@ fn node(pool: PgPool, base: PathBuf, delay: Duration) -> tokio::task::JoinHandle
                 tokio::time::sleep(delay).await;
                 let dir = base.join(tenant_id.to_string());
                 std::fs::create_dir_all(&dir).unwrap();
-                let root = dhpanel_safe_fs::Root::open(&dir).unwrap();
-                let result = dhpanel_fileops::handle(&root, request);
+                let root = builtpanel_safe_fs::Root::open(&dir).unwrap();
+                let result = builtpanel_fileops::handle(&root, request);
                 let output = serde_json::to_value(Output::File { result }).unwrap();
-                dhpanel_database::operations::succeed(&pool, id, &output)
+                builtpanel_database::operations::succeed(&pool, id, &output)
                     .await
                     .unwrap();
             }
@@ -297,7 +297,7 @@ fn code(body: &Value) -> &str {
 }
 
 fn scratch(tag: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("dh-files-api-{tag}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-files-api-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     dir
@@ -803,7 +803,7 @@ async fn big_files_go_up_in_chunks_that_can_be_resumed_and_come_down_through_a_f
     let token = String::from_utf8(
         MasterKey::from_bytes(&KEY)
             .open(
-                &dhpanel_database::file_transfers::token_context(uuid),
+                &builtpanel_database::file_transfers::token_context(uuid),
                 &sealed,
             )
             .unwrap(),
@@ -845,7 +845,7 @@ async fn big_files_go_up_in_chunks_that_can_be_resumed_and_come_down_through_a_f
         .call(&a, "GET", &format!("{f}/transfers/{id}"), None)
         .await;
     assert_eq!(now["status"], "running");
-    dhpanel_database::operations::succeed(
+    builtpanel_database::operations::succeed(
         &pool,
         op,
         &json!({"type": "file_fetched", "size_bytes": data.len()}),
@@ -869,7 +869,7 @@ async fn big_files_go_up_in_chunks_that_can_be_resumed_and_come_down_through_a_f
     let spooled = spool_dir().join(format!("{}.upload", id.replace('-', "")));
     assert!(spooled.exists());
     assert_eq!(
-        dhpanel_mod_files::transfers::sweep(&pool, &spool_dir())
+        builtpanel_mod_files::transfers::sweep(&pool, &spool_dir())
             .await
             .unwrap(),
         1
@@ -949,7 +949,7 @@ async fn big_files_go_up_in_chunks_that_can_be_resumed_and_come_down_through_a_f
     let dtoken = String::from_utf8(
         MasterKey::from_bytes(&KEY)
             .open(
-                &dhpanel_database::file_transfers::token_context(duuid),
+                &builtpanel_database::file_transfers::token_context(duuid),
                 &sealed,
             )
             .unwrap(),
@@ -1006,7 +1006,7 @@ async fn big_files_go_up_in_chunks_that_can_be_resumed_and_come_down_through_a_f
         )
         .await;
     assert_eq!(status, StatusCode::OK);
-    dhpanel_database::operations::succeed(
+    builtpanel_database::operations::succeed(
         &pool,
         op,
         &json!({"type": "file_sent", "size_bytes": data.len()}),
@@ -1099,9 +1099,9 @@ async fn the_disk_usage_is_measured_by_the_node_and_kept_for_the_client(pool: Pg
         (StatusCode::OK, Value::Null, json!(0))
     );
     // The panel queues a measurement for every active account, once per slot.
-    assert_eq!(dhpanel_mod_files::measure_usage(&pool).await.unwrap(), 1);
+    assert_eq!(builtpanel_mod_files::measure_usage(&pool).await.unwrap(), 1);
     assert_eq!(
-        dhpanel_mod_files::measure_usage(&pool).await.unwrap(),
+        builtpanel_mod_files::measure_usage(&pool).await.unwrap(),
         0,
         "once per six hours"
     );
@@ -1115,20 +1115,20 @@ async fn the_disk_usage_is_measured_by_the_node_and_kept_for_the_client(pool: Pg
     let dir = base.join(tenant.to_string());
     std::fs::create_dir_all(dir.join("www/big")).unwrap();
     std::fs::write(dir.join("www/big/a.bin"), vec![1u8; 200_000]).unwrap();
-    let root = dhpanel_safe_fs::Root::open(&dir).unwrap();
-    let dhpanel_node_protocol::files::FileResult::Usage {
+    let root = builtpanel_safe_fs::Root::open(&dir).unwrap();
+    let builtpanel_node_protocol::files::FileResult::Usage {
         total_bytes,
         inodes,
         folders,
         partial,
-    } = dhpanel_fileops::handle(
+    } = builtpanel_fileops::handle(
         &root,
-        dhpanel_node_protocol::files::FileRequest::DiskUsage { top: 5 },
+        builtpanel_node_protocol::files::FileRequest::DiskUsage { top: 5 },
     )
     else {
         panic!()
     };
-    dhpanel_database::file_transfers::record_usage(
+    builtpanel_database::file_transfers::record_usage(
         &pool,
         tenant,
         i64::try_from(total_bytes).unwrap(),
@@ -1239,7 +1239,7 @@ async fn ftp_accounts_are_made_on_the_node_in_the_background_and_passwords_never
             .unwrap();
     let opened = MasterKey::from_bytes(&KEY)
         .open(
-            &dhpanel_database::ftp_accounts::password_context(id),
+            &builtpanel_database::ftp_accounts::password_context(id),
             &sealed,
         )
         .unwrap();
@@ -1249,7 +1249,7 @@ async fn ftp_accounts_are_made_on_the_node_in_the_background_and_passwords_never
         .execute(&pool)
         .await
         .unwrap();
-    dhpanel_database::operations::succeed(
+    builtpanel_database::operations::succeed(
         &pool,
         op,
         &json!({"type": "ftp_account_set", "created": true}),
@@ -1368,7 +1368,7 @@ async fn ftp_accounts_are_made_on_the_node_in_the_background_and_passwords_never
         .execute(&pool)
         .await
         .unwrap();
-    dhpanel_database::operations::succeed(
+    builtpanel_database::operations::succeed(
         &pool,
         drop_op,
         &json!({"type": "ftp_account_dropped", "existed": true}),

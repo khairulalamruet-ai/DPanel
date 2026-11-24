@@ -2,7 +2,7 @@
 //! (as root) writes the packet filter, the agent opens the public port, and a
 //! connection from this machine's own address gets through only while that address
 //! is on the list. Ignored by default; needs the login user's rootless Docker, a
-//! helper running as root (DHPANEL_TEST_HELPER_SOCKET) and the helper's
+//! helper running as root (BUILTPANEL_TEST_HELPER_SOCKET) and the helper's
 //! `--db-port` equal to the agent's public port (13306).
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
@@ -15,14 +15,18 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_docker_manager::{DockerManager, Name};
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{DockerManager, Name};
+use builtpanel_node_agent::ops::{
     db::{CONTAINER, ensure_db_server, public_port, set_db_remote_access},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -66,14 +70,14 @@ fn greeted(address: &str, port: u16) -> bool {
 #[ignore = "needs rootless Docker and a root helper (see the file header)"]
 async fn the_public_port_lets_in_only_the_listed_addresses() {
     let (Some(socket), true) = (
-        std::env::var_os("DHPANEL_TEST_HELPER_SOCKET"),
+        std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET"),
         docker_socket().exists(),
     ) else {
         eprintln!("skipped: no helper socket or no Docker");
         return;
     };
     let docker = DockerManager::connect(&docker_socket()).unwrap();
-    let root = std::env::temp_dir().join(format!("dh-dbfw-live-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bp-dbfw-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root).unwrap();
     let context = Arc::new(TenantContext {
@@ -86,7 +90,7 @@ async fn the_public_port_lets_in_only_the_listed_addresses() {
     let port = public_port();
     let access = |cidrs: Vec<String>| Operation::SetDbRemoteAccess {
         cidrs,
-        engine: dhpanel_node_protocol::DbEngine::Mysql,
+        engine: builtpanel_node_protocol::DbEngine::Mysql,
     };
 
     ensure_db_server(context.clone(), Operation::EnsureDbServer)
@@ -142,7 +146,7 @@ async fn the_public_port_lets_in_only_the_listed_addresses() {
     }
     assert!(greeted(&me, port), "an allowed address reaches the server");
     // The agent's own loopback port still works, and the data survived the new container.
-    assert!(greeted("127.0.0.1", dhpanel_node_agent::ops::db::port()));
+    assert!(greeted("127.0.0.1", builtpanel_node_agent::ops::db::port()));
 
     // Only other addresses allowed: this one is dropped (not refused: dropped).
     let done = set_db_remote_access(context.clone(), access(vec!["203.0.113.7/32".into()]))
@@ -159,7 +163,7 @@ async fn the_public_port_lets_in_only_the_listed_addresses() {
         !greeted(&me, port),
         "an address that is not listed does not"
     );
-    assert!(greeted("127.0.0.1", dhpanel_node_agent::ops::db::port()));
+    assert!(greeted("127.0.0.1", builtpanel_node_agent::ops::db::port()));
 
     // The list can grow and shrink; a range counts as all its addresses.
     let wide = format!("{}.0.0.0/8", me.split('.').next().unwrap());
@@ -186,10 +190,10 @@ async fn the_public_port_lets_in_only_the_listed_addresses() {
 
     let _ = docker.remove(&Name::parse(CONTAINER).unwrap(), true).await;
     let _ = docker
-        .remove_volume(&Name::parse("dh-db-data").unwrap())
+        .remove_volume(&Name::parse("bp-db-data").unwrap())
         .await;
     let _ = docker
-        .remove_network(&Name::parse("dh-db-net").unwrap())
+        .remove_network(&Name::parse("bp-db-net").unwrap())
         .await;
     let _ = std::fs::remove_dir_all(&root);
 }

@@ -1,0 +1,77 @@
+# Built Panel privileged helper: the only part of the node side that runs as root.
+# It listens on a Unix socket that only the builtpanel-agent user can open and
+# carries out a short, fixed list of actions (see apps/priv-helper).
+[Unit]
+Description=Built Panel privileged helper
+Documentation=https://docs.builtpanel.dev/agent
+Before=builtpanel-agent.service
+
+[Service]
+Type=simple
+User=root
+# The agent's group: the folder files wait in (shared with the agent) is open to it only.
+SupplementaryGroups=builtpanel-agent
+ExecStart=/usr/local/bin/builtpanel-priv-helper --socket /run/builtpanel/priv-helper.sock --agent-user builtpanel-agent --tenants-root /srv/tenants --db-port 13306 --pg-port 15432
+# The directory tenants live in is created by install.sh before the service is
+# started: the sandbox's mount namespace is built before any ExecStartPre runs,
+# so the path must already exist. It is the only place besides /run/builtpanel the
+# helper may write.
+ReadWritePaths=/srv/tenants
+# Where files wait between the network and a tenant's files (the agent's).
+ReadWritePaths=-/var/lib/builtpanel-transfers
+StateDirectory=builtpanel-priv-helper
+StateDirectoryMode=0700
+# /run/builtpanel, root-owned; other users can look inside but the socket is 0600.
+RuntimeDirectory=builtpanel
+RuntimeDirectoryMode=0755
+Restart=always
+RestartSec=2
+
+# --- Hardening. Root, but with almost nothing root can normally do. The
+# --- capability list grows only together with the action that needs it.
+NoNewPrivileges=yes
+# CAP_CHOWN: hand the socket file and tenant directories to their owners.
+# CAP_SYS_ADMIN: set project quota limits (quotactl); nothing else here needs it.
+# CAP_SETUID, CAP_SETGID: file manager workers drop to the tenant's own user.
+# CAP_NET_ADMIN: write the one nftables table that guards the database's public
+# port (set_db_firewall, T07.05b); the table, the port and the shape of every rule
+# are fixed in the helper, and no request can name anything else.
+CapabilityBoundingSet=CAP_CHOWN CAP_SYS_ADMIN CAP_NET_ADMIN CAP_SETUID CAP_SETGID
+# With NoNewPrivileges, systemd starts the process without CAP_SETUID unless the
+# capabilities are also ambient (checked on a real machine: CapEff lacked it).
+AmbientCapabilities=CAP_CHOWN CAP_SYS_ADMIN CAP_NET_ADMIN CAP_SETUID CAP_SETGID
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# xfs_quota passes the block device path of the mount to quotactl, so /dev must
+# be the real one (PrivateDevices=yes hides it); DevicePolicy=closed still stops
+# the helper from opening any device node.
+PrivateDevices=no
+DevicePolicy=closed
+# The packet filter is the node's own, so the helper shares the network namespace
+# (and may open netlink sockets, nothing else but Unix sockets).
+PrivateNetwork=no
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallFilter=chown fchown fchownat lchown quotactl quotactl_fd
+# The file manager's workers run as the tenant's own user (`setpriv`): they need to
+# drop to it.
+SystemCallFilter=setuid setgid setgroups setresuid setresgid setreuid setregid capget capset
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

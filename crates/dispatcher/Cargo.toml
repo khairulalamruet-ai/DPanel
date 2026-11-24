@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-dispatcher"
+name = "builtpanel-dispatcher"
 description = "Sends ledger operations to connected nodes and records their results."
 version.workspace = true
 edition.workspace = true
@@ -11,25 +11,25 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-cache.workspace = true
-dhpanel-database.workspace = true
-dhpanel-node-gateway.workspace = true
-dhpanel-node-protocol.workspace = true
-dhpanel-operations.workspace = true
-dhpanel-domain.workspace = true
-dhpanel-events.workspace = true
-dhpanel-kernel.workspace = true
-dhpanel-tenant-stack.workspace = true
-dhpanel-web-config.workspace = true
+builtpanel-cache.workspace = true
+builtpanel-database.workspace = true
+builtpanel-node-gateway.workspace = true
+builtpanel-node-protocol.workspace = true
+builtpanel-operations.workspace = true
+builtpanel-domain.workspace = true
+builtpanel-events.workspace = true
+builtpanel-kernel.workspace = true
+builtpanel-tenant-stack.workspace = true
+builtpanel-web-config.workspace = true
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt", "time", "sync"] }
 tracing = "0.1.44"
 uuid = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
-dhpanel-catalog.workspace = true
-dhpanel-pki.workspace = true
-dhpanel-node-agent = { path = "../../apps/node-agent" }
+builtpanel-catalog.workspace = true
+builtpanel-pki.workspace = true
+builtpanel-node-agent = { path = "../../apps/node-agent" }
 secrecy = "0.10"
 rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring", "x509-parser"] }
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "macros", "uuid", "json", "migrate"] }

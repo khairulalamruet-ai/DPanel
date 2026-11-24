@@ -13,16 +13,16 @@
 //! * **Never root.** Every container runs as the tenant's own numeric id, which
 //!   is always 10000 or higher.
 //! * **Nothing shared.** Names, the network and the volumes are the tenant's
-//!   own (`dh-<username>-...`); no container publishes a port, mounts a host
+//!   own (`bp-<username>-...`); no container publishes a port, mounts a host
 //!   path, or joins another tenant's network.
 
 use std::{collections::BTreeMap, fmt};
 
-use dhpanel_docker_manager::{
+use builtpanel_docker_manager::{
     Capability, ContainerSpec, ImageRef, Limits, Name, Network, PublishedPort, Restart, SpecError,
     Tmpfs, VolumeMount,
 };
-use dhpanel_domain::{TenantUsername, Uid};
+use builtpanel_domain::{TenantUsername, Uid};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -498,7 +498,7 @@ struct ServiceTemplate {
 }
 
 /// Where PHP containers read the account's options.
-const PHP_INI_DIR: &str = "/usr/local/etc/php/dhpanel.d";
+const PHP_INI_DIR: &str = "/usr/local/etc/php/builtpanel.d";
 
 const MIB: u64 = 1024 * 1024;
 
@@ -535,7 +535,7 @@ const WEB_PHP: &[ServiceTemplate] = &[
         // The options the account chose are read from a directory of their own,
         // next to the ones the image has (a leading `:` keeps the image's).
         ini_at: Some(PHP_INI_DIR),
-        env: &[("PHP_INI_SCAN_DIR", ":/usr/local/etc/php/dhpanel.d")],
+        env: &[("PHP_INI_SCAN_DIR", ":/usr/local/etc/php/builtpanel.d")],
     },
 ];
 
@@ -551,7 +551,7 @@ pub struct Stack {
 }
 
 fn name(tenant: &TenantUsername, suffix: &str) -> Result<Name, SpecError> {
-    Name::parse(&format!("dh-{tenant}-{suffix}"))
+    Name::parse(&format!("bp-{tenant}-{suffix}"))
 }
 
 /// The port the tenant's web container listens on (the unprivileged nginx).
@@ -660,7 +660,7 @@ fn service_limits(
     Ok(limits)
 }
 
-/// Name of the container of an extra PHP version: `dh-<user>-php-8-3`.
+/// Name of the container of an extra PHP version: `bp-<user>-php-8-3`.
 ///
 /// # Errors
 /// [`SpecError`] (a bad version or tenant name).
@@ -864,8 +864,8 @@ pub fn render(tenant: &Tenant<'_>, allowlist: &Allowlist) -> Result<Stack, Stack
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
-    use dhpanel_docker_manager::{MANAGED_LABEL, ROLE_LABEL, TENANT_LABEL};
-    use dhpanel_domain::UidRange;
+    use builtpanel_docker_manager::{MANAGED_LABEL, ROLE_LABEL, TENANT_LABEL};
+    use builtpanel_domain::UidRange;
 
     use super::*;
 
@@ -1004,7 +1004,7 @@ mod tests {
             let username = format!("tenant{n}");
             let stack = render_for(&username, n as u32, resources).unwrap();
             let owner = TenantUsername::parse(&username).unwrap();
-            let prefix = format!("dh-{owner}-");
+            let prefix = format!("bp-{owner}-");
             // The tenant's own network and volume, named after the tenant.
             assert_eq!(stack.network.as_str(), format!("{prefix}net"));
             assert_eq!(stack.volumes.len(), 3);
@@ -1117,20 +1117,20 @@ mod tests {
         let ini = &stack.services[0].volumes[1];
         assert_eq!(
             (ini.volume.as_str(), ini.target.as_str(), ini.read_only),
-            ("dh-alice-phpini", "/usr/local/etc/php/dhpanel.d", true)
+            ("bp-alice-phpini", "/usr/local/etc/php/builtpanel.d", true)
         );
         assert_eq!(
             stack.services[0]
                 .env
                 .get("PHP_INI_SCAN_DIR")
                 .map(String::as_str),
-            Some(":/usr/local/etc/php/dhpanel.d")
+            Some(":/usr/local/etc/php/builtpanel.d")
         );
         assert!(stack.services[1].env.is_empty());
         let conf = &stack.services[1].volumes[1];
         assert_eq!(
             (conf.volume.as_str(), conf.target.as_str(), conf.read_only),
-            ("dh-alice-conf", "/etc/nginx/conf.d", true)
+            ("bp-alice-conf", "/etc/nginx/conf.d", true)
         );
         // Resources follow the 75 / 25 split.
         assert_eq!(stack.services[0].memory_bytes, 384 * MIB);
@@ -1231,10 +1231,10 @@ mod tests {
         assert_eq!(
             names,
             [
-                "dh-alice-php",
-                "dh-alice-php-8-3",
-                "dh-alice-php-8-2",
-                "dh-alice-web"
+                "bp-alice-php",
+                "bp-alice-php-8-3",
+                "bp-alice-php-8-2",
+                "bp-alice-web"
             ]
         );
         assert_eq!(stack.services[0].image, *list.php_image("8.5").unwrap());
@@ -1272,12 +1272,12 @@ mod tests {
         // A site on another version is sent to that version's container.
         assert_eq!(
             php_upstream_for(&username, Some("8.3"), "8.5").unwrap(),
-            "dh-alice-php-8-3:9000"
+            "bp-alice-php-8-3:9000"
         );
         for same in [Some("8.5"), None] {
             assert_eq!(
                 php_upstream_for(&username, same, "8.5").unwrap(),
-                "dh-alice-php:9000"
+                "bp-alice-php:9000"
             );
         }
         assert!(php_extra_name(&username, "8.3; x").is_err());
@@ -1289,12 +1289,12 @@ mod tests {
         let (own_d, official_d) = ("b".repeat(64), "c".repeat(64));
         let web = format!("[[image]]\nrole = \"web\"\nreference = \"nginx@sha256:{digest}\"\n");
         let php = format!(
-            "[[image]]\nrole = \"php\"\nversion = \"8.4\"\npreferred = \"ghcr.io/o/dhpanel-php@sha256:{own_d}\"\nreference = \"php@sha256:{official_d}\"\n"
+            "[[image]]\nrole = \"php\"\nversion = \"8.4\"\npreferred = \"ghcr.io/o/builtpanel-php@sha256:{own_d}\"\nreference = \"php@sha256:{official_d}\"\n"
         );
         let list = Allowlist::parse(&format!("{web}{php}")).unwrap();
         let own = list.php_image("8.4").unwrap().clone();
         let official = list.fallback_for(&own).unwrap().clone();
-        assert!(own.as_str().starts_with("ghcr.io/o/dhpanel-php@"));
+        assert!(own.as_str().starts_with("ghcr.io/o/builtpanel-php@"));
         assert!(official.as_str().starts_with("php@"));
         assert_eq!(list.current(Role::Php).unwrap(), &own);
         // Both may run (a container made from the fallback is not replaced).
@@ -1303,7 +1303,7 @@ mod tests {
         // A tag instead of a digest is refused.
         let err = Allowlist::parse(&format!(
             "{web}{}",
-            php.replace("ghcr.io/o/dhpanel-php@", "ghcr.io/o/dhpanel-php:")
+            php.replace("ghcr.io/o/builtpanel-php@", "ghcr.io/o/builtpanel-php:")
         ))
         .unwrap_err()
         .to_string();
@@ -1317,15 +1317,15 @@ mod tests {
             "[[image]]\nrole = \"php\"\nversion = \"8.4\"\nreference = \"php@sha256:{digest}\"\n"
         );
         let web = format!(
-            "[[image]]\nrole = \"web\"\npreferred = \"ghcr.io/o/dhpanel-web@sha256:{own_d}\"\nreference = \"nginx@sha256:{digest}\"\n"
+            "[[image]]\nrole = \"web\"\npreferred = \"ghcr.io/o/builtpanel-web@sha256:{own_d}\"\nreference = \"nginx@sha256:{digest}\"\n"
         );
         let db = format!(
-            "[[image]]\nrole = \"db\"\npreferred = \"ghcr.io/o/dhpanel-db@sha256:{own_d}\"\nreference = \"mariadb@sha256:{digest}\"\n"
+            "[[image]]\nrole = \"db\"\npreferred = \"ghcr.io/o/builtpanel-db@sha256:{own_d}\"\nreference = \"mariadb@sha256:{digest}\"\n"
         );
         let list = Allowlist::parse(&format!("{web}{db}{php}")).unwrap();
         for (role, own_name, official_name) in [
-            (Role::Web, "ghcr.io/o/dhpanel-web@", "nginx@"),
-            (Role::Db, "ghcr.io/o/dhpanel-db@", "mariadb@"),
+            (Role::Web, "ghcr.io/o/builtpanel-web@", "nginx@"),
+            (Role::Db, "ghcr.io/o/builtpanel-db@", "mariadb@"),
         ] {
             // New stacks use ours; the official one is its fallback; both may run.
             let own = list.current(role).unwrap().clone();

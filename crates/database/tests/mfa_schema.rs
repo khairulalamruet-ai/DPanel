@@ -2,7 +2,7 @@
 //! Ignored by default; run with DATABASE_URL (superuser) and `--include-ignored`.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use dhpanel_database::mfa;
+use builtpanel_database::mfa;
 use sqlx::{PgPool, types::Uuid};
 
 const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA";

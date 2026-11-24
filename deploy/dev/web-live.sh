@@ -3,16 +3,16 @@
 # real Caddy and a real site, all in throw-away containers (T05.14).
 #
 #   deploy/dev/web-live.sh [path-to-the-test-binary]
-#   CADDY_IMAGE=dh-caddy-waf:test WAF_DIR=/etc/caddy deploy/dev/web-live.sh   (with the firewall, T11.03)
+#   CADDY_IMAGE=bp-caddy-waf:test WAF_DIR=/etc/caddy deploy/dev/web-live.sh   (with the firewall, T11.03)
 #
 # Needs Docker and the test binary built with
-#   cargo test -p dhpanel-node-agent --test web_live --no-run
+#   cargo test -p builtpanel-node-agent --test web_live --no-run
 # Caddy's admin API is published on 127.0.0.1:12019 and its HTTP port on
 # 127.0.0.1:18080; both are removed again.
 set -uo pipefail
-NET=dh-webtest-net
-CADDY=dh-webtest-caddy
-BACKEND=dh-alice-web   # the name the agent's checks demand for tenant "alice"
+NET=bp-webtest-net
+CADDY=bp-webtest-caddy
+BACKEND=bp-alice-web   # the name the agent's checks demand for tenant "alice"
 CADDY_IMAGE="${CADDY_IMAGE:-caddy:2}"
 BUSYBOX="${BUSYBOX_IMAGE:-busybox:stable}"
 TEST_BIN="${1:-$(ls -t target/debug/deps/web_live-* 2>/dev/null | grep -v '\.d$' | head -1)}"
@@ -51,10 +51,10 @@ docker run -d --name "$CADDY" --network "$NET" --restart unless-stopped \
   "$CADDY_IMAGE" caddy run --config /etc/caddy/init.json >/dev/null
 for _ in $(seq 1 30); do curl -sf http://127.0.0.1:12019/config/ >/dev/null && break; sleep 1; done
 
-DHPANEL_TEST_CADDY_ADMIN=http://127.0.0.1:12019 \
-DHPANEL_TEST_CADDY_URL=http://127.0.0.1:18080 \
-DHPANEL_TEST_CADDY_TLS_PORT=18443 \
-DHPANEL_TEST_CADDY_CONTAINER="$CADDY" \
-DHPANEL_TEST_WAF_DIR="${WAF_DIR:-}" \
+BUILTPANEL_TEST_CADDY_ADMIN=http://127.0.0.1:12019 \
+BUILTPANEL_TEST_CADDY_URL=http://127.0.0.1:18080 \
+BUILTPANEL_TEST_CADDY_TLS_PORT=18443 \
+BUILTPANEL_TEST_CADDY_CONTAINER="$CADDY" \
+BUILTPANEL_TEST_WAF_DIR="${WAF_DIR:-}" \
   "$TEST_BIN" --include-ignored --nocapture --test-threads=1 2>&1 | grep -E "^test |test result|panicked|left|right|skipped|Caddy" -A3
 exit "${PIPESTATUS[0]}"

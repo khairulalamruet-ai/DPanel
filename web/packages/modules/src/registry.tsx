@@ -29,6 +29,25 @@ export interface FrontendModule {
 export const registeredFrontendModules: FrontendModule[] = [
   {
     manifest: {
+      name: "admin-tools",
+      title: { en: "System tools", bn: "সিস্টেম টুলস" },
+      category: "core",
+      core: true,
+      permissions: ["admin.settings.manage"],
+    },
+    adminNav: [
+      {
+        id: "admin-tools",
+        labelKey: "adminTools.nav",
+        icon: <Wrench className="h-4 w-4" />,
+        href: "/system-tools",
+        order: 95,
+        permission: "admin.settings.manage",
+      },
+    ],
+  },
+  {
+    manifest: {
       name: "dashboard",
       title: { en: "Dashboard", bn: "ড্যাশবোর্ড" },
       category: "core",
@@ -72,6 +91,13 @@ export const registeredFrontendModules: FrontendModule[] = [
         href: "/security",
         order: 20,
       },
+      {
+        id: "security-center",
+        labelKey: "securityCenter.nav",
+        icon: <ShieldAlert className="h-4 w-4" />,
+        href: "/security-center",
+        order: 21,
+      },
     ],
     clientNav: [
       {
@@ -98,14 +124,6 @@ export const registeredFrontendModules: FrontendModule[] = [
         icon: <Server className="h-4 w-4" />,
         href: "/nodes",
         order: 22,
-        permission: "admin.nodes.read",
-      },
-      {
-        id: "ip-pools",
-        labelKey: "nodes.ipPools.nav",
-        icon: <Globe className="h-4 w-4" />,
-        href: "/admin/ip-pools",
-        order: 23,
         permission: "admin.nodes.read",
       },
     ],
@@ -305,14 +323,6 @@ export const registeredFrontendModules: FrontendModule[] = [
         order: 32,
         permission: "dns.read",
         feature: "dns",
-      },
-      {
-        id: "dns-cluster",
-        labelKey: "dns.cluster.nav",
-        icon: <Network className="h-4 w-4" />,
-        href: "/admin/dns-cluster",
-        order: 33,
-        permission: "dns.read",
       },
     ],
     clientNav: [
@@ -768,14 +778,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.security.read"],
     },
     adminNav: [
-      {
-        id: "admin-security-center",
-        labelKey: "securityCenter.nav",
-        icon: <ShieldAlert className="h-4 w-4" />,
-        href: "/admin/security",
-        order: 66,
-        permission: "admin.security.read",
-      },
     ],
   },
   {
@@ -798,14 +800,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       },
     ],
     adminNav: [
-      {
-        id: "admin-apps",
-        labelKey: "apps.nav",
-        icon: <Boxes className="h-4 w-4" />,
-        href: "/admin/apps",
-        order: 55,
-        permission: "apps.read",
-      },
     ],
   },
   {
@@ -828,14 +822,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       },
     ],
     adminNav: [
-      {
-        id: "admin-email",
-        labelKey: "email.adminNav",
-        icon: <Mail className="h-4 w-4" />,
-        href: "/admin/mail",
-        order: 56,
-        permission: "admin.email.manage",
-      },
     ],
   },
   {
@@ -858,14 +844,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       },
     ],
     adminNav: [
-      {
-        id: "admin-resellers",
-        labelKey: "reseller.adminNav",
-        icon: <Briefcase className="h-4 w-4" />,
-        href: "/admin/resellers",
-        order: 58,
-        permission: "admin.resellers.manage",
-      },
     ],
   },
   {
@@ -895,25 +873,6 @@ export const registeredFrontendModules: FrontendModule[] = [
         href: "/migration",
         order: 42,
         permission: "migration.read",
-      },
-    ],
-  },
-  {
-    manifest: {
-      name: "users",
-      title: { en: "Users", bn: "ব্যবহারকারী" },
-      category: "core",
-      core: true,
-      permissions: ["users.read", "users.create", "users.update", "users.delete"],
-    },
-    adminNav: [
-      {
-        id: "users",
-        labelKey: "common.users",
-        icon: <Users className="h-4 w-4" />,
-        href: "/users",
-        order: 40,
-        permission: "users.read",
       },
     ],
   },
@@ -983,14 +942,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.license.read", "admin.settings.read"],
     },
     adminNav: [
-      {
-        id: "license-authority",
-        labelKey: "la.nav",
-        icon: <KeyRound className="h-4 w-4" />,
-        href: "/la",
-        order: 85,
-        permission: "admin.settings.read",
-      },
     ],
   },
   {
@@ -1002,13 +953,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.branding.manage", "admin.settings.manage", "*"],
     },
     adminNav: [
-      {
-        id: "branding",
-        labelKey: "branding.nav",
-        icon: <Palette className="h-4 w-4" />,
-        href: "/admin/branding",
-        order: 86,
-      },
     ],
   },
   {
@@ -1024,9 +968,28 @@ export const registeredFrontendModules: FrontendModule[] = [
         id: "update",
         labelKey: "update.nav",
         icon: <ArrowUpCircle className="h-4 w-4" />,
-        href: "/admin/update",
-        order: 87,
-        permission: "admin.update.manage",
+        href: "/update",
+        order: 97,
+        permission: "admin.settings.read",
+      },
+    ],
+  },
+  {
+    manifest: {
+      name: "app_installer",
+      title: { en: "Install an App", bn: "অ্যাপ ইনস্টল" },
+      category: "core",
+      core: true,
+      permissions: ["admin.apps.read", "admin.apps.manage"],
+    },
+    adminNav: [
+      {
+        id: "app-installer",
+        labelKey: "appInstaller.nav",
+        icon: <Boxes className="h-4 w-4" />,
+        href: "/app-installer",
+        order: 40,
+        permission: "admin.apps.read",
       },
     ],
   },
@@ -1039,14 +1002,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.tokens.manage"],
     },
     adminNav: [
-      {
-        id: "api_tokens",
-        labelKey: "apiTokens.nav",
-        icon: <Key className="h-4 w-4" />,
-        href: "/admin/api-tokens",
-        order: 88,
-        permission: "admin.tokens.manage",
-      },
     ],
   },
   {
@@ -1058,13 +1013,6 @@ export const registeredFrontendModules: FrontendModule[] = [
       permissions: ["admin.support.read", "admin.settings.manage", "*"],
     },
     adminNav: [
-      {
-        id: "support-report",
-        labelKey: "support.nav",
-        icon: <FileText className="h-4 w-4" />,
-        href: "/admin/support-report",
-        order: 90,
-      },
     ],
   },
 ];
@@ -1086,6 +1034,8 @@ export function filterNavItems(
   if (!session) return [];
 
   const activeModules = session.modules || [];
+  // Some interface modules are parts of one backend module.
+  const backendModuleOf = (name: string): string => (name === "dns" || name === "ssl" ? "domains" : name);
   const activeFeatures = session.features || [];
   const permissions = session.permissions || [];
   const roles = session.roles || [];
@@ -1114,7 +1064,7 @@ export function filterNavItems(
   for (const mod of modules) {
     // 1. Module Gate: Check if module is core or in active modules
     const isModuleEnabled =
-      !session.modules || mod.manifest.core || activeModules.includes(mod.manifest.name);
+      !session.modules || mod.manifest.core || activeModules.includes(backendModuleOf(mod.manifest.name));
     if (!isModuleEnabled) continue;
 
     // Pick target nav list

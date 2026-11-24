@@ -3,25 +3,29 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DashboardPage } from "./DashboardPage";
 
-const STORAGE_KEY = "dhpanel-admin-dashboard-layout";
+const STORAGE_KEY = "builtpanel-admin-dashboard-layout";
 
-vi.mock("@dhpanel/auth", () => ({
+vi.mock("@builtpanel/auth", () => ({
   useSession: () => ({
     data: {
       user: { username: "admin", name: "Administrator" },
       roles: ["super_admin"],
-      branding: { companyName: "DHPanel" },
+      branding: { companyName: "Built Panel" },
     },
   }),
 }));
 
-vi.mock("@dhpanel/api", () => ({
+vi.mock("@builtpanel/api", () => ({
   api: {
     GET: vi.fn(async () => ({
       data: { status: "ok", version: "0.1.0" },
     })),
   },
-  apiFetch: vi.fn(async () => ({
+  apiFetch: vi.fn(async () => ({}))
+}));
+
+vi.mock("./api", () => ({
+  loadAdminSummary: vi.fn(async () => ({
     nodes: { total: 3, online: 3, avg_cpu_percent: 18, avg_ram_percent: 42 },
     tenants: { total: 24, active: 22, domains_count: 58, databases_count: 36 },
     resources: {
@@ -37,7 +41,7 @@ vi.mock("@dhpanel/api", () => ({
       { id: "op-vhost-842", type: "VhostTemplateApply", status: "completed", duration_ms: 120, created_at: new Date().toISOString() },
     ],
     security: { blocked_threats_24h: 142, active_waf_rules: 942, ssh_bans: 12 },
-    license: { tier: "DHPanel Enterprise Edition", status: "active", signature_valid: true, expires_in_days: 305 },
+    license: { tier: "Built Panel Enterprise Edition", status: "active", signature_valid: true, expires_in_days: 305 },
   })),
 }));
 

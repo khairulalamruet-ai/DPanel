@@ -32,7 +32,7 @@ pub const VARIABLES: [&str; 7] = [
 const REQUIRED: [&str; 2] = ["server_names", "docroot"];
 
 /// The template new installations start with.
-pub const DEFAULT_NGINX_TEMPLATE: &str = r"# Managed by DHPanel for {{domain}}. Changes made here are overwritten.
+pub const DEFAULT_NGINX_TEMPLATE: &str = r"# Managed by Built Panel for {{domain}}. Changes made here are overwritten.
 {{policy_http}}
 server {
     listen 8080;
@@ -62,7 +62,7 @@ server {
 /// The site configuration of a domain that shows one of the tenant's own applications
 /// (Node.js, Python): the web server passes every request on to the application's container.
 /// `{{php_upstream}}` is the application's `name:port` here.
-pub const PROXY_NGINX_TEMPLATE: &str = r"# Managed by DHPanel for {{domain}} (application). Changes made here are overwritten.
+pub const PROXY_NGINX_TEMPLATE: &str = r"# Managed by Built Panel for {{domain}} (application). Changes made here are overwritten.
 {{policy_http}}
 server {
     listen 8080;
@@ -277,7 +277,7 @@ pub fn check_template(body: &str) -> Result<(), VhostError> {
             "example.com".into(),
             "example.com www.example.com".into(),
             format!("{WEB_ROOT}/public_html"),
-            "dh-sample-php:9000".into(),
+            "bp-sample-php:9000".into(),
         ),
     );
     for words in statements(&sample)? {
@@ -819,14 +819,14 @@ mod tests {
             domain: &domain,
             aliases: &[],
             docroot: &docroot,
-            php_upstream: "dh-alice-php:9000",
+            php_upstream: "bp-alice-php:9000",
             policy: &policy,
             custom: "",
             proxy,
         };
-        let text = render(DEFAULT_NGINX_TEMPLATE, &site(Some("dh-alice-app-api:3000"))).unwrap();
+        let text = render(DEFAULT_NGINX_TEMPLATE, &site(Some("bp-alice-app-api:3000"))).unwrap();
         assert!(
-            text.contains("proxy_pass http://dh-alice-app-api:3000;"),
+            text.contains("proxy_pass http://bp-alice-app-api:3000;"),
             "{text}"
         );
         assert!(!text.contains("fastcgi_pass"));
@@ -854,7 +854,7 @@ mod tests {
                     domain: &domain,
                     aliases: &[],
                     docroot: &docroot,
-                    php_upstream: "dh-alice-php:9000",
+                    php_upstream: "bp-alice-php:9000",
                     policy: &policy,
                     custom: "",
                     proxy: None,
@@ -900,7 +900,7 @@ mod tests {
                 domain: &domain,
                 aliases: &aliases,
                 docroot: &docroot,
-                php_upstream: "dh-alice-php:9000",
+                php_upstream: "bp-alice-php:9000",
                 policy: &Policy::default(),
                 custom: "",
                 proxy: None,
@@ -910,7 +910,7 @@ mod tests {
         // The whole file, so a change of the template shows up in review.
         assert_eq!(
             text,
-            r"# Managed by DHPanel for example.com. Changes made here are overwritten.
+            r"# Managed by Built Panel for example.com. Changes made here are overwritten.
 server {
     listen 8080;
     server_name example.com www.example.com example.net;
@@ -925,7 +925,7 @@ server {
         try_files $uri =404;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_pass dh-alice-php:9000;
+        fastcgi_pass bp-alice-php:9000;
     }
 
     location ~ /\.(?!well-known) {
@@ -950,7 +950,7 @@ server {
                 domain: &domain,
                 aliases: &aliases,
                 docroot: &Docroot::default(),
-                php_upstream: "dh-alice-php:9000",
+                php_upstream: "bp-alice-php:9000",
                 policy: &Policy::default(),
                 custom: "",
                 proxy: None,
@@ -1022,9 +1022,9 @@ server {
     fn a_value_cannot_bring_a_directive_along() {
         let domain = fqdn("example.com");
         for bad in [
-            "dh-a-php",
-            "dh-a-php:0",
-            "dh-a-php:9000; alias /etc",
+            "bp-a-php",
+            "bp-a-php:0",
+            "bp-a-php:9000; alias /etc",
             "DH:9000",
             ":9000",
             "a b:1",
@@ -1053,7 +1053,7 @@ server {
                 domain: &domain,
                 aliases: &many,
                 docroot: &Docroot::default(),
-                php_upstream: "dh-a-php:9000",
+                php_upstream: "bp-a-php:9000",
                 policy: &Policy::default(),
                 custom: "",
                 proxy: None,
@@ -1087,7 +1087,7 @@ server {
                 domain: &domain,
                 aliases: &[],
                 docroot: &Docroot::default(),
-                php_upstream: "dh-alice-php:9000",
+                php_upstream: "bp-alice-php:9000",
                 policy: &policy,
                 custom: "",
                 proxy: None,
@@ -1097,7 +1097,7 @@ server {
         let zone = Policy::zone(&domain);
         assert!(zone.starts_with("rl_example_com_"), "{zone}");
         let expected_top = format!(
-            "# Managed by DHPanel for example.com. Changes made here are overwritten.\nlimit_req_zone $http_x_forwarded_for zone={zone}:1m rate=10r/s;\nserver {{\n"
+            "# Managed by Built Panel for example.com. Changes made here are overwritten.\nlimit_req_zone $http_x_forwarded_for zone={zone}:1m rate=10r/s;\nserver {{\n"
         );
         assert!(text.starts_with(&expected_top), "{text}");
         let inside = format!(
@@ -1112,7 +1112,7 @@ server {
                 domain: &domain,
                 aliases: &[],
                 docroot: &Docroot::default(),
-                php_upstream: "dh-alice-php:9000",
+                php_upstream: "bp-alice-php:9000",
                 policy: &Policy::default(),
                 custom: "",
                 proxy: None,
@@ -1280,7 +1280,7 @@ server {
                 domain: &domain,
                 aliases: &[],
                 docroot: &Docroot::default(),
-                php_upstream: "dh-alice-php:9000",
+                php_upstream: "bp-alice-php:9000",
                 policy: &Policy::default(),
                 custom,
                 proxy: None,
@@ -1299,7 +1299,7 @@ server {
                 domain: &domain,
                 aliases: &[],
                 docroot: &Docroot::default(),
-                php_upstream: "dh-alice-php:9000",
+                php_upstream: "bp-alice-php:9000",
                 policy: &Policy::default(),
                 custom: "alias /etc;",
                 proxy: None,

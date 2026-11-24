@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-license"
+name = "builtpanel-license"
 description = "License documents: canonical JSON, Ed25519 signing and verification, entitlement claims."
 version.workspace = true
 edition.workspace = true

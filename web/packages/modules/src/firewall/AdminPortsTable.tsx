@@ -13,9 +13,9 @@ import {
   TableCell,
   Button,
   Badge,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { Network, ShieldCheck, Lock, Trash2, Plus } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { NodePortRule } from "./types";
 import { AddPortDialog } from "./AddPortDialog";
 

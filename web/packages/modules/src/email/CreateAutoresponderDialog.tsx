@@ -8,8 +8,8 @@ import {
   DialogFooter,
   Button,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Clock } from "lucide-react";
 
 interface CreateAutoresponderDialogProps {

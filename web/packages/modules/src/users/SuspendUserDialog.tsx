@@ -8,8 +8,8 @@ import {
   DialogDescription,
   Button,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { UserItem } from "./types";
 

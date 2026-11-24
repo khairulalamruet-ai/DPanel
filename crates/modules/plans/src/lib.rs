@@ -33,18 +33,18 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     feature_sets::{self, DeleteOutcome, FeatureSet, WriteError},
     sqlx::PgPool,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_kernel::ModuleMount;
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_kernel::ModuleMount;
+use builtpanel_rbac::{
     Require, RequireRecent,
     permissions::{PlansManage, PlansRead},
 };
-use dhpanel_session::{SessionStore, rfc3339};
+use builtpanel_session::{SessionStore, rfc3339};
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
 use uuid::Uuid;
@@ -416,7 +416,7 @@ pub async fn create_feature_set(
     )
     .await
     .map_err(write_error)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("admin.feature_set_created", Outcome::Success)
             .actor(who.account_id())
@@ -486,7 +486,7 @@ pub async fn update_feature_set(
     if !found {
         return Err(AppError::not_found("feature_set"));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("admin.feature_set_updated", Outcome::Success)
             .actor(who.account_id())
@@ -555,7 +555,7 @@ pub async fn delete_feature_set(
         }
         DeleteOutcome::Deleted => {}
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("admin.feature_set_deleted", Outcome::Success)
             .actor(who.account_id())

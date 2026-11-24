@@ -4,7 +4,7 @@
 //! as whoever the process is: the privileged helper runs it as the tenant's own
 //! user id, in a process of its own, so what a tenant can do here is exactly what
 //! the tenant could do with the files anyway. Every path goes through
-//! `dhpanel-safe-fs`, which follows no links and cannot leave the root.
+//! `builtpanel-safe-fs`, which follows no links and cannot leave the root.
 //!
 //! Nothing here replaces a file silently except [`FileRequest::Write`] (atomic:
 //! a temporary file in the same directory, then a rename) and nothing removes a
@@ -19,11 +19,11 @@ use std::{
     os::fd::{AsFd, OwnedFd},
 };
 
-use dhpanel_node_protocol::files::{
+use builtpanel_node_protocol::files::{
     EntryKind, FileEntry, FileErrorCode, FileRequest, FileResult, MAX_DIR_ENTRIES, MAX_EDIT_BYTES,
     MAX_LIST_LIMIT, TRASH_DIR, TrashItem,
 };
-use dhpanel_safe_fs::{FsError, PathError, Root};
+use builtpanel_safe_fs::{FsError, PathError, Root};
 use rustix::fs::{AtFlags, Dir, FileType, Mode, OFlags, RenameFlags, Stat, fstat, statat};
 
 /// Most items one copy, fix or empty touches.
@@ -128,7 +128,7 @@ fn run(root: &Root, request: FileRequest) -> Out<FileResult> {
 
 /// A path of the tenant's own files: the trash folder is not one.
 fn user_path(path: &str) -> Out<&str> {
-    let parts = fs(dhpanel_safe_fs::parts(path).map_err(FsError::Path))?;
+    let parts = fs(builtpanel_safe_fs::parts(path).map_err(FsError::Path))?;
     if parts.first() == Some(&TRASH_DIR) {
         return fail(FileErrorCode::InvalidPath, "the trash folder is not a path");
     }
@@ -204,7 +204,7 @@ fn list(root: &Root, path: &str, offset: u32, limit: u32) -> Out<FileResult> {
             "the page size is 1 to 1000",
         );
     }
-    let at_root = fs(dhpanel_safe_fs::parts(path).map_err(FsError::Path))?.is_empty();
+    let at_root = fs(builtpanel_safe_fs::parts(path).map_err(FsError::Path))?.is_empty();
     if !at_root {
         user_path(path)?;
     }
@@ -320,7 +320,7 @@ fn write(
         }
         Err(other) => return Err(other),
     }
-    let tmp = format!(".dh-tmp-{}", random_hex(8)?);
+    let tmp = format!(".bp-tmp-{}", random_hex(8)?);
     let fd = sys(rustix::fs::openat(
         &dir,
         tmp.as_str(),
@@ -334,7 +334,7 @@ fn write(
         file.sync_all()
     })();
     if written.is_err() {
-        let _ = dhpanel_safe_fs::remove(&dir, &tmp, false);
+        let _ = builtpanel_safe_fs::remove(&dir, &tmp, false);
         return fail(FileErrorCode::Failed, "cannot write");
     }
     let moved = if create_only {
@@ -350,7 +350,7 @@ fn write(
         rustix::fs::renameat(&dir, tmp.as_str(), &dir, name.as_str())
     };
     if let Err(e) = moved {
-        let _ = dhpanel_safe_fs::remove(&dir, &tmp, false);
+        let _ = builtpanel_safe_fs::remove(&dir, &tmp, false);
         return Err(from_fs(FsError::from(e)));
     }
     Ok(FileResult::Done { count: 1 })
@@ -388,8 +388,8 @@ fn copy(root: &Root, from: &str, to: &str) -> Out<FileResult> {
     let st = stat_at(&from_dir, &from_name)?;
     // A directory cannot be copied into itself: the copy would never end.
     if kind_of(FileType::from_raw_mode(st.st_mode)) == EntryKind::Dir {
-        let source = fs(dhpanel_safe_fs::parts(from).map_err(FsError::Path))?;
-        let target = fs(dhpanel_safe_fs::parts(to).map_err(FsError::Path))?;
+        let source = fs(builtpanel_safe_fs::parts(from).map_err(FsError::Path))?;
+        let target = fs(builtpanel_safe_fs::parts(to).map_err(FsError::Path))?;
         if target.len() >= source.len() && target[..source.len()] == source[..] {
             return fail(
                 FileErrorCode::InvalidArguments,
@@ -521,7 +521,7 @@ fn chmod_item(
 }
 
 fn fix_permissions(root: &Root, path: &str) -> Out<FileResult> {
-    let at_root = fs(dhpanel_safe_fs::parts(path).map_err(FsError::Path))?.is_empty();
+    let at_root = fs(builtpanel_safe_fs::parts(path).map_err(FsError::Path))?.is_empty();
     if !at_root {
         user_path(path)?;
     }
@@ -719,7 +719,7 @@ mod trash {
             )
         })?;
         // Where it was; the folders above it are made again if they are gone.
-        let parts = fs(dhpanel_safe_fs::parts(&item.path).map_err(FsError::Path))?;
+        let parts = fs(builtpanel_safe_fs::parts(&item.path).map_err(FsError::Path))?;
         let (name, folders) = parts
             .split_last()
             .ok_or_else(|| (FileErrorCode::InvalidPath, "bad path".to_owned()))?;
@@ -800,9 +800,9 @@ fn remove_tree(dir: &OwnedFd, name: &str, depth: usize, count: &mut u32) -> Out<
         for child in names(&fd)? {
             remove_tree(&fd, &child, depth + 1, count)?;
         }
-        fs(dhpanel_safe_fs::remove(dir, name, true))?;
+        fs(builtpanel_safe_fs::remove(dir, name, true))?;
     } else {
-        fs(dhpanel_safe_fs::remove(dir, name, false))?;
+        fs(builtpanel_safe_fs::remove(dir, name, false))?;
     }
     *count += 1;
     Ok(())
@@ -825,7 +825,7 @@ pub fn place(
     max_bytes: u64,
     input: &mut dyn std::io::Read,
 ) -> Out<u64> {
-    let parts = fs(dhpanel_safe_fs::parts(user_path(dest)?).map_err(FsError::Path))?;
+    let parts = fs(builtpanel_safe_fs::parts(user_path(dest)?).map_err(FsError::Path))?;
     let (name, folders) = parts.split_last().ok_or_else(|| {
         (
             FileErrorCode::InvalidPath,
@@ -861,7 +861,7 @@ pub fn place(
         Err((FileErrorCode::NotFound, _)) => {}
         Err(other) => return Err(other),
     }
-    let tmp = format!(".dh-up-{}", random_hex(8)?);
+    let tmp = format!(".bp-up-{}", random_hex(8)?);
     let fd = sys(rustix::fs::openat(
         &dir,
         tmp.as_str(),
@@ -880,11 +880,11 @@ pub fn place(
     let size = match copied {
         Ok(n) if n <= max_bytes => n,
         Ok(_) => {
-            let _ = dhpanel_safe_fs::remove(&dir, &tmp, false);
+            let _ = builtpanel_safe_fs::remove(&dir, &tmp, false);
             return fail(FileErrorCode::TooLarge, "the file is bigger than the limit");
         }
         Err(e) => {
-            let _ = dhpanel_safe_fs::remove(&dir, &tmp, false);
+            let _ = builtpanel_safe_fs::remove(&dir, &tmp, false);
             // A full disk or a quota shows here.
             return Err((
                 FileErrorCode::Failed,
@@ -904,7 +904,7 @@ pub fn place(
         )
     };
     if let Err(e) = moved {
-        let _ = dhpanel_safe_fs::remove(&dir, &tmp, false);
+        let _ = builtpanel_safe_fs::remove(&dir, &tmp, false);
         return Err(from_fs(FsError::from(e)));
     }
     Ok(size)

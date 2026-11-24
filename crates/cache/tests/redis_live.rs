@@ -1,13 +1,13 @@
 //! Integration tests against a real Redis server.
 //!
 //! Ignored by default. Run with:
-//! `REDIS_URL=redis://:<password>@127.0.0.1:6379/15 cargo test -p dhpanel-cache -- --include-ignored`
+//! `REDIS_URL=redis://:<password>@127.0.0.1:6379/15 cargo test -p builtpanel-cache -- --include-ignored`
 //! Use a dedicated logical database (e.g. /15); keys are prefixed and cleaned up.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::time::Duration;
 
-use dhpanel_cache::RedisHandle;
+use builtpanel_cache::RedisHandle;
 use secrecy::SecretString;
 
 fn handle() -> RedisHandle {
@@ -16,7 +16,7 @@ fn handle() -> RedisHandle {
 }
 
 fn key(name: &str) -> String {
-    format!("dhpanel:test:{}:{name}", std::process::id())
+    format!("builtpanel:test:{}:{name}", std::process::id())
 }
 
 #[tokio::test]

@@ -1,4 +1,4 @@
-# DHPanel
+# Built Panel
 
 Docker-based web hosting control panel: one isolated container stack per customer, managed across multiple Linux servers.
 
@@ -10,4 +10,4 @@ Planning, architecture and the task roadmap live in [docs/](docs/README.md). Sta
 
 Contribution rules for humans and AI agents: [AGENTS.md](AGENTS.md).
 
-> OpenPanel was used only as a feature reference. Its license (CC BY-NC-ND 4.0) forbids copying or porting its code; all DHPanel code is original.
+> OpenPanel was used only as a feature reference. Its license (CC BY-NC-ND 4.0) forbids copying or porting its code; all Built Panel code is original.

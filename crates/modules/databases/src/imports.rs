@@ -27,13 +27,13 @@ use axum::{
     response::Response,
     routing::{get, post, put},
 };
-use dhpanel_database::imports::{self as store, Import, StartError};
-use dhpanel_domain::TenantUsername;
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::Operation;
-use dhpanel_rbac::Principal;
-use dhpanel_session::rfc3339;
-use dhpanel_settings::Scope;
+use builtpanel_database::imports::{self as store, Import, StartError};
+use builtpanel_domain::TenantUsername;
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::Operation;
+use builtpanel_rbac::Principal;
+use builtpanel_session::rfc3339;
+use builtpanel_settings::Scope;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::io::AsyncWriteExt;
@@ -168,7 +168,7 @@ pub struct StartImport {
 
 async fn max_size_mb(state: &DatabasesState) -> Result<i64, AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "databases", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "databases", Scope::Global)
         .await
         .map_err(internal)?;
     Ok(values
@@ -220,7 +220,7 @@ pub async fn start_import(
             "Imports are not set up on this panel (agent.public_url).",
         ));
     }
-    let db = dhpanel_database::databases::get(&state.db, h.tenant.id, database_id)
+    let db = builtpanel_database::databases::get(&state.db, h.tenant.id, database_id)
         .await
         .map_err(internal)?
         .ok_or_else(|| AppError::not_found("database"))?;
@@ -275,7 +275,7 @@ pub async fn start_import(
         ),
         StartError::Database(db) => internal(db),
     })?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("database.import_started", &who, &h, "database_import", id)
             .metadata(serde_json::json!({ "database": db.name, "size_bytes": size })),
@@ -509,11 +509,12 @@ pub async fn complete_import(
         .map_err(internal)?;
     let hash = Sha256::digest(token.as_bytes());
     let tenant_name = TenantUsername::parse(&h.tenant.username).map_err(internal)?;
-    let engine = dhpanel_database::databases::engine_of(&state.db, h.tenant.id, &import.database)
-        .await
-        .map_err(internal)?
-        .and_then(|e| dhpanel_node_protocol::DbEngine::parse(&e))
-        .unwrap_or_default();
+    let engine =
+        builtpanel_database::databases::engine_of(&state.db, h.tenant.id, &import.database)
+            .await
+            .map_err(internal)?
+            .and_then(|e| builtpanel_node_protocol::DbEngine::parse(&e))
+            .unwrap_or_default();
     let mut tx = state.db.begin().await.map_err(internal)?;
     if !store::queue(&mut tx, id, &hash, &sealed)
         .await
@@ -543,7 +544,7 @@ pub async fn complete_import(
         &who,
     )
     .await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("database.import_queued", &who, &h, "database_import", id)
             .metadata(serde_json::json!({ "database": import.database })),
@@ -601,7 +602,7 @@ pub async fn cancel_import(
         .map_err(internal)?
     {
         let _ = tokio::fs::remove_file(spool_path(&state.spool_dir, id)).await;
-        dhpanel_audit::insert(
+        builtpanel_audit::insert(
             &state.db,
             &entry("database.import_cancelled", &who, &h, "database_import", id),
         )
@@ -696,20 +697,20 @@ pub async fn download(
 /// # Errors
 /// Database or file errors.
 pub async fn sweep(
-    db: &dhpanel_database::sqlx::PgPool,
+    db: &builtpanel_database::sqlx::PgPool,
     spool_dir: &FsPath,
 ) -> Result<usize, AppError> {
     store::cancel_abandoned(db, ABANDONED_AFTER_HOURS)
         .await
         .map_err(internal)?;
-    dhpanel_database::exports::expire_due(db)
+    builtpanel_database::exports::expire_due(db)
         .await
         .map_err(internal)?;
     let mut live: std::collections::HashSet<String> = std::collections::HashSet::new();
     for id in store::live_ids(db).await.map_err(internal)? {
         live.insert(format!("{}.dump", id.simple()));
     }
-    for id in dhpanel_database::exports::live_ids(db)
+    for id in builtpanel_database::exports::live_ids(db)
         .await
         .map_err(internal)?
     {

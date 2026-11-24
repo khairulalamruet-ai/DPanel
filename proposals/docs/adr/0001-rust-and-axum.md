@@ -4,7 +4,7 @@ Status: accepted (implemented since phase 00)
 
 ## Context
 The control plane, the node agent, the privileged helper, the license authority and the CLI
-(`dhctl`) are long-running programs that handle other people's sites, credentials and root-adjacent
+(`bpctl`) are long-running programs that handle other people's sites, credentials and root-adjacent
 work. They need memory safety, a small footprint on every node, one toolchain for all of them, and
 types that carry through from the database to the wire.
 

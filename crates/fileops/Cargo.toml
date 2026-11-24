@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-fileops"
+name = "builtpanel-fileops"
 description = "The file manager's operations on one tenant's files (T08.02-T08.06)."
 version.workspace = true
 edition.workspace = true
@@ -11,14 +11,14 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-node-protocol.workspace = true
-dhpanel-safe-fs.workspace = true
+builtpanel-node-protocol.workspace = true
+builtpanel-safe-fs.workspace = true
 rustix = { version = "1", default-features = false, features = ["std", "fs"] }
 serde_json = "1"
 # Archives (T08.05): zip, and tar.gz.
 zip = { version = "9.5.1", default-features = false, features = ["deflate"] }
 tar = { version = "0.4.46", default-features = false }
 # Backups (T09.04): the files of an account as an encrypted tar.zst.
-dhpanel-backup.workspace = true
+builtpanel-backup.workspace = true
 zstd = { version = "0.14", default-features = false }
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }

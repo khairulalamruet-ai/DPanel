@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-settings"
+name = "builtpanel-settings"
 description = "Typed settings: JSON Schema per module, validated before they are stored."
 version.workspace = true
 edition.workspace = true
@@ -11,8 +11,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-database.workspace = true
-dhpanel-http-kit.workspace = true
+builtpanel-database.workspace = true
+builtpanel-http-kit.workspace = true
 # Schema validation. The default features (fetching schemas over HTTP or from
 # files, and the TLS stack that needs) are switched off: a schema is only ever
 # a document we ship, never something fetched.

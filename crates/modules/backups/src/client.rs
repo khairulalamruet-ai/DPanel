@@ -16,16 +16,16 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_backup::{crypto::new_key, schedule::Cron};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_backup::{crypto::new_key, schedule::Cron};
+use builtpanel_database::{
     accounts::DbAccountKind,
     backups::{self as store, Backup, NewRestore, Restore, RestoreError},
     plans, tenants, users,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::Principal;
-use dhpanel_session::rfc3339;
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::Principal;
+use builtpanel_session::rfc3339;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -88,7 +88,7 @@ async fn audit(
     kind: &'static str,
     id: Uuid,
 ) -> Result<(), AppError> {
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &AuditEntry::new(action, Outcome::Success)
             .actor(who.account_id())
@@ -717,7 +717,7 @@ pub struct StartExport {
 
 /// An export.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ExportView {
+pub struct BackupExportView {
     /// Id.
     pub id: Uuid,
     /// The backup it packs.
@@ -736,8 +736,8 @@ pub struct ExportView {
     pub finished_at: Option<String>,
 }
 
-fn export_view(e: store::Export) -> ExportView {
-    ExportView {
+fn export_view(e: store::Export) -> BackupExportView {
+    BackupExportView {
         id: e.id,
         backup_id: e.backup_id,
         status: e.status,
@@ -751,9 +751,9 @@ fn export_view(e: store::Export) -> ExportView {
 
 /// The exports.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ExportList {
+pub struct BackupExportList {
     /// Newest first.
-    pub items: Vec<ExportView>,
+    pub items: Vec<BackupExportView>,
 }
 
 /// Packs a backup into one file (an account export) that another panel can import.
@@ -769,7 +769,7 @@ pub struct ExportList {
     ),
     request_body = StartExport,
     responses(
-        (status = 202, description = "Queued; follow the export until `ready`", body = ExportView),
+        (status = 202, description = "Queued; follow the export until `ready`", body = BackupExportView),
         (status = 404, description = "No such backup", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 409, description = "`backup_not_ready` or `export_active`", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 422, description = "The passphrase is too short", body = ProblemDetails, content_type = "application/problem+json")
@@ -780,10 +780,10 @@ pub async fn start_export(
     who: Principal,
     Path(id): Path<Uuid>,
     Json(req): Json<StartExport>,
-) -> Result<(StatusCode, Json<ExportView>), AppError> {
+) -> Result<(StatusCode, Json<BackupExportView>), AppError> {
     let h = hosting(&state, &who).await?;
     running(&h)?;
-    if req.passphrase.chars().count() < dhpanel_backup::export::MIN_PASSPHRASE {
+    if req.passphrase.chars().count() < builtpanel_backup::export::MIN_PASSPHRASE {
         return Err(bad(
             "passphrase",
             "too_short",
@@ -804,7 +804,7 @@ pub async fn start_export(
         .await
         .map_err(internal)?
         .ok_or_else(|| internal(std::io::Error::other("a backup has no key")))?;
-    let key: [u8; dhpanel_backup::KEY_LEN] = state
+    let key: [u8; builtpanel_backup::KEY_LEN] = state
         .master_key
         .open(&store::key_context(id), &sealed)
         .map_err(internal)?
@@ -816,7 +816,7 @@ pub async fn start_export(
         backup.created_at,
     );
     let header = tokio::task::spawn_blocking(move || {
-        dhpanel_backup::export::Header::new(
+        builtpanel_backup::export::Header::new(
             &id.simple().to_string(),
             &account,
             created_at,
@@ -863,12 +863,12 @@ pub async fn start_export(
     tag = "backups",
     operation_id = "clientListExports",
     security(("session" = [])),
-    responses((status = 200, description = "The exports", body = ExportList))
+    responses((status = 200, description = "The exports", body = BackupExportList))
 )]
 pub async fn list_exports(
     State(state): State<BackupsState>,
     who: Principal,
-) -> Result<Json<ExportList>, AppError> {
+) -> Result<Json<BackupExportList>, AppError> {
     let h = hosting(&state, &who).await?;
     let items = store::exports_of(&state.db, h.tenant.id)
         .await
@@ -876,5 +876,5 @@ pub async fn list_exports(
         .into_iter()
         .map(export_view)
         .collect();
-    Ok(Json(ExportList { items }))
+    Ok(Json(BackupExportList { items }))
 }

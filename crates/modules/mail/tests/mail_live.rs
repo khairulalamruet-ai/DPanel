@@ -10,13 +10,13 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::modules as db;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_mail::{MailState, SETTINGS_SCHEMA, admin_router, client_router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
-use dhpanel_settings::SettingsRegistry;
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::modules as db;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_mail::{MailState, SETTINGS_SCHEMA, admin_router, client_router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_settings::SettingsRegistry;
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -171,7 +171,7 @@ async fn admin(pool: &PgPool, name: &str, roles: &[&str]) -> Uuid {
     .await
     .unwrap();
     for role in roles {
-        dhpanel_database::rbac::assign_role(pool, id, role, None)
+        builtpanel_database::rbac::assign_role(pool, id, role, None)
             .await
             .unwrap();
     }
@@ -346,7 +346,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
     assert_ne!(status, StatusCode::NO_CONTENT);
 
     // The tick: first the server, then the domain, then the rest.
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     assert_eq!(waiting(&pool, "ensure_mail_server").await, 1);
@@ -361,7 +361,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         json!({"type": "mail_server_ready", "created": true}),
     )
     .await;
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let asked = answer(
@@ -370,7 +370,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         json!({"type": "mail_domain_set", "records": [
             {"name": "@", "rtype": "MX", "content": "mail.panel-host.org", "priority": 10},
             {"name": "@", "rtype": "TXT", "content": "v=spf1 mx -all"},
-            {"name": "dhpanel._domainkey", "rtype": "TXT", "content": "v=DKIM1; k=rsa; p=AAAA"},
+            {"name": "builtpanel._domainkey", "rtype": "TXT", "content": "v=DKIM1; k=rsa; p=AAAA"},
             {"name": "_dmarc", "rtype": "TXT", "content": "v=DMARC1; p=quarantine"}
         ]}),
     )
@@ -385,7 +385,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         "the mailbox waits for the domain"
     );
 
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     // The records are in the zone, once.
@@ -400,7 +400,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
     for want in [
         ("@", "MX"),
         ("@", "TXT"),
-        ("dhpanel._domainkey", "TXT"),
+        ("builtpanel._domainkey", "TXT"),
         ("_dmarc", "TXT"),
     ] {
         assert_eq!(
@@ -437,12 +437,12 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         sent[0]
     );
     assert!(!sent[0].to_string().contains(STRONG));
-    let sealed = dhpanel_database::mail::sealed_password_of(&pool, "alice-mail.org", "info")
+    let sealed = builtpanel_database::mail::sealed_password_of(&pool, "alice-mail.org", "info")
         .await
         .unwrap();
     let (id, blob) = sealed.expect("the sealed password waits for the frame");
     let opened = MasterKey::from_bytes(&KEY)
-        .open(&dhpanel_database::mail::password_context(id), &blob)
+        .open(&builtpanel_database::mail::password_context(id), &blob)
         .unwrap();
     assert_eq!(opened, STRONG.as_bytes());
     answer(
@@ -451,7 +451,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         json!({"type": "mail_forwarders_set", "count": 0}),
     )
     .await;
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let (_, list) = e
@@ -464,7 +464,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         .await;
     assert_eq!(list[0]["status"], "active", "{list}");
     assert!(
-        dhpanel_database::mail::sealed_password_of(&pool, "alice-mail.org", "info")
+        builtpanel_database::mail::sealed_password_of(&pool, "alice-mail.org", "info")
             .await
             .unwrap()
             .is_none(),
@@ -481,7 +481,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         )
         .await;
     assert_eq!(status, StatusCode::OK);
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     assert_eq!(
@@ -548,7 +548,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         )
         .await;
     assert_eq!(status, StatusCode::CREATED);
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let domain_asked = answer(
@@ -558,7 +558,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
     )
     .await;
     assert_eq!(domain_asked[0]["catch_all"], "boss@crm.example.org");
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let fwd_asked = answer(
@@ -600,7 +600,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         .await;
     assert_eq!(status, StatusCode::CREATED, "{got}");
     assert_eq!(got["is_active"], false);
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let asked = answer(
@@ -615,7 +615,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         .call(&alice, "DELETE", &format!("{ar}/{box_id}"), None)
         .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let asked = answer(
@@ -656,10 +656,10 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
                    "status": "queued", "queued_at": 1_790_000_000, "retries": 0, "size_bytes": 900})
         })
         .collect();
-    dhpanel_database::mail::save_queue(&pool, node, &Value::Array(items), 600)
+    builtpanel_database::mail::save_queue(&pool, node, &Value::Array(items), 600)
         .await
         .unwrap();
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let (_, domains) = e
@@ -683,7 +683,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
     .unwrap();
     assert_eq!(told, 2, "the owner and the administrator are told");
     // The next domain settings carry the hold to the node.
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let asked = answer(
@@ -729,7 +729,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
     // (The node answers while the panel keeps changing things, so it takes a few rounds.)
     let mut released = false;
     for _ in 0..6 {
-        dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+        builtpanel_mod_mail::tick::tick(&pool, &e.settings)
             .await
             .unwrap();
         let asked = answer(
@@ -757,7 +757,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
     assert_eq!(status, StatusCode::NO_CONTENT);
     let (_, list) = e.call(&alice, "GET", mailboxes, None).await;
     assert_eq!(list.as_array().unwrap().len(), 0, "{list}");
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let dropped = answer(
@@ -779,7 +779,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
                 .unwrap();
         panic!("no drop: {state:?} {ops:?}");
     }
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let left: i64 = sqlx::query_scalar("SELECT count(*) FROM mailboxes")
@@ -799,7 +799,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
         .await
         .unwrap();
     assert_eq!(state, "removing");
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let removed = answer(
@@ -810,7 +810,7 @@ async fn mail_is_made_sent_to_the_node_and_put_in_dns(pool: PgPool) {
     .await;
     assert_eq!(removed.len(), 1);
     assert_eq!(removed[0]["domain"], "alice-mail.org");
-    dhpanel_mod_mail::tick::tick(&pool, &e.settings)
+    builtpanel_mod_mail::tick::tick(&pool, &e.settings)
         .await
         .unwrap();
     let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM mail_domains")
@@ -832,7 +832,7 @@ async fn a_plan_without_email_or_with_a_small_limit_stops_mailboxes(pool: PgPool
         .fetch_one(&pool)
         .await
         .unwrap();
-    dhpanel_database::mail::want_hostname(&pool, node, "mail.limited-host.org")
+    builtpanel_database::mail::want_hostname(&pool, node, "mail.limited-host.org")
         .await
         .unwrap();
     let body =

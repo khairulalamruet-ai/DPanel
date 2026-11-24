@@ -13,8 +13,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { EmailForwarder } from "./types";
 import { CreateForwarderDialog } from "./CreateForwarderDialog";
 import { CornerUpRight, Plus, Trash2, ArrowRight } from "lucide-react";

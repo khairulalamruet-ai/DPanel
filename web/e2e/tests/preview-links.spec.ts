@@ -30,7 +30,7 @@ test.describe("Client Temporary Preview Link UI (T06.14)", () => {
     await expect(page.getByTestId("badge-preview-status-active")).toBeVisible();
     const input = page.getByTestId("input-preview-url");
     await expect(input).toBeVisible();
-    await expect(input).toHaveValue(/https:\/\/prv_[a-z0-9]+\.preview\.dhpanel\.net/);
+    await expect(input).toHaveValue(/https:\/\/prv_[a-z0-9]+\.preview\.builtpanel\.net/);
 
     // Verify copy button
     await expect(page.getByTestId("btn-copy-preview-url")).toBeVisible();

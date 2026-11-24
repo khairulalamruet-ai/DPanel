@@ -7,9 +7,9 @@ import {
   CardContent,
   Button,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
 import {
   CheckCircle2,
   Circle,
@@ -23,8 +23,8 @@ import {
 } from "lucide-react";
 import { AdminQuickstartStep, AdminQuickstartStepId } from "./types";
 
-const STORAGE_DISMISS_KEY = "dhpanel-admin-onboarding-dismissed";
-const STORAGE_COMPLETED_KEY = "dhpanel-admin-onboarding-completed-steps";
+const STORAGE_DISMISS_KEY = "builtpanel-admin-onboarding-dismissed";
+const STORAGE_COMPLETED_KEY = "builtpanel-admin-onboarding-completed-steps";
 
 const INITIAL_STEPS: AdminQuickstartStep[] = [
   {
@@ -198,7 +198,7 @@ export function AdminQuickstartChecklist({ onDismissCallback }: AdminQuickstartC
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             <CardTitle className="text-base font-semibold" data-testid="quickstart-title">
-              {t("onboarding.admin.title", "Getting Started with DHPanel")}
+              {t("onboarding.admin.title", "Getting Started with Built Panel")}
             </CardTitle>
             <Badge variant="outline" className="text-xs font-mono ml-2">
               {completedCount} / {steps.length} {t("onboarding.admin.stepsDone", "completed")} ({progressPercent}%)

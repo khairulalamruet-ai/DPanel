@@ -4,18 +4,22 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use dhpanel_docker_manager::{DockerManager, Name};
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{DockerManager, Name};
+use builtpanel_node_agent::ops::{
     db::{CONTAINER, create_database, ensure_db_server, port},
     pma::{self, CONTAINER as PMA},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
 use mysql_async::prelude::Queryable as _;
 use sha2::{Digest as _, Sha256};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -62,10 +66,10 @@ async fn a_link_signs_one_client_in_once_with_rights_on_one_database() {
     for name in [CONTAINER, PMA] {
         let _ = docker.remove(&Name::parse(name).unwrap(), true).await;
     }
-    for volume in ["dh-db-data", "dh-pma-sessions"] {
+    for volume in ["bp-db-data", "bp-pma-sessions"] {
         let _ = docker.remove_volume(&Name::parse(volume).unwrap()).await;
     }
-    let root_dir = std::env::temp_dir().join(format!("dh-pma-live-{}", std::process::id()));
+    let root_dir = std::env::temp_dir().join(format!("bp-pma-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root_dir);
     std::fs::create_dir_all(&root_dir).unwrap();
     let context = Arc::new(TenantContext {
@@ -82,7 +86,7 @@ async fn a_link_signs_one_client_in_once_with_rights_on_one_database() {
             context.clone(),
             Operation::CreateDatabase {
                 name: name.into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         )
@@ -255,7 +259,7 @@ async fn a_link_signs_one_client_in_once_with_rights_on_one_database() {
     for name in [PMA, CONTAINER] {
         let _ = docker.remove(&Name::parse(name).unwrap(), true).await;
     }
-    for volume in ["dh-db-data", "dh-pma-sessions"] {
+    for volume in ["bp-db-data", "bp-pma-sessions"] {
         let _ = docker.remove_volume(&Name::parse(volume).unwrap()).await;
     }
     let _ = std::fs::remove_dir_all(&root_dir);

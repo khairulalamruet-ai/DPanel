@@ -1,0 +1,8 @@
+slug        = "web-disk"
+name        = "Web Disk"
+category    = "utilities"
+kind        = "unavailable"
+description = "Web Disk (service)."
+license     = "GPL-3.0-only"
+covers      = ["Web Disk (service)"]
+reason      = "not packaged for the panel yet"

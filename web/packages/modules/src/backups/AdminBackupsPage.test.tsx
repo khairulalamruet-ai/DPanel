@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
+import { ToastProvider } from "@builtpanel/ui";
 import { AdminBackupsPage } from "./AdminBackupsPage";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -29,7 +29,7 @@ describe("AdminBackupsPage (T09.10)", () => {
     });
   });
 
-  it("switches to Storage Destinations tab and tests destination connection", async () => {
+  it("switches to Storage Destinations tab and makes a destination the default", async () => {
     renderWithProviders(<AdminBackupsPage />);
 
     await waitFor(() => {
@@ -43,12 +43,12 @@ describe("AdminBackupsPage (T09.10)", () => {
       expect(screen.getByTestId("dest-name-dest_s3_01")).toHaveTextContent("Wasabi EU Cloud");
     });
 
-    const testBtn = screen.getByTestId("btn-test-dest-dest_s3_01");
-    fireEvent.click(testBtn);
+    fireEvent.click(screen.getByTestId("btn-default-dest-dest_s3_01"));
 
-    // Button should show loading or succeed
+    // It is the default now, so its button is off and the old default's is on
     await waitFor(() => {
-      expect(screen.getByTestId("dest-status-dest_s3_01")).toBeInTheDocument();
+      expect(screen.getByTestId("btn-default-dest-dest_s3_01")).toBeDisabled();
+      expect(screen.getByTestId("btn-default-dest-dest_local")).not.toBeDisabled();
     });
   });
 
@@ -73,13 +73,6 @@ describe("AdminBackupsPage (T09.10)", () => {
       target: { value: "backups-production" },
     });
 
-    // Test connection inside dialog
-    fireEvent.click(screen.getByTestId("btn-test-connection"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("test-connection-result")).toBeInTheDocument();
-    });
-
     fireEvent.click(screen.getByTestId("btn-submit-destination"));
 
     await waitFor(() => {
@@ -97,15 +90,15 @@ describe("AdminBackupsPage (T09.10)", () => {
     fireEvent.click(screen.getByTestId("tab-schedules"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("sched-row-sched_01")).toBeInTheDocument();
-      expect(screen.getByTestId("sched-name-sched_01")).toHaveTextContent("Nightly All-Tenant Backup");
+      expect(screen.getByTestId("sched-row-system")).toBeInTheDocument();
+      expect(screen.getByTestId("sched-name-system")).toHaveTextContent("Control plane backup");
     });
 
-    const toggleBtn = screen.getByTestId("btn-toggle-sched-sched_01");
+    const toggleBtn = screen.getByTestId("btn-toggle-sched-system");
     fireEvent.click(toggleBtn);
 
     await waitFor(() => {
-      expect(screen.getByTestId("sched-row-sched_01")).toBeInTheDocument();
+      expect(screen.getByTestId("sched-row-system")).toBeInTheDocument();
     });
   });
 

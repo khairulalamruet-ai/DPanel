@@ -1,0 +1,8 @@
+slug        = "darcs"
+name        = "Darcs"
+category    = "version_control"
+kind        = "unavailable"
+description = "Darcs."
+license     = "GPL-2.0-or-later"
+covers      = ["Darcs"]
+reason      = "an account has no shell on the server to run command-line tools; Git is offered"

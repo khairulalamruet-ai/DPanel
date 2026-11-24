@@ -1,6 +1,6 @@
-//! DHPanel control plane HTTP API (Axum).
+//! Built Panel control plane HTTP API (Axum).
 //!
-//! Startup: load and validate configuration (`dhpanel-config`), initialise
+//! Startup: load and validate configuration (`builtpanel-config`), initialise
 //! telemetry, serve HTTP, shut down gracefully on SIGINT/SIGTERM.
 
 mod app;
@@ -15,9 +15,9 @@ mod system_backup;
 
 use std::{process::ExitCode, sync::Arc};
 
-use dhpanel_config::ControlConfig;
-use dhpanel_http_kit::health::Readiness;
-use dhpanel_observability::{LogFormat, TelemetryConfig};
+use builtpanel_config::ControlConfig;
+use builtpanel_http_kit::health::Readiness;
+use builtpanel_observability::{LogFormat, TelemetryConfig};
 
 const SERVICE: &str = "control-api";
 
@@ -27,8 +27,8 @@ const EXIT_CONFIG: u8 = 78;
 fn telemetry_config(config: &ControlConfig) -> TelemetryConfig {
     let mut t = TelemetryConfig::new(SERVICE);
     t.log_format = match config.log.format {
-        dhpanel_config::LogFormat::Json => LogFormat::Json,
-        dhpanel_config::LogFormat::Pretty => LogFormat::Pretty,
+        builtpanel_config::LogFormat::Json => LogFormat::Json,
+        builtpanel_config::LogFormat::Pretty => LogFormat::Pretty,
     };
     t.log_filter.clone_from(&config.log.filter);
     t.otlp_endpoint.clone_from(&config.log.otlp_endpoint);
@@ -46,7 +46,7 @@ async fn main() -> ExitCode {
         }
     };
 
-    let telemetry = match dhpanel_observability::init(&telemetry_config(&config)) {
+    let telemetry = match builtpanel_observability::init(&telemetry_config(&config)) {
         Ok(t) => t,
         Err(err) => {
             eprintln!("{SERVICE}: failed to initialise telemetry: {err}");
@@ -79,9 +79,9 @@ async fn main() -> ExitCode {
         .database_url()
         .map_err(|e| e.to_string())
         .and_then(|url| {
-            dhpanel_database::connect_lazy(
+            builtpanel_database::connect_lazy(
                 &url,
-                &dhpanel_database::PoolSettings {
+                &builtpanel_database::PoolSettings {
                     max_connections: config.database.max_connections,
                     application_name: SERVICE.to_owned(),
                 },
@@ -100,7 +100,7 @@ async fn main() -> ExitCode {
     let redis = match config
         .redis_url()
         .map_err(|e| e.to_string())
-        .and_then(|url| dhpanel_cache::RedisHandle::new(&url).map_err(|e| e.to_string()))
+        .and_then(|url| builtpanel_cache::RedisHandle::new(&url).map_err(|e| e.to_string()))
     {
         Ok(handle) => handle,
         Err(err) => {
@@ -118,9 +118,11 @@ async fn main() -> ExitCode {
             let db = db.clone();
             Arc::new(move || {
                 let db = db.clone();
-                Box::pin(
-                    async move { dhpanel_database::ping(&db).await.map_err(|e| e.to_string()) },
-                )
+                Box::pin(async move {
+                    builtpanel_database::ping(&db)
+                        .await
+                        .map_err(|e| e.to_string())
+                })
             })
         })
         .with_probe("redis", {
@@ -131,8 +133,8 @@ async fn main() -> ExitCode {
             })
         });
 
-    let hasher = match dhpanel_auth_core::password::PasswordHasher::new(
-        dhpanel_auth_core::password::Argon2Params {
+    let hasher = match builtpanel_auth_core::password::PasswordHasher::new(
+        builtpanel_auth_core::password::Argon2Params {
             memory_kib: config.auth.argon2_memory_kib,
             iterations: config.auth.argon2_iterations,
             parallelism: config.auth.argon2_parallelism,
@@ -145,10 +147,10 @@ async fn main() -> ExitCode {
             return ExitCode::from(EXIT_CONFIG);
         }
     };
-    let sessions = dhpanel_session::SessionStore::new(
+    let sessions = builtpanel_session::SessionStore::new(
         redis.clone(),
         db.clone(),
-        dhpanel_session::SessionConfig {
+        builtpanel_session::SessionConfig {
             idle_timeout: std::time::Duration::from_secs(
                 u64::from(config.auth.session_idle_minutes) * 60,
             ),
@@ -156,14 +158,14 @@ async fn main() -> ExitCode {
                 u64::from(config.auth.session_absolute_hours) * 3600,
             ),
             sudo_window: std::time::Duration::from_secs(u64::from(config.auth.sudo_minutes) * 60),
-            ..dhpanel_session::SessionConfig::default()
+            ..builtpanel_session::SessionConfig::default()
         },
     );
     let master_key = match config
         .master_key()
         .map_err(|e| e.to_string())
         .and_then(|key| {
-            dhpanel_auth_core::secretbox::MasterKey::from_base64(
+            builtpanel_auth_core::secretbox::MasterKey::from_base64(
                 secrecy::ExposeSecret::expose_secret(&key),
             )
             .map_err(|e| format!("secrets.master_key: {e}"))
@@ -181,24 +183,25 @@ async fn main() -> ExitCode {
     let notify_key = master_key.clone();
     let notify_sessions = sessions.clone();
     let minutes = |m: u32| std::time::Duration::from_secs(u64::from(m) * 60);
-    let lockout = |threshold, lock_minutes| dhpanel_cache::lockout::LockoutPolicy {
+    let lockout = |threshold, lock_minutes| builtpanel_cache::lockout::LockoutPolicy {
         threshold,
         window: minutes(config.auth.lockout_window_minutes),
         lockout: minutes(lock_minutes),
     };
     // No CA yet is fine (enrollment then answers 503); a CA that exists but is
     // unusable (expired, wrong key, key readable by others) must not be ignored.
-    let ca = match dhpanel_pki::load_ca_dir(&config.pki.ca_dir, time::OffsetDateTime::now_utc()) {
+    let ca = match builtpanel_pki::load_ca_dir(&config.pki.ca_dir, time::OffsetDateTime::now_utc())
+    {
         Ok(ca) => {
             tracing::info!(fingerprint = ca.fingerprint_sha256(), "node CA loaded");
             Some(Arc::new(ca))
         }
-        Err(dhpanel_pki::PkiError::Io { source, .. })
+        Err(builtpanel_pki::PkiError::Io { source, .. })
             if source.kind() == std::io::ErrorKind::NotFound =>
         {
             tracing::warn!(
                 dir = %config.pki.ca_dir.display(),
-                "no node CA found: node enrollment is switched off; create one with `dhctl ca init`"
+                "no node CA found: node enrollment is switched off; create one with `bpctl ca init`"
             );
             None
         }
@@ -213,24 +216,24 @@ async fn main() -> ExitCode {
         (None, _) => None,
         (Some(_), None) => {
             tracing::error!(
-                "agent.stream_listen is set but there is no node CA: run `dhctl ca init`"
+                "agent.stream_listen is set but there is no node CA: run `bpctl ca init`"
             );
             telemetry.shutdown();
             return ExitCode::from(EXIT_CONFIG);
         }
         (Some(addr), Some(ca)) => {
-            let tls = match dhpanel_node_gateway::tls::load_server_config(
+            let tls = match builtpanel_node_gateway::tls::load_server_config(
                 ca.certificate_pem(),
                 &config.pki.ca_dir,
             ) {
                 Ok(tls) => tls,
                 Err(err) => {
-                    tracing::error!(error = %err, "agent port TLS unusable: create the server certificate with `dhctl ca issue-server`");
+                    tracing::error!(error = %err, "agent port TLS unusable: create the server certificate with `bpctl ca issue-server`");
                     telemetry.shutdown();
                     return ExitCode::from(EXIT_CONFIG);
                 }
             };
-            let listener = match dhpanel_node_gateway::bind(addr).await {
+            let listener = match builtpanel_node_gateway::bind(addr).await {
                 Ok(l) => l,
                 Err(err) => {
                     tracing::error!(%addr, error = %err, "failed to bind the agent port");
@@ -239,17 +242,17 @@ async fn main() -> ExitCode {
             };
             tracing::info!(%addr, "agent port listening (mutual TLS)");
             Some((
-                dhpanel_node_gateway::Gateway::new(
+                builtpanel_node_gateway::Gateway::new(
                     db.clone(),
                     tls,
-                    dhpanel_node_gateway::Settings::default(),
+                    builtpanel_node_gateway::Settings::default(),
                 ),
                 listener,
             ))
         }
     };
-    let operations = dhpanel_operations::Operations::new(db.clone());
-    let nodes = dhpanel_mod_nodes::NodesState {
+    let operations = builtpanel_operations::Operations::new(db.clone());
+    let nodes = builtpanel_mod_nodes::NodesState {
         db: db.clone(),
         sessions: sessions.clone(),
         public_url: config.agent.public_url.as_deref().map(Into::into),
@@ -258,21 +261,21 @@ async fn main() -> ExitCode {
             u64::from(config.agent.enrollment_token_minutes) * 60,
         ),
         ca,
-        limiter: dhpanel_mod_nodes::enrollment_limiter(redis.clone()),
+        limiter: builtpanel_mod_nodes::enrollment_limiter(redis.clone()),
         gateway: gateway.as_ref().map(|(gateway, _)| gateway.clone()),
         operations: operations.clone(),
-        audit: dhpanel_audit::AuditWriter::new(db.clone()),
+        audit: builtpanel_audit::AuditWriter::new(db.clone()),
     };
-    let admin = dhpanel_mod_admin::AdminState {
+    let admin = builtpanel_mod_admin::AdminState {
         db: db.clone(),
         sessions: sessions.clone(),
         hasher: hasher.clone(),
     };
-    let auth = dhpanel_mod_auth::AuthState {
+    let auth = builtpanel_mod_auth::AuthState {
         db: db.clone(),
         sessions,
         hasher,
-        limits: dhpanel_mod_auth::LoginLimits::new(
+        limits: builtpanel_mod_auth::LoginLimits::new(
             redis.clone(),
             lockout(config.auth.lockout_threshold, config.auth.lockout_minutes),
             lockout(
@@ -284,7 +287,12 @@ async fn main() -> ExitCode {
         redis: redis.clone(),
         master_key,
         totp_issuer: config.auth.totp_issuer.trim().into(),
-        audit: dhpanel_audit::AuditWriter::new(db.clone()),
+        root_login: config
+            .auth
+            .root_login_socket
+            .clone()
+            .map(builtpanel_mod_auth::root_login::RootLogin::new),
+        audit: builtpanel_audit::AuditWriter::new(db.clone()),
     };
 
     let handle = telemetry.prometheus_handle();
@@ -309,7 +317,7 @@ async fn main() -> ExitCode {
     // table can be read, and again whenever an administrator switches one.
     // The license: without an authority in the configuration nothing is checked.
     let license =
-        match dhpanel_mod_license::service::LicenseService::new(db.clone(), &config.license) {
+        match builtpanel_mod_license::service::LicenseService::new(db.clone(), &config.license) {
             Ok(l) => Arc::new(l),
             Err(message) => {
                 tracing::error!(%message, "the license settings cannot be used");
@@ -346,7 +354,7 @@ async fn main() -> ExitCode {
     // What the notification channels are to get is sent every half minute (and the inboxes of what
     // is old are cleared once a day).
     tokio::spawn({
-        let state = dhpanel_mod_notifications::NotificationsState {
+        let state = builtpanel_mod_notifications::NotificationsState {
             db: db.clone(),
             sessions: notify_sessions,
             settings: Arc::new(std::sync::OnceLock::from(settings.clone())),
@@ -358,10 +366,11 @@ async fn main() -> ExitCode {
             let mut rounds = 0_u32;
             loop {
                 every.tick().await;
-                dhpanel_mod_notifications::deliver_due(&state).await;
+                builtpanel_mod_notifications::deliver_due(&state).await;
                 rounds = rounds.wrapping_add(1);
                 if rounds % 2880 == 1
-                    && let Err(error) = dhpanel_database::notifications::prune(&state.db, 90).await
+                    && let Err(error) =
+                        builtpanel_database::notifications::prune(&state.db, 90).await
                 {
                     tracing::warn!(%error, "could not clear the old notifications");
                 }
@@ -369,7 +378,7 @@ async fn main() -> ExitCode {
         }
     });
     // Imports that were running when the panel last stopped cannot go on by themselves.
-    if let Err(error) = dhpanel_mod_migration::exec::end_interrupted(&db).await {
+    if let Err(error) = builtpanel_mod_migration::exec::end_interrupted(&db).await {
         tracing::warn!(%error, "could not end the imports that were interrupted");
     }
     // Uploaded dumps nobody needs any more are removed; forgotten uploads are cancelled.
@@ -380,10 +389,11 @@ async fn main() -> ExitCode {
             every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 every.tick().await;
-                if let Err(error) = dhpanel_mod_databases::imports::sweep(&db, &spool_dir).await {
+                if let Err(error) = builtpanel_mod_databases::imports::sweep(&db, &spool_dir).await
+                {
                     tracing::warn!(%error, "could not sweep the import spool");
                 }
-                if let Err(error) = dhpanel_mod_files::transfers::sweep(&db, &spool_dir).await {
+                if let Err(error) = builtpanel_mod_files::transfers::sweep(&db, &spool_dir).await {
                     tracing::warn!(%error, "could not sweep the file transfers");
                 }
             }
@@ -406,10 +416,12 @@ async fn main() -> ExitCode {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0));
-                if let Err(error) = dhpanel_mod_backups::runner::tick(&db, &runner_key, now).await {
+                if let Err(error) =
+                    builtpanel_mod_backups::runner::tick(&db, &runner_key, now).await
+                {
                     tracing::warn!(%error, "the backup runner could not finish a round");
                 }
-                if let Err(error) = dhpanel_mod_backups::transfer::tick(&db, &runner_key).await {
+                if let Err(error) = builtpanel_mod_backups::transfer::tick(&db, &runner_key).await {
                     tracing::warn!(%error, "the node transfers could not finish a round");
                 }
                 system.run().await;
@@ -424,12 +436,19 @@ async fn main() -> ExitCode {
             every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 every.tick().await;
-                if let Err(error) = dhpanel_database::usage::maintain(&db).await {
+                if let Err(error) = builtpanel_database::usage::maintain(&db).await {
                     tracing::warn!(%error, "could not roll up the usage readings");
                 }
             }
         }
     });
+    // The panel's own update: looks for a new release now and then, tells the administrators about
+    // it, and installs it by itself when the settings (system module) say so.
+    tokio::spawn(builtpanel_mod_system::update::run_auto(
+        db.clone(),
+        settings.clone(),
+        std::sync::Arc::new(builtpanel_mod_system::update::UpdateConfig::from_env()),
+    ));
     // What has been in the accounts' trash longer than the setting says goes for good.
     tokio::spawn({
         let (db, settings) = (db.clone(), settings.clone());
@@ -438,10 +457,10 @@ async fn main() -> ExitCode {
             every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 every.tick().await;
-                if let Err(error) = dhpanel_mod_files::purge_trash(&db, &settings).await {
+                if let Err(error) = builtpanel_mod_files::purge_trash(&db, &settings).await {
                     tracing::warn!(%error, "could not queue the trash purges");
                 }
-                if let Err(error) = dhpanel_mod_files::measure_usage(&db).await {
+                if let Err(error) = builtpanel_mod_files::measure_usage(&db).await {
                     tracing::warn!(%error, "could not queue the disk usage measurements");
                 }
             }
@@ -456,7 +475,7 @@ async fn main() -> ExitCode {
             every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 every.tick().await;
-                if let Err(error) = dhpanel_mod_mail::tick::tick(&db, &settings).await {
+                if let Err(error) = builtpanel_mod_mail::tick::tick(&db, &settings).await {
                     tracing::warn!(%error, "the mail tick could not finish a round");
                 }
             }
@@ -470,19 +489,19 @@ async fn main() -> ExitCode {
     // While the license is not good, changes are closed (reading and the license page stay).
     let app = app::router(
         mount.service().layer(axum::middleware::from_fn_with_state(
-            dhpanel_mod_license::Restrictor::new(db.clone()),
-            dhpanel_mod_license::restrict,
+            builtpanel_mod_license::Restrictor::new(db.clone()),
+            builtpanel_mod_license::restrict,
         )),
         trusted_proxies,
     );
     // The event relay: hands outbox events to the enabled modules.
-    let relay = dhpanel_events::Relay::new(
+    let relay = builtpanel_events::Relay::new(
         db.clone(),
         {
             let mount = mount.clone();
             Arc::new(move || mount.active_modules())
         },
-        dhpanel_events::Settings::default(),
+        builtpanel_events::Settings::default(),
     );
 
     // One signal stops the API and the agent port.
@@ -494,11 +513,11 @@ async fn main() -> ExitCode {
     // The dispatcher lives next to the agent port: it needs the live sessions.
     let dispatcher_task = gateway.as_ref().and_then(|(gateway, _)| {
         let results = gateway.take_results()?;
-        let dispatcher = dhpanel_dispatcher::Dispatcher::new(
+        let dispatcher = builtpanel_dispatcher::Dispatcher::new(
             operations.clone(),
             gateway.clone(),
             Some(redis.clone()),
-            dhpanel_dispatcher::Settings::default(),
+            builtpanel_dispatcher::Settings::default(),
         )
         .with_secrets(operation_secrets);
         Some(tokio::spawn(dispatcher.run(results, stopped.clone())))
@@ -514,12 +533,12 @@ async fn main() -> ExitCode {
         Some(url) => match config.powerdns_api_key() {
             Ok(api_key) => {
                 let provider =
-                    dhpanel_dns::powerdns::PowerDns::new(&dhpanel_dns::powerdns::Config {
+                    builtpanel_dns::powerdns::PowerDns::new(&builtpanel_dns::powerdns::Config {
                         url,
                         api_key,
                         server_id: config.dns.powerdns_server_id.clone(),
                     });
-                let sync = dhpanel_dns::sync::ZoneSync::new(
+                let sync = builtpanel_dns::sync::ZoneSync::new(
                     db.clone(),
                     Arc::new(provider),
                     Arc::new(SettingsNameservers {
@@ -551,7 +570,7 @@ async fn main() -> ExitCode {
         }
     };
 
-    tracing::info!(%addr, version = dhpanel_common::VERSION, "{SERVICE} listening");
+    tracing::info!(%addr, version = builtpanel_common::VERSION, "{SERVICE} listening");
     // Connect info gives handlers the peer address (login events, sessions).
     let result = axum::serve(
         listener,
@@ -612,16 +631,16 @@ async fn shutdown_signal() {
 
 /// The name servers the administrator set in the domains module's settings.
 struct SettingsNameservers {
-    registry: Arc<dhpanel_settings::SettingsRegistry>,
-    db: dhpanel_database::sqlx::PgPool,
+    registry: Arc<builtpanel_settings::SettingsRegistry>,
+    db: builtpanel_database::sqlx::PgPool,
 }
 
-impl dhpanel_dns::sync::NameserverSource for SettingsNameservers {
-    fn nameservers(&self) -> dhpanel_dns::BoxFuture<'_, Vec<String>> {
+impl builtpanel_dns::sync::NameserverSource for SettingsNameservers {
+    fn nameservers(&self) -> builtpanel_dns::BoxFuture<'_, Vec<String>> {
         Box::pin(async move {
             // A settings read that fails leaves the zones as they are: no name
             // servers means "do not change the ones the server has".
-            dhpanel_mod_domains::nameservers::configured(&self.registry, &self.db)
+            builtpanel_mod_domains::nameservers::configured(&self.registry, &self.db)
                 .await
                 .unwrap_or_default()
         })

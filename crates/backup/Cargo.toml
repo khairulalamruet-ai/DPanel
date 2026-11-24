@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-backup"
+name = "builtpanel-backup"
 description = "The backup format: parts, manifest, encryption and checks (T09.01, T09.06)."
 version.workspace = true
 edition.workspace = true

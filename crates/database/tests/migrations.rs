@@ -1,12 +1,12 @@
 //! Integration tests against a real PostgreSQL 18 server.
 //!
 //! Ignored by default so `cargo test` works without a database. Run with:
-//! `DATABASE_URL=postgres://<superuser>@127.0.0.1:5432/postgres cargo test -p dhpanel-database -- --include-ignored`
+//! `DATABASE_URL=postgres://<superuser>@127.0.0.1:5432/postgres cargo test -p builtpanel-database -- --include-ignored`
 //! `#[sqlx::test]` creates (and drops) a fresh database per test, applies all
 //! migrations first, so the role in DATABASE_URL needs CREATEDB.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use dhpanel_database::{MIGRATOR, in_transaction, migration_status, ping};
+use builtpanel_database::{MIGRATOR, in_transaction, migration_status, ping};
 use sqlx::PgPool;
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -18,7 +18,7 @@ async fn migrations_create_schema_info_row(pool: PgPool) {
             .fetch_one(&pool)
             .await
             .expect("schema_info row");
-    assert_eq!(product, "dhpanel");
+    assert_eq!(product, "builtpanel");
     assert_eq!(rows, 1);
 }
 

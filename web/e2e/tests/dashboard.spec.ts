@@ -24,7 +24,7 @@ test.describe("Admin Dashboard & Layout Customization (T18.01)", () => {
     await expect(page.getByTestId("stat-blocked-threats")).toContainText("142");
 
     await expect(page.getByTestId("widget-license_status")).toBeVisible();
-    await expect(page.getByTestId("stat-license-tier")).toContainText("DHPanel Enterprise");
+    await expect(page.getByTestId("stat-license-tier")).toContainText("Built Panel Enterprise");
 
     // 3. Open Layout Customization Dialog
     const customizeBtn = page.getByTestId("btn-customize-dashboard");

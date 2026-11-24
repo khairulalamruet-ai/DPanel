@@ -23,7 +23,7 @@
 
 use std::collections::BTreeMap;
 
-use dhpanel_database::{settings as db, sqlx::PgConnection};
+use builtpanel_database::{settings as db, sqlx::PgConnection};
 use jsonschema::Validator;
 use serde_json::{Map, Value};
 use uuid::Uuid;
@@ -141,7 +141,7 @@ pub enum SettingsError {
     Invalid(Vec<Problem>),
     /// The database failed.
     #[error(transparent)]
-    Database(#[from] dhpanel_database::sqlx::Error),
+    Database(#[from] builtpanel_database::sqlx::Error),
 }
 
 /// What a write changed.
@@ -622,8 +622,11 @@ mod tests {
                 .unwrap();
         let r = SettingsRegistry::build(vec![("system".to_owned(), schema)]).unwrap();
         let system = r.module("system").unwrap();
-        assert_eq!(system.properties.len(), 3);
-        assert_eq!(system.properties["panel_name"].default, json!("DHPanel"));
+        assert_eq!(system.properties.len(), 11);
+        assert_eq!(
+            system.properties["panel_name"].default,
+            json!("Built Panel")
+        );
         assert_eq!(system.properties["default_language"].default, json!("en"));
     }
 }

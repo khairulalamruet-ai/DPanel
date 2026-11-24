@@ -11,11 +11,11 @@
 - **DoD:** Unit test আছে। Hash হতে ~২০০ms লাগে (benchmark দিয়ে দেখা)।
 
 ### T01.03 — Bootstrap admin
-- **কী করতে হবে:** `dhctl admin create` → প্রথম super_admin। পাসওয়ার্ড প্রম্পটে দিতে হবে, log-এ কখনো আসবে না।
+- **কী করতে হবে:** `bpctl admin create` → প্রথম super_admin। পাসওয়ার্ড প্রম্পটে দিতে হবে, log-এ কখনো আসবে না।
 - **DoD:** কমান্ড চালানোর পর DB-তে admin থাকে।
 
 ### T01.04 — Session store
-- **কী করতে হবে:** Redis-এ session (random 256-bit), idle ও absolute timeout, cookie `__Host-dh_session; HttpOnly; Secure; SameSite=Strict`।
+- **কী করতে হবে:** Redis-এ session (random 256-bit), idle ও absolute timeout, cookie `__Host-bp_session; HttpOnly; Secure; SameSite=Strict`।
 - **DoD:** Test-এ দেখা যায় মেয়াদ শেষে 401 আসে।
 
 ### T01.05 — Login/logout API

@@ -1,6 +1,6 @@
 # ০১ — OpenPanel সার্ভারের সার্বিক চিত্র
 
-**সার্ভার:** `167.104.101.81` · hostname `dhpanel` · Linux 6.8.0-31-generic (Ubuntu 24.04)
+**সার্ভার:** `167.104.101.81` · hostname `builtpanel` · Linux 6.8.0-31-generic (Ubuntu 24.04)
 **OpenPanel version:** `openpanel/openpanel:2.0.20`
 **বিশ্লেষণের তারিখ:** ২০২৬-১১-১০ (install হয়েছে একই দিন সকালে)
 
@@ -47,7 +47,7 @@
 1. **Admin panel root হিসেবে চলে।** PDF-এ ঠিক এটাই নিষেধ করা হয়েছে ("Do not run the public control plane as root")।
 2. **আসল কাজ হয় bash script-এ।** Go API মূলত `opencli` ডাকে। এতে input validation দুর্বল হওয়ার ঝুঁকি থাকে।
 3. **শুধু একটা server।** Cluster ফিচার (`/cluster/enroll`, `/cluster/fleet`) আছে, কিন্তু ভিত্তি single-node।
-4. **Plan-এর feature set সাধারণ text file দিয়ে নিয়ন্ত্রিত।** এটা ভালো ধারণা। DHPanel-এ এটা database-এ রাখা হবে।
+4. **Plan-এর feature set সাধারণ text file দিয়ে নিয়ন্ত্রিত।** এটা ভালো ধারণা। Built Panel-এ এটা database-এ রাখা হবে।
 5. **Container runtime হলো Podman।** কোড Docker API-compatible, তাই Bollard দিয়ে দুটোই চালানো যাবে।
 
 ## ৪. Admin binary (REA বিশ্লেষণ)

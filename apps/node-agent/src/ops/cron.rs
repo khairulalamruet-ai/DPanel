@@ -18,8 +18,8 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_backup::schedule::Cron;
-use dhpanel_node_protocol::{
+use builtpanel_backup::schedule::Cron;
+use builtpanel_node_protocol::{
     AgentError, CronJobSpec, CronRun, CronStatus, MAX_CRON_JOBS, MAX_CRON_RUNS_PER_REPORT,
     Operation, Output,
 };
@@ -113,7 +113,7 @@ pub async fn sync_cron_jobs(
     else {
         return Err(super::wrong_operation());
     };
-    dhpanel_domain::TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
+    builtpanel_domain::TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
     if jobs.len() > MAX_CRON_JOBS {
         return Err(invalid("too many cron jobs"));
     }
@@ -169,7 +169,7 @@ pub async fn run_cron_job(
     else {
         return Err(super::wrong_operation());
     };
-    dhpanel_domain::TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
+    builtpanel_domain::TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
     check(&job)?;
     let started = start(&context, tenant_id, &username, job);
     Ok(Output::CronStarted { started })
@@ -257,9 +257,9 @@ async fn execute(
         exit_code,
         output,
     };
-    let container = dhpanel_domain::TenantUsername::parse(username)
+    let container = builtpanel_domain::TenantUsername::parse(username)
         .ok()
-        .and_then(|u| dhpanel_tenant_stack::php_container_name(&u).ok());
+        .and_then(|u| builtpanel_tenant_stack::php_container_name(&u).ok());
     let Some(container) = container else {
         return finish(CronStatus::Failed, None, "bad account name".into());
     };
@@ -283,7 +283,7 @@ async fn execute(
             };
             finish(status, code, done.output)
         }
-        Err(dhpanel_docker_manager::DockerError::Unavailable(_)) => finish(
+        Err(builtpanel_docker_manager::DockerError::Unavailable(_)) => finish(
             CronStatus::Timeout,
             None,
             "the command did not finish in time".into(),

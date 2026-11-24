@@ -6,9 +6,9 @@ import {
   CardDescription,
   CardContent,
   Badge,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { ShieldCheck, ShieldAlert, KeyRound, Terminal, CheckCircle2, XCircle } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { SshConfigInfo } from "./types";
 
 interface SshConfigCardProps {

@@ -1,4 +1,4 @@
-//! The release manifest (T17.14): which files make a DHPanel release, with their sizes and
+//! The release manifest (T17.14): which files make a Built Panel release, with their sizes and
 //! SHA-256 hashes, signed with the release key (a key of its own, never the license key). An
 //! installation checks the signature and then every file against it before it installs
 //! anything (T17.15).
@@ -17,7 +17,7 @@ pub const MANIFEST_VERSION: u32 = 1;
 
 /// What is put in front of the manifest before it is signed, so that a signature made for
 /// anything else (an entitlement, say) can never pass as a release manifest.
-const RELEASE_DOMAIN: &[u8] = b"dhpanel.release.v1\n";
+const RELEASE_DOMAIN: &[u8] = b"builtpanel.release.v1\n";
 
 /// The most files a manifest may list.
 pub const MAX_COMPONENTS: usize = 256;
@@ -26,7 +26,7 @@ pub const MAX_COMPONENTS: usize = 256;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Component {
-    /// The file's name (no folders), such as `dhpanel-control-api`.
+    /// The file's name (no folders), such as `builtpanel-control-api`.
     pub name: String,
     /// Its SHA-256, as 64 lower-case hexadecimal digits.
     pub sha256: String,
@@ -289,13 +289,13 @@ mod tests {
 
     fn files() -> Vec<(String, Vec<u8>)> {
         vec![
-            ("dhpanel-worker".into(), b"worker binary".to_vec()),
-            ("dhpanel-control-api".into(), b"api binary".to_vec()),
+            ("builtpanel-worker".into(), b"worker binary".to_vec()),
+            ("builtpanel-control-api".into(), b"api binary".to_vec()),
         ]
     }
 
     fn tmp() -> std::path::PathBuf {
-        let d = std::env::temp_dir().join(format!("dh-release-{}", uuid::Uuid::new_v4()));
+        let d = std::env::temp_dir().join(format!("bp-release-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&d).unwrap();
         d
     }
@@ -305,7 +305,7 @@ mod tests {
         let dir = tmp();
         let k = key(&dir, "release-1");
         let m = ReleaseManifest::build("1.2.3", "abc123", 1_700_000_000, &files()).unwrap();
-        assert_eq!(m.components[0].name, "dhpanel-control-api");
+        assert_eq!(m.components[0].name, "builtpanel-control-api");
         let signed = SignedManifest::sign(&m, &k).unwrap();
         let keys = PublicKeys::new().with("release-1", k.public_key()).unwrap();
         assert_eq!(signed.verify(&keys).unwrap(), m);
@@ -354,14 +354,14 @@ mod tests {
     #[test]
     fn a_file_is_checked_against_its_hash_and_size() {
         let m = ReleaseManifest::build("1.0.0", "abc", 1, &files()).unwrap();
-        m.check_file("dhpanel-worker", b"worker binary").unwrap();
+        m.check_file("builtpanel-worker", b"worker binary").unwrap();
         assert_eq!(
-            m.check_file("dhpanel-worker", b"worker binarx"),
-            Err(ReleaseError::Mismatch("dhpanel-worker".into()))
+            m.check_file("builtpanel-worker", b"worker binarx"),
+            Err(ReleaseError::Mismatch("builtpanel-worker".into()))
         );
         assert_eq!(
-            m.check_file("dhpanel-worker", b"worker binary!"),
-            Err(ReleaseError::Mismatch("dhpanel-worker".into()))
+            m.check_file("builtpanel-worker", b"worker binary!"),
+            Err(ReleaseError::Mismatch("builtpanel-worker".into()))
         );
         assert_eq!(
             m.check_file("other", b"x"),
@@ -372,7 +372,7 @@ mod tests {
     #[test]
     fn a_bad_manifest_is_not_made_or_accepted() {
         let mut dup = files();
-        dup.push(("dhpanel-worker".into(), b"x".to_vec()));
+        dup.push(("builtpanel-worker".into(), b"x".to_vec()));
         assert!(ReleaseManifest::build("1.0.0", "abc", 1, &dup).is_err());
         assert!(ReleaseManifest::build("1.0.0", "abc", 1, &[("../x".into(), vec![1])]).is_err());
         assert!(ReleaseManifest::build("1.0.0", "abc", 1, &[]).is_err());

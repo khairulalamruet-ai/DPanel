@@ -1,0 +1,8 @@
+slug        = "bazaar"
+name        = "Bazaar"
+category    = "version_control"
+kind        = "unavailable"
+description = "Bazaar."
+license     = "GPL-2.0-or-later"
+covers      = ["Bazaar"]
+reason      = "an account has no shell on the server to run command-line tools; Git is offered"

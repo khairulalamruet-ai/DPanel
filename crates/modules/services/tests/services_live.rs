@@ -9,11 +9,11 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::modules as db;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_services::{ServicesState, admin_router, client_router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::modules as db;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_services::{ServicesState, admin_router, client_router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -201,8 +201,8 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                     (
                         "succeeded",
                         Some(json!({"type": "containers", "items": [
-                            {"name": "dh-alice-php", "role": "php", "image": "php:8.4", "state": "running", "status": "Up 2 hours", "created": 1_700_000_000},
-                            {"name": "dh-alice-web", "role": "web", "image": "nginx", "state": "exited", "status": "Exited (0) 1 hour ago", "created": 1_700_000_100}
+                            {"name": "bp-alice-php", "role": "php", "image": "php:8.4", "state": "running", "status": "Up 2 hours", "created": 1_700_000_000},
+                            {"name": "bp-alice-web", "role": "web", "image": "nginx", "state": "exited", "status": "Exited (0) 1 hour ago", "created": 1_700_000_100}
                         ]})),
                         None,
                     )
@@ -210,7 +210,7 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                     (
                         "succeeded",
                         Some(json!({"type": "server_info", "info": {
-                            "hostname": "dhpanel", "os": "Ubuntu 24.04", "kernel": "6.8.0", "timezone": "Etc/UTC",
+                            "hostname": "builtpanel", "os": "Ubuntu 24.04", "kernel": "6.8.0", "timezone": "Etc/UTC",
                             "uptime_seconds": 1000, "memory_total_bytes": 2000, "memory_available_bytes": 1000,
                             "swap_total_bytes": 500, "swap_used_bytes": 100, "ssh": [["permitrootlogin", "yes"]]
                         }})),
@@ -236,13 +236,13 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                     (
                         "succeeded",
                         Some(json!({"type": "processes", "items": [
-                            {"container": "dh-alice-php", "pid": 1, "uid": 10000, "state": "S (sleeping)", "command": "php-fpm: master process"},
-                            {"container": "dh-alice-php", "pid": 17, "uid": 10000, "state": "R (running)", "command": "php-fpm: pool www"}
+                            {"container": "bp-alice-php", "pid": 1, "uid": 10000, "state": "S (sleeping)", "command": "php-fpm: master process"},
+                            {"container": "bp-alice-php", "pid": 17, "uid": 10000, "state": "R (running)", "command": "php-fpm: pool www"}
                         ]})),
                         None,
                     )
                 } else if kind == "signal_process" {
-                    if payload["container"] == "dh-alice-php" && payload["pid"] == 17 {
+                    if payload["container"] == "bp-alice-php" && payload["pid"] == 17 {
                         (
                             "succeeded",
                             Some(
@@ -295,11 +295,11 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                             ),
                         )
                     }
-                } else if payload["name"] == "dh-alice-web" {
+                } else if payload["name"] == "bp-alice-web" {
                     (
                         "succeeded",
                         Some(
-                            json!({"type": "container_restarted", "name": "dh-alice-web", "state": "Up 1 second"}),
+                            json!({"type": "container_restarted", "name": "bp-alice-web", "state": "Up 1 second"}),
                         ),
                         None,
                     )
@@ -340,7 +340,7 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
     .fetch_one(&pool)
     .await
     .unwrap();
-    dhpanel_database::rbac::assign_role(&pool, admin_id, "super_admin", None)
+    builtpanel_database::rbac::assign_role(&pool, admin_id, "super_admin", None)
         .await
         .unwrap();
     let root = e.sign_in(admin_id).await;
@@ -352,7 +352,7 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
     );
     let (status, list) = e.call(&alice, "GET", "/api/v1/client/services").await;
     assert_eq!(status, StatusCode::OK, "{list}");
-    assert_eq!(list["items"][0]["name"], "dh-alice-php");
+    assert_eq!(list["items"][0]["name"], "bp-alice-php");
     assert_eq!(list["items"][1]["state"], "exited");
     // The node was asked about this account, by its id.
     let asked: Value =
@@ -370,13 +370,13 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
         .call(
             &alice,
             "POST",
-            "/api/v1/client/containers/dh-alice-web/restart",
+            "/api/v1/client/containers/bp-alice-web/restart",
         )
         .await;
     assert_eq!(status, StatusCode::OK, "{done}");
     assert_eq!(done["state"], "Up 1 second");
     // What the node refuses is a 404, whatever the reason.
-    for name in ["dh-bob-web", "dh-db"] {
+    for name in ["bp-bob-web", "bp-db"] {
         let (status, _) = e
             .call(
                 &alice,
@@ -401,7 +401,7 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
         .call(
             &alice,
             "POST",
-            "/api/v1/client/containers/dh-alice-web/restart",
+            "/api/v1/client/containers/bp-alice-web/restart",
         )
         .await;
     assert_eq!(
@@ -446,13 +446,13 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
             )
         }
     };
-    let (status, out) = post(&alice, sig("dh-alice-php", 17), json!({})).await;
+    let (status, out) = post(&alice, sig("bp-alice-php", 17), json!({})).await;
     assert_eq!(
         (status, out["outcome"].as_str()),
         (StatusCode::OK, Some("exited")),
         "{out}"
     );
-    let (_, out) = post(&alice, sig("dh-alice-php", 17), json!({"signal": "kill"})).await;
+    let (_, out) = post(&alice, sig("bp-alice-php", 17), json!({"signal": "kill"})).await;
     assert_eq!(out["outcome"], "killed");
     // Process 1, a bad signal: refused before the node is asked. Another container: 404.
     let before: i64 =
@@ -461,11 +461,11 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
             .await
             .unwrap();
     assert_eq!(
-        post(&alice, sig("dh-alice-php", 1), json!({})).await.0,
+        post(&alice, sig("bp-alice-php", 1), json!({})).await.0,
         StatusCode::UNPROCESSABLE_ENTITY
     );
     assert_eq!(
-        post(&alice, sig("dh-alice-php", 17), json!({"signal": "stop"}))
+        post(&alice, sig("bp-alice-php", 17), json!({"signal": "stop"}))
             .await
             .0,
         StatusCode::UNPROCESSABLE_ENTITY
@@ -477,7 +477,7 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
             .unwrap();
     assert_eq!(before, after);
     assert_eq!(
-        post(&alice, sig("dh-bob-php", 17), json!({})).await.0,
+        post(&alice, sig("bp-bob-php", 17), json!({})).await.0,
         StatusCode::NOT_FOUND
     );
     let audited: i64 =
@@ -573,7 +573,7 @@ async fn an_account_lists_and_restarts_its_services_and_nobody_elses(pool: PgPoo
     assert_eq!(status, StatusCode::OK, "{info}");
     assert_eq!(
         (info["hostname"].as_str(), info["ssh"][0]["name"].as_str()),
-        (Some("dhpanel"), Some("permitrootlogin"))
+        (Some("builtpanel"), Some("permitrootlogin"))
     );
     for who in [&alice, &plain] {
         assert_eq!(e.call(who, "GET", &server).await.0, StatusCode::FORBIDDEN);

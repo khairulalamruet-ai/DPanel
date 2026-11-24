@@ -1,8 +1,8 @@
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
-import { resetMockAdminDomains } from "@dhpanel/api";
+import { ToastProvider } from "@builtpanel/ui";
+import { resetMockAdminDomains } from "@builtpanel/api";
 import { AdminDomainsPage } from "./AdminDomainsPage";
 
 function renderWithProviders(ui: React.ReactElement) {

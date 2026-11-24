@@ -5,7 +5,8 @@ members = [
     "apps/worker",
     "apps/node-agent",
     "apps/priv-helper",
-    "apps/dhctl",
+    "apps/root-auth",
+    "apps/bpctl",
     "apps/license-authority",
     "crates/kernel",
     "crates/safe-fs",
@@ -61,68 +62,68 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.19"
 edition = "2024"
 rust-version = "1.100"
-license = "LicenseRef-DHPanel-Proprietary"
+license = "LicenseRef-Built Panel-Proprietary"
 publish = false
-repository = "https://example.invalid/dhpanel"
+repository = "https://example.invalid/builtpanel"
 
 [workspace.dependencies]
 # Internal crates. External dependencies are added here (with a reason in the PR) by later tasks.
-dhpanel-kernel = { path = "crates/kernel" }
-dhpanel-auth-core = { path = "crates/auth-core" }
-dhpanel-cache = { path = "crates/cache" }
-dhpanel-common = { path = "crates/common" }
-dhpanel-config = { path = "crates/config" }
-dhpanel-domain = { path = "crates/domain" }
-dhpanel-safe-fs = { path = "crates/safe-fs" }
-dhpanel-backup = { path = "crates/backup" }
-dhpanel-backup-dest = { path = "crates/backup-dest" }
-dhpanel-system-backup = { path = "crates/system-backup" }
-dhpanel-fileops = { path = "crates/fileops" }
-dhpanel-database = { path = "crates/database" }
-dhpanel-http-kit = { path = "crates/http-kit" }
-dhpanel-observability = { path = "crates/observability" }
-dhpanel-session = { path = "crates/session" }
-dhpanel-rbac = { path = "crates/rbac" }
-dhpanel-audit = { path = "crates/audit" }
-dhpanel-node-protocol = { path = "crates/node-protocol" }
-dhpanel-pki = { path = "crates/pki" }
-dhpanel-web-config = { path = "crates/web-config" }
-dhpanel-mod-auth = { path = "crates/modules/auth" }
-dhpanel-mod-admin = { path = "crates/modules/admin" }
-dhpanel-mod-nodes = { path = "crates/modules/nodes" }
-dhpanel-mod-system = { path = "crates/modules/system" }
-dhpanel-mod-plans = { path = "crates/modules/plans" }
-dhpanel-mod-users = { path = "crates/modules/users" }
-dhpanel-mod-domains = { path = "crates/modules/domains" }
-dhpanel-mod-databases = { path = "crates/modules/databases" }
-dhpanel-mod-files = { path = "crates/modules/files" }
-dhpanel-mod-backups = { path = "crates/modules/backups" }
-dhpanel-catalog = { path = "crates/catalog" }
-dhpanel-license = { path = "crates/license" }
-dhpanel-license-client = { path = "crates/license-client" }
-dhpanel-mod-apps = { path = "crates/modules/apps" }
-dhpanel-mod-license = { path = "crates/modules/license" }
-dhpanel-mod-cron = { path = "crates/modules/cron" }
-dhpanel-mod-mail = { path = "crates/modules/mail" }
-dhpanel-mod-migration = { path = "crates/modules/migration" }
-dhpanel-import = { path = "crates/import" }
-dhpanel-mod-logs = { path = "crates/modules/logs" }
-dhpanel-mod-notifications = { path = "crates/modules/notifications" }
-dhpanel-mod-usage = { path = "crates/modules/usage" }
-dhpanel-mod-services = { path = "crates/modules/services" }
-dhpanel-mod-security = { path = "crates/modules/security" }
-dhpanel-dns = { path = "crates/dns" }
-dhpanel-node-gateway = { path = "crates/node-gateway" }
-dhpanel-operations = { path = "crates/operations" }
-dhpanel-dispatcher = { path = "crates/dispatcher" }
-dhpanel-events = { path = "crates/events" }
-dhpanel-feature-gate = { path = "crates/feature-gate" }
-dhpanel-settings = { path = "crates/settings" }
-dhpanel-tenant-stack = { path = "crates/tenant-stack" }
-dhpanel-docker-manager = { path = "crates/docker-manager" }
+builtpanel-kernel = { path = "crates/kernel" }
+builtpanel-auth-core = { path = "crates/auth-core" }
+builtpanel-cache = { path = "crates/cache" }
+builtpanel-common = { path = "crates/common" }
+builtpanel-config = { path = "crates/config" }
+builtpanel-domain = { path = "crates/domain" }
+builtpanel-safe-fs = { path = "crates/safe-fs" }
+builtpanel-backup = { path = "crates/backup" }
+builtpanel-backup-dest = { path = "crates/backup-dest" }
+builtpanel-system-backup = { path = "crates/system-backup" }
+builtpanel-fileops = { path = "crates/fileops" }
+builtpanel-database = { path = "crates/database" }
+builtpanel-http-kit = { path = "crates/http-kit" }
+builtpanel-observability = { path = "crates/observability" }
+builtpanel-session = { path = "crates/session" }
+builtpanel-rbac = { path = "crates/rbac" }
+builtpanel-audit = { path = "crates/audit" }
+builtpanel-node-protocol = { path = "crates/node-protocol" }
+builtpanel-pki = { path = "crates/pki" }
+builtpanel-web-config = { path = "crates/web-config" }
+builtpanel-mod-auth = { path = "crates/modules/auth" }
+builtpanel-mod-admin = { path = "crates/modules/admin" }
+builtpanel-mod-nodes = { path = "crates/modules/nodes" }
+builtpanel-mod-system = { path = "crates/modules/system" }
+builtpanel-mod-plans = { path = "crates/modules/plans" }
+builtpanel-mod-users = { path = "crates/modules/users" }
+builtpanel-mod-domains = { path = "crates/modules/domains" }
+builtpanel-mod-databases = { path = "crates/modules/databases" }
+builtpanel-mod-files = { path = "crates/modules/files" }
+builtpanel-mod-backups = { path = "crates/modules/backups" }
+builtpanel-catalog = { path = "crates/catalog" }
+builtpanel-license = { path = "crates/license" }
+builtpanel-license-client = { path = "crates/license-client" }
+builtpanel-mod-apps = { path = "crates/modules/apps" }
+builtpanel-mod-license = { path = "crates/modules/license" }
+builtpanel-mod-cron = { path = "crates/modules/cron" }
+builtpanel-mod-mail = { path = "crates/modules/mail" }
+builtpanel-mod-migration = { path = "crates/modules/migration" }
+builtpanel-import = { path = "crates/import" }
+builtpanel-mod-logs = { path = "crates/modules/logs" }
+builtpanel-mod-notifications = { path = "crates/modules/notifications" }
+builtpanel-mod-usage = { path = "crates/modules/usage" }
+builtpanel-mod-services = { path = "crates/modules/services" }
+builtpanel-mod-security = { path = "crates/modules/security" }
+builtpanel-dns = { path = "crates/dns" }
+builtpanel-node-gateway = { path = "crates/node-gateway" }
+builtpanel-operations = { path = "crates/operations" }
+builtpanel-dispatcher = { path = "crates/dispatcher" }
+builtpanel-events = { path = "crates/events" }
+builtpanel-feature-gate = { path = "crates/feature-gate" }
+builtpanel-settings = { path = "crates/settings" }
+builtpanel-tenant-stack = { path = "crates/tenant-stack" }
+builtpanel-docker-manager = { path = "crates/docker-manager" }
 
 # External crates shared by the agent and the control plane's agent port (T02.08).
 # TLS 1.3 only, `ring` backend (the one rcgen and ureq already use); the WebSocket

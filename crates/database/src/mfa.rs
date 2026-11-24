@@ -8,7 +8,7 @@ use sqlx::{PgPool, types::Uuid};
 /// A stored TOTP factor.
 #[derive(Clone)]
 pub struct TotpFactor {
-    /// Encrypted secret (see `dhpanel_auth_core::secretbox`).
+    /// Encrypted secret (see `builtpanel_auth_core::secretbox`).
     pub secret_enc: Vec<u8>,
     /// Whether enrolment was confirmed; unconfirmed factors do not gate login.
     pub confirmed: bool,

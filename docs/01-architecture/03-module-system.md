@@ -1,6 +1,6 @@
 # ০৩ — Module System
 
-DHPanel সম্পূর্ণ module-ভিত্তিক হবে, ধারণাটা OpenPanel-এর `enabled_modules` আর `features/*.txt` থেকে নেওয়া। পার্থক্য হলো এখানে প্রতিটা module backend, frontend আর agent তিন জায়গাতেই একটা স্পষ্ট একক।
+Built Panel সম্পূর্ণ module-ভিত্তিক হবে, ধারণাটা OpenPanel-এর `enabled_modules` আর `features/*.txt` থেকে নেওয়া। পার্থক্য হলো এখানে প্রতিটা module backend, frontend আর agent তিন জায়গাতেই একটা স্পষ্ট একক।
 
 ## Module কী
 একটা module = নিচের অংশগুলোর একটা গুচ্ছ:

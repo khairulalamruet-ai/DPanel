@@ -17,13 +17,13 @@ use axum::{
     extract::{Path, State},
     routing::get,
 };
-use dhpanel_database::{
+use builtpanel_database::{
     domain_policies::{self, DomainPolicy, StoredHeader},
     plans,
 };
-use dhpanel_domain::vhost::{self, Header, MAX_HEADERS, MAX_RATE_LIMIT};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_domain::vhost::{self, Header, MAX_HEADERS, MAX_RATE_LIMIT};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
@@ -152,7 +152,7 @@ async fn set_policy(
     domain_policies::set(&mut tx, id, &stored)
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("domain.policy_changed", who, hosting, id).metadata(serde_json::json!({
             "fqdn": domain.domain.fqdn,

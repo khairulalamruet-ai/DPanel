@@ -1,0 +1,16 @@
+slug        = "wildfly"
+name        = "WildFly"
+category    = "java_tools"
+kind        = "container"
+description = "The Jakarta EE application server (formerly JBoss)."
+license     = "Apache-2.0"
+homepage    = "https://www.wildfly.org"
+covers      = ["WildFly"]
+version     = "42.0.0"
+image       = "quay.io/wildfly/wildfly"
+track       = ""
+tag         = "42.0.0.Final-jdk21"
+digest      = "sha256:2bef87441b6f76d388785d3163e894845655221451196f9d4d5b525262450e8e"
+port        = 8080
+memory_mb   = 768
+usage       = "Applications on host \"wildfly\", port 8080, from inside your account or on a domain."

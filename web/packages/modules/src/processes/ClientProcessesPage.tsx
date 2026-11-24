@@ -14,9 +14,9 @@ import {
   TableBody,
   TableCell,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { listProcesses, signalProcess } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   Terminal,
   Cpu,
@@ -52,12 +52,9 @@ export function ClientProcessesPage() {
   const fetchProcesses = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [listRes, statsRes] = await Promise.all([
-        apiFetch<ProcessItem[]>("/api/v1/client/processes"),
-        apiFetch<ProcessOverviewStats>("/api/v1/client/processes/stats"),
-      ]);
-      setProcesses(listRes);
-      setStats(statsRes);
+      const res = await listProcesses();
+      setProcesses(res.items);
+      setStats(res.stats);
     } catch (err: any) {
       toast({
         title: t("common.error"),
@@ -89,10 +86,9 @@ export function ClientProcessesPage() {
   };
 
   const handleExecuteKill = async (pid: number, signal: ProcessSignal) => {
-    await apiFetch(`/api/v1/client/processes/${encodeURIComponent(pid)}/kill`, {
-      method: "POST",
-      body: JSON.stringify({ pid, signal }),
-    });
+    const target = processes.find((p) => p.pid === pid);
+    if (!target?.container) throw new Error("Unknown process");
+    await signalProcess(target.container, pid, signal);
 
     toast({
       title: t("common.success"),

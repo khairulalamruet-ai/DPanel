@@ -1,0 +1,8 @@
+slug        = "apache"
+name        = "Apache"
+category    = "web_servers"
+kind        = "unavailable"
+description = "A web server."
+license     = "Apache-2.0"
+covers      = ["Apache (service)"]
+reason      = "the panel serves every site with its own web stack; a second web server for the whole account is not offered (run one yourself in Containers if you need it)"

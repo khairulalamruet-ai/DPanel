@@ -1,6 +1,6 @@
 import React from "react";
-import { useTranslation } from "@dhpanel/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from "@dhpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from "@builtpanel/ui";
 import {
   CheckCircle2,
   XCircle,

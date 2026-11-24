@@ -1,0 +1,9 @@
+slug        = "postgresql-older"
+name        = "PostgreSQL (older versions)"
+category    = "databases"
+kind        = "unavailable"
+description = "Earlier PostgreSQL releases."
+license     = "PostgreSQL"
+homepage    = "https://www.postgresql.org"
+covers      = ["PostgreSQL15", "PostgreSQL16", "PostgreSQL17"]
+reason      = "the panel runs one PostgreSQL (18); older major versions are not offered"

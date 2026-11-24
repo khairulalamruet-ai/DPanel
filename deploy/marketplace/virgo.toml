@@ -1,0 +1,8 @@
+slug        = "virgo"
+name        = "Virgo"
+category    = "java_containers"
+kind        = "unavailable"
+description = "An OSGi application server."
+license     = "EPL-1.0"
+covers      = ["Virgo"]
+reason      = "the project is discontinued and no longer gets security fixes"

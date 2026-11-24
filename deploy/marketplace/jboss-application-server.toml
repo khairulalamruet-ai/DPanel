@@ -1,0 +1,8 @@
+slug        = "jboss-application-server"
+name        = "JBoss Application Server"
+category    = "java_tools"
+kind        = "unavailable"
+description = "JBoss Application Server."
+license     = "LGPL-2.1-only"
+covers      = ["JBoss Application Server"]
+reason      = "the project is discontinued and no longer gets security fixes; WildFly is its successor"

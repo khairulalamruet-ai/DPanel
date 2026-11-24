@@ -1,0 +1,8 @@
+slug        = "apache-hive"
+name        = "Apache Hive"
+category    = "databases"
+kind        = "unavailable"
+description = "Apache Hive."
+license     = "Apache-2.0"
+covers      = ["Apache Hive"]
+reason      = "not packaged for the panel yet"

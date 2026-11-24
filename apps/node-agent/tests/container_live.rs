@@ -5,19 +5,23 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, Name, Network};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, Name, Network};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_agent::ops::{
     runtimeapp::{remove_runtime_app, set_runtime_app},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output, RuntimeEnv};
-use dhpanel_tenant_stack::{Allowlist, Role, network_name};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output, RuntimeEnv};
+use builtpanel_tenant_stack::{Allowlist, Role, network_name};
 use uuid::Uuid;
 
 const NGINX: &str = "nginxinc/nginx-unprivileged@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -49,16 +53,16 @@ fn set(name: &str, image: Option<&str>, port: u16, memory_mb: u32) -> Operation 
 #[tokio::test]
 #[ignore = "needs rootless Docker and the network"]
 async fn an_approved_image_runs_on_the_tenants_network_and_goes_away_with_its_data() {
-    let base = std::env::temp_dir().join("dh-container-live");
+    let base = std::env::temp_dir().join("bp-container-live");
     let _ = std::fs::remove_dir_all(&base);
     std::fs::create_dir_all(base.join("state/vhosts")).unwrap();
     let username = TenantUsername::parse("carol").unwrap();
     let docker = DockerManager::connect(&docker_socket()).unwrap();
     let network = network_name(&username).unwrap();
-    for n in ["dh-carol-app-web", "dh-ctprobe"] {
+    for n in ["bp-carol-app-web", "bp-ctprobe"] {
         let _ = docker.remove(&Name::parse(n).unwrap(), true).await;
     }
-    let data = Name::parse("dh-carol-app-web-data").unwrap();
+    let data = Name::parse("bp-carol-app-web-data").unwrap();
     let _ = docker.remove_volume(&data).await;
     docker.ensure_network(&network, false).await.unwrap();
     let context = Arc::new(TenantContext {
@@ -83,7 +87,7 @@ async fn an_approved_image_runs_on_the_tenants_network_and_goes_away_with_its_da
     }
     assert!(
         docker
-            .inspect(&Name::parse("dh-carol-app-web").unwrap())
+            .inspect(&Name::parse("bp-carol-app-web").unwrap())
             .await
             .is_err(),
         "a refused request started nothing"
@@ -95,12 +99,12 @@ async fn an_approved_image_runs_on_the_tenants_network_and_goes_away_with_its_da
     assert_eq!(
         out,
         Output::RuntimeAppSet {
-            host: "dh-carol-app-web:8080".into()
+            host: "bp-carol-app-web:8080".into()
         }
     );
     // It runs from the pinned image, with the memory it was given.
     let info = docker
-        .inspect(&Name::parse("dh-carol-app-web").unwrap())
+        .inspect(&Name::parse("bp-carol-app-web").unwrap())
         .await
         .unwrap();
     assert!(info.running, "{info:?}");
@@ -110,10 +114,10 @@ async fn an_approved_image_runs_on_the_tenants_network_and_goes_away_with_its_da
     let allowlist = Allowlist::embedded().unwrap();
     let node_image = allowlist.runtime_image(Role::Node, "24").unwrap().clone();
     docker.pull_image(&node_image).await.unwrap();
-    let mut probe = ContainerSpec::new(Name::parse("dh-ctprobe").unwrap(), node_image);
+    let mut probe = ContainerSpec::new(Name::parse("bp-ctprobe").unwrap(), node_image);
     probe.entrypoint = vec!["node".into(), "-e".into()];
     probe.command = vec![
-        "fetch('http://dh-carol-app-web:8080/').then(r => r.text()).then(t => console.log('ANSWER=' + t.slice(0, 200))).catch(e => console.log('ERROR=' + e))".into(),
+        "fetch('http://bp-carol-app-web:8080/').then(r => r.text()).then(t => console.log('ANSWER=' + t.slice(0, 200))).catch(e => console.log('ERROR=' + e))".into(),
     ];
     probe.network = Network::Named(network.clone());
     let said = docker
@@ -143,7 +147,7 @@ async fn an_approved_image_runs_on_the_tenants_network_and_goes_away_with_its_da
     assert_eq!(removed, Output::RuntimeAppRemoved { existed: true });
     assert!(
         docker
-            .inspect(&Name::parse("dh-carol-app-web").unwrap())
+            .inspect(&Name::parse("bp-carol-app-web").unwrap())
             .await
             .is_err()
     );

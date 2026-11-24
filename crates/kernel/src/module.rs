@@ -156,6 +156,17 @@ pub enum Event {
         /// Its name.
         name: String,
     },
+    /// The panel's own update: a newer release is on offer (`available`), the automatic update has
+    /// begun (`started`), or an automatic update did not work (`failed`). For the administrators.
+    PanelUpdate {
+        /// The release's version.
+        version: String,
+        /// `available`, `started` or `failed`.
+        stage: String,
+        /// With `available`: in how many days the panel will install it by itself (none when
+        /// automatic updates are off).
+        auto_in_days: Option<i64>,
+    },
     /// A backup failed. Written by a database trigger on the change itself.
     BackupFailed {
         /// The backup.
@@ -183,6 +194,7 @@ impl Event {
             Self::NodeServiceDown { .. } => "node_service_down",
             Self::NodeServiceRecovered { .. } => "node_service_recovered",
             Self::NodeOffline { .. } => "node_offline",
+            Self::PanelUpdate { .. } => "panel_update",
             Self::BackupFailed { .. } => "backup_failed",
         }
     }

@@ -1,7 +1,7 @@
 //! `fetch_file` and `send_file` (T08.07): big files between the control plane and a
 //! tenant's files. The bytes wait in the agent's own folder (`<state>/transfers`)
 //! between the network and the tenant's files; the privileged helper moves them across
-//! as the tenant's own user (see `dhpanel_priv_helper::files`).
+//! as the tenant's own user (see `builtpanel_priv_helper::files`).
 
 use std::{path::PathBuf, sync::Arc};
 
@@ -10,13 +10,13 @@ use super::{
     sqlimport::{download, failed, invalid},
     tenant::{TenantContext, ask_helper},
 };
-use dhpanel_node_protocol::{AgentError, Operation, Output};
-use dhpanel_priv_helper::protocol::Action;
+use builtpanel_node_protocol::{AgentError, Operation, Output};
+use builtpanel_priv_helper::protocol::Action;
 
-/// The folder files wait in (`DHPANEL_AGENT_TRANSFERS`; the helper's `--transfers-dir`
+/// The folder files wait in (`BUILTPANEL_AGENT_TRANSFERS`; the helper's `--transfers-dir`
 /// is the same place). Without it, a folder in the state directory.
 fn transfers_dir(context: &TenantContext) -> PathBuf {
-    std::env::var_os("DHPANEL_AGENT_TRANSFERS").map_or_else(
+    std::env::var_os("BUILTPANEL_AGENT_TRANSFERS").map_or_else(
         || context.vhosts_root.with_file_name("transfers"),
         PathBuf::from,
     )

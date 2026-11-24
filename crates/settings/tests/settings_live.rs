@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use dhpanel_settings::{Scope, SettingsError, SettingsRegistry, get, set};
+use builtpanel_settings::{Scope, SettingsError, SettingsRegistry, get, set};
 use serde_json::{Map, Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;

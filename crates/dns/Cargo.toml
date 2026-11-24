@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-dns"
+name = "builtpanel-dns"
 description = "DNS providers (PowerDNS) and the sync of the panel's zones to them."
 version.workspace = true
 edition.workspace = true
@@ -11,8 +11,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-database.workspace = true
-dhpanel-domain.workspace = true
+builtpanel-database.workspace = true
+builtpanel-domain.workspace = true
 secrecy = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

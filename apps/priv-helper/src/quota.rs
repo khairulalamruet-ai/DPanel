@@ -117,7 +117,7 @@ fn unescape(path: &str) -> String {
 
 /// Where the helper keeps the `xfs_quota` project files (a systemd
 /// `StateDirectory`, so it is writable under the sandbox).
-pub const STATE_DIR: &str = "/var/lib/dhpanel-priv-helper";
+pub const STATE_DIR: &str = "/var/lib/builtpanel-priv-helper";
 
 /// Makes sure the state directory exists (root-only).
 ///
@@ -318,9 +318,9 @@ mod tests {
             [
                 "-x",
                 "-D",
-                "/var/lib/dhpanel-priv-helper/projects",
+                "/var/lib/builtpanel-priv-helper/projects",
                 "-P",
-                "/var/lib/dhpanel-priv-helper/projid",
+                "/var/lib/builtpanel-priv-helper/projid",
                 "-c",
                 "project -s -p /srv/tenants-live/0190b6a2-0000-7000-8000-000000000001 10042",
                 "/srv/tenants-live"

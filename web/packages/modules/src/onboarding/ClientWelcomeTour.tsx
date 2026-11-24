@@ -7,9 +7,9 @@ import {
   CardContent,
   Button,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
 import {
   Globe,
   Folder,
@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { ClientTourStep } from "./types";
 
-const STORAGE_DISMISS_KEY = "dhpanel-client-tour-dismissed";
+const STORAGE_DISMISS_KEY = "builtpanel-client-tour-dismissed";
 
 const CLIENT_TOUR_STEPS: ClientTourStep[] = [
   {
@@ -146,7 +146,7 @@ export function ClientWelcomeTour({ onDismissCallback }: ClientWelcomeTourProps)
           <div className="flex items-center gap-2">
             <Compass className="h-4 w-4 text-primary animate-pulse" />
             <CardTitle className="text-base font-semibold" data-testid="client-tour-title">
-              {t("onboarding.client.tour.title", "Welcome to Your DHPanel Account")}
+              {t("onboarding.client.tour.title", "Welcome to Your Built Panel Account")}
             </CardTitle>
             <Badge variant="outline" className="text-xs font-mono ml-2">
               {currentStepIndex + 1} / {CLIENT_TOUR_STEPS.length}

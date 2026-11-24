@@ -11,10 +11,10 @@
 //! The account's name must be the one the export was made from.
 
 use axum::{Json, extract::State, http::StatusCode};
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{backups as store, tenants};
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_rbac::{Require, permissions::BackupsManage};
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{backups as store, tenants};
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_rbac::{Require, permissions::BackupsManage};
 use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -28,7 +28,7 @@ use crate::{
 /// An export file to turn into a backup.
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
-pub struct StartImport {
+pub struct BackupStartImport {
     /// The hosting account the backup is for.
     pub tenant_id: Uuid,
     /// The destination the file is at (and the backup is made at).
@@ -48,7 +48,7 @@ pub struct StartImport {
     operation_id = "adminStartBackupImport",
     security(("session" = [])),
     params(("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
-    request_body = StartImport,
+    request_body = BackupStartImport,
     responses(
         (status = 202, description = "Queued; the backup is `ready` when the node has unpacked it", body = BackupView),
         (status = 404, description = "No such account, destination or file", body = ProblemDetails, content_type = "application/problem+json"),
@@ -59,7 +59,7 @@ pub struct StartImport {
 pub async fn start_import(
     State(state): State<BackupsState>,
     who: Require<BackupsManage>,
-    Json(req): Json<StartImport>,
+    Json(req): Json<BackupStartImport>,
 ) -> Result<(StatusCode, Json<BackupView>), AppError> {
     let plain_object = req
         .object
@@ -99,7 +99,7 @@ pub async fn start_import(
         req.object.clone(),
     );
     let header = tokio::task::spawn_blocking(move || {
-        let dest = dhpanel_backup_dest::open::open(&kind, &settings, &secrets)
+        let dest = builtpanel_backup_dest::open::open(&kind, &settings, &secrets)
             .map_err(|e| AppError::conflict("destination_unavailable", e.to_string()))?;
         let input = dest
             .get(&object)
@@ -113,10 +113,10 @@ pub async fn start_import(
             .and_then(Result::ok)
             .filter(|e| {
                 e.path()
-                    .is_ok_and(|p| p.to_string_lossy() == dhpanel_backup::export::HEADER)
+                    .is_ok_and(|p| p.to_string_lossy() == builtpanel_backup::export::HEADER)
             })
             .ok_or_else(|| bad("object", "not_an_export", "This is not an export file."))?;
-        dhpanel_backup::export::Header::from_reader(first)
+        builtpanel_backup::export::Header::from_reader(first)
             .map_err(|_| bad("object", "not_an_export", "This is not an export file."))
     })
     .await
@@ -158,7 +158,7 @@ pub async fn start_import(
         }
         store::ImportError::Database(db) => internal(db),
     })?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &AuditEntry::new("backup.import_started", Outcome::Success)
             .actor(who.0.account_id())

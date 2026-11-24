@@ -30,8 +30,8 @@
         "bn": "phpMyAdmin-এর ঠিকানা"
       },
       "x-description": {
-        "en": "The host name phpMyAdmin is served under on every node (pma.example.com). Its DNS record must point at the nodes' web servers, and the web server must be able to reach the phpMyAdmin container (the node's network dh-pma-net). Empty turns phpMyAdmin off.",
-        "bn": "প্রতিটি নোডে যে host name-এ phpMyAdmin চলবে (pma.example.com)। এর DNS record নোডের web server-এ যেতে হবে, আর web server-কে phpMyAdmin container-এ পৌঁছাতে হবে (নোডের dh-pma-net network)। ফাঁকা থাকলে phpMyAdmin বন্ধ।"
+        "en": "The host name phpMyAdmin is served under on every node (pma.example.com). Its DNS record must point at the nodes' web servers, and the web server must be able to reach the phpMyAdmin container (the node's network bp-pma-net). Empty turns phpMyAdmin off.",
+        "bn": "প্রতিটি নোডে যে host name-এ phpMyAdmin চলবে (pma.example.com)। এর DNS record নোডের web server-এ যেতে হবে, আর web server-কে phpMyAdmin container-এ পৌঁছাতে হবে (নোডের bp-pma-net network)। ফাঁকা থাকলে phpMyAdmin বন্ধ।"
       }
     },
     "phpmyadmin_session_minutes": {

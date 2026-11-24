@@ -8,11 +8,11 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { changeFtpPassword } from "./api";
 import { Key, RefreshCw } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
-import { FtpAccount, ChangeFtpPasswordPayload } from "./types";
+import { useTranslation } from "@builtpanel/i18n";
+import { FtpAccount } from "./types";
 
 interface ChangeFtpPasswordDialogProps {
   open: boolean;
@@ -48,12 +48,7 @@ export function ChangeFtpPasswordDialog({
 
     try {
       setIsSubmitting(true);
-      await apiFetch(`/api/v1/client/ftp/accounts/${encodeURIComponent(account.id)}/password`, {
-        method: "PUT",
-        body: JSON.stringify({
-          password,
-        } as ChangeFtpPasswordPayload),
-      });
+      await changeFtpPassword(account.id, password);
 
       toast({
         title: t("common.success"),

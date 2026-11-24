@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-safe-fs"
+name = "builtpanel-safe-fs"
 description = "File access that cannot leave a directory: paths below a root, no symlinks, no magic links (T08.01)."
 version.workspace = true
 edition.workspace = true

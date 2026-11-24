@@ -7,7 +7,7 @@
 //! ledger key carries the version, so the tick can run as often as it likes: asking again
 //! for the same version finds the same operation.
 
-use dhpanel_database::{
+use builtpanel_database::{
     dns,
     mail::{self as store, MailDomain, Mailbox},
     notifications::{self, NewNotification},
@@ -16,9 +16,9 @@ use dhpanel_database::{
     sqlx::PgPool,
     tenants,
 };
-use dhpanel_domain::{DnsRecord, DnsRecordType, check_dns_conflicts};
-use dhpanel_node_protocol::{MailDnsRecord, MailForwarder, MailQueueItem, Operation, Output};
-use dhpanel_settings::SettingsRegistry;
+use builtpanel_domain::{DnsRecord, DnsRecordType, check_dns_conflicts};
+use builtpanel_node_protocol::{MailDnsRecord, MailForwarder, MailQueueItem, Operation, Output};
+use builtpanel_settings::SettingsRegistry;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -33,7 +33,7 @@ const OP_TTL_SECS: i32 = 6 * 3600;
 pub enum TickError {
     /// The database.
     #[error(transparent)]
-    Database(#[from] dhpanel_database::sqlx::Error),
+    Database(#[from] builtpanel_database::sqlx::Error),
     /// The ledger refused an operation.
     #[error("cannot queue an operation: {0}")]
     Queue(String),

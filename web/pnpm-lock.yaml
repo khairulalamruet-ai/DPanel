@@ -71,22 +71,22 @@ importers:
 
   apps/admin:
     dependencies:
-      '@dhpanel/api':
+      '@builtpanel/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@dhpanel/auth':
+      '@builtpanel/auth':
         specifier: workspace:*
         version: link:../../packages/auth
-      '@dhpanel/i18n':
+      '@builtpanel/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
-      '@dhpanel/modules':
+      '@builtpanel/modules':
         specifier: workspace:*
         version: link:../../packages/modules
-      '@dhpanel/shell':
+      '@builtpanel/shell':
         specifier: workspace:*
         version: link:../../packages/shell
-      '@dhpanel/ui':
+      '@builtpanel/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@tanstack/react-router':
@@ -123,22 +123,22 @@ importers:
 
   apps/client:
     dependencies:
-      '@dhpanel/api':
+      '@builtpanel/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@dhpanel/auth':
+      '@builtpanel/auth':
         specifier: workspace:*
         version: link:../../packages/auth
-      '@dhpanel/i18n':
+      '@builtpanel/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
-      '@dhpanel/modules':
+      '@builtpanel/modules':
         specifier: workspace:*
         version: link:../../packages/modules
-      '@dhpanel/shell':
+      '@builtpanel/shell':
         specifier: workspace:*
         version: link:../../packages/shell
-      '@dhpanel/ui':
+      '@builtpanel/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@tanstack/react-router':
@@ -200,13 +200,13 @@ importers:
 
   packages/auth:
     dependencies:
-      '@dhpanel/api':
+      '@builtpanel/api':
         specifier: workspace:*
         version: link:../api
-      '@dhpanel/i18n':
+      '@builtpanel/i18n':
         specifier: workspace:*
         version: link:../i18n
-      '@dhpanel/ui':
+      '@builtpanel/ui':
         specifier: workspace:*
         version: link:../ui
       lucide-react:
@@ -244,16 +244,16 @@ importers:
 
   packages/modules:
     dependencies:
-      '@dhpanel/api':
+      '@builtpanel/api':
         specifier: workspace:*
         version: link:../api
-      '@dhpanel/auth':
+      '@builtpanel/auth':
         specifier: workspace:*
         version: link:../auth
-      '@dhpanel/i18n':
+      '@builtpanel/i18n':
         specifier: workspace:*
         version: link:../i18n
-      '@dhpanel/ui':
+      '@builtpanel/ui':
         specifier: workspace:*
         version: link:../ui
       lucide-react:
@@ -272,13 +272,13 @@ importers:
 
   packages/shell:
     dependencies:
-      '@dhpanel/auth':
+      '@builtpanel/auth':
         specifier: workspace:*
         version: link:../auth
-      '@dhpanel/i18n':
+      '@builtpanel/i18n':
         specifier: workspace:*
         version: link:../i18n
-      '@dhpanel/ui':
+      '@builtpanel/ui':
         specifier: workspace:*
         version: link:../ui
       lucide-react:

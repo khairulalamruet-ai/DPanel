@@ -8,14 +8,14 @@
 //!
 //! Ranges: `1h` (1-minute points), `24h` (5 minutes), `7d` (1 hour), `30d` (6 hours). CPU is
 //! in thousandths of a CPU (1000 = one whole CPU), bytes are per point. The numbers come from
-//! the node readings of `dhpanel_database::usage` (one a minute).
+//! the node readings of `builtpanel_database::usage` (one a minute).
 
 use axum::{
     Json, Router,
     extract::{FromRef, Path, Query, State},
     routing::get,
 };
-use dhpanel_database::{
+use builtpanel_database::{
     accounts::DbAccountKind,
     plans,
     sqlx::PgPool,
@@ -23,12 +23,12 @@ use dhpanel_database::{
     usage::{self, Rank},
     users,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require,
     permissions::{NodesRead, UsersRead},
 };
-use dhpanel_session::SessionStore;
+use builtpanel_session::SessionStore;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use uuid::Uuid;

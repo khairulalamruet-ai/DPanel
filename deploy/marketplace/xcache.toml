@@ -1,0 +1,8 @@
+slug        = "xcache"
+name        = "Xcache"
+category    = "modules"
+kind        = "unavailable"
+description = "A PHP module."
+license     = "PHP-3.01"
+covers      = ["Xcache (library)"]
+reason      = "the project is discontinued and no longer gets security fixes"

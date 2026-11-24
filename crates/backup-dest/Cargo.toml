@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-backup-dest"
+name = "builtpanel-backup-dest"
 description = "Where backups are stored: a folder, an S3-compatible bucket, an SFTP folder (T09.03)."
 version.workspace = true
 edition.workspace = true
@@ -11,7 +11,7 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-safe-fs.workspace = true
+builtpanel-safe-fs.workspace = true
 hmac = "0.13"
 serde_json = "1"
 sha2 = "0.11"

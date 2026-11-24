@@ -1,182 +1,195 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { apiFetch } from "@dhpanel/api";
-import { useToast } from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { useNavigate } from "@tanstack/react-router";
-import { ShieldCheck, AlertCircle } from "lucide-react";
-import { SecurityOverviewResponse, SecurityIssue } from "./types";
-import { SecurityScoreCard } from "./SecurityScoreCard";
-import { SecurityStatsGrid } from "./SecurityStatsGrid";
-import { SecurityIssuesList } from "./SecurityIssuesList";
-import { FixIssueDialog } from "./FixIssueDialog";
+import React, { useCallback, useEffect, useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input, useToast } from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import * as sec from "./api";
+
+function useLoad<T>(load: () => Promise<T>) {
+  const [data, setData] = useState<T | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const reload = useCallback(async () => {
+    try {
+      setData(await load());
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [load]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+  return { data, error, reload };
+}
+
+function useRun(reload: () => Promise<void>) {
+  const { toast } = useToast();
+  return async (fn: () => Promise<unknown>, ok: string) => {
+    try {
+      await fn();
+      toast({ title: ok });
+      await reload();
+    } catch (e) {
+      toast({ title: e instanceof Error ? e.message : String(e), variant: "destructive" });
+    }
+  };
+}
+
+function ImagesCard() {
+  const { t } = useTranslation();
+  const { data, error, reload } = useLoad(sec.listImages);
+  const run = useRun(reload);
+  const [open, setOpen] = useState<string | null>(null);
+  const [findings, setFindings] = useState<sec.ImageFinding[]>([]);
+
+  const show = async (reference: string) => {
+    setOpen(reference);
+    try {
+      setFindings(await sec.imageFindings(reference));
+    } catch {
+      setFindings([]);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("securityCenter.images", "Container images")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {data?.map((i) => (
+          <div key={i.reference} className="space-y-1 rounded border p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-mono text-sm">
+                {i.reference} {i.update_available && <Badge variant="outline">{t("securityCenter.newer", "newer version")}</Badge>}
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => run(() => sec.scanImage(i.reference), t("securityCenter.asked", "Scan asked for"))}>
+                  {t("securityCenter.scan", "Scan")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => void show(i.reference)}>
+                  {t("securityCenter.findings", "Findings")}
+                </Button>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {i.role} · critical {i.critical ?? "-"} · high {i.high ?? "-"} · medium {i.medium ?? "-"} · low {i.low ?? "-"}
+              {i.scanned_at ? ` · ${new Date(i.scanned_at * 1000).toLocaleString()}` : ""}
+            </div>
+            {open === i.reference &&
+              (findings.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t("securityCenter.noFindings", "No findings.")}</p>
+              ) : (
+                findings.map((f) => (
+                  <div key={f.id + f.package} className="text-xs">
+                    {f.severity}: {f.id} {f.package} {f.installed}{f.fixed ? ` → ${f.fixed}` : ""} — {f.title}
+                  </div>
+                ))
+              ))}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function UserAgentsCard() {
+  const { t } = useTranslation();
+  const { data, error, reload } = useLoad(sec.listUserAgents);
+  const run = useRun(reload);
+  const [pattern, setPattern] = useState("");
+  const [note, setNote] = useState("");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("securityCenter.userAgents", "Refused User-Agents")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {data?.map((u) => (
+          <div key={u.id} className="flex items-center justify-between gap-2 border-b py-1 text-sm">
+            <span className="font-mono">{u.pattern} {u.note && <span className="text-xs text-muted-foreground">{u.note}</span>}</span>
+            <Button size="sm" variant="outline" onClick={() => run(() => sec.removeUserAgent(u.id), t("securityCenter.removed", "Removed"))}>
+              {t("common.delete", "Delete")}
+            </Button>
+          </div>
+        ))}
+        <form
+          className="flex flex-wrap gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void run(() => sec.addUserAgent(pattern, note), t("securityCenter.added", "Added")).then(() => {
+              setPattern("");
+              setNote("");
+            });
+          }}
+        >
+          <Input placeholder="BadBot" value={pattern} onChange={(e) => setPattern(e.target.value)} required />
+          <Input placeholder={t("securityCenter.note", "note")} value={note} onChange={(e) => setNote(e.target.value)} />
+          <Button type="submit">{t("securityCenter.add", "Add")}</Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AdvisoriesCard() {
+  const { t } = useTranslation();
+  const { data, error, reload } = useLoad(sec.listAdvisories);
+  const run = useRun(reload);
+  const [form, setForm] = useState({ component: "plugin", slug: "", fixed_in: "", severity: "high", title: "", reference: "" });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("securityCenter.advisories", "WordPress advisories")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {data?.map((a) => (
+          <div key={a.id} className="flex items-center justify-between gap-2 border-b py-1 text-sm">
+            <span>
+              <Badge variant="outline">{a.severity}</Badge> {a.component}/{a.slug} &lt; {a.fixed_in} — {a.title}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => run(() => sec.removeAdvisory(a.id), t("securityCenter.removed", "Removed"))}>
+              {t("common.delete", "Delete")}
+            </Button>
+          </div>
+        ))}
+        <form
+          className="grid gap-2 sm:grid-cols-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void run(() => sec.addAdvisory(form), t("securityCenter.added", "Added"));
+          }}
+        >
+          <select className="rounded border bg-background px-2 text-sm" value={form.component} onChange={(e) => setForm({ ...form, component: e.target.value })}>
+            <option value="core">core</option>
+            <option value="plugin">plugin</option>
+            <option value="theme">theme</option>
+          </select>
+          <Input placeholder="slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required />
+          <Input placeholder="fixed in (6.4.2)" value={form.fixed_in} onChange={(e) => setForm({ ...form, fixed_in: e.target.value })} required />
+          <select className="rounded border bg-background px-2 text-sm" value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value })}>
+            {["low", "medium", "high", "critical"].map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <Input placeholder={t("securityCenter.title", "title")} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+          <Input placeholder="reference URL" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
+          <Button type="submit">{t("securityCenter.add", "Add")}</Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function AdminSecurityCenterPage() {
   const { t } = useTranslation();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-
-  const [data, setData] = useState<SecurityOverviewResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [selectedIssueForFix, setSelectedIssueForFix] = useState<SecurityIssue | null>(null);
-
-  const fetchOverview = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setIsError(false);
-      const res = await apiFetch<SecurityOverviewResponse>("/api/v1/admin/security/overview");
-      setData(res);
-    } catch {
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchOverview();
-  }, [fetchOverview]);
-
-  const handleRescan = async () => {
-    try {
-      setIsScanning(true);
-      const res = await apiFetch<SecurityOverviewResponse>("/api/v1/admin/security/scan", {
-        method: "POST",
-      });
-      setData(res);
-      toast({
-        title: t("securityCenter.scanCompleteTitle", "Security Audit Completed"),
-        description: t("securityCenter.scanCompleteDesc", "System posture re-evaluated across all security domains."),
-      });
-    } catch {
-      toast({
-        title: t("common.error", "Error"),
-        description: t("securityCenter.scanFailed", "Failed to trigger security audit."),
-        variant: "destructive",
-      });
-    } finally {
-      setIsScanning(false);
-    }
-  };
-
-  const handleExecuteFix = async (issueId: string) => {
-    try {
-      const res = await apiFetch<{ success: boolean; issue: SecurityIssue }>(
-        `/api/v1/admin/security/issues/${issueId}/fix`,
-        {
-          method: "POST",
-        }
-      );
-
-      toast({
-        title: t("securityCenter.fixSuccessTitle", "Remediation Applied"),
-        description: t("securityCenter.fixSuccessDesc", "Security issue was successfully mitigated."),
-      });
-
-      // Update state locally
-      setData((old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          stats: {
-            ...old.stats,
-            score: Math.min(100, old.stats.score + 5),
-            resolved_count: old.stats.resolved_count + 1,
-            critical_count:
-              res.issue.severity === "critical"
-                ? Math.max(0, old.stats.critical_count - 1)
-                : old.stats.critical_count,
-            warning_count:
-              res.issue.severity === "warning"
-                ? Math.max(0, old.stats.warning_count - 1)
-                : old.stats.warning_count,
-          },
-          issues: old.issues.map((i) =>
-            i.id === res.issue.id ? { ...i, status: "resolved" } : i
-          ),
-        };
-      });
-    } catch {
-      toast({
-        title: t("common.error", "Error"),
-        description: t("securityCenter.fixFailed", "Could not apply remediation action."),
-        variant: "destructive",
-      });
-      throw new Error("Fix failed");
-    }
-  };
-
-  const handleNavigate = (path: string) => {
-    navigate({ to: path });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center" data-testid="security-center-loading">
-        <p className="text-sm text-muted-foreground">{t("common.loading", "Loading...")}</p>
-      </div>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <div className="p-8 text-center" data-testid="security-center-error">
-        <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-2" />
-        <p className="font-semibold">{t("securityCenter.loadError", "Failed to load security center data.")}</p>
-        <button
-          onClick={() => fetchOverview()}
-          className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded text-xs font-semibold"
-        >
-          {t("common.retry", "Retry")}
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6" data-testid="admin-security-center-page">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="security-center-title">
-            <ShieldCheck className="h-7 w-7 text-primary" />
-            {t("securityCenter.title", "Security Center")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t(
-              "securityCenter.subtitle",
-              "Centralized posture analysis: failed logins, WAF blocks, malware events, 2FA enforcement, SSL expiration, and container CVEs."
-            )}
-          </p>
-        </div>
-      </div>
-
-      {/* Security Health Score Card */}
-      <SecurityScoreCard
-        stats={data.stats}
-        onRescan={handleRescan}
-        isScanning={isScanning}
-      />
-
-      {/* 6 Core Security Domain KPIs (T11.11 requirement) */}
-      <SecurityStatsGrid stats={data.stats} />
-
-      {/* Detected Issues List with One-Click "Fix" Links (T11.11 DoD) */}
-      <SecurityIssuesList
-        issues={data.issues}
-        onOpenFix={(issue) => setSelectedIssueForFix(issue)}
-        onNavigateTo={handleNavigate}
-      />
-
-      {/* Remediate Action Dialog */}
-      <FixIssueDialog
-        open={Boolean(selectedIssueForFix)}
-        issue={selectedIssueForFix}
-        onClose={() => setSelectedIssueForFix(null)}
-        onExecuteFix={handleExecuteFix}
-        onNavigateTo={handleNavigate}
-      />
+    <div className="space-y-4" data-testid="admin-security-center-page">
+      <h1 className="text-2xl font-bold">{t("securityCenter.title", "Security center")}</h1>
+      <ImagesCard />
+      <UserAgentsCard />
+      <AdvisoriesCard />
     </div>
   );
 }

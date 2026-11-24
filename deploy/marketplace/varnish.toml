@@ -1,0 +1,16 @@
+slug        = "varnish"
+name        = "Varnish Cache"
+category    = "utilities"
+kind        = "container"
+description = "An HTTP cache placed in front of a web application."
+license     = "BSD-2-Clause"
+homepage    = "https://varnish-cache.org"
+covers      = ["Varnish", "Varnish Extension"]
+version     = "8.0.2"
+image       = "docker.io/library/varnish"
+track       = "8"
+tag         = "8.0.2"
+digest      = "sha256:d5cb7840d6dcff465031e52276f2113675cc8edbea1cc8d7e6f8e6cfd0f522a3"
+port        = 8080
+memory_mb   = 256
+usage       = "Host \"varnish\", port 8080, from inside your account."

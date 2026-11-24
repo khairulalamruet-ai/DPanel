@@ -13,13 +13,13 @@ use axum::{
     http::{HeaderMap, HeaderValue, header},
     response::Response,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::accounts::{self, DbAccountKind, DbAccountStatus};
-use dhpanel_http_kit::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::accounts::{self, DbAccountKind, DbAccountStatus};
+use builtpanel_http_kit::{
     AppError, ProblemDetails,
     client_ip::{client_ip, rate_limit_key},
 };
-use dhpanel_session::{NewSession, RevokeReason, cookie_value, set_cookie};
+use builtpanel_session::{NewSession, RevokeReason, cookie_value, set_cookie};
 use serde::Deserialize;
 use std::net::SocketAddr;
 use utoipa::ToSchema;
@@ -56,7 +56,7 @@ fn invalid_token() -> AppError {
     request_body = RedeemRequest,
     responses(
         (status = 200, description = "Session cookie set; `impersonated_by` names the administrator", body = Me,
-         headers(("set-cookie" = String, description = "__Host-dh_session=…; Path=/; Secure; HttpOnly; SameSite=Strict"))),
+         headers(("set-cookie" = String, description = "__Host-bp_session=…; Path=/; Secure; HttpOnly; SameSite=Strict"))),
         (status = 401, description = "`invalid_token`: unknown, expired or already used", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 403, description = "`account_unavailable`: the account cannot be signed in to now", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 422, description = "Malformed body", body = ProblemDetails, content_type = "application/problem+json"),

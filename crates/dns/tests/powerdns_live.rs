@@ -1,18 +1,18 @@
 //! The PowerDNS provider against a real PowerDNS (deploy/dev/compose.yml).
-//! Ignored by default. Set DHPANEL_TEST_PDNS_URL (for example http://127.0.0.1:8053)
-//! and DHPANEL_TEST_PDNS_KEY, then run with `--include-ignored`; skips without them.
+//! Ignored by default. Set BUILTPANEL_TEST_PDNS_URL (for example http://127.0.0.1:8053)
+//! and BUILTPANEL_TEST_PDNS_KEY, then run with `--include-ignored`; skips without them.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use dhpanel_dns::{
+use builtpanel_dns::{
     DnsError, DnsProvider, ZoneSpec,
     powerdns::{Config, PowerDns},
 };
-use dhpanel_domain::DnsRecord;
+use builtpanel_domain::DnsRecord;
 use secrecy::SecretString;
 
 fn server() -> Option<PowerDns> {
-    let url = std::env::var("DHPANEL_TEST_PDNS_URL").ok()?;
-    let key = std::env::var("DHPANEL_TEST_PDNS_KEY").ok()?;
+    let url = std::env::var("BUILTPANEL_TEST_PDNS_URL").ok()?;
+    let key = std::env::var("BUILTPANEL_TEST_PDNS_KEY").ok()?;
     Some(PowerDns::new(&Config {
         url,
         api_key: SecretString::from(key),
@@ -31,7 +31,7 @@ async fn zones_and_every_kind_of_record_round_trip_through_a_real_server() {
         eprintln!("skipped: no PowerDNS configured");
         return;
     };
-    let zone = format!("dhpanel-live-{}.test", std::process::id());
+    let zone = format!("builtpanel-live-{}.test", std::process::id());
     let spec = ZoneSpec {
         name: zone.clone(),
         nameservers: vec![format!("ns1.{zone}."), format!("ns2.{zone}.")],
@@ -104,7 +104,7 @@ async fn a_wrong_key_is_refused_and_a_dead_address_is_unavailable() {
         return;
     };
     let _ = good;
-    let url = std::env::var("DHPANEL_TEST_PDNS_URL").unwrap();
+    let url = std::env::var("BUILTPANEL_TEST_PDNS_URL").unwrap();
     let wrong = PowerDns::new(&Config {
         url,
         api_key: SecretString::from("not-the-key".to_owned()),
@@ -128,7 +128,7 @@ async fn changing_the_name_servers_updates_the_zone_the_server_already_has() {
         eprintln!("skipped: no PowerDNS configured");
         return;
     };
-    let zone = format!("dhpanel-ns-{}.test", std::process::id());
+    let zone = format!("builtpanel-ns-{}.test", std::process::id());
     let spec = |ns: &[&str]| ZoneSpec {
         name: zone.clone(),
         nameservers: ns.iter().map(|n| (*n).to_owned()).collect(),
@@ -137,8 +137,8 @@ async fn changing_the_name_servers_updates_the_zone_the_server_already_has() {
     // The apex NS records are the server's own, so they are not in the record list;
     // read them from the server's API directly.
     let apex_ns = || async {
-        let url = std::env::var("DHPANEL_TEST_PDNS_URL").unwrap();
-        let key = std::env::var("DHPANEL_TEST_PDNS_KEY").unwrap();
+        let url = std::env::var("BUILTPANEL_TEST_PDNS_URL").unwrap();
+        let key = std::env::var("BUILTPANEL_TEST_PDNS_KEY").unwrap();
         let zone = zone.clone();
         tokio::task::spawn_blocking(move || {
             let mut r = ureq::get(&format!("{url}/api/v1/servers/localhost/zones/{zone}."))
@@ -176,7 +176,7 @@ async fn changing_the_name_servers_updates_the_zone_the_server_already_has() {
 #[tokio::test]
 #[ignore = "needs the machine's DNS and the internet"]
 async fn the_system_resolver_finds_the_name_servers_of_a_real_domain() {
-    use dhpanel_dns::resolver::{NsResolver, SystemResolver};
+    use builtpanel_dns::resolver::{NsResolver, SystemResolver};
     let resolver = SystemResolver::new();
     let found = resolver.lookup_ns("example.com").await.unwrap();
     assert!(!found.is_empty(), "example.com has name servers");
@@ -188,7 +188,7 @@ async fn the_system_resolver_finds_the_name_servers_of_a_real_domain() {
     );
     // A name that does not exist has none; that is an answer, not a failure.
     let none = resolver
-        .lookup_ns("surely-this-does-not-exist-dhpanel.invalid")
+        .lookup_ns("surely-this-does-not-exist-builtpanel.invalid")
         .await
         .unwrap();
     assert!(none.is_empty(), "{none:?}");

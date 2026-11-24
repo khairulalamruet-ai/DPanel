@@ -18,13 +18,13 @@ use axum::{
     extract::{Path, State},
     routing::post,
 };
-use dhpanel_database::operations::{self, Status};
-use dhpanel_domain::{Fqdn, TenantUsername};
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_node_protocol::Operation;
-use dhpanel_rbac::Principal;
-use dhpanel_session::rfc3339;
-use dhpanel_settings::Scope;
+use builtpanel_database::operations::{self, Status};
+use builtpanel_domain::{Fqdn, TenantUsername};
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_node_protocol::Operation;
+use builtpanel_rbac::Principal;
+use builtpanel_session::rfc3339;
+use builtpanel_settings::Scope;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use utoipa::ToSchema;
@@ -58,7 +58,7 @@ pub struct PhpMyAdminLink {
 
 async fn settings(state: &DatabasesState) -> Result<(String, u32), AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "databases", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "databases", Scope::Global)
         .await
         .map_err(internal)?;
     let host = values
@@ -114,7 +114,7 @@ pub async fn open_phpmyadmin(
         })?
         .as_str()
         .to_owned();
-    let db = dhpanel_database::databases::get(&state.db, h.tenant.id, database_id)
+    let db = builtpanel_database::databases::get(&state.db, h.tenant.id, database_id)
         .await
         .map_err(internal)?
         .ok_or_else(|| AppError::not_found("database"))?;
@@ -124,7 +124,7 @@ pub async fn open_phpmyadmin(
             "A web client for PostgreSQL databases is not available yet; connect with your own client.",
         ));
     }
-    if super::server_for(&state, &h, dhpanel_node_protocol::DbEngine::Mysql)
+    if super::server_for(&state, &h, builtpanel_node_protocol::DbEngine::Mysql)
         .await?
         .is_some()
     {
@@ -139,7 +139,7 @@ pub async fn open_phpmyadmin(
             "The database is not ready yet.",
         ));
     }
-    let recent: i64 = dhpanel_database::sqlx::query_scalar(
+    let recent: i64 = builtpanel_database::sqlx::query_scalar(
         "SELECT count(*) FROM operations
          WHERE tenant_id = $1 AND kind = 'open_phpmyadmin' AND created_at > now() - interval '10 minutes'",
     )
@@ -192,7 +192,7 @@ pub async fn open_phpmyadmin(
         &who,
     )
     .await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("database.phpmyadmin", &who, &h, "database", db.id)
             .metadata(serde_json::json!({ "database": db.name })),

@@ -20,12 +20,12 @@ use axum::{
     extract::{Path, State},
     routing::{get, post},
 };
-use dhpanel_database::{dns as store, sqlx::PgPool};
-use dhpanel_dns::resolver::{Assessment, assess};
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_rbac::{Principal, Require, permissions::DomainsRead};
-use dhpanel_session::rfc3339;
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_database::{dns as store, sqlx::PgPool};
+use builtpanel_dns::resolver::{Assessment, assess};
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_rbac::{Principal, Require, permissions::DomainsRead};
+use builtpanel_session::rfc3339;
+use builtpanel_settings::{Scope, SettingsRegistry};
 use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -62,7 +62,7 @@ pub async fn configured(
     pool: &PgPool,
 ) -> Result<Vec<String>, AppError> {
     let mut conn = pool.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(registry, &mut conn, "domains", Scope::Global)
+    let values = builtpanel_settings::get(registry, &mut conn, "domains", Scope::Global)
         .await
         .map_err(internal)?;
     let mut out: Vec<String> = Vec::new();
@@ -214,7 +214,7 @@ impl From<&Assessment> for StoredAssessment {
 
 impl From<StoredAssessment> for Assessment {
     fn from(s: StoredAssessment) -> Self {
-        use dhpanel_dns::resolver::Delegation;
+        use builtpanel_dns::resolver::Delegation;
         let status = match s.status.as_str() {
             "ok" => Delegation::Ok,
             "partial" => Delegation::Partial,

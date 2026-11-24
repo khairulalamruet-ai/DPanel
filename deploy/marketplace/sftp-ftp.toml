@@ -1,0 +1,9 @@
+slug        = "sftp-ftp"
+name        = "FTP and SFTP"
+category    = "utilities"
+kind        = "builtin"
+description = "File transfer for every account (SFTP and FTPS)."
+license     = "AGPL-3.0-only"
+homepage    = "https://sftpgo.com"
+covers      = ["Pure-FTPd"]
+provided_by = "Files > FTP accounts"

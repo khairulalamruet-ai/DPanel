@@ -1,8 +1,8 @@
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
-import { resetMockModules } from "@dhpanel/api";
+import { ToastProvider } from "@builtpanel/ui";
+import { resetMockModules } from "@builtpanel/api";
 import { ModuleManagerPage } from "./ModuleManagerPage";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -78,7 +78,7 @@ describe("ModuleManagerPage (T03.12)", () => {
     });
 
     const searchInput = screen.getByPlaceholderText(/Search modules|মডিউল খুঁজুন/i);
-    fireEvent.change(searchInput, { target: { value: "PowerDNS" } });
+    fireEvent.change(searchInput, { target: { value: "dns" } });
 
     expect(screen.getByText("(dns)")).toBeInTheDocument();
     expect(screen.queryByText("(db-mysql)")).not.toBeInTheDocument();

@@ -1,0 +1,13 @@
+# Rotation of the firewall's audit log (see coraza.conf). The web server keeps the file open, so it
+# is copied and emptied rather than moved. The agent reads the last 8 MiB, so a week is plenty.
+/var/log/caddy/waf-audit.log {
+    weekly
+    rotate 4
+    size 50M
+    missingok
+    notifempty
+    copytruncate
+    compress
+    delaycompress
+    create 0640 caddy caddy
+}

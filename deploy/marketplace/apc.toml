@@ -1,0 +1,8 @@
+slug        = "apc"
+name        = "APC"
+category    = "modules"
+kind        = "unavailable"
+description = "A PHP module."
+license     = "PHP-3.01"
+covers      = ["APC (library)"]
+reason      = "the project is discontinued and no longer gets security fixes"

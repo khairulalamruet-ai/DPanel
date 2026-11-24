@@ -8,7 +8,7 @@
 
 use std::collections::BTreeSet;
 
-use dhpanel_domain::{Fqdn, TenantUsername, databases::full_name};
+use builtpanel_domain::{Fqdn, TenantUsername, databases::full_name};
 use serde::{Deserialize, Serialize};
 
 use crate::model::{DomainKind, Engine, ImportModel, Warning};

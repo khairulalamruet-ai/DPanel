@@ -1,0 +1,8 @@
+slug        = "stack-lemp"
+name        = "LEMP Stack"
+category    = "stacks"
+kind        = "builtin"
+description = "A web server, a database and a language together; every account has this combination ready."
+license     = "MIT"
+covers      = ["LEMP Stack"]
+provided_by = "Websites (nginx, PHP, MariaDB) and Applications (Node.js)"

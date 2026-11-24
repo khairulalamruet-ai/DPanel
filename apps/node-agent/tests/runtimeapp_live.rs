@@ -5,17 +5,21 @@
 
 use std::{os::unix::fs::PermissionsExt as _, path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, Name, Network, VolumeMount};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, Name, Network, VolumeMount};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_agent::ops::{
     runtimeapp::{remove_runtime_app, set_runtime_app},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output, RuntimeEnv};
-use dhpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output, RuntimeEnv};
+use builtpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -33,7 +37,7 @@ fn open_dir(path: &std::path::Path) {
 #[tokio::test]
 #[ignore = "needs rootless Docker and the network"]
 async fn node_and_python_applications_run_on_the_tenants_network_and_answer_by_name() {
-    let base = std::env::temp_dir().join("dh-runtime-live");
+    let base = std::env::temp_dir().join("bp-runtime-live");
     let _ = std::fs::remove_dir_all(&base);
     let tenants = base.join("tenants");
     let state = base.join("state");
@@ -73,10 +77,10 @@ async fn node_and_python_applications_run_on_the_tenants_network_and_answer_by_n
     let network = network_name(&username).unwrap();
     let files = files_volume_name(&username).unwrap();
     for n in [
-        "dh-alice-app-api",
-        "dh-alice-app-py",
-        "dh-alice-app-broken",
-        "dh-rtprobe",
+        "bp-alice-app-api",
+        "bp-alice-app-py",
+        "bp-alice-app-broken",
+        "bp-rtprobe",
     ] {
         let _ = docker.remove(&Name::parse(n).unwrap(), true).await;
     }
@@ -146,7 +150,7 @@ async fn node_and_python_applications_run_on_the_tenants_network_and_answer_by_n
         let docker = DockerManager::connect(&docker_socket()).unwrap();
         let (network, files, node_image) = (network.clone(), files.clone(), node_image.clone());
         async move {
-            let mut spec = ContainerSpec::new(Name::parse("dh-rtprobe").unwrap(), node_image);
+            let mut spec = ContainerSpec::new(Name::parse("bp-rtprobe").unwrap(), node_image);
             spec.entrypoint = vec!["node".into(), "-e".into()];
             spec.command = vec![format!(
                 "fetch('{url}').then(r => r.text()).then(t => console.log('ANSWER=' + t)).catch(e => console.log('ERROR=' + e))"
@@ -169,7 +173,7 @@ async fn node_and_python_applications_run_on_the_tenants_network_and_answer_by_n
         let docker = DockerManager::connect(&docker_socket()).unwrap();
         let (network, files, node_image) = (network.clone(), files.clone(), node_image.clone());
         async move {
-            let mut spec = ContainerSpec::new(Name::parse("dh-rtprobe").unwrap(), node_image);
+            let mut spec = ContainerSpec::new(Name::parse("bp-rtprobe").unwrap(), node_image);
             spec.entrypoint = vec!["node".into(), "-e".into()];
             spec.command = vec![format!(
                 "const u = new URL('{url}'); require('http').get({{host: u.hostname, port: u.port, path: '/', headers: {{host: '{host}'}}}}, r => {{ let t = ''; r.on('data', d => t += d); r.on('end', () => console.log('ANSWER=' + t)); }}).on('error', e => console.log('ERROR=' + e));"
@@ -198,10 +202,10 @@ async fn node_and_python_applications_run_on_the_tenants_network_and_answer_by_n
     assert_eq!(
         out,
         Output::RuntimeAppSet {
-            host: "dh-alice-app-api:3000".into()
+            host: "bp-alice-app-api:3000".into()
         }
     );
-    let said = ask("http://dh-alice-app-api:3000/".into()).await;
+    let said = ask("http://bp-alice-app-api:3000/".into()).await;
     // The value reached the program intact (quotes, `$(…)` and backticks are only characters),
     // it listens on the port it was given, and it runs in its own folder.
     assert!(
@@ -228,25 +232,25 @@ async fn node_and_python_applications_run_on_the_tenants_network_and_answer_by_n
     assert_eq!(
         out,
         Output::RuntimeAppSet {
-            host: "dh-alice-app-py:5000".into()
+            host: "bp-alice-app-py:5000".into()
         }
     );
-    let said = ask("http://dh-alice-app-py:5000/".into()).await;
+    let said = ask("http://bp-alice-app-py:5000/".into()).await;
     assert!(said.contains("ANSWER=python:5000:/app/py"), "{said}");
 
     // The web server of the account passes a domain on to the application: the site file made
     // for a domain with a running application, in a real nginx on the same network.
-    let domain = dhpanel_domain::Fqdn::parse("app.example.com").unwrap();
-    let rendered = dhpanel_domain::vhost::render(
-        dhpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE,
-        &dhpanel_domain::vhost::Site {
+    let domain = builtpanel_domain::Fqdn::parse("app.example.com").unwrap();
+    let rendered = builtpanel_domain::vhost::render(
+        builtpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE,
+        &builtpanel_domain::vhost::Site {
             domain: &domain,
             aliases: &[],
-            docroot: &dhpanel_domain::Docroot::default(),
-            php_upstream: "dh-alice-php:9000",
-            policy: &dhpanel_domain::vhost::Policy::default(),
+            docroot: &builtpanel_domain::Docroot::default(),
+            php_upstream: "bp-alice-php:9000",
+            policy: &builtpanel_domain::vhost::Policy::default(),
             custom: "",
-            proxy: Some("dh-alice-app-api:3000"),
+            proxy: Some("bp-alice-app-api:3000"),
         },
     )
     .unwrap();
@@ -258,9 +262,9 @@ async fn node_and_python_applications_run_on_the_tenants_network_and_answer_by_n
         std::fs::Permissions::from_mode(0o644),
     )
     .unwrap();
-    let conf_volume = Name::parse("dh-alice-testconf").unwrap();
+    let conf_volume = Name::parse("bp-alice-testconf").unwrap();
     let _ = docker
-        .remove(&Name::parse("dh-alice-testweb").unwrap(), true)
+        .remove(&Name::parse("bp-alice-testweb").unwrap(), true)
         .await;
     let _ = docker.remove_volume(&conf_volume).await;
     docker
@@ -268,7 +272,7 @@ async fn node_and_python_applications_run_on_the_tenants_network_and_answer_by_n
         .await
         .unwrap();
     let mut web = ContainerSpec::new(
-        Name::parse("dh-alice-testweb").unwrap(),
+        Name::parse("bp-alice-testweb").unwrap(),
         allowlist.current(Role::Web).unwrap().clone(),
     );
     web.writable_root = true;
@@ -281,23 +285,23 @@ async fn node_and_python_applications_run_on_the_tenants_network_and_answer_by_n
     docker.pull_image(&web.image).await.unwrap();
     docker.create_container(&web).await.unwrap();
     docker
-        .start(&Name::parse("dh-alice-testweb").unwrap())
+        .start(&Name::parse("bp-alice-testweb").unwrap())
         .await
         .unwrap();
     tokio::time::sleep(Duration::from_secs(3)).await;
-    let said = ask_with_host("http://dh-alice-testweb:8080/".into(), "app.example.com").await;
+    let said = ask_with_host("http://bp-alice-testweb:8080/".into(), "app.example.com").await;
     assert!(
         said.contains("ANSWER=node:"),
         "through the web server: {said}"
     );
     let _ = docker
-        .remove(&Name::parse("dh-alice-testweb").unwrap(), true)
+        .remove(&Name::parse("bp-alice-testweb").unwrap(), true)
         .await;
     let _ = docker.remove_volume(&conf_volume).await;
 
     // Another tenant's network does not reach it: nothing is published on the host either.
     let published = docker
-        .inspect(&Name::parse("dh-alice-app-api").unwrap())
+        .inspect(&Name::parse("bp-alice-app-api").unwrap())
         .await
         .unwrap();
     assert!(published.published.is_empty(), "{published:?}");

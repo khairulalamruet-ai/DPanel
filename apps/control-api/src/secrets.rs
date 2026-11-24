@@ -1,16 +1,16 @@
 //! Secrets that are kept out of the operations ledger and put back when an
 //! operation is sent to its node (T05.17b).
 
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_dispatcher::SecretFiller;
-use dhpanel_node_protocol::Operation;
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_dispatcher::SecretFiller;
+use builtpanel_node_protocol::Operation;
 
 /// Fills in the private keys of uploaded certificates: the ledger has the chain
 /// only, the sealed key is opened here, for the one frame that carries it. A
 /// certificate that was removed since the operation was queued is left out (the
 /// removal has already queued the next operation).
 pub fn operation_secrets(
-    db: dhpanel_database::sqlx::PgPool,
+    db: builtpanel_database::sqlx::PgPool,
     master_key: MasterKey,
 ) -> SecretFiller {
     std::sync::Arc::new(move |op| {
@@ -28,18 +28,18 @@ pub fn operation_secrets(
                     engine,
                     dedicated,
                 } => {
-                    let found = dhpanel_database::databases::sealed_password_of(&db, &name)
+                    let found = builtpanel_database::databases::sealed_password_of(&db, &name)
                         .await
                         .map_err(|_| "could not read a database password".to_owned())?;
                     let password = match found {
                         Some((user_id, sealed)) => {
                             let bytes = master_key
                                 .open(
-                                    &dhpanel_database::databases::password_context(user_id),
+                                    &builtpanel_database::databases::password_context(user_id),
                                     &sealed,
                                 )
                                 .map_err(|_| "a database password does not open".to_owned())?;
-                            Some(dhpanel_node_protocol::DbPassword(
+                            Some(builtpanel_node_protocol::DbPassword(
                                 String::from_utf8(bytes)
                                     .map_err(|_| "a database password is not text".to_owned())?,
                             ))
@@ -64,18 +64,18 @@ pub fn operation_secrets(
                     quota_bytes,
                     aliases,
                 } => {
-                    let found = dhpanel_database::mail::sealed_password_of(&db, &domain, &local)
+                    let found = builtpanel_database::mail::sealed_password_of(&db, &domain, &local)
                         .await
                         .map_err(|_| "could not read a mailbox password".to_owned())?;
                     let password = match found {
                         Some((mailbox_id, sealed)) => {
                             let bytes = master_key
                                 .open(
-                                    &dhpanel_database::mail::password_context(mailbox_id),
+                                    &builtpanel_database::mail::password_context(mailbox_id),
                                     &sealed,
                                 )
                                 .map_err(|_| "a mailbox password does not open".to_owned())?;
-                            Some(dhpanel_node_protocol::DbPassword(
+                            Some(builtpanel_node_protocol::DbPassword(
                                 String::from_utf8(bytes)
                                     .map_err(|_| "a mailbox password is not text".to_owned())?,
                             ))
@@ -109,19 +109,20 @@ pub fn operation_secrets(
                     let open = |name: &'static str| {
                         let (db, master_key) = (db.clone(), master_key.clone());
                         async move {
-                            let sealed = dhpanel_database::apps::sealed_secret(&db, app_id, name)
-                                .await
-                                .map_err(|_| "could not read an install secret".to_owned())?
-                                .ok_or_else(|| "this install has ended".to_owned())?;
+                            let sealed =
+                                builtpanel_database::apps::sealed_secret(&db, app_id, name)
+                                    .await
+                                    .map_err(|_| "could not read an install secret".to_owned())?
+                                    .ok_or_else(|| "this install has ended".to_owned())?;
                             let bytes = master_key
                                 .open(
-                                    &dhpanel_database::apps::secret_context(app_id, name),
+                                    &builtpanel_database::apps::secret_context(app_id, name),
                                     &sealed,
                                 )
                                 .map_err(|_| "an install secret does not open".to_owned())?;
                             String::from_utf8(bytes)
                                 .map_err(|_| "an install secret is not text".to_owned())
-                                .map(dhpanel_node_protocol::DbPassword)
+                                .map(builtpanel_node_protocol::DbPassword)
                         }
                     };
                     return Ok(Operation::InstallWordPress {
@@ -156,19 +157,20 @@ pub fn operation_secrets(
                     let open = |name: &'static str| {
                         let (db, master_key) = (db.clone(), master_key.clone());
                         async move {
-                            let sealed = dhpanel_database::apps::sealed_secret(&db, app_id, name)
-                                .await
-                                .map_err(|_| "could not read an install secret".to_owned())?
-                                .ok_or_else(|| "this install has ended".to_owned())?;
+                            let sealed =
+                                builtpanel_database::apps::sealed_secret(&db, app_id, name)
+                                    .await
+                                    .map_err(|_| "could not read an install secret".to_owned())?
+                                    .ok_or_else(|| "this install has ended".to_owned())?;
                             let bytes = master_key
                                 .open(
-                                    &dhpanel_database::apps::secret_context(app_id, name),
+                                    &builtpanel_database::apps::secret_context(app_id, name),
                                     &sealed,
                                 )
                                 .map_err(|_| "an install secret does not open".to_owned())?;
                             String::from_utf8(bytes)
                                 .map_err(|_| "an install secret is not text".to_owned())
-                                .map(dhpanel_node_protocol::DbPassword)
+                                .map(builtpanel_node_protocol::DbPassword)
                         }
                     };
                     let database_password = if database.is_some() {
@@ -207,17 +209,19 @@ pub fn operation_secrets(
                 } => {
                     let password = if kind == "redis" {
                         let sealed =
-                            dhpanel_database::cache_instances::sealed_password(&db, instance_id)
+                            builtpanel_database::cache_instances::sealed_password(&db, instance_id)
                                 .await
                                 .map_err(|_| "could not read a cache password".to_owned())?
                                 .ok_or_else(|| "this cache server has no password".to_owned())?;
                         let bytes = master_key
                             .open(
-                                &dhpanel_database::cache_instances::password_context(instance_id),
+                                &builtpanel_database::cache_instances::password_context(
+                                    instance_id,
+                                ),
                                 &sealed,
                             )
                             .map_err(|_| "a cache password does not open".to_owned())?;
-                        Some(dhpanel_node_protocol::DbPassword(
+                        Some(builtpanel_node_protocol::DbPassword(
                             String::from_utf8(bytes)
                                 .map_err(|_| "a cache password is not text".to_owned())?,
                         ))
@@ -251,7 +255,7 @@ pub fn operation_secrets(
                     restart_app,
                     token: None,
                 } => {
-                    let sealed = dhpanel_database::git_deploys::sealed_token(&db, deploy_id)
+                    let sealed = builtpanel_database::git_deploys::sealed_token(&db, deploy_id)
                         .await
                         .map_err(|_| "could not read a deploy's token".to_owned())?;
                     let token = match sealed {
@@ -259,11 +263,11 @@ pub fn operation_secrets(
                         Some(sealed) => {
                             let bytes = master_key
                                 .open(
-                                    &dhpanel_database::git_deploys::token_context(deploy_id),
+                                    &builtpanel_database::git_deploys::token_context(deploy_id),
                                     &sealed,
                                 )
                                 .map_err(|_| "a deploy's token does not open".to_owned())?;
-                            Some(dhpanel_node_protocol::DbPassword(
+                            Some(builtpanel_node_protocol::DbPassword(
                                 String::from_utf8(bytes)
                                     .map_err(|_| "a deploy's token is not text".to_owned())?,
                             ))
@@ -303,7 +307,7 @@ pub fn operation_secrets(
                     env: None,
                     image,
                 } => {
-                    let sealed = dhpanel_database::runtime_apps::sealed_env(&db, app_id)
+                    let sealed = builtpanel_database::runtime_apps::sealed_env(&db, app_id)
                         .await
                         .map_err(|_| "could not read an application's environment".to_owned())?;
                     let env = match sealed {
@@ -311,7 +315,7 @@ pub fn operation_secrets(
                         Some(sealed) => {
                             let bytes = master_key
                                 .open(
-                                    &dhpanel_database::runtime_apps::env_context(app_id),
+                                    &builtpanel_database::runtime_apps::env_context(app_id),
                                     &sealed,
                                 )
                                 .map_err(|_| {
@@ -338,7 +342,7 @@ pub fn operation_secrets(
                         install,
                         port,
                         memory_mb,
-                        env: Some(dhpanel_node_protocol::RuntimeEnv(env)),
+                        env: Some(builtpanel_node_protocol::RuntimeEnv(env)),
                         image,
                     });
                 }
@@ -350,16 +354,18 @@ pub fn operation_secrets(
                     username,
                     uid,
                     path,
-                    command: command @ dhpanel_node_protocol::WpCommand::ResetAdminPassword { .. },
+                    command:
+                        command @ builtpanel_node_protocol::WpCommand::ResetAdminPassword { .. },
                     password: None,
                 } => {
-                    let sealed = dhpanel_database::apps::sealed_secret(&db, app_id, "admin_reset")
-                        .await
-                        .map_err(|_| "could not read a password".to_owned())?
-                        .ok_or_else(|| "this password was used already".to_owned())?;
+                    let sealed =
+                        builtpanel_database::apps::sealed_secret(&db, app_id, "admin_reset")
+                            .await
+                            .map_err(|_| "could not read a password".to_owned())?
+                            .ok_or_else(|| "this password was used already".to_owned())?;
                     let bytes = master_key
                         .open(
-                            &dhpanel_database::apps::secret_context(app_id, "admin_reset"),
+                            &builtpanel_database::apps::secret_context(app_id, "admin_reset"),
                             &sealed,
                         )
                         .map_err(|_| "a password does not open".to_owned())?;
@@ -370,7 +376,7 @@ pub fn operation_secrets(
                         uid,
                         path,
                         command,
-                        password: Some(dhpanel_node_protocol::DbPassword(
+                        password: Some(builtpanel_node_protocol::DbPassword(
                             String::from_utf8(bytes)
                                 .map_err(|_| "a password is not text".to_owned())?,
                         )),
@@ -391,13 +397,13 @@ pub fn operation_secrets(
                     engine,
                     dedicated,
                 } => {
-                    let sealed = dhpanel_database::imports::sealed_token_of(&db, import_id)
+                    let sealed = builtpanel_database::imports::sealed_token_of(&db, import_id)
                         .await
                         .map_err(|_| "could not read an import token".to_owned())?
                         .ok_or_else(|| "this import has ended".to_owned())?;
                     let bytes = master_key
                         .open(
-                            &dhpanel_database::imports::token_context(import_id),
+                            &builtpanel_database::imports::token_context(import_id),
                             &sealed,
                         )
                         .map_err(|_| "an import token does not open".to_owned())?;
@@ -409,7 +415,7 @@ pub fn operation_secrets(
                         size_bytes,
                         sha256,
                         gzip,
-                        token: Some(dhpanel_node_protocol::DbPassword(
+                        token: Some(builtpanel_node_protocol::DbPassword(
                             String::from_utf8(bytes)
                                 .map_err(|_| "an import token is not text".to_owned())?,
                         )),
@@ -427,13 +433,13 @@ pub fn operation_secrets(
                     engine,
                     dedicated,
                 } => {
-                    let sealed = dhpanel_database::exports::sealed_token_of(&db, export_id)
+                    let sealed = builtpanel_database::exports::sealed_token_of(&db, export_id)
                         .await
                         .map_err(|_| "could not read an export token".to_owned())?
                         .ok_or_else(|| "this export has ended".to_owned())?;
                     let bytes = master_key
                         .open(
-                            &dhpanel_database::exports::token_context(export_id),
+                            &builtpanel_database::exports::token_context(export_id),
                             &sealed,
                         )
                         .map_err(|_| "an export token does not open".to_owned())?;
@@ -442,7 +448,7 @@ pub fn operation_secrets(
                         database,
                         export_id,
                         url,
-                        token: Some(dhpanel_node_protocol::DbPassword(
+                        token: Some(builtpanel_node_protocol::DbPassword(
                             String::from_utf8(bytes)
                                 .map_err(|_| "an export token is not text".to_owned())?,
                         )),
@@ -465,18 +471,20 @@ pub fn operation_secrets(
                     quota_mb,
                     enabled,
                 } => {
-                    let found = dhpanel_database::ftp_accounts::sealed_password_of(&db, &name)
+                    let found = builtpanel_database::ftp_accounts::sealed_password_of(&db, &name)
                         .await
                         .map_err(|_| "could not read an FTP password".to_owned())?;
                     let password = match found {
                         Some((account_id, sealed)) => {
                             let bytes = master_key
                                 .open(
-                                    &dhpanel_database::ftp_accounts::password_context(account_id),
+                                    &builtpanel_database::ftp_accounts::password_context(
+                                        account_id,
+                                    ),
                                     &sealed,
                                 )
                                 .map_err(|_| "an FTP password does not open".to_owned())?;
-                            Some(dhpanel_node_protocol::DbPassword(
+                            Some(builtpanel_node_protocol::DbPassword(
                                 String::from_utf8(bytes)
                                     .map_err(|_| "an FTP password is not text".to_owned())?,
                             ))
@@ -547,23 +555,24 @@ pub fn operation_secrets(
                 | Operation::RestoreBackup { .. }
                 | Operation::ExportBackup { .. }
                 | Operation::ImportExport { .. }) => {
-                    return dhpanel_mod_backups::runner::fill(&db, &master_key, op).await;
+                    return builtpanel_mod_backups::runner::fill(&db, &master_key, op).await;
                 }
                 other => return Ok(other),
             };
             let mut filled = Vec::with_capacity(items.len());
             for mut item in items.drain(..) {
                 if item.private_key.is_none() {
-                    let found =
-                        dhpanel_database::certificates::custom_key_of(&db, &username, &item.host)
-                            .await
-                            .map_err(|_| "could not read a certificate key".to_owned())?;
+                    let found = builtpanel_database::certificates::custom_key_of(
+                        &db, &username, &item.host,
+                    )
+                    .await
+                    .map_err(|_| "could not read a certificate key".to_owned())?;
                     let Some((domain_id, sealed)) = found else {
                         continue;
                     };
                     let key = master_key
                         .open(
-                            &dhpanel_database::certificates::key_context(domain_id),
+                            &builtpanel_database::certificates::key_context(domain_id),
                             &sealed,
                         )
                         .map_err(|_| "a certificate key does not open".to_owned())?;
@@ -584,21 +593,21 @@ pub fn operation_secrets(
 
 /// The opened token of a file transfer that is still wanted.
 async fn transfer_token(
-    db: &dhpanel_database::sqlx::PgPool,
+    db: &builtpanel_database::sqlx::PgPool,
     master_key: &MasterKey,
-    transfer_id: dhpanel_database::sqlx::types::Uuid,
-) -> Result<dhpanel_node_protocol::DbPassword, String> {
-    let sealed = dhpanel_database::file_transfers::sealed_token_of(db, transfer_id)
+    transfer_id: builtpanel_database::sqlx::types::Uuid,
+) -> Result<builtpanel_node_protocol::DbPassword, String> {
+    let sealed = builtpanel_database::file_transfers::sealed_token_of(db, transfer_id)
         .await
         .map_err(|_| "could not read a transfer token".to_owned())?
         .ok_or_else(|| "this transfer has ended".to_owned())?;
     let bytes = master_key
         .open(
-            &dhpanel_database::file_transfers::token_context(transfer_id),
+            &builtpanel_database::file_transfers::token_context(transfer_id),
             &sealed,
         )
         .map_err(|_| "a transfer token does not open".to_owned())?;
-    Ok(dhpanel_node_protocol::DbPassword(
+    Ok(builtpanel_node_protocol::DbPassword(
         String::from_utf8(bytes).map_err(|_| "a transfer token is not text".to_owned())?,
     ))
 }
@@ -607,7 +616,7 @@ async fn transfer_token(
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use dhpanel_node_protocol::RuntimeEnv;
+    use builtpanel_node_protocol::RuntimeEnv;
     use sqlx::PgPool;
     use uuid::Uuid;
 
@@ -655,7 +664,7 @@ mod tests {
         .unwrap();
         let sealed = key
             .seal(
-                &dhpanel_database::runtime_apps::env_context(app),
+                &builtpanel_database::runtime_apps::env_context(app),
                 br#"{"A":"1","SECRET":"it's s3cret"}"#,
             )
             .unwrap();
@@ -697,8 +706,11 @@ mod tests {
         sqlx::query("UPDATE runtime_apps SET sealed_env = $2 WHERE id = $1")
             .bind(app)
             .bind(
-                key.seal(&dhpanel_database::runtime_apps::env_context(other), b"{}")
-                    .unwrap(),
+                key.seal(
+                    &builtpanel_database::runtime_apps::env_context(other),
+                    b"{}",
+                )
+                .unwrap(),
             )
             .execute(&pool)
             .await
@@ -748,7 +760,7 @@ mod tests {
         .fetch_one(&pool)
         .await
         .unwrap();
-        let md = dhpanel_database::mail::ensure_domain(
+        let md = builtpanel_database::mail::ensure_domain(
             &pool,
             tenant,
             domain,
@@ -761,13 +773,15 @@ mod tests {
         let mailbox = Uuid::new_v4();
         let sealed = key
             .seal(
-                &dhpanel_database::mail::password_context(mailbox),
+                &builtpanel_database::mail::password_context(mailbox),
                 b"Mailbox-Pass-77!",
             )
             .unwrap();
-        dhpanel_database::mail::create_mailbox(&pool, mailbox, tenant, md.id, "gus", 100, &sealed)
-            .await
-            .unwrap();
+        builtpanel_database::mail::create_mailbox(
+            &pool, mailbox, tenant, md.id, "gus", 100, &sealed,
+        )
+        .await
+        .unwrap();
         let op = Operation::UpsertMailbox {
             domain: "gus-mail.org".into(),
             local: "gus".into(),
@@ -781,10 +795,12 @@ mod tests {
         };
         assert_eq!(
             password,
-            Some(dhpanel_node_protocol::DbPassword("Mailbox-Pass-77!".into()))
+            Some(builtpanel_node_protocol::DbPassword(
+                "Mailbox-Pass-77!".into()
+            ))
         );
         // The node has it: nothing is put in any more.
-        dhpanel_database::mail::mailbox_applied(&pool, mailbox, 1)
+        builtpanel_database::mail::mailbox_applied(&pool, mailbox, 1)
             .await
             .unwrap();
         let Operation::UpsertMailbox { password, .. } = fill(op).await.unwrap() else {
@@ -836,7 +852,7 @@ mod tests {
         .unwrap();
         let sealed = key
             .seal(
-                &dhpanel_database::git_deploys::token_context(deploy),
+                &builtpanel_database::git_deploys::token_context(deploy),
                 b"ghp_tokenvalue",
             )
             .unwrap();

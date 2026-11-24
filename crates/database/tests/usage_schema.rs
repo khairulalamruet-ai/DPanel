@@ -4,7 +4,7 @@
 
 use std::time::Instant;
 
-use dhpanel_database::usage::{self, Container, Node};
+use builtpanel_database::usage::{self, Container, Node};
 use sqlx::{PgPool, types::Uuid};
 
 const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA";
@@ -84,10 +84,10 @@ async fn readings_become_rates_per_account_and_for_the_node(pool: PgPool) {
         t0,
         &node(1000, 10_000),
         &[
-            container("dh-alice-web", 100, 1000, 10 << 20),
-            container("dh-alice-php", 200, 5000, 50 << 20),
-            container("dh-bob-web", 50, 0, 5 << 20),
-            container("dh-db", 999, 999, 999),
+            container("bp-alice-web", 100, 1000, 10 << 20),
+            container("bp-alice-php", 200, 5000, 50 << 20),
+            container("bp-bob-web", 50, 0, 5 << 20),
+            container("bp-db", 999, 999, 999),
         ],
     )
     .await
@@ -107,11 +107,11 @@ async fn readings_become_rates_per_account_and_for_the_node(pool: PgPool) {
         t0 + 60,
         &node(1000 + 60, 10_000 + 200),
         &[
-            container("dh-alice-web", 130, 2000, 11 << 20),
-            container("dh-alice-php", 206, 6000, 51 << 20),
+            container("bp-alice-web", 130, 2000, 11 << 20),
+            container("bp-alice-php", 206, 6000, 51 << 20),
             // Bob's container restarted: its counters are lower. No negative anything.
-            container("dh-bob-web", 1, 10, 5 << 20),
-            container("dh-db", 1000, 1000, 1000),
+            container("bp-bob-web", 1, 10, 5 << 20),
+            container("bp-db", 1000, 1000, 1000),
         ],
     )
     .await
@@ -155,8 +155,8 @@ async fn readings_become_rates_per_account_and_for_the_node(pool: PgPool) {
         t0 + 90,
         &node(1100, 10_400),
         &[
-            container("dh-alice-web", 140, 2500, 11 << 20),
-            container("dh-alice-php", 207, 6100, 51 << 20),
+            container("bp-alice-web", 140, 2500, 11 << 20),
+            container("bp-alice-php", 207, 6100, 51 << 20),
         ],
     )
     .await
@@ -296,7 +296,7 @@ async fn the_fleet_is_shown_as_prometheus_text_and_the_dashboard_uses_what_is_sh
         node_id,
         now - 60,
         &node(1000, 10_000),
-        &[container("dh-alice-web", 10, 0, 1 << 20)],
+        &[container("bp-alice-web", 10, 0, 1 << 20)],
     )
     .await
     .unwrap();
@@ -306,8 +306,8 @@ async fn the_fleet_is_shown_as_prometheus_text_and_the_dashboard_uses_what_is_sh
         now,
         &node(1100, 10_400),
         &[
-            container("dh-alice-web", 40, 500, 2 << 20),
-            container("dh-bobby-web", 5, 0, 1 << 20),
+            container("bp-alice-web", 40, 500, 2 << 20),
+            container("bp-bobby-web", 5, 0, 1 << 20),
         ],
     )
     .await
@@ -315,26 +315,26 @@ async fn the_fleet_is_shown_as_prometheus_text_and_the_dashboard_uses_what_is_sh
     let text = usage::prometheus_text(&pool).await.unwrap();
     // The newest reading of the node and the accounts, in Prometheus's format.
     assert!(
-        text.contains("# TYPE dhpanel_node_cpu_busy_ratio gauge"),
+        text.contains("# TYPE builtpanel_node_cpu_busy_ratio gauge"),
         "{text}"
     );
     assert!(
-        text.contains("dhpanel_node_cpu_busy_ratio{node=\"node1\"} 0.25"),
+        text.contains("builtpanel_node_cpu_busy_ratio{node=\"node1\"} 0.25"),
         "{text}"
     );
-    assert!(text.contains("dhpanel_node_containers{node=\"node1\"} 2"));
-    assert!(text.contains("dhpanel_tenant_memory_bytes{account=\"alice\"} 2097152"));
-    assert!(text.contains("dhpanel_tenant_net_receive_bytes{account=\"alice\"} 500"));
+    assert!(text.contains("builtpanel_node_containers{node=\"node1\"} 2"));
+    assert!(text.contains("builtpanel_tenant_memory_bytes{account=\"alice\"} 2097152"));
+    assert!(text.contains("builtpanel_tenant_net_receive_bytes{account=\"alice\"} 500"));
     assert!(
-        text.contains("dhpanel_tenant_memory_bytes{account=\"bobby\"} 1048576"),
+        text.contains("builtpanel_tenant_memory_bytes{account=\"bobby\"} 1048576"),
         "{text}"
     );
-    assert!(text.contains("dhpanel_tenants{status=\"active\"} 2"));
+    assert!(text.contains("builtpanel_tenants{status=\"active\"} 2"));
     // Every metric the Grafana dashboard asks for is among them.
-    let dashboard = include_str!("../../../deploy/grafana/dhpanel-fleet.json");
+    let dashboard = include_str!("../../../deploy/grafana/builtpanel-fleet.json");
     let mut seen = 0;
     for word in dashboard.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')) {
-        if word.starts_with("dhpanel_") {
+        if word.starts_with("builtpanel_") {
             assert!(
                 text.contains(&format!("# TYPE {word} gauge")),
                 "the dashboard uses {word}, which is not shown"

@@ -8,9 +8,9 @@ import {
   Button,
   Badge,
   useToast,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { Terminal, Copy, Check, Play, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { CronJob } from "./types";
 
 interface CronOutputModalProps {

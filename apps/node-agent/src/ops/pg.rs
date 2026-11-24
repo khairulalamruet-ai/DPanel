@@ -1,7 +1,7 @@
 //! The node's PostgreSQL server (T07.12): the same jobs as [`super::db`] for MariaDB.
 //!
-//! One PostgreSQL container per node, named `dh-pg`, with its data in the volume
-//! `dh-pg-data`. It is published on the node's loopback address only, and it joins the
+//! One PostgreSQL container per node, named `bp-pg`, with its data in the volume
+//! `bp-pg-data`. It is published on the node's loopback address only, and it joins the
 //! network of each tenant that uses it, as `pg`. Its superuser password is made here, kept
 //! in the agent's secret store (`<state>/secrets/postgres-root`, 0600) and never leaves the
 //! node. Which user may connect from where is the server's `pg_hba.conf`, which this module
@@ -26,13 +26,13 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_docker_manager::{
+use builtpanel_docker_manager::{
     Capability, ContainerSpec, DockerError, Name, Network, PublishedPort, Restart, Tmpfs,
     VolumeMount,
 };
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{AgentError, DbSize, ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role, network_name};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{AgentError, DbSize, ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role, network_name};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -41,21 +41,21 @@ use super::{
 };
 
 /// The server's container.
-pub const CONTAINER: &str = "dh-pg";
+pub const CONTAINER: &str = "bp-pg";
 /// Its network (the tenants' networks are added to it as it is used).
-const NETWORK: &str = "dh-pg-net";
+const NETWORK: &str = "bp-pg-net";
 /// Its data.
-const VOLUME: &str = "dh-pg-data";
+const VOLUME: &str = "bp-pg-data";
 /// The name tenants reach it by on their own network.
 pub const ALIAS: &str = "pg";
-/// The loopback port it is published on unless `DHPANEL_AGENT_PG_PORT` says another.
+/// The loopback port it is published on unless `BUILTPANEL_AGENT_PG_PORT` says another.
 pub const DEFAULT_PORT: u16 = 5433;
-/// The public port unless `DHPANEL_AGENT_PG_PUBLIC_PORT` says another.
+/// The public port unless `BUILTPANEL_AGENT_PG_PUBLIC_PORT` says another.
 pub const DEFAULT_PUBLIC_PORT: u16 = 15432;
 /// The label that says the container publishes its public port (and which).
-const PUBLIC_LABEL: &str = "dh-pg-public";
+const PUBLIC_LABEL: &str = "bp-pg-public";
 /// Where the configuration directory is mounted in the container.
-const CONF_AT: &str = "/dhpanel-pg";
+const CONF_AT: &str = "/builtpanel-pg";
 /// Longest wait for the server to accept connections.
 const READY_TIMEOUT: Duration = Duration::from_secs(120);
 /// Longest a statement may take.
@@ -112,7 +112,7 @@ fn level_of(access: &str) -> Option<Level> {
 /// The loopback port of the server.
 #[must_use]
 pub fn port() -> u16 {
-    std::env::var("DHPANEL_AGENT_PG_PORT")
+    std::env::var("BUILTPANEL_AGENT_PG_PORT")
         .ok()
         .and_then(|p| p.parse().ok())
         .filter(|p| *p >= 1024)
@@ -123,7 +123,7 @@ pub fn port() -> u16 {
 /// on.
 #[must_use]
 pub fn public_port() -> u16 {
-    std::env::var("DHPANEL_AGENT_PG_PUBLIC_PORT")
+    std::env::var("BUILTPANEL_AGENT_PG_PUBLIC_PORT")
         .ok()
         .and_then(|p| p.parse().ok())
         .filter(|p| *p >= 1024)
@@ -166,6 +166,12 @@ fn disk(what: &str, err: &std::io::Error) -> AgentError {
 pub(super) fn sql_error(err: &tokio_postgres::Error) -> AgentError {
     if let Some(db) = err.as_db_error() {
         let code = db.code().code();
+        // "The system is starting up" (an engine that opens the port before the server is
+        // ready answers like this): it will be fine in a moment.
+        if code == "57P03" {
+            return AgentError::new(ErrorCode::Internal, "the database server is starting up")
+                .retryable();
+        }
         let message = if code == "28P01" || code == "28000" {
             "the database server refused the agent's password".to_owned()
         } else {
@@ -179,7 +185,7 @@ pub(super) fn sql_error(err: &tokio_postgres::Error) -> AgentError {
 /// A database, role or user name as a statement writes it: a plain identifier (checked),
 /// not one the server keeps for itself, and quoted.
 pub(super) fn identifier(text: &str) -> Result<String, AgentError> {
-    dhpanel_domain::databases::check_identifier(text).map_err(|e| invalid(&e.to_string()))?;
+    builtpanel_domain::databases::check_identifier(text).map_err(|e| invalid(&e.to_string()))?;
     if text.len() > MAX_NAME_LEN {
         return Err(invalid("a PostgreSQL name is at most 58 characters"));
     }
@@ -245,7 +251,7 @@ fn conf_dir(context: &TenantContext) -> PathBuf {
 /// the password is long and random), each user from its own addresses, nobody else.
 fn hba_text(hosts: &Hosts) -> String {
     let mut text = String::from(
-        "# Written by the DHPanel node agent. Changes are overwritten.\n\
+        "# Written by the Built Panel node agent. Changes are overwritten.\n\
          local all all reject\n\
          host all postgres 0.0.0.0/0 scram-sha-256\n",
     );
@@ -352,7 +358,7 @@ pub(super) async fn connect_as(
         .password(password)
         .dbname(database)
         .connect_timeout(Duration::from_secs(10))
-        .application_name("dhpanel-agent");
+        .application_name("builtpanel-agent");
     let (client, connection) = config
         .connect(tokio_postgres::NoTls)
         .await
@@ -444,7 +450,7 @@ pub async fn ensure_server_with(context: &TenantContext, public: bool) -> Result
                 .map_err(|e| AgentError::new(ErrorCode::Internal, e.to_string()))?
                 .clone();
             let network = match &dedicated {
-                Some(tenant) => name(&format!("dh-{tenant}-pgnet"))?,
+                Some(tenant) => name(&format!("bp-{tenant}-pgnet"))?,
                 None => name(NETWORK)?,
             };
             docker
@@ -460,8 +466,8 @@ pub async fn ensure_server_with(context: &TenantContext, public: bool) -> Result
                 .await
                 .map_err(|e| docker_error(&e))?;
             let conf_volume = name(&match &dedicated {
-                Some(tenant) => format!("dh-{tenant}-pg-conf"),
-                None => "dh-pg-conf".to_owned(),
+                Some(tenant) => format!("bp-{tenant}-pg-conf"),
+                None => "bp-pg-conf".to_owned(),
             })?;
             let dir = conf_dir(context);
             let root = dir.parent().unwrap_or(&dir);
@@ -645,7 +651,7 @@ async fn tenant_range(
             other => docker_error(&other),
         })?;
     // Checked as an IPv4 range of a usable size; the text is what goes in the file.
-    dhpanel_domain::databases::host_for_network(&subnet)
+    builtpanel_domain::databases::host_for_network(&subnet)
         .map(|_| subnet)
         .ok_or_else(|| {
             AgentError::new(
@@ -974,7 +980,7 @@ pub async fn upsert_db_user(
     let quoted = identifier(&user)?;
     let tenant = TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
     if let Some(p) = &password {
-        dhpanel_domain::databases::check_password(&p.0).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_domain::databases::check_password(&p.0).map_err(|e| invalid(&e.to_string()))?;
     }
     let range = tenant_range(&context, &tenant).await?;
     let network = network_name(&tenant).map_err(|e| invalid(&e.to_string()))?;
@@ -1244,12 +1250,12 @@ pub async fn set_db_remote_hosts(
     };
     identifier(&user)?;
     let tenant = TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
-    if cidrs.len() > dhpanel_node_protocol::MAX_DB_REMOTE_HOSTS {
+    if cidrs.len() > builtpanel_node_protocol::MAX_DB_REMOTE_HOSTS {
         return Err(invalid("too many remote addresses"));
     }
     let mut wanted: BTreeSet<String> = BTreeSet::new();
     for cidr in &cidrs {
-        if dhpanel_domain::databases::host_for_remote(cidr).is_none() {
+        if builtpanel_domain::databases::host_for_remote(cidr).is_none() {
             return Err(invalid(
                 "a remote address is IPv4 a.b.c.d/n, no wider than /8",
             ));
@@ -1284,11 +1290,11 @@ pub async fn set_db_remote_access(
     let Operation::SetDbRemoteAccess { cidrs, .. } = op else {
         return Err(super::wrong_operation());
     };
-    if cidrs.len() > dhpanel_node_protocol::MAX_DB_REMOTE_ACCESS {
+    if cidrs.len() > builtpanel_node_protocol::MAX_DB_REMOTE_ACCESS {
         return Err(invalid("too many address ranges"));
     }
     for cidr in &cidrs {
-        if dhpanel_domain::databases::host_for_remote(cidr).is_none() {
+        if builtpanel_domain::databases::host_for_remote(cidr).is_none() {
             return Err(invalid(
                 "an address range is not IPv4 a.b.c.d/n (n from 8 to 32)",
             ));
@@ -1300,7 +1306,7 @@ pub async fn set_db_remote_access(
     tokio::task::spawn_blocking(move || {
         super::tenant::ask_helper(
             &socket,
-            dhpanel_priv_helper::protocol::Action::SetPgFirewall { cidrs: sent },
+            builtpanel_priv_helper::protocol::Action::SetPgFirewall { cidrs: sent },
         )
     })
     .await
@@ -1342,7 +1348,7 @@ pub async fn report_sizes(
         .map_err(|e| sql_error(&e))?;
     let items = rows
         .iter()
-        .take(dhpanel_node_protocol::MAX_DB_SIZES_PER_REPORT)
+        .take(builtpanel_node_protocol::MAX_DB_SIZES_PER_REPORT)
         .map(|r| DbSize {
             name: r.get::<_, String>(0),
             bytes: u64::try_from(r.get::<_, i64>(1)).unwrap_or(0),

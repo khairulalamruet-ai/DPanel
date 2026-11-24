@@ -10,9 +10,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use dhpanel_database::operations as ledger;
-use dhpanel_node_protocol::Operation;
-use dhpanel_operations::{Operations, Request};
+use builtpanel_database::operations as ledger;
+use builtpanel_node_protocol::Operation;
+use builtpanel_operations::{Operations, Request};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;

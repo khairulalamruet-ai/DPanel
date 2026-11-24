@@ -17,7 +17,7 @@
 ## Container hardening (প্রতিটা tenant container-এ বাধ্যতামূলক)
 - `user: <tenant uid>:<gid>` (root নয়), `userns-remap` বা rootless Docker।
 - `cap_drop: [ALL]`। কিছু যোগ করতে হলে নির্দিষ্টভাবে করতে হবে (যেমন web server-এর জন্য `NET_BIND_SERVICE` না দিয়ে উঁচু পোর্ট + Caddy)।
-- `security_opt: no-new-privileges, seccomp=default, apparmor=dhpanel-tenant`।
+- `security_opt: no-new-privileges, seccomp=default, apparmor=builtpanel-tenant`।
 - `pids_limit`, `memory`, `cpus`, `blkio` (plan অনুযায়ী)। Storage quota: XFS project quota বা ext4 quota।
 - Mount: শুধু tenant-এর নিজের volume। Host bind mount নিষেধ, শুধু read-only template ছাড়া।
 - Network: tenant-প্রতি bridge network। Inter-tenant traffic বন্ধ। Egress policy (SMTP 25 বন্ধ, শুধু mail relay দিয়ে পাঠানো যাবে)।

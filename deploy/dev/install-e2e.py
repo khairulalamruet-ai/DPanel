@@ -82,9 +82,9 @@ if not existing:
     status, made = admin.call("POST", "/api/v1/admin/nodes", {"name": args.node_name})
     step("the local node is added (an enrolment is made)", status == 201 and made.get("enroll_command"), f"{status} {made}" if status != 201 else "")
     command = made["enroll_command"]
-    remote(f"sudo -u dhpanel-agent {command}")
+    remote(f"sudo -u builtpanel-agent {command}")
     step("the agent enrols (as its own user)", True)
-    remote("systemctl enable --now dhpanel-agent")
+    remote("systemctl enable --now builtpanel-agent")
 for _ in range(60):
     status, nodes = admin.call("GET", "/api/v1/admin/nodes")
     items = (nodes or {}).get("items", nodes if isinstance(nodes, list) else [])

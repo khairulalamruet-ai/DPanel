@@ -3,11 +3,11 @@
 # key line (never ask the first time: a changed host key must fail the deploy).
 #
 # The archive and the signed release manifest are copied to the deploy user's incoming folder,
-# and the only command run is `sudo dhpanel-deploy NAME` (deploy/release/server-deploy.sh,
+# and the only command run is `sudo builtpanel-deploy NAME` (deploy/release/server-deploy.sh,
 # put there by setup-deploy-user.sh), which installs nothing the release key did not sign.
 #
-#   DEPLOY_HOST=dhpanel-deploy@panel DEPLOY_SSH_KEY=... DEPLOY_KNOWN_HOSTS=... \
-#     remote-deploy.sh dhpanel-1.0.0-linux-x86_64.tar.gz release-manifest.json
+#   DEPLOY_HOST=builtpanel-deploy@panel DEPLOY_SSH_KEY=... DEPLOY_KNOWN_HOSTS=... \
+#     remote-deploy.sh builtpanel-1.0.0-linux-x86_64.tar.gz release-manifest.json
 set -euo pipefail
 tarball="${1:?usage: remote-deploy.sh TARBALL MANIFEST}"
 manifest="${2:?usage: remote-deploy.sh TARBALL MANIFEST}"
@@ -18,4 +18,4 @@ ssh_opts=(-i "$work/key" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKey
 name="$(basename "$tarball" .tar.gz)"
 scp "${ssh_opts[@]}" "$tarball" "$DEPLOY_HOST:incoming/$name.tar.gz"
 scp "${ssh_opts[@]}" "$manifest" "$DEPLOY_HOST:incoming/release-manifest.json"
-ssh "${ssh_opts[@]}" "$DEPLOY_HOST" "sudo -n /usr/local/sbin/dhpanel-deploy $name"
+ssh "${ssh_opts[@]}" "$DEPLOY_HOST" "sudo -n /usr/local/sbin/builtpanel-deploy $name"

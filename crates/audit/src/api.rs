@@ -12,10 +12,10 @@ use axum::{
     extract::{FromRef, Query, State},
     routing::get,
 };
-use dhpanel_database::sqlx::PgPool;
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{Require, permissions::AuditRead};
-use dhpanel_session::SessionStore;
+use builtpanel_database::sqlx::PgPool;
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{Require, permissions::AuditRead};
+use builtpanel_session::SessionStore;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};

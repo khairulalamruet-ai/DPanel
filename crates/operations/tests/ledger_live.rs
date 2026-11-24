@@ -4,8 +4,8 @@
 
 use std::time::Duration;
 
-use dhpanel_node_protocol::Operation;
-use dhpanel_operations::{Enqueued, Operations, OperationsError, Request, Status, envelope};
+use builtpanel_node_protocol::Operation;
+use builtpanel_operations::{Enqueued, Operations, OperationsError, Request, Status, envelope};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;

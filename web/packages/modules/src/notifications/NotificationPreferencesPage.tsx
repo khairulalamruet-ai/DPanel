@@ -1,503 +1,282 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
-import { useToast, Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input, Badge } from "@dhpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { useOptionalSession } from "@builtpanel/auth";
+import { useToast, Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input, Badge } from "@builtpanel/ui";
+import { Bell, Mail, Webhook, Clock, PauseCircle, PlayCircle, Trash2, Plus } from "lucide-react";
 import {
-  Bell,
-  Mail,
-  Webhook,
-  ShieldAlert,
-  Archive,
-  Lock,
-  Server,
-  Clock,
-  Send,
-  Save,
-  CheckCircle2,
-  AlertCircle,
-  PauseCircle,
-  PlayCircle,
-} from "lucide-react";
-import { NotificationChannelConfig } from "./types";
+  addChannel,
+  changeChannel,
+  getQuiet,
+  listChannels,
+  listEvents,
+  removeChannel,
+  setQuiet,
+  type Audience,
+  type Channel,
+  type Quiet,
+} from "./api";
 
+/** Where notifications go (e-mail, webhook), which events go where, and when to keep quiet. */
 export function NotificationPreferencesPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const who: Audience = useOptionalSession()?.data?.user.kind === "admin" ? "admin" : "client";
 
-  const [config, setConfig] = useState<NotificationChannelConfig>({
-    email_enabled: true,
-    email_recipients: ["admin@enterprise.io"],
-    webhook_enabled: false,
-    webhook_url: "",
-    in_app_enabled: true,
-    notify_on_ssl_expiry: true,
-    notify_on_backup_failure: true,
-    notify_on_node_offline: true,
-    notify_on_security_alert: true,
-    snooze_until: null,
-  });
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [events, setEvents] = useState<string[]>([]);
+  const [quiet, setQuietState] = useState<Quiet>({ paused: false, snoozed_until: null });
 
-  const [recipientInput, setRecipientInput] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
+  const [kind, setKind] = useState<"email" | "webhook">("email");
+  const [name, setName] = useState("");
+  const [target, setTarget] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
+  const [secret, setSecret] = useState<string | null>(null);
 
-  const loadSettings = useCallback(async () => {
+  const fail = useCallback(
+    (err: any) =>
+      toast({
+        title: t("common.error", "Error"),
+        description: err?.message || t("common.unknownError", "Something went wrong"),
+        variant: "destructive",
+      }),
+    [t, toast],
+  );
+
+  const load = useCallback(async () => {
     try {
-      setIsLoading(true);
-      const res = await apiFetch<NotificationChannelConfig>("/api/v1/notifications/settings");
-      setConfig(res);
-      setRecipientInput(res.email_recipients.join(", "));
-    } catch {
-      // Use defaults
-    } finally {
-      setIsLoading(false);
+      const [c, e, q] = await Promise.all([listChannels(who), listEvents(who), getQuiet(who)]);
+      setChannels(c);
+      setEvents(e);
+      setQuietState(q);
+    } catch (err) {
+      fail(err);
     }
-  }, []);
+  }, [who, fail]);
 
   useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+    void load();
+  }, [load]);
 
-  const handleSave = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    setIsSaving(true);
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const recipients = recipientInput
-        .split(",")
-        .map((s) => s.trim().toLowerCase())
-        .filter(Boolean);
-
-      const payload: NotificationChannelConfig = {
-        ...config,
-        email_recipients: recipients,
-      };
-
-      const updated = await apiFetch<NotificationChannelConfig>("/api/v1/notifications/settings", {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
-
-      setConfig(updated);
-      toast({
-        title: t("notifications.savedTitle", "Preferences Saved"),
-        description: t("notifications.savedDesc", "Notification channels and alert triggers updated."),
-        variant: "success",
-      });
-    } catch (err: any) {
-      toast({
-        title: t("common.error", "Error"),
-        description: err.message || t("notifications.saveError", "Failed to save notification settings."),
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+      const res = await addChannel(who, { kind, name: name.trim(), target: target.trim(), events: picked });
+      setChannels((prev) => [...prev, res.channel]);
+      setSecret(res.secret ?? null);
+      setName("");
+      setTarget("");
+      setPicked([]);
+      toast({ title: t("notifications.savedTitle", "Saved"), description: t("notifications.channelAdded", "Channel added"), variant: "success" });
+    } catch (err) {
+      fail(err);
     }
   };
 
-  const handleTestNotification = async () => {
-    setIsTesting(true);
+  const handleToggle = async (c: Channel) => {
     try {
-      await apiFetch("/api/v1/notifications/test", { method: "POST" });
-      toast({
-        title: t("notifications.testSentTitle", "Test Notification Dispatched"),
-        description: t("notifications.testSentDesc", "A sample notification was sent to your active channels."),
-        variant: "success",
-      });
-    } catch (err: any) {
-      toast({
-        title: t("common.error", "Error"),
-        description: err.message || t("notifications.testFailed", "Failed to send test notification."),
-        variant: "destructive",
-      });
-    } finally {
-      setIsTesting(false);
+      await changeChannel(who, c.id, { enabled: !c.enabled });
+      setChannels((prev) => prev.map((x) => (x.id === c.id ? { ...x, enabled: !c.enabled } : x)));
+    } catch (err) {
+      fail(err);
     }
   };
 
-  const handleSnooze = async (durationHours: number) => {
+  const handleRemove = async (c: Channel) => {
     try {
-      const res = await apiFetch<{ snooze_until: string }>("/api/v1/notifications/snooze", {
-        method: "POST",
-        body: JSON.stringify({ duration_hours: durationHours }),
-      });
-      setConfig((prev) => ({ ...prev, snooze_until: res.snooze_until }));
-      toast({
-        title: t("notifications.snoozedTitle", "Notifications Snoozed"),
-        description: t("notifications.snoozedDesc", "Alerts paused until {{time}}.", {
-          time: new Date(res.snooze_until).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        }),
-        variant: "success",
-      });
-    } catch {
-      // Revert if error
+      await removeChannel(who, c.id);
+      setChannels((prev) => prev.filter((x) => x.id !== c.id));
+    } catch (err) {
+      fail(err);
     }
   };
 
-  const handleClearSnooze = async () => {
+  const handleSnooze = async (minutes: number) => {
     try {
-      await apiFetch("/api/v1/notifications/snooze", {
-        method: "POST",
-        body: JSON.stringify({ duration_hours: 0 }),
-      });
-      setConfig((prev) => ({ ...prev, snooze_until: null }));
-      toast({
-        title: t("notifications.snoozeClearedTitle", "Snooze Cleared"),
-        description: t("notifications.snoozeClearedDesc", "Live notification alerts resumed."),
-        variant: "success",
-      });
-    } catch {
-      // Revert
+      setQuietState(await setQuiet(who, false, minutes));
+    } catch (err) {
+      fail(err);
     }
   };
 
-  const isSnoozed = Boolean(config.snooze_until && new Date(config.snooze_until) > new Date());
+  const handlePause = async (paused: boolean) => {
+    try {
+      setQuietState(await setQuiet(who, paused, 0));
+    } catch (err) {
+      fail(err);
+    }
+  };
+
+  const snoozedUntil = quiet.snoozed_until ? new Date(quiet.snoozed_until * 1000) : null;
+  const isSnoozed = Boolean(snoozedUntil && snoozedUntil > new Date());
 
   return (
     <div className="space-y-6" data-testid="notification-preferences-page">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="notification-settings-title">
-            {t("notifications.settingsPageTitle", "Notification Channels & Alert Rules")}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {t(
-              "notifications.settingsPageSubtitle",
-              "Configure dispatch channels, critical incident triggers, and alert pause policies."
-            )}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleTestNotification}
-            disabled={isTesting}
-            className="gap-2 shrink-0 text-xs h-9"
-            data-testid="btn-test-notification"
-          >
-            <Send className={`h-3.5 w-3.5 ${isTesting ? "animate-spin" : ""}`} />
-            {t("notifications.sendTestAlert", "Send Test Alert")}
-          </Button>
-
-          <Button
-            onClick={() => handleSave()}
-            disabled={isSaving}
-            className="gap-2 shrink-0 text-xs h-9"
-            data-testid="btn-save-notification-settings"
-          >
-            <Save className="h-3.5 w-3.5" />
-            {isSaving ? t("common.saving", "Saving...") : t("common.saveChanges", "Save Changes")}
-          </Button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="notification-settings-title">
+          {t("notifications.settingsPageTitle", "Notification Channels & Alert Rules")}
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          {t("notifications.settingsPageSubtitle", "Choose where notifications are sent, which events go where, and when to keep quiet.")}
+        </p>
       </div>
 
-      {/* Snooze / Alert Pause Banner */}
-      <Card
-        className={`border shadow-xs ${
-          isSnoozed ? "border-amber-500/40 bg-amber-500/10" : "bg-card"
-        }`}
-        data-testid="snooze-control-card"
-      >
-        <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg shrink-0 ${isSnoozed ? "bg-amber-500/20 text-amber-600 dark:text-amber-400" : "bg-primary/10 text-primary"}`}>
-              {isSnoozed ? <PauseCircle className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">
-                  {t("notifications.snoozeHeading", "Alert Snooze & Maintenance Window")}
-                </span>
-                {isSnoozed && (
-                  <Badge variant="outline" className="border-amber-500 text-amber-600 font-mono text-[10px]">
-                    Snoozed until {new Date(config.snooze_until!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {t(
-                  "notifications.snoozeSubheading",
-                  "Temporarily pause all outbound notifications during scheduled system maintenance."
-                )}
-              </p>
-            </div>
-          </div>
+      {/* Channels */}
+      <Card data-testid="notification-channels-card">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bell className="h-4 w-4 text-primary" />
+            {t("notifications.channelsTitle", "Channels")}
+          </CardTitle>
+          <CardDescription>
+            {t("notifications.channelsDesc", "Every notification also lands in the bell; a channel sends the chosen events elsewhere.")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {channels.length === 0 ? (
+            <p className="text-sm text-muted-foreground" data-testid="no-channels">
+              {t("notifications.noChannels", "No channels yet.")}
+            </p>
+          ) : (
+            <ul className="divide-y rounded-md border">
+              {channels.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-3 p-3 text-sm" data-testid={`channel-${c.id}`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {c.kind === "webhook" ? <Webhook className="h-4 w-4 shrink-0" /> : <Mail className="h-4 w-4 shrink-0" />}
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{c.name}</div>
+                      <div className="text-xs text-muted-foreground font-mono truncate">{c.target}</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {c.events.length === 0 ? (
+                          <Badge variant="secondary">{t("notifications.allEvents", "all events")}</Badge>
+                        ) : (
+                          c.events.map((ev) => (
+                            <Badge key={ev} variant="secondary" className="font-mono text-[10px]">
+                              {ev}
+                            </Badge>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <input type="checkbox" checked={c.enabled} onChange={() => handleToggle(c)} data-testid={`toggle-channel-${c.id}`} />
+                      {t("common.enabled", "On")}
+                    </label>
+                    <Button size="sm" variant="ghost" onClick={() => handleRemove(c)} data-testid={`remove-channel-${c.id}`}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
 
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-            {isSnoozed ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearSnooze}
-                className="text-xs h-8 gap-1.5"
-                data-testid="btn-clear-snooze"
+          {secret && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs" data-testid="webhook-secret">
+              {t("notifications.secretOnce", "The webhook's signing secret is shown only now:")} <code className="font-mono">{secret}</code>
+            </div>
+          )}
+
+          <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end border-t pt-4">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("notifications.kind", "Kind")}</label>
+              <select
+                value={kind}
+                onChange={(e) => setKind(e.target.value as "email" | "webhook")}
+                className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-sm"
+                data-testid="select-channel-kind"
               >
-                <PlayCircle className="h-3.5 w-3.5 text-emerald-500" />
-                {t("notifications.resumeAlerts", "Resume Alerts")}
-              </Button>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSnooze(1)}
-                  className="text-xs h-8"
-                  data-testid="btn-snooze-1h"
-                >
-                  {t("notifications.snooze1h", "1 Hour")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSnooze(8)}
-                  className="text-xs h-8"
-                  data-testid="btn-snooze-8h"
-                >
-                  {t("notifications.snooze8h", "8 Hours")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSnooze(24)}
-                  className="text-xs h-8"
-                  data-testid="btn-snooze-24h"
-                >
-                  {t("notifications.snooze24h", "24 Hours")}
-                </Button>
+                <option value="email">E-mail</option>
+                <option value="webhook">Webhook</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("common.name", "Name")}</label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} required data-testid="input-channel-name" />
+            </div>
+            <div className="space-y-1 md:col-span-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {kind === "email" ? t("notifications.address", "Address") : "URL"}
+              </label>
+              <Input
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                required
+                placeholder={kind === "email" ? "me@example.com" : "https://example.com/hook"}
+                data-testid="input-channel-target"
+              />
+            </div>
+            <Button type="submit" size="sm" className="gap-1.5" data-testid="btn-add-channel">
+              <Plus className="h-4 w-4" />
+              {t("common.add", "Add")}
+            </Button>
+          </form>
+
+          {events.length > 0 && (
+            <div className="space-y-1.5" data-testid="notification-triggers-card">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {t("notifications.eventsPick", "Events for the new channel (none picked: all)")}
               </div>
-            )}
-          </div>
+              <div className="flex flex-wrap gap-2">
+                {events.map((ev) => (
+                  <label key={ev} className="flex items-center gap-1.5 text-xs font-mono border rounded px-2 py-1">
+                    <input
+                      type="checkbox"
+                      checked={picked.includes(ev)}
+                      onChange={() => setPicked((p) => (p.includes(ev) ? p.filter((x) => x !== ev) : [...p, ev]))}
+                    />
+                    {ev}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 1. Dispatch Channels */}
-        <Card className="border shadow-xs" data-testid="notification-channels-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Bell className="h-4 w-4 text-primary" />
-              <span>{t("notifications.channelsTitle", "Dispatch Channels")}</span>
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {t(
-                "notifications.channelsSubtitle",
-                "Select where alerts and notifications should be transmitted."
-              )}
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {/* In-App Bell */}
-            <div className="p-3.5 rounded-lg border bg-muted/15 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <Bell className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold block">
-                    {t("notifications.inAppChannel", "In-App Notification Bell")}
-                  </span>
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("notifications.inAppDesc", "Display real-time alerts in the top panel navigation bar.")}
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={config.in_app_enabled}
-                onChange={(e) => setConfig({ ...config, in_app_enabled: e.target.checked })}
-                className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 mt-1"
-                data-testid="checkbox-inapp-channel"
-              />
-            </div>
-
-            {/* Email Channel */}
-            <div className="p-3.5 rounded-lg border bg-muted/15 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <Mail className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-bold block">
-                      {t("notifications.emailChannel", "Email Notifications (SMTP)")}
-                    </span>
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("notifications.emailDesc", "Send formatted HTML notification alerts to administrator inboxes.")}
-                    </p>
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={config.email_enabled}
-                  onChange={(e) => setConfig({ ...config, email_enabled: e.target.checked })}
-                  className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 mt-1"
-                  data-testid="checkbox-email-channel"
-                />
-              </div>
-
-              {config.email_enabled && (
-                <div className="pt-2 border-t">
-                  <label className="text-[11px] font-semibold block mb-1">
-                    {t("notifications.emailRecipientsLabel", "Recipient Email Addresses (comma separated)")}
-                  </label>
-                  <Input
-                    value={recipientInput}
-                    onChange={(e) => setRecipientInput(e.target.value)}
-                    placeholder="admin@enterprise.io, devops@enterprise.io"
-                    className="text-xs font-mono"
-                    data-testid="input-email-recipients"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Webhook Channel */}
-            <div className="p-3.5 rounded-lg border bg-muted/15 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <Webhook className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-bold block">
-                      {t("notifications.webhookChannel", "Outbound Webhooks")}
-                    </span>
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("notifications.webhookDesc", "Post JSON alert payloads to Slack, Discord, or monitoring endpoints.")}
-                    </p>
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={config.webhook_enabled}
-                  onChange={(e) => setConfig({ ...config, webhook_enabled: e.target.checked })}
-                  className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 mt-1"
-                  data-testid="checkbox-webhook-channel"
-                />
-              </div>
-
-              {config.webhook_enabled && (
-                <div className="pt-2 border-t">
-                  <label className="text-[11px] font-semibold block mb-1">
-                    {t("notifications.webhookUrlLabel", "Payload Destination URL")}
-                  </label>
-                  <Input
-                    value={config.webhook_url || ""}
-                    onChange={(e) => setConfig({ ...config, webhook_url: e.target.value })}
-                    placeholder="https://hooks.slack.com/services/..."
-                    className="text-xs font-mono"
-                    data-testid="input-webhook-url"
-                  />
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 2. Critical Alert Triggers (T18.03 DoD: SSL, Backup, Node Offline) */}
-        <Card className="border shadow-xs" data-testid="notification-triggers-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-primary" />
-              <span>{t("notifications.triggersTitle", "Critical Alert Triggers")}</span>
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {t(
-                "notifications.triggersSubtitle",
-                "Automated events that generate urgent warnings and administrator notifications."
-              )}
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-3">
-            {/* SSL Expiry */}
-            <div className="p-3.5 rounded-lg border bg-muted/15 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <Lock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold block">
-                    {t("notifications.triggerSsl", "SSL Certificate Expiry Warning")}
-                  </span>
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("notifications.triggerSslDesc", "Alert 30 days and 7 days prior to Let's Encrypt / custom certificate expiration.")}
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={config.notify_on_ssl_expiry}
-                onChange={(e) => setConfig({ ...config, notify_on_ssl_expiry: e.target.checked })}
-                className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 mt-1"
-                data-testid="checkbox-trigger-ssl"
-              />
-            </div>
-
-            {/* Backup Failure */}
-            <div className="p-3.5 rounded-lg border bg-muted/15 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <Archive className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold block">
-                    {t("notifications.triggerBackup", "Backup Failure & Storage Errors")}
-                  </span>
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("notifications.triggerBackupDesc", "Immediate notification if scheduled snapshot or S3 sync encounters errors.")}
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={config.notify_on_backup_failure}
-                onChange={(e) => setConfig({ ...config, notify_on_backup_failure: e.target.checked })}
-                className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 mt-1"
-                data-testid="checkbox-trigger-backup"
-              />
-            </div>
-
-            {/* Node Offline */}
-            <div className="p-3.5 rounded-lg border bg-muted/15 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <Server className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold block">
-                    {t("notifications.triggerNodeOffline", "Worker Node Disconnection / Offline")}
-                  </span>
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("notifications.triggerNodeOfflineDesc", "Trigger alert within 60 seconds if a cluster agent drops connection.")}
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={config.notify_on_node_offline}
-                onChange={(e) => setConfig({ ...config, notify_on_node_offline: e.target.checked })}
-                className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 mt-1"
-                data-testid="checkbox-trigger-node-offline"
-              />
-            </div>
-
-            {/* Security Alerts */}
-            <div className="p-3.5 rounded-lg border bg-muted/15 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <ShieldAlert className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold block">
-                    {t("notifications.triggerSecurity", "Security & Brute-Force Alerts")}
-                  </span>
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("notifications.triggerSecurityDesc", "Coraza WAF anomalies, SSH jail triggers, and repeated login failures.")}
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={config.notify_on_security_alert}
-                onChange={(e) => setConfig({ ...config, notify_on_security_alert: e.target.checked })}
-                className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 mt-1"
-                data-testid="checkbox-trigger-security"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Quiet */}
+      <Card data-testid="snooze-control-card">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-4 w-4 text-primary" />
+            {t("notifications.quietTitle", "Quiet hours")}
+          </CardTitle>
+          <CardDescription>
+            {quiet.paused
+              ? t("notifications.pausedNow", "Notifications are paused.")
+              : isSnoozed
+                ? t("notifications.snoozedDesc", "Alerts paused until {{time}}.", {
+                    time: snoozedUntil?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  })
+                : t("notifications.activeNow", "Notifications are on.")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {isSnoozed || quiet.paused ? (
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handlePause(false)} data-testid="btn-clear-snooze">
+              <PlayCircle className="h-4 w-4" />
+              {t("notifications.resume", "Resume")}
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={() => handleSnooze(60)} data-testid="btn-snooze-1h">
+                1 h
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleSnooze(240)} data-testid="btn-snooze-4h">
+                4 h
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleSnooze(1440)} data-testid="btn-snooze-24h">
+                24 h
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handlePause(true)} data-testid="btn-pause-notifications">
+                <PauseCircle className="h-4 w-4" />
+                {t("notifications.pause", "Pause")}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

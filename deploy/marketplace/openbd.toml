@@ -1,0 +1,8 @@
+slug        = "openbd"
+name        = "OpenBD"
+category    = "java_tools"
+kind        = "unavailable"
+description = "OpenBD."
+license     = "LGPL-2.1-only"
+covers      = ["OpenBD"]
+reason      = "the project is discontinued and no longer gets security fixes"

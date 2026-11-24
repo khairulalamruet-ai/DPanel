@@ -1,8 +1,8 @@
-# ০৫ — সিদ্ধান্ত ও পার্থক্য (OpenPanel বনাম DHPanel)
+# ০৫ — সিদ্ধান্ত ও পার্থক্য (OpenPanel বনাম Built Panel)
 
 ## মূল সিদ্ধান্ত
 
-| # | বিষয় | OpenPanel-এ | DHPanel-এ | কারণ |
+| # | বিষয় | OpenPanel-এ | Built Panel-এ | কারণ |
 |---|---|---|---|---|
 | D1 | Backend ভাষা | Go | **Rust + Axum** | doc-guide PDF |
 | D2 | Frontend | Go-র server-rendered template | **React + TS + Vite (SPA)** | আপনার নির্দেশ (Next.js নয়) |

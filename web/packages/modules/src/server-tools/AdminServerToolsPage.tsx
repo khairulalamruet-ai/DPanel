@@ -8,7 +8,7 @@ import {
   Button,
   Badge,
   useToast,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import {
   Wrench,
   Server,
@@ -18,8 +18,8 @@ import {
   Clock,
   Cpu,
 } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+import { useTranslation } from "@builtpanel/i18n";
+import { listNodeChoices, loadServer, loadAudit, setTimezone, setSwap, dropCaches, reboot, type NodeChoice } from "./api";
 import { ServerOverview, SshConfigInfo, ServerAuditEvent } from "./types";
 import { TimezoneCard } from "./TimezoneCard";
 import { SwapCard } from "./SwapCard";
@@ -32,23 +32,32 @@ export function AdminServerToolsPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [selectedNode, setSelectedNode] = useState("node-1");
+  const [nodes, setNodes] = useState<NodeChoice[]>([]);
+  const [selectedNode, setSelectedNode] = useState("");
   const [overview, setOverview] = useState<ServerOverview | null>(null);
   const [sshConfig, setSshConfig] = useState<SshConfigInfo | null>(null);
   const [auditEvents, setAuditEvents] = useState<ServerAuditEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRebootOpen, setIsRebootOpen] = useState(false);
 
+  useEffect(() => {
+    listNodeChoices()
+      .then((list) => {
+        setNodes(list);
+        setSelectedNode((current) => current || list[0]?.id || "");
+      })
+      .catch((err: any) =>
+        toast({ title: t("common.error"), description: err?.message || t("common.unknownError"), variant: "destructive" }),
+      );
+  }, []);
+
   const fetchData = useCallback(async () => {
+    if (!selectedNode) return;
     try {
       setIsLoading(true);
-      const [overviewData, sshData, auditData] = await Promise.all([
-        apiFetch<ServerOverview>(`/api/v1/admin/server/overview?node=${selectedNode}`),
-        apiFetch<SshConfigInfo>(`/api/v1/admin/server/ssh-config?node=${selectedNode}`),
-        apiFetch<ServerAuditEvent[]>(`/api/v1/admin/server/audit-events?node=${selectedNode}`),
-      ]);
-      setOverview(overviewData);
-      setSshConfig(sshData);
+      const [server, auditData] = await Promise.all([loadServer(selectedNode), loadAudit(selectedNode).catch(() => [])]);
+      setOverview(server.overview);
+      setSshConfig(server.ssh);
       setAuditEvents(auditData);
     } catch (err: any) {
       toast({
@@ -67,10 +76,7 @@ export function AdminServerToolsPage() {
 
   const handleUpdateTimezone = async (timezone: string, sudoPassword: string) => {
     try {
-      await apiFetch("/api/v1/admin/server/timezone", {
-        method: "POST",
-        body: JSON.stringify({ node: selectedNode, timezone, sudo_password: sudoPassword }),
-      });
+      await setTimezone(selectedNode, timezone, sudoPassword);
       toast({
         title: t("common.success"),
         description: t("serverTools.timezoneUpdatedSuccess", { timezone }),
@@ -86,15 +92,12 @@ export function AdminServerToolsPage() {
     }
   };
 
-  const handleUpdateSwap = async (totalMb: number, swappiness: number, sudoPassword: string) => {
+  const handleUpdateSwap = async (totalMb: number, _swappiness: number, sudoPassword: string) => {
     try {
-      await apiFetch("/api/v1/admin/server/swap", {
-        method: "POST",
-        body: JSON.stringify({ node: selectedNode, total_mb: totalMb, swappiness, sudo_password: sudoPassword }),
-      });
+      await setSwap(selectedNode, totalMb, sudoPassword);
       toast({
         title: t("common.success"),
-        description: t("serverTools.swapUpdatedSuccess", { totalMb, swappiness }),
+        description: t("serverTools.swapUpdatedSuccess", { totalMb, swappiness: 0 }),
       });
       await fetchData();
     } catch (err: any) {
@@ -109,13 +112,10 @@ export function AdminServerToolsPage() {
 
   const handleDropCaches = async (sudoPassword: string) => {
     try {
-      const res = await apiFetch<{ success: boolean; dropped_mb: number }>("/api/v1/admin/server/drop-caches", {
-        method: "POST",
-        body: JSON.stringify({ node: selectedNode, sudo_password: sudoPassword }),
-      });
+      await dropCaches(selectedNode, sudoPassword);
       toast({
         title: t("common.success"),
-        description: t("serverTools.dropCachesSuccess", { droppedMb: res.dropped_mb || 320 }),
+        description: t("serverTools.dropCachesDone", "The page cache was dropped"),
       });
       await fetchData();
     } catch (err: any) {
@@ -130,14 +130,7 @@ export function AdminServerToolsPage() {
 
   const handleReboot = async (sudoPassword: string) => {
     try {
-      await apiFetch("/api/v1/admin/server/reboot", {
-        method: "POST",
-        body: JSON.stringify({
-          node: selectedNode,
-          confirmation: "REBOOT",
-          sudo_password: sudoPassword,
-        }),
-      });
+      await reboot(selectedNode, nodes.find((n) => n.id === selectedNode)?.name ?? "", sudoPassword);
       toast({
         title: t("serverTools.rebootInitiatedTitle"),
         description: t("serverTools.rebootInitiatedDescription"),
@@ -183,8 +176,11 @@ export function AdminServerToolsPage() {
               onChange={(e) => setSelectedNode(e.target.value)}
               className="bg-transparent font-medium focus:outline-none"
             >
-              <option value="node-1">node-1 (Primary Control Node)</option>
-              <option value="node-2">node-2 (Worker Node East)</option>
+              {nodes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -296,7 +292,8 @@ export function AdminServerToolsPage() {
       <RebootDialog
         open={isRebootOpen}
         onOpenChange={setIsRebootOpen}
-        nodeHostname={overview?.hostname || "node-1.dhpanel.internal"}
+        nodeHostname={overview?.hostname || ""}
+        confirmWord={nodes.find((n) => n.id === selectedNode)?.name}
         onConfirm={handleReboot}
       />
     </div>

@@ -1,10 +1,10 @@
 # ০২ — Admin Panel (OpenAdmin): ফিচার A থেকে Z
 
 এই তালিকা বানানো হয়েছে admin binary-র ভেতরের route string থেকে, REA দিয়ে। Binary চালিয়ে দেখা হয়নি, তাই প্রতিটা ফিচার কতটা কাজ করে সেটা যাচাই করা নেই।
-কলামের অর্থ: **Module** মানে DHPanel-এ যে module-এ এই ফিচার যাবে (দেখুন [../01-architecture/03-module-system.md](../01-architecture/03-module-system.md))।
+কলামের অর্থ: **Module** মানে Built Panel-এ যে module-এ এই ফিচার যাবে (দেখুন [../01-architecture/03-module-system.md](../01-architecture/03-module-system.md))।
 
 ## A. Account ও Admin
-| ফিচার | OpenPanel route | DHPanel module |
+| ফিচার | OpenPanel route | Built Panel module |
 |---|---|---|
 | Admin login, whoami | `POST /api/login`, `GET /api/whoami` | `auth` |
 | একাধিক admin, role | `/api/settings/administrators` | `auth` |
@@ -138,4 +138,4 @@
 | Webhook | `/api/webhooks/...` | `integrations` |
 
 ---
-**মোট:** প্রায় ১৮০টা আলাদা API endpoint, যেগুলো DHPanel-এর ~৩০টা module-এ ভাগ হবে।
+**মোট:** প্রায় ১৮০টা আলাদা API endpoint, যেগুলো Built Panel-এর ~৩০টা module-এ ভাগ হবে।

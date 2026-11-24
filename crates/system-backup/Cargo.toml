@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-system-backup"
+name = "builtpanel-system-backup"
 description = "The panel's own backup: the control database, its config and the node CA (T09.08)."
 version.workspace = true
 edition.workspace = true
@@ -11,8 +11,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-backup.workspace = true
-dhpanel-backup-dest.workspace = true
+builtpanel-backup.workspace = true
+builtpanel-backup-dest.workspace = true
 serde_json = "1"
 sha2 = "0.11"
 tar = { version = "0.4.46", default-features = false }

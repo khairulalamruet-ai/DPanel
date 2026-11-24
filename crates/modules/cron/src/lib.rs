@@ -18,9 +18,9 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_backup::schedule::Cron;
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_backup::schedule::Cron;
+use builtpanel_database::{
     accounts::DbAccountKind,
     cron_jobs::{self as store, CronJob, Fields, SaveError},
     operations::{self, NewOperation},
@@ -28,11 +28,11 @@ use dhpanel_database::{
     sqlx::PgPool,
     tenants, users,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::{CronJobSpec, Operation};
-use dhpanel_rbac::Principal;
-use dhpanel_session::{SessionStore, rfc3339};
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::{CronJobSpec, Operation};
+use builtpanel_rbac::Principal;
+use builtpanel_session::{SessionStore, rfc3339};
+use builtpanel_settings::{Scope, SettingsRegistry};
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
 use uuid::Uuid;
@@ -139,7 +139,7 @@ struct Rules {
 
 async fn rules(state: &CronState) -> Result<Rules, AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "cron", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "cron", Scope::Global)
         .await
         .map_err(internal)?;
     let int = |key: &str, default: i64| {
@@ -388,7 +388,7 @@ async fn audit(
     h: &Hosting,
     id: Uuid,
 ) -> Result<(), AppError> {
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &AuditEntry::new(action, Outcome::Success)
             .actor(who.account_id())

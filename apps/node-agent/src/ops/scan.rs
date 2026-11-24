@@ -9,13 +9,13 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{Capability, ContainerSpec, Network, Tmpfs, VolumeMount};
-use dhpanel_node_protocol::{
+use builtpanel_docker_manager::{Capability, ContainerSpec, Network, Tmpfs, VolumeMount};
+use builtpanel_node_protocol::{
     AgentError, ErrorCode, Infection, Operation, Output, WpComponent, WpInstall,
     files::{FileRequest, FileResult},
 };
-use dhpanel_priv_helper::protocol::Action;
-use dhpanel_tenant_stack::{Allowlist, Role};
+use builtpanel_priv_helper::protocol::Action;
+use builtpanel_tenant_stack::{Allowlist, Role};
 
 use super::{
     db,
@@ -25,7 +25,7 @@ use super::{
 
 const GIB: u64 = 1024 * 1024 * 1024;
 /// The network the signature update uses.
-pub const NETWORK: &str = "dh-clamav-net";
+pub const NETWORK: &str = "bp-clamav-net";
 const SCAN_LIMIT: Duration = Duration::from_secs(45 * 60);
 const UPDATE_LIMIT: Duration = Duration::from_secs(10 * 60);
 /// Most infected files listed (and moved) by one scan.
@@ -52,7 +52,7 @@ fn has_signatures(dir: &std::path::Path) -> bool {
             .any(|f| dir.join(f).exists())
 }
 
-async fn image(context: &TenantContext) -> Result<dhpanel_docker_manager::ImageRef, AgentError> {
+async fn image(context: &TenantContext) -> Result<builtpanel_docker_manager::ImageRef, AgentError> {
     let allowlist = Allowlist::embedded().map_err(|e| failed(&format!("the image list: {e}")))?;
     let image = allowlist
         .current(Role::Clamav)
@@ -67,8 +67,8 @@ async fn image(context: &TenantContext) -> Result<dhpanel_docker_manager::ImageR
 }
 
 pub(super) fn base_spec(
-    name: dhpanel_docker_manager::Name,
-    image: dhpanel_docker_manager::ImageRef,
+    name: builtpanel_docker_manager::Name,
+    image: builtpanel_docker_manager::ImageRef,
     command: &[&str],
 ) -> ContainerSpec {
     let mut spec = ContainerSpec::new(name, image);
@@ -96,7 +96,7 @@ pub(super) fn base_spec(
 /// Makes the signature folder and its volume; returns the volume.
 async fn signatures_volume(
     context: &TenantContext,
-) -> Result<dhpanel_docker_manager::Name, AgentError> {
+) -> Result<builtpanel_docker_manager::Name, AgentError> {
     use std::os::unix::fs::PermissionsExt as _;
     let dir = signatures_dir(context)?;
     // Only when it is new: afterwards the updater's own user owns it, and it stays open to it.
@@ -107,7 +107,7 @@ async fn signatures_volume(
         std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o777))
             .map_err(|e| failed(&format!("cannot set the folder's rights: {e}")))?;
     }
-    let volume = db::name("dh-clamav-db")?;
+    let volume = db::name("bp-clamav-db")?;
     context
         .docker
         .create_bind_volume(&volume, &dir, &state(context)?)
@@ -126,7 +126,7 @@ async fn update(context: &TenantContext) -> Result<String, AgentError> {
         .await
         .map_err(|e| docker_error(&e))?;
     let mut spec = base_spec(
-        db::name("dh-clamav-update")?,
+        db::name("bp-clamav-update")?,
         image,
         &["freshclam", "--stdout"],
     );
@@ -247,7 +247,7 @@ pub async fn scan_tenant(context: Arc<TenantContext>, op: Operation) -> Result<O
     let signatures = signatures_volume(&context).await?;
     let short = tenant_id.simple().to_string();
     let short = &short[..12];
-    let volume = db::name(&format!("dh-scan-{short}"))?;
+    let volume = db::name(&format!("bp-scan-{short}"))?;
     context
         .docker
         .create_bind_volume(&volume, &tenant_dir, &context.tenants_root)
@@ -257,7 +257,7 @@ pub async fn scan_tenant(context: Arc<TenantContext>, op: Operation) -> Result<O
         Some(f) => format!("/scan/www/{f}"),
         None => "/scan/www".to_owned(),
     };
-    let name = db::name(&format!("dh-scan-{short}"))?;
+    let name = db::name(&format!("bp-scan-{short}"))?;
     let mut spec = base_spec(
         name.clone(),
         image,
@@ -428,7 +428,7 @@ pub async fn inventory_wordpress(
     }
     let image = image(&context).await?;
     let short = tenant_id.simple().to_string();
-    let volume = db::name(&format!("dh-wpinv-{}", &short[..12]))?;
+    let volume = db::name(&format!("bp-wpinv-{}", &short[..12]))?;
     context
         .docker
         .create_bind_volume(&volume, &tenant_dir, &context.tenants_root)

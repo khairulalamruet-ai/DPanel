@@ -9,9 +9,9 @@ import {
   Button,
   Badge,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch, getCsrfToken } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch, getCsrfToken } from "@builtpanel/api";
 import { Server, Copy, Check, Terminal, ShieldCheck, Loader2, KeyRound } from "lucide-react";
 import type { CreatedEnrollment } from "./types";
 

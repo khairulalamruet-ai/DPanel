@@ -8,10 +8,10 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { createCronJob } from "./api";
 import { Clock, Terminal, AlertCircle } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { CreateCronJobInput } from "./types";
 
 interface CreateCronJobDialogProps {
@@ -31,7 +31,6 @@ export function CreateCronJobDialog({
   const [name, setName] = useState("");
   const [command, setCommand] = useState("");
   const [schedule, setSchedule] = useState("0 * * * *");
-  const [description, setDescription] = useState("");
   const [timeoutSeconds, setTimeoutSeconds] = useState(300);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,14 +92,10 @@ export function CreateCronJobDialog({
         name: name.trim(),
         command: command.trim(),
         schedule: schedule.trim(),
-        description: description.trim() || undefined,
         timeout_seconds: Number(timeoutSeconds) || 300,
       };
 
-      await apiFetch("/api/v1/client/cron", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      await createCronJob(payload);
 
       toast({
         title: t("common.success"),
@@ -110,7 +105,6 @@ export function CreateCronJobDialog({
       setName("");
       setCommand("");
       setSchedule("0 * * * *");
-      setDescription("");
       setValidationError(null);
       onOpenChange(false);
       onSaved();
@@ -236,18 +230,7 @@ export function CreateCronJobDialog({
           </div>
 
           {/* Description & Timeout in grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("cron.description")}
-              </label>
-              <Input
-                placeholder={t("cron.descriptionPlaceholder")}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                data-testid="input-cron-description"
-              />
-            </div>
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("cron.timeoutSec")}

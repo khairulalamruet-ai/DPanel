@@ -1,7 +1,7 @@
 # Proposal: README install section (human owns README.md)
 
 ```sh
-curl -fsSL https://github.com/khairulalamruet-ai/DHPanel/releases/latest/download/get.sh | sudo bash
+curl -fsSL https://github.com/khairulalamruet-ai/DPanel/releases/latest/download/get.sh | sudo bash
 ```
 
 Run as root on a new Ubuntu 22.04+/Debian 12+ server. Without options the panel is served under

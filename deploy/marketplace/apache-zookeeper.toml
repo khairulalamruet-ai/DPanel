@@ -1,0 +1,9 @@
+slug        = "apache-zookeeper"
+name        = "Apache ZooKeeper"
+category    = "java_tools"
+kind        = "unavailable"
+description = "A coordination service."
+license     = "Apache-2.0"
+homepage    = "https://zookeeper.apache.org"
+covers      = ["Apache ZooKeeper"]
+reason      = "its image starts as root and then switches to its own user"

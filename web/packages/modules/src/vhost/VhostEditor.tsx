@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Button } from "@dhpanel/ui";
+import { Button } from "@builtpanel/ui";
 import { AlertCircle, CheckCircle2, Code2, Plus } from "lucide-react";
 
 interface VhostEditorProps {

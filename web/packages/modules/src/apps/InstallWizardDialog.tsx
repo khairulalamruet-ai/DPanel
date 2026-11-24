@@ -9,8 +9,8 @@ import {
   Button,
   Input,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   Download,
   CheckCircle,
@@ -45,13 +45,13 @@ export function InstallWizardDialog({
 }: InstallWizardDialogProps) {
   const { t } = useTranslation();
 
-  const [selectedDomain, setSelectedDomain] = useState(domains[0] || "example.com");
+  const [selectedDomain, setSelectedDomain] = useState(domains[0] || "");
   const [protocol, setProtocol] = useState<"https" | "http">("https");
   const [installPath, setInstallPath] = useState("");
   const [siteName, setSiteName] = useState("My Awesome Site");
   const [adminUsername, setAdminUsername] = useState("admin");
-  const [adminEmail, setAdminEmail] = useState("admin@example.com");
-  const [adminPassword, setAdminPassword] = useState("SecurePass!2026");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
   const [autoUpdate, setAutoUpdate] = useState(true);
 
   // Installation state

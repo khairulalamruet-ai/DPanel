@@ -1,9 +1,9 @@
-# DHPanel control plane configuration (example).
-# Install as /etc/dhpanel/control.toml (mode 0640, owner root:dhpanel),
-# or point DHPANEL_CONFIG at another path.
+# Built Panel control plane configuration (example).
+# Install as /etc/builtpanel/control.toml (mode 0640, owner root:builtpanel),
+# or point BUILTPANEL_CONFIG at another path.
 #
 # Every key can be overridden by environment variables:
-#   DHPANEL_<SECTION>__<KEY>, e.g. DHPANEL_DATABASE__MAX_CONNECTIONS=20
+#   BUILTPANEL_<SECTION>__<KEY>, e.g. BUILTPANEL_DATABASE__MAX_CONNECTIONS=20
 # Unknown keys are rejected at startup.
 
 listen = "127.0.0.1:8080"
@@ -16,22 +16,22 @@ trusted_proxies = []   # e.g. ["127.0.0.1", "::1"]
 
 [log]
 format = "json"          # json | pretty
-filter = "info"          # EnvFilter directives, e.g. "info,dhpanel=debug"
+filter = "info"          # EnvFilter directives, e.g. "info,builtpanel=debug"
 # otlp_endpoint = "http://127.0.0.1:4318/v1/traces"   # needs a build with --features otel
 
 [database]
 # Put the URL in a file readable only by the service user (chmod 0600).
-url_file = "/etc/dhpanel/secrets/database_url"
+url_file = "/etc/builtpanel/secrets/database_url"
 max_connections = 10
 
 [redis]
-url_file = "/etc/dhpanel/secrets/redis_url"
+url_file = "/etc/builtpanel/secrets/redis_url"
 
 [auth]
 # Argon2id password hashing cost. Raising these makes every login slower;
 # existing hashes are upgraded on the next successful login.
 # Default is the OWASP baseline (19 MiB, t=2). Benchmark the server first:
-#   DHPANEL_BENCH_ARGON2=65536,3,1 cargo test -p dhpanel-auth-core --release -- --ignored --nocapture benchmark
+#   BUILTPANEL_BENCH_ARGON2=65536,3,1 cargo test -p builtpanel-auth-core --release -- --ignored --nocapture benchmark
 # and aim for roughly 200 ms per hash.
 argon2_memory_kib = 19456   # KiB, minimum 19456
 argon2_iterations = 2       # minimum 2
@@ -58,20 +58,25 @@ ip_lockout_threshold = 10      # lockout_threshold..=100000
 ip_lockout_minutes = 60        # 1..=10080
 
 # Two-factor authentication: the name authenticator apps show for this panel.
-totp_issuer = "DHPanel"
+totp_issuer = "Built Panel"
+
+# Root login (like WHM): the administrator `root` logs in with this server's root password,
+# checked by the builtpanel-root-auth helper on this socket. install.sh sets it up; remove the
+# line (and run `bpctl admin root-login --disable`) to turn it off.
+# root_login_socket = "/run/builtpanel-root-auth/root-auth.sock"
 
 [secrets]
 # Master key that encrypts secrets stored in the database (TOTP secrets, ...).
 # Create once and back it up separately from the database:
-#   (umask 077; openssl rand -base64 32 > /etc/dhpanel/secrets/master_key)
+#   (umask 077; openssl rand -base64 32 > /etc/builtpanel/secrets/master_key)
 # If it is lost, users must re-enrol 2FA; if it leaks together with a database
 # dump, stored TOTP secrets are exposed.
-master_key_file = "/etc/dhpanel/secrets/master_key"
+master_key_file = "/etc/builtpanel/secrets/master_key"
 
 [pki]
-# Where `dhctl ca init` put node_ca.crt and node_ca.key. Without a CA, node
+# Where `bpctl ca init` put node_ca.crt and node_ca.key. Without a CA, node
 # enrollment is switched off (the rest of the panel works).
-ca_dir = "/etc/dhpanel/secrets"
+ca_dir = "/etc/builtpanel/secrets"
 
 [agent]
 # Where node agents reach this control plane (its agent port). Shown to
@@ -81,7 +86,7 @@ ca_dir = "/etc/dhpanel/secrets"
 # How long a new node's enrollment token stays valid, in minutes (1..=60).
 enrollment_token_minutes = 15
 # The agent port: agents connect here with their node certificate (mutual TLS,
-# TLS 1.3). Needs server.crt and server.key next to the CA (`dhctl ca issue-server
+# TLS 1.3). Needs server.crt and server.key next to the CA (`bpctl ca issue-server
 # --out <pki.ca_dir>`). Set both or neither. Open this port to your nodes only.
 # stream_listen = "0.0.0.0:8444"
 # stream_url = "https://panel.example.com:8444"
@@ -90,4 +95,4 @@ enrollment_token_minutes = 15
 # Uploaded SQL dumps wait here until the node has fetched them, then they are
 # removed. Needs room for a few of the biggest dumps (setting `max_import_mb` of
 # the databases module, 1024 MB by default). Imports need `agent.public_url`.
-# spool_dir = "/var/lib/dhpanel/spool/imports"
+# spool_dir = "/var/lib/builtpanel/spool/imports"

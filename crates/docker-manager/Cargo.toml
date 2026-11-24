@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-docker-manager"
+name = "builtpanel-docker-manager"
 description = "The only way the node agent talks to Docker: a small set of typed, hardened actions."
 version.workspace = true
 edition.workspace = true

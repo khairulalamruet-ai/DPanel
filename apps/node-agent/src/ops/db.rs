@@ -1,7 +1,7 @@
 //! The node's shared database server (T07.01).
 //!
-//! One MariaDB container per node, named `dh-db`, with its data in the volume
-//! `dh-db-data`. It is published on the node's loopback address only (the agent
+//! One MariaDB container per node, named `bp-db`, with its data in the volume
+//! `bp-db-data`. It is published on the node's loopback address only (the agent
 //! reaches it there; nothing outside the node can), and it joins the network of
 //! each tenant that may use databases, as `db`, so a tenant's containers reach it
 //! and nobody else's do. Its root password is made here, kept in the agent's
@@ -15,28 +15,28 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_docker_manager::{
+use builtpanel_docker_manager::{
     Capability, ContainerSpec, DockerError, Name, Network, PublishedPort, Restart, Tmpfs,
     VolumeMount,
 };
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role, network_name};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role, network_name};
 
 use super::tenant::{TenantContext, docker_error};
 
 /// The database container.
-pub const CONTAINER: &str = "dh-db";
+pub const CONTAINER: &str = "bp-db";
 /// Its network (the tenants' networks are added to it as it is used).
-pub(super) const NETWORK: &str = "dh-db-net";
+pub(super) const NETWORK: &str = "bp-db-net";
 /// Its data.
-const VOLUME: &str = "dh-db-data";
-/// The loopback port it is published on unless `DHPANEL_AGENT_DB_PORT` says another.
+const VOLUME: &str = "bp-db-data";
+/// The loopback port it is published on unless `BUILTPANEL_AGENT_DB_PORT` says another.
 pub const DEFAULT_PORT: u16 = 3307;
-/// The public port unless `DHPANEL_AGENT_DB_PUBLIC_PORT` says another.
+/// The public port unless `BUILTPANEL_AGENT_DB_PUBLIC_PORT` says another.
 pub const DEFAULT_PUBLIC_PORT: u16 = 13306;
 /// The label that says the container publishes its public port (and which).
-const PUBLIC_LABEL: &str = "dh-db-public";
+const PUBLIC_LABEL: &str = "bp-db-public";
 /// The name tenants reach it by on their own network.
 pub const ALIAS: &str = "db";
 /// Longest wait for it to accept connections.
@@ -47,7 +47,7 @@ const MIB: u64 = 1024 * 1024;
 /// The loopback port of the database server.
 #[must_use]
 pub fn port() -> u16 {
-    std::env::var("DHPANEL_AGENT_DB_PORT")
+    std::env::var("BUILTPANEL_AGENT_DB_PORT")
         .ok()
         .and_then(|p| p.parse().ok())
         .filter(|p| *p >= 1024)
@@ -55,11 +55,11 @@ pub fn port() -> u16 {
 }
 
 /// The port the server is published on for clients outside the node, when remote
-/// access is on (`DHPANEL_AGENT_DB_PUBLIC_PORT`; the privileged helper's
+/// access is on (`BUILTPANEL_AGENT_DB_PUBLIC_PORT`; the privileged helper's
 /// `--db-port` must be the same).
 #[must_use]
 pub fn public_port() -> u16 {
-    std::env::var("DHPANEL_AGENT_DB_PUBLIC_PORT")
+    std::env::var("BUILTPANEL_AGENT_DB_PUBLIC_PORT")
         .ok()
         .and_then(|p| p.parse().ok())
         .filter(|p| *p >= 1024)
@@ -251,7 +251,7 @@ pub async fn ensure_server_with(context: &TenantContext, public: bool) -> Result
             // The server has a network of its own that tenants are added to (the shared one, or
             // one tenant's own server, which only that tenant is added to).
             let network = match &dedicated {
-                Some(tenant) => name(&format!("dh-{tenant}-dbnet"))?,
+                Some(tenant) => name(&format!("bp-{tenant}-dbnet"))?,
                 None => name(NETWORK)?,
             };
             docker
@@ -383,7 +383,7 @@ fn sql_error(err: &mysql_async::Error) -> AgentError {
 }
 
 fn identifier(name: &str) -> Result<String, AgentError> {
-    dhpanel_domain::databases::check_identifier(name)
+    builtpanel_domain::databases::check_identifier(name)
         .map_err(|e| AgentError::new(ErrorCode::InvalidArguments, e.to_string()))?;
     // Checked as plain letters, digits and `_` above, so nothing in it needs
     // escaping; the quotes keep a word the server knows from being read as one.
@@ -480,7 +480,7 @@ pub async fn drop_database(
 /// A user's name as a statement writes it. (The same plain-identifier rule as for
 /// databases; checked, then quoted.)
 fn user_literal(name: &str) -> Result<String, AgentError> {
-    dhpanel_domain::databases::check_identifier(name)
+    builtpanel_domain::databases::check_identifier(name)
         .map_err(|e| AgentError::new(ErrorCode::InvalidArguments, e.to_string()))?;
     Ok(format!("'{name}'"))
 }
@@ -554,7 +554,7 @@ pub async fn upsert_db_user(
     let user = user_literal(&name)?;
     let tenant = TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
     if let Some(p) = &password {
-        dhpanel_domain::databases::check_password(&p.0).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_domain::databases::check_password(&p.0).map_err(|e| invalid(&e.to_string()))?;
     }
     // Where it may connect from: its own tenant's network, never `%`.
     let network = network_name(&tenant).map_err(|e| invalid(&e.to_string()))?;
@@ -566,7 +566,7 @@ pub async fn upsert_db_user(
             DockerError::NotFound => invalid("the tenant has no network on this node"),
             other => docker_error(&other),
         })?;
-    let host = dhpanel_domain::databases::host_for_network(&subnet).ok_or_else(|| {
+    let host = builtpanel_domain::databases::host_for_network(&subnet).ok_or_else(|| {
         AgentError::new(
             ErrorCode::Internal,
             "the tenant's network range is not usable",
@@ -705,7 +705,7 @@ pub async fn grant_db(context: Arc<TenantContext>, op: Operation) -> Result<Outp
     else {
         return Err(super::wrong_operation());
     };
-    let level = dhpanel_domain::databases::Access::parse(&access)
+    let level = builtpanel_domain::databases::Access::parse(&access)
         .ok_or_else(|| AgentError::new(ErrorCode::InvalidArguments, "an unknown access level"))?;
     let db = identifier(&database)?;
     let who = user_literal(&user)?;
@@ -785,7 +785,7 @@ async fn tenant_host(
             DockerError::NotFound => invalid("the tenant has no network on this node"),
             other => docker_error(&other),
         })?;
-    dhpanel_domain::databases::host_for_network(&subnet).ok_or_else(|| {
+    builtpanel_domain::databases::host_for_network(&subnet).ok_or_else(|| {
         AgentError::new(
             ErrorCode::Internal,
             "the tenant's network range is not usable",
@@ -803,7 +803,7 @@ async fn grants_on(
     host: &str,
 ) -> Result<Vec<(String, Vec<String>)>, AgentError> {
     use mysql_async::prelude::Queryable as _;
-    let known: std::collections::BTreeSet<&str> = dhpanel_domain::databases::Access::All
+    let known: std::collections::BTreeSet<&str> = builtpanel_domain::databases::Access::All
         .privileges()
         .iter()
         .copied()
@@ -829,7 +829,7 @@ async fn grants_on(
         };
         let _ = tail;
         let privileges: Vec<String> = privs.split(", ").map(str::to_owned).collect();
-        if dhpanel_domain::databases::check_identifier(db).is_ok()
+        if builtpanel_domain::databases::check_identifier(db).is_ok()
             && privileges.iter().all(|p| known.contains(p.as_str()))
         {
             out.push((db.to_owned(), privileges));
@@ -866,8 +866,8 @@ pub async fn report_db_sizes(
     Ok(Output::DbSizes {
         items: rows
             .into_iter()
-            .take(dhpanel_node_protocol::MAX_DB_SIZES_PER_REPORT)
-            .map(|(name, bytes)| dhpanel_node_protocol::DbSize { name, bytes })
+            .take(builtpanel_node_protocol::MAX_DB_SIZES_PER_REPORT)
+            .map(|(name, bytes)| builtpanel_node_protocol::DbSize { name, bytes })
             .collect(),
     })
 }
@@ -894,12 +894,12 @@ pub async fn set_db_remote_hosts(
     let invalid = |m: &str| AgentError::new(ErrorCode::InvalidArguments, m.to_owned());
     let user = user_literal(&name)?;
     let tenant = TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
-    if cidrs.len() > dhpanel_node_protocol::MAX_DB_REMOTE_HOSTS {
+    if cidrs.len() > builtpanel_node_protocol::MAX_DB_REMOTE_HOSTS {
         return Err(invalid("too many remote addresses"));
     }
     let mut wanted: Vec<String> = Vec::new();
     for cidr in &cidrs {
-        let host = dhpanel_domain::databases::host_for_remote(cidr)
+        let host = builtpanel_domain::databases::host_for_remote(cidr)
             .ok_or_else(|| invalid("a remote address is IPv4 a.b.c.d/n, no wider than /8"))?;
         if !wanted.contains(&host) {
             wanted.push(host);
@@ -979,11 +979,11 @@ pub async fn set_db_remote_access(
         return Err(super::wrong_operation());
     };
     let invalid = |m: &str| AgentError::new(ErrorCode::InvalidArguments, m.to_owned());
-    if cidrs.len() > dhpanel_node_protocol::MAX_DB_REMOTE_ACCESS {
+    if cidrs.len() > builtpanel_node_protocol::MAX_DB_REMOTE_ACCESS {
         return Err(invalid("too many address ranges"));
     }
     for cidr in &cidrs {
-        if dhpanel_domain::databases::host_for_remote(cidr).is_none() {
+        if builtpanel_domain::databases::host_for_remote(cidr).is_none() {
             return Err(invalid(
                 "an address range is not IPv4 a.b.c.d/n (n from 8 to 32)",
             ));
@@ -995,7 +995,7 @@ pub async fn set_db_remote_access(
     tokio::task::spawn_blocking(move || {
         super::tenant::ask_helper(
             &socket,
-            dhpanel_priv_helper::protocol::Action::SetDbFirewall { cidrs: sent },
+            builtpanel_priv_helper::protocol::Action::SetDbFirewall { cidrs: sent },
         )
     })
     .await
@@ -1106,7 +1106,7 @@ mod tests {
 
     #[test]
     fn the_root_password_is_made_once_kept_private_and_read_back() {
-        let dir = std::env::temp_dir().join(format!("dh-secrets-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bp-secrets-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let first = root_password(&dir).unwrap();
         assert_eq!(first.len(), 64);

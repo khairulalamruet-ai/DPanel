@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AuditViewerPage } from "./AuditViewerPage";
-import { api } from "@dhpanel/api";
+import { api } from "@builtpanel/api";
 
 let mockHasPermission = true;
 
-vi.mock("@dhpanel/auth", () => ({
+vi.mock("@builtpanel/auth", () => ({
   useSession: () => ({
     data: {
       user: { id: "00000000-0000-0000-0000-000000000001", username: "admin" },
@@ -19,7 +19,7 @@ vi.mock("@dhpanel/auth", () => ({
   }),
 }));
 
-vi.mock("@dhpanel/i18n", () => ({
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const dict: Record<string, string> = {

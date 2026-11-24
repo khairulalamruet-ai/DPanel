@@ -1,0 +1,9 @@
+slug        = "dotnet"
+name        = ".NET"
+category    = "web_servers"
+kind        = "unavailable"
+description = "Microsoft's open-source application platform."
+license     = "MIT"
+homepage    = "https://dotnet.microsoft.com"
+covers      = ["Dotnet"]
+reason      = "a language runtime or build tool, not a service; put it in your own container image (Containers)"

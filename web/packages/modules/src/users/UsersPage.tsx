@@ -9,37 +9,30 @@ import {
   Button,
   Input,
   Badge,
-  Card,
-  CardContent,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { apiFetch } from "@builtpanel/api";
+import { listUsers, bulkAction } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
-  Users,
   Search,
-  Filter,
   RefreshCw,
-  UserPlus,
   ShieldAlert,
   ShieldCheck,
   Package,
-  HardDrive,
   LogIn,
-  MoreVertical,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
   AlertTriangle,
   Trash2,
+  ChevronDown,
 } from "lucide-react";
 import { UserItem, UsersListResponse, UserStatus } from "./types";
 import { ChangePlanDialog, AVAILABLE_PLANS } from "./ChangePlanDialog";
 import { SuspendUserDialog } from "./SuspendUserDialog";
+import { AccountsTabs } from "../accounts/AccountsTabs";
 
 export const AVAILABLE_NODES = [
   { id: "node-sgp-01", name: "node-sgp-01 (Singapore)" },
@@ -54,6 +47,91 @@ export function formatBytes(bytes: number): string {
   const sizes = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+type ColumnKey = "email" | "status" | "package" | "node" | "memory" | "cpu" | "disk" | "inodes" | "created" | "login" | "actions";
+
+const COLUMNS: { key: ColumnKey; labelKey: string; fallback: string }[] = [
+  { key: "email", labelKey: "users.table.email", fallback: "Email" },
+  { key: "status", labelKey: "users.table.status", fallback: "Status" },
+  { key: "package", labelKey: "users.table.package", fallback: "Package" },
+  { key: "node", labelKey: "users.table.node", fallback: "Node" },
+  { key: "memory", labelKey: "users.table.memory", fallback: "Memory %" },
+  { key: "cpu", labelKey: "users.table.cpu", fallback: "CPU %" },
+  { key: "disk", labelKey: "users.table.disk", fallback: "Disk %" },
+  { key: "inodes", labelKey: "users.table.inodes", fallback: "Inodes %" },
+  { key: "created", labelKey: "users.table.created", fallback: "Created" },
+  { key: "login", labelKey: "users.table.login", fallback: "Log in" },
+  { key: "actions", labelKey: "users.table.actions", fallback: "Actions" },
+];
+
+const DEFAULT_COLUMNS: Record<ColumnKey, boolean> = {
+  email: false,
+  status: true,
+  package: true,
+  node: false,
+  memory: true,
+  cpu: true,
+  disk: true,
+  inodes: true,
+  created: true,
+  login: true,
+  actions: true,
+};
+
+/** "3mo ago", "2h ago": how long ago a time was, in the page's language. */
+export function timeAgo(iso: string, now: number = Date.now()): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const seconds = Math.max(0, Math.round((now - then) / 1000));
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["year", 31_536_000],
+    ["month", 2_592_000],
+    ["day", 86_400],
+    ["hour", 3_600],
+    ["minute", 60],
+  ];
+  const lang = typeof document !== "undefined" && document.documentElement.lang ? document.documentElement.lang : "en";
+  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "always", style: "narrow" });
+  for (const [unit, size] of units) {
+    if (seconds >= size) return rtf.format(-Math.floor(seconds / size), unit);
+  }
+  return rtf.format(-seconds, "second");
+}
+
+/** A small ring that shows how much of a plan limit is used; empty when it is not known. */
+export function UsageRing({ percent, label }: { percent?: number | null; label: string }) {
+  const known = typeof percent === "number";
+  const shown = known ? percent : 0;
+  const radius = 13;
+  const circumference = 2 * Math.PI * radius;
+  const filled = (Math.min(100, Math.max(0, shown)) / 100) * circumference;
+  const color = !known ? "stroke-transparent" : shown > 90 ? "stroke-destructive" : shown > 75 ? "stroke-amber-500" : "stroke-primary";
+  return (
+    <div
+      className="relative h-8 w-8"
+      role="img"
+      aria-label={known ? `${label}: ${shown}%` : `${label}: –`}
+      data-testid="usage-ring"
+    >
+      <svg viewBox="0 0 32 32" className="h-8 w-8 -rotate-90">
+        <circle cx="16" cy="16" r={radius} fill="none" strokeWidth="3" className="stroke-muted" />
+        <circle
+          cx="16"
+          cy="16"
+          r={radius}
+          fill="none"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={`${filled} ${circumference}`}
+          className={color}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-foreground">
+        {known ? shown : "–"}
+      </span>
+    </div>
+  );
 }
 
 export function UsersPage() {
@@ -74,6 +152,8 @@ export function UsersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [nodeFilter, setNodeFilter] = useState<string>("all");
+  const [columns, setColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_COLUMNS);
+  const [columnsOpen, setColumnsOpen] = useState(false);
 
   // Selection state
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
@@ -104,17 +184,13 @@ export function UsersPage() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const queryParams: Record<string, string | number> = {
+      const data = await listUsers({
         page,
-        per_page: perPage,
-      };
-      if (debouncedSearch.trim()) queryParams.search = debouncedSearch.trim();
-      if (statusFilter !== "all") queryParams.status = statusFilter;
-      if (planFilter !== "all") queryParams.plan_id = planFilter;
-      if (nodeFilter !== "all") queryParams.node_id = nodeFilter;
-
-      const data = await apiFetch<UsersListResponse>("/api/v1/admin/users", {
-        params: queryParams,
+        perPage,
+        search: debouncedSearch.trim() || undefined,
+        status: statusFilter,
+        planId: planFilter,
+        nodeId: nodeFilter,
       });
 
       setUsers(data.items || []);
@@ -225,14 +301,7 @@ export function UsersPage() {
     setIsSubmitting(true);
     try {
       const ids = changePlanUsers?.map((u) => u.id) || [];
-      await apiFetch("/api/v1/admin/users/bulk", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "change_plan",
-          user_ids: ids,
-          plan_id: planId,
-        }),
-      });
+      await bulkAction({ action: "change_plan", user_ids: ids, plan_id: planId });
 
       toast({
         title: t("common.appName"),
@@ -262,14 +331,7 @@ export function UsersPage() {
       const { users: targetUsers, action } = suspendDialogData;
       const ids = targetUsers.map((u) => u.id);
 
-      await apiFetch("/api/v1/admin/users/bulk", {
-        method: "POST",
-        body: JSON.stringify({
-          action,
-          user_ids: ids,
-          reason,
-        }),
-      });
+      await bulkAction({ action, user_ids: ids, reason });
 
       toast({
         title: t("common.appName"),
@@ -307,117 +369,54 @@ export function UsersPage() {
 
   return (
     <div className="space-y-6">
+      <AccountsTabs active="users" />
       {/* Page Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <Users className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">{t("users.title")}</h1>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">{t("users.desc")}</p>
+          <h1 className="text-xl font-semibold tracking-tight">{t("users.accountsTitle", "User accounts")}</h1>
+          <p className="text-sm text-muted-foreground mt-1" data-testid="users-count">
+            {t("users.accountsCount", { count: total, defaultValue: "{{count}} user accounts on this server." })}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchUsers}
-            disabled={isLoading}
-            className="gap-2 text-xs"
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            {t("users.refresh")}
-          </Button>
-          <Button size="sm" className="gap-2" onClick={() => (window.location.href = "/users/new")}>
-            <UserPlus className="h-4 w-4" />
-            {t("users.createUser")}
-          </Button>
-        </div>
-      </div>
-
-      {/* Summary Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 flex items-center justify-between border bg-card">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">{t("users.stats.total")}</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{total.toLocaleString()}</p>
-          </div>
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-            <Users className="h-5 w-5" />
-          </div>
-        </Card>
-        <Card className="p-4 flex items-center justify-between border bg-card">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">{t("users.stats.active")}</p>
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-              {users.filter((u) => u.status === "active").length}
-            </p>
-          </div>
-          <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-            <CheckCircle2 className="h-5 w-5" />
-          </div>
-        </Card>
-        <Card className="p-4 flex items-center justify-between border bg-card">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">{t("users.stats.suspended")}</p>
-            <p className="text-2xl font-bold text-destructive mt-1">
-              {users.filter((u) => u.status === "suspended").length}
-            </p>
-          </div>
-          <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
-            <XCircle className="h-5 w-5" />
-          </div>
-        </Card>
-        <Card className="p-4 flex items-center justify-between border bg-card">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">{t("users.stats.storageAllocated")}</p>
-            <p className="text-2xl font-bold text-foreground mt-1">
-              {formatBytes(
-                users.reduce((acc, u) => acc + (u.disk_used_bytes > 0 ? u.disk_used_bytes : 0), 0)
-              )}
-            </p>
-          </div>
-          <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
-            <HardDrive className="h-5 w-5" />
-          </div>
-        </Card>
+        <Button size="sm" onClick={() => (window.location.href = "/users/new")}>
+          {t("users.createNew", "Create new")}
+        </Button>
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-card p-3 rounded-lg border">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={t("users.filter.searchPlaceholder")}
-            className="pl-9 h-9 text-xs"
-          />
-        </div>
-
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Status Filter */}
+          <div className="relative w-full sm:w-56">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t("users.filter.searchPlaceholder")}
+              className="pl-9 h-9 text-xs"
+            />
+          </div>
           <select
+            aria-label={t("users.filter.status", "Status")}
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-md border border-input bg-background px-2.5 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-9 rounded-md border border-dashed border-input bg-background px-2.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <option value="all">{t("users.filter.allStatuses")}</option>
             <option value="active">{t("users.status.active")}</option>
             <option value="suspended">{t("users.status.suspended")}</option>
             <option value="pending">{t("users.status.pending")}</option>
           </select>
-
-          {/* Plan Filter */}
           <select
+            aria-label={t("users.filter.package", "Package")}
             value={planFilter}
             onChange={(e) => {
               setPlanFilter(e.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-md border border-input bg-background px-2.5 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-9 rounded-md border border-dashed border-input bg-background px-2.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <option value="all">{t("users.filter.allPlans")}</option>
             {AVAILABLE_PLANS.map((p) => (
@@ -426,15 +425,14 @@ export function UsersPage() {
               </option>
             ))}
           </select>
-
-          {/* Node Filter */}
           <select
+            aria-label={t("users.filter.node", "Node")}
             value={nodeFilter}
             onChange={(e) => {
               setNodeFilter(e.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-md border border-input bg-background px-2.5 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-9 rounded-md border border-dashed border-input bg-background px-2.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <option value="all">{t("users.filter.allNodes")}</option>
             {AVAILABLE_NODES.map((n) => (
@@ -443,16 +441,40 @@ export function UsersPage() {
               </option>
             ))}
           </select>
-
           {(searchTerm || statusFilter !== "all" || planFilter !== "all" || nodeFilter !== "all") && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetFilters}
-              className="text-xs h-9 px-2 text-muted-foreground hover:text-foreground"
-            >
+            <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-xs h-9 px-2 text-muted-foreground hover:text-foreground">
               {t("users.filter.reset")}
             </Button>
+          )}
+        </div>
+
+        {/* Show columns */}
+        <div className="relative">
+          <Button
+            variant="outline"
+            size="sm"
+            aria-haspopup="true"
+            aria-expanded={columnsOpen}
+            onClick={() => setColumnsOpen((o) => !o)}
+            className="h-9 gap-2 text-xs"
+          >
+            {t("users.showColumns", "Show columns")}
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+          {columnsOpen && (
+            <div className="absolute right-0 z-20 mt-1 w-48 rounded-md border bg-popover p-2 shadow-md" role="menu">
+              {COLUMNS.map((c) => (
+                <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-muted">
+                  <input
+                    type="checkbox"
+                    checked={columns[c.key]}
+                    onChange={() => setColumns((prev) => ({ ...prev, [c.key]: !prev[c.key] }))}
+                    className="h-3.5 w-3.5"
+                  />
+                  {t(c.labelKey, c.fallback)}
+                </label>
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -520,124 +542,102 @@ export function UsersPage() {
       )}
 
       {/* Users Table */}
-      <Card className="border shadow-sm">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted/50">
+      <div className="rounded-lg border">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10 px-4">
+                  <input
+                    type="checkbox"
+                    aria-label={t("users.table.selectAll")}
+                    checked={isAllSelected}
+                    ref={(input) => {
+                      if (input) input.indeterminate = isSomeSelected;
+                    }}
+                    onChange={handleSelectAll}
+                    className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                  />
+                </TableHead>
+                <TableHead>{t("users.table.username", "Username")}</TableHead>
+                {columns.email && <TableHead>{t("users.table.email")}</TableHead>}
+                {columns.status && <TableHead>{t("users.table.status")}</TableHead>}
+                {columns.package && <TableHead>{t("users.table.package", "Package")}</TableHead>}
+                {columns.node && <TableHead>{t("users.table.node")}</TableHead>}
+                {columns.memory && <TableHead>{t("users.table.memory", "Memory %")}</TableHead>}
+                {columns.cpu && <TableHead>{t("users.table.cpu", "CPU %")}</TableHead>}
+                {columns.disk && <TableHead>{t("users.table.disk", "Disk %")}</TableHead>}
+                {columns.inodes && <TableHead>{t("users.table.inodes", "Inodes %")}</TableHead>}
+                {columns.created && <TableHead>{t("users.table.created", "Created")}</TableHead>}
+                {columns.login && <TableHead className="text-center">{t("users.table.login", "Log in")}</TableHead>}
+                {columns.actions && <TableHead className="text-right pr-4">{t("users.table.actions")}</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
                 <TableRow>
-                  <TableHead className="w-10 px-4">
-                    <input
-                      type="checkbox"
-                      aria-label={t("users.table.selectAll")}
-                      checked={isAllSelected}
-                      ref={(input) => {
-                        if (input) input.indeterminate = isSomeSelected;
-                      }}
-                      onChange={handleSelectAll}
-                      className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
-                    />
-                  </TableHead>
-                  <TableHead className="w-[24%]">{t("users.table.user")}</TableHead>
-                  <TableHead className="w-[18%]">{t("users.table.email")}</TableHead>
-                  <TableHead className="w-[14%]">{t("users.table.plan")}</TableHead>
-                  <TableHead className="w-[12%]">{t("users.table.node")}</TableHead>
-                  <TableHead className="w-[10%]">{t("users.table.status")}</TableHead>
-                  <TableHead className="w-[12%]">{t("users.table.diskUsage")}</TableHead>
-                  <TableHead className="w-[10%] text-right pr-4">{t("users.table.actions")}</TableHead>
+                  <TableCell colSpan={13} className="h-32 text-center text-sm text-muted-foreground">
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+                      <span>{t("common.loading")}</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
-                      <div className="flex items-center justify-center gap-2">
-                        <RefreshCw className="h-4 w-4 animate-spin text-primary" />
-                        <span>{t("common.loading")}</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
-                      {t("users.table.noUsersFound")}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => {
-                    const isSelected = selectedUserIds.has(user.id);
-                    const diskUsedFormatted = formatBytes(user.disk_used_bytes);
-                    const diskLimitFormatted = formatBytes(user.disk_limit_bytes);
-                    const diskPercent =
-                      user.disk_limit_bytes > 0
-                        ? Math.min(100, Math.round((user.disk_used_bytes / user.disk_limit_bytes) * 100))
-                        : 0;
-
-                    return (
-                      <TableRow
-                        key={user.id}
-                        data-state={isSelected ? "selected" : undefined}
-                        className={isSelected ? "bg-muted/40" : undefined}
-                      >
-                        <TableCell className="px-4">
-                          <input
-                            type="checkbox"
-                            aria-label={`Select ${user.username}`}
-                            checked={isSelected}
-                            onChange={() => handleToggleSelect(user.id)}
-                            className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary uppercase shrink-0">
-                              {user.username.slice(0, 2)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-foreground text-sm truncate">
-                                {user.username}
-                              </p>
-                              {user.primary_domain && (
-                                <p className="text-[11px] text-muted-foreground font-mono truncate">
-                                  {user.primary_domain}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs text-foreground truncate block max-w-[180px]">
-                            {user.email}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-normal text-xs">
-                            {user.plan_name}
+              ) : users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={13} className="h-32 text-center text-sm text-muted-foreground">
+                    {t("users.table.noUsersFound")}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => {
+                  const isSelected = selectedUserIds.has(user.id);
+                  const suspended = user.status === "suspended";
+                  return (
+                    <TableRow
+                      key={user.id}
+                      data-state={isSelected ? "selected" : undefined}
+                      className={`${isSelected ? "bg-muted/40" : ""} ${suspended ? "border-l-2 border-l-destructive" : ""}`}
+                    >
+                      <TableCell className="px-4">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${user.username}`}
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(user.id)}
+                          className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <p className={`font-medium text-sm truncate ${suspended ? "text-destructive" : "text-foreground"}`}>
+                          {user.username}
+                        </p>
+                        {user.primary_domain && (
+                          <p className="text-[11px] text-muted-foreground font-mono truncate">{user.primary_domain}</p>
+                        )}
+                        {(user.node_status === "offline" || user.is_node_offline) && (
+                          <Badge
+                            variant="destructive"
+                            data-testid="tenant-node-offline-badge"
+                            className="mt-1 text-[10px] px-1.5 py-0 font-medium inline-flex items-center gap-1"
+                          >
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            {t("users.nodeOffline")}
                           </Badge>
-                        </TableCell>
+                        )}
+                      </TableCell>
+                      {columns.email && (
                         <TableCell>
-                          <div className="flex flex-col gap-1 items-start">
-                            <span className="text-xs font-mono text-muted-foreground">
-                              {user.node_name || user.node_id}
-                            </span>
-                            {(user.node_status === "offline" || user.is_node_offline) && (
-                              <Badge
-                                variant="destructive"
-                                data-testid="tenant-node-offline-badge"
-                                className="text-[10px] px-1.5 py-0 font-medium flex items-center gap-1"
-                              >
-                                <AlertTriangle className="h-2.5 w-2.5" />
-                                {t("users.nodeOffline")}
-                              </Badge>
-                            )}
-                          </div>
+                          <span className="text-xs text-foreground truncate block max-w-[180px]">{user.email}</span>
                         </TableCell>
+                      )}
+                      {columns.status && (
                         <TableCell>
                           {user.status === "active" ? (
                             <Badge variant="default" className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs">
                               {t("users.status.active")}
                             </Badge>
-                          ) : user.status === "suspended" ? (
+                          ) : suspended ? (
                             <Badge variant="destructive" className="text-xs">
                               {t("users.status.suspended")}
                             </Badge>
@@ -647,43 +647,53 @@ export function UsersPage() {
                             </Badge>
                           )}
                         </TableCell>
+                      )}
+                      {columns.package && (
+                        <TableCell className="text-sm text-foreground">{user.plan_name}</TableCell>
+                      )}
+                      {columns.node && (
                         <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                              <span>{diskUsedFormatted}</span>
-                              <span>/ {diskLimitFormatted}</span>
-                            </div>
-                            {user.disk_limit_bytes > 0 && (
-                              <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all ${
-                                    diskPercent > 90
-                                      ? "bg-destructive"
-                                      : diskPercent > 75
-                                      ? "bg-amber-500"
-                                      : "bg-primary"
-                                  }`}
-                                  style={{ width: `${diskPercent}%` }}
-                                />
-                              </div>
-                            )}
-                          </div>
+                          <span className="text-xs font-mono text-muted-foreground">{user.node_name || user.node_id}</span>
                         </TableCell>
+                      )}
+                      {columns.memory && (
+                        <TableCell>
+                          <UsageRing percent={user.usage?.memory_percent} label={t("users.table.memory", "Memory %")} />
+                        </TableCell>
+                      )}
+                      {columns.cpu && (
+                        <TableCell>
+                          <UsageRing percent={user.usage?.cpu_percent} label={t("users.table.cpu", "CPU %")} />
+                        </TableCell>
+                      )}
+                      {columns.disk && (
+                        <TableCell>
+                          <UsageRing percent={user.usage?.disk_percent} label={t("users.table.disk", "Disk %")} />
+                        </TableCell>
+                      )}
+                      {columns.inodes && (
+                        <TableCell>
+                          <UsageRing percent={user.usage?.inodes_percent} label={t("users.table.inodes", "Inodes %")} />
+                        </TableCell>
+                      )}
+                      {columns.created && (
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap" title={new Date(user.created_at).toLocaleString()}>
+                          {timeAgo(user.created_at)}
+                        </TableCell>
+                      )}
+                      {columns.login && (
+                        <TableCell className="text-center">
+                          {!suspended && (
+                            <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => handleImpersonate(user)}>
+                              <LogIn className="h-3.5 w-3.5" />
+                              {t("users.loginAsUser", "Log in as user")}
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
+                      {columns.actions && (
                         <TableCell className="text-right pr-4">
                           <div className="flex items-center justify-end gap-1">
-                            {/* Impersonate */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              title={t("users.actions.impersonate")}
-                              aria-label={t("users.actions.impersonate")}
-                              onClick={() => handleImpersonate(user)}
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                            >
-                              <LogIn className="h-4 w-4" />
-                            </Button>
-
-                            {/* Change Plan */}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -694,36 +704,16 @@ export function UsersPage() {
                             >
                               <Package className="h-4 w-4" />
                             </Button>
-
-                            {/* Suspend / Unsuspend */}
                             <Button
                               variant="ghost"
                               size="sm"
-                              title={
-                                user.status === "suspended"
-                                  ? t("users.actions.unsuspend")
-                                  : t("users.actions.suspend")
-                              }
-                              aria-label={
-                                user.status === "suspended"
-                                  ? t("users.actions.unsuspend")
-                                  : t("users.actions.suspend")
-                              }
+                              title={suspended ? t("users.actions.unsuspend") : t("users.actions.suspend")}
+                              aria-label={suspended ? t("users.actions.unsuspend") : t("users.actions.suspend")}
                               onClick={() => handleSingleSuspendToggle(user)}
-                              className={`h-8 w-8 p-0 ${
-                                user.status === "suspended"
-                                  ? "text-emerald-600 hover:text-emerald-700"
-                                  : "text-muted-foreground hover:text-destructive"
-                              }`}
+                              className={`h-8 w-8 p-0 ${suspended ? "text-emerald-600 hover:text-emerald-700" : "text-muted-foreground hover:text-destructive"}`}
                             >
-                              {user.status === "suspended" ? (
-                                <ShieldCheck className="h-4 w-4" />
-                              ) : (
-                                <ShieldAlert className="h-4 w-4" />
-                              )}
+                              {suspended ? <ShieldCheck className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
                             </Button>
-
-                            {/* Delete */}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -736,13 +726,14 @@ export function UsersPage() {
                             </Button>
                           </div>
                         </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                      )}
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
           {/* Pagination Footer */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t bg-muted/20">
@@ -824,8 +815,7 @@ export function UsersPage() {
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Change Plan Dialog */}
       {changePlanUsers && (

@@ -1,0 +1,9 @@
+slug        = "sqlite"
+name        = "SQLite"
+category    = "databases"
+kind        = "unavailable"
+description = "A file database inside your own programs."
+license     = "blessed-public-domain"
+homepage    = "https://www.sqlite.org"
+covers      = ["SQLite (library)"]
+reason      = "SQLite is a library belongs to the server's operating system and needs root to install; the panel's PHP and Node.js images already include what sites need and a container brings its own"

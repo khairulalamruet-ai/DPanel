@@ -1,7 +1,7 @@
 //! A tenant's own application (T12.07 Node.js, T12.08 Python): a container of the tenant.
 //!
 //! The container sits on the tenant's network only (no port is published) under the name
-//! `dh-<account>-app-<name>`, where the account's web server reaches it. It runs the account's
+//! `bp-<account>-app-<name>`, where the account's web server reaches it. It runs the account's
 //! files from one folder as the account's own user, with a read-only root, a memory limit and no
 //! capabilities. The command is a list of words that is run as it is. The environment is
 //! written to a file in a folder of the agent's state (mounted read-only) and read by a fixed
@@ -14,10 +14,10 @@
 
 use std::{os::unix::fs::PermissionsExt as _, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerError, Network, Restart, Tmpfs, VolumeMount};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{AgentError, ErrorCode, Operation, Output, RuntimeEnv};
-use dhpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
+use builtpanel_docker_manager::{ContainerSpec, DockerError, Network, Restart, Tmpfs, VolumeMount};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{AgentError, ErrorCode, Operation, Output, RuntimeEnv};
+use builtpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
 
 use super::{
     db,
@@ -31,9 +31,9 @@ const INSTALL_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 /// Where the account's files are inside the container.
 const APP_ROOT: &str = "/app";
 /// Where the environment file is inside the container.
-const ENV_DIR: &str = "/opt/dh-app";
+const ENV_DIR: &str = "/opt/bp-app";
 /// What starts the application: read the environment, then become the command.
-const START_SCRIPT: &str = ". /opt/dh-app/env.sh && exec \"$@\"";
+const START_SCRIPT: &str = ". /opt/bp-app/env.sh && exec \"$@\"";
 
 fn invalid(what: &str) -> AgentError {
     AgentError::new(ErrorCode::InvalidArguments, what.to_owned())
@@ -119,8 +119,8 @@ pub fn env_script(env: &[(String, String)]) -> String {
 fn container_name(
     username: &TenantUsername,
     name: &str,
-) -> Result<dhpanel_docker_manager::Name, AgentError> {
-    db::name(&format!("dh-{}-app-{name}", username.as_str()))
+) -> Result<builtpanel_docker_manager::Name, AgentError> {
+    db::name(&format!("bp-{}-app-{name}", username.as_str()))
 }
 
 fn install_script(kind: &str) -> &'static str {
@@ -155,7 +155,7 @@ async fn set_container(
         return Err(invalid("the container's settings are not valid"));
     }
     valid_env(&env)?;
-    let image = dhpanel_docker_manager::ImageRef::parse(
+    let image = builtpanel_docker_manager::ImageRef::parse(
         image.ok_or_else(|| invalid("a container needs an image"))?,
     )
     .map_err(|e| invalid(&e.to_string()))?;
@@ -189,7 +189,7 @@ async fn set_container(
         target: "/tmp".into(),
         size_bytes: 64 * 1024 * 1024,
     }];
-    let data = db::name(&format!("dh-{}-app-{name}-data", username.as_str()))?;
+    let data = db::name(&format!("bp-{}-app-{name}-data", username.as_str()))?;
     docker
         .create_volume(&data)
         .await
@@ -304,7 +304,7 @@ pub async fn set_runtime_app(
 
     // The common shape of both containers: the tenant's own user, a read-only root, the
     // files in /app, scratch space in memory.
-    let base = |container: dhpanel_docker_manager::Name, tmpfs_mb: u64| {
+    let base = |container: builtpanel_docker_manager::Name, tmpfs_mb: u64| {
         let mut spec = ContainerSpec::new(container, image.clone());
         spec.user = Some((uid, uid));
         spec.cpu_millis = 1000;
@@ -340,7 +340,7 @@ pub async fn set_runtime_app(
     // The install step, in a container that exists only for it.
     if install {
         let job = db::name(&format!(
-            "dh-{}-appinst-{}",
+            "bp-{}-appinst-{}",
             username.as_str(),
             &app_id.simple().to_string()[..8]
         ))?;
@@ -385,7 +385,7 @@ pub async fn set_runtime_app(
     }
     // (The file is readable to the container's user; the folder is under the agent's state,
     // which only the agent and the container's user namespace reach.)
-    let volume = db::name(&format!("dh-{}-app-{name}-env", username.as_str()))?;
+    let volume = db::name(&format!("bp-{}-app-{name}-env", username.as_str()))?;
     let _ = docker.remove_volume(&volume).await;
     docker
         .create_bind_volume(&volume, &dir_state, &state(&context)?)
@@ -413,7 +413,7 @@ pub async fn set_runtime_app(
         "sh".into(),
         "-c".into(),
         START_SCRIPT.into(),
-        "dh-app".into(),
+        "bp-app".into(),
     ];
     spec.command = command;
     docker
@@ -438,8 +438,8 @@ pub async fn set_runtime_app(
 /// keeps restarting) is an error of the application, not of the node: it is not retried, and
 /// the end of what it printed is part of the message.
 async fn wait_up(
-    docker: &dhpanel_docker_manager::DockerManager,
-    container: &dhpanel_docker_manager::Name,
+    docker: &builtpanel_docker_manager::DockerManager,
+    container: &builtpanel_docker_manager::Name,
 ) -> Result<(), AgentError> {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(40);
     let mut up_since: Option<tokio::time::Instant> = None;
@@ -515,14 +515,14 @@ pub async fn remove_runtime_app(
     };
     let _ = docker
         .remove_volume(&db::name(&format!(
-            "dh-{}-app-{name}-env",
+            "bp-{}-app-{name}-env",
             username.as_str()
         ))?)
         .await;
     // A container's own data goes with it.
     let _ = docker
         .remove_volume(&db::name(&format!(
-            "dh-{}-app-{name}-data",
+            "bp-{}-app-{name}-data",
             username.as_str()
         ))?)
         .await;

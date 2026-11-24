@@ -1,5 +1,5 @@
 {
-  "name": "@dhpanel/auth",
+  "name": "@builtpanel/auth",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,9 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@dhpanel/api": "workspace:*",
-    "@dhpanel/ui": "workspace:*",
-    "@dhpanel/i18n": "workspace:*",
+    "@builtpanel/api": "workspace:*",
+    "@builtpanel/ui": "workspace:*",
+    "@builtpanel/i18n": "workspace:*",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

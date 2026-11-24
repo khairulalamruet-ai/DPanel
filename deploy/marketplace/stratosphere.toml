@@ -1,0 +1,8 @@
+slug        = "stratosphere"
+name        = "Stratosphere"
+category    = "databases"
+kind        = "unavailable"
+description = "Stratosphere."
+license     = "Apache-2.0"
+covers      = ["Stratosphere"]
+reason      = "the project is discontinued and no longer gets security fixes"

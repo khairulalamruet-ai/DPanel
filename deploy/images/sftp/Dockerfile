@@ -8,5 +8,5 @@ RUN apk upgrade --no-cache
 # The official image runs as this user: the agent starts the container as root anyway
 # (SFTPGo changes to each account's id), but the default stays what it was.
 USER 1000:1000
-LABEL org.opencontainers.image.title="DHPanel SFTP (SFTPGo)" \
+LABEL org.opencontainers.image.title="Built Panel SFTP (SFTPGo)" \
       org.opencontainers.image.description="The official SFTPGo with its OS packages upgraded"

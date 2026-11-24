@@ -1,6 +1,6 @@
 import React from "react";
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Lock, Home, Sparkles } from "lucide-react";
 
 export interface FeatureRequiredPageProps {
@@ -42,7 +42,7 @@ export function FeatureRequiredPage({ feature, onNavigateHome }: FeatureRequired
           </Button>
           <Button
             onClick={() => {
-              window.open("https://dhpanel.com/pricing", "_blank");
+              window.open("https://builtpanel.com/pricing", "_blank");
             }}
             className="gap-2 text-xs"
           >

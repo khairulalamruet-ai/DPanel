@@ -1,0 +1,9 @@
+slug        = "mail"
+name        = "Mail server"
+category    = "utilities"
+kind        = "builtin"
+description = "Mail for every domain: SMTP, IMAP, spam filter, webmail."
+license     = "AGPL-3.0-only"
+homepage    = "https://stalw.art"
+covers      = ["Exim (service)", "Dovecot (service)", "SpamAssassin", "Mailx (library)"]
+provided_by = "Email"

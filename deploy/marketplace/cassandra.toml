@@ -1,0 +1,9 @@
+slug        = "cassandra"
+name        = "Apache Cassandra"
+category    = "databases"
+kind        = "unavailable"
+description = "A distributed wide-column database."
+license     = "Apache-2.0"
+homepage    = "https://cassandra.apache.org"
+covers      = ["Cassandra"]
+reason      = "its image starts as root and then switches to its own user"

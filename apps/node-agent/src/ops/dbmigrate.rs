@@ -11,9 +11,9 @@
 
 use std::sync::Arc;
 
-use dhpanel_docker_manager::DockerError;
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{
+use builtpanel_docker_manager::DockerError;
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{
     AgentError, DbEngine, ErrorCode, MAX_MIGRATED_DATABASES, Operation, Output,
 };
 use uuid::Uuid;
@@ -54,7 +54,8 @@ pub async fn migrate(context: Arc<TenantContext>, op: Operation) -> Result<Outpu
         return Err(invalid("too many databases or users"));
     }
     for name in databases.iter().chain(users.iter()) {
-        dhpanel_domain::databases::check_identifier(name).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_domain::databases::check_identifier(name)
+            .map_err(|e| invalid(&e.to_string()))?;
         if engine == DbEngine::Postgres {
             pg::identifier(name)?;
         }
@@ -147,7 +148,7 @@ pub async fn migrate(context: Arc<TenantContext>, op: Operation) -> Result<Outpu
     // The tenant's containers now find the target as `db` (or `pg`), and not the source: the
     // source is taken off the tenant's network.
     let network =
-        dhpanel_tenant_stack::network_name(&tenant).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_tenant_stack::network_name(&tenant).map_err(|e| invalid(&e.to_string()))?;
     let source_container = dbserver::scope(source.clone(), async {
         match engine {
             DbEngine::Mysql => db::container_name(),
@@ -249,14 +250,14 @@ pub async fn remove(context: Arc<TenantContext>, op: Operation) -> Result<Output
         let (container, volume, networks, kind) = match engine {
             DbEngine::Mysql => (
                 db::container_name(),
-                dbserver::volume(dbserver::Kind::Mariadb, "dh-db-data"),
-                vec![format!("dh-{username}-dbnet")],
+                dbserver::volume(dbserver::Kind::Mariadb, "bp-db-data"),
+                vec![format!("bp-{username}-dbnet")],
                 dbserver::Kind::Mariadb,
             ),
             DbEngine::Postgres => (
                 pg::container_name(),
-                dbserver::volume(dbserver::Kind::Postgres, "dh-pg-data"),
-                vec![format!("dh-{username}-pgnet")],
+                dbserver::volume(dbserver::Kind::Postgres, "bp-pg-data"),
+                vec![format!("bp-{username}-pgnet")],
                 dbserver::Kind::Postgres,
             ),
         };
@@ -281,7 +282,7 @@ pub async fn remove(context: Arc<TenantContext>, op: Operation) -> Result<Output
         };
         let mut volumes = vec![volume];
         if engine == DbEngine::Postgres {
-            volumes.push(format!("dh-{username}-pg-conf"));
+            volumes.push(format!("bp-{username}-pg-conf"));
         }
         for v in volumes {
             match docker.remove_volume(&name(&v)?).await {

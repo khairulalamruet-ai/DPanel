@@ -1,8 +1,8 @@
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
-import { resetMockPreviewLinks } from "@dhpanel/api";
+import { ToastProvider } from "@builtpanel/ui";
+import { resetMockPreviewLinks } from "@builtpanel/api";
 import { PreviewLinkDialog } from "./PreviewLinkDialog";
 import { ClientDomainItem } from "./types";
 
@@ -37,7 +37,7 @@ describe("PreviewLinkDialog (T06.14)", () => {
     resetMockPreviewLinks();
   });
 
-  it("renders preview dialog and generates a new temporary preview link with TTL", async () => {
+  it("renders preview dialog and generates a new temporary preview link", async () => {
     renderWithProviders(
       <PreviewLinkDialog open={true} onOpenChange={() => {}} domain={mockDomain} />
     );
@@ -46,11 +46,6 @@ describe("PreviewLinkDialog (T06.14)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("btn-generate-preview-link")).toBeInTheDocument();
     });
-
-    // Select 48 Hours TTL
-    const ttl48Btn = screen.getByTestId("btn-ttl-48");
-    expect(ttl48Btn).toBeInTheDocument();
-    fireEvent.click(ttl48Btn);
 
     // Click Generate
     fireEvent.click(screen.getByTestId("btn-generate-preview-link"));
@@ -62,7 +57,7 @@ describe("PreviewLinkDialog (T06.14)", () => {
     });
 
     const input = screen.getByTestId("input-preview-url") as HTMLInputElement;
-    expect(input.value).toMatch(/https:\/\/prv_[a-z0-9]+\.preview\.dhpanel\.net/);
+    expect(input.value).toMatch(/https:\/\/prv_[a-z0-9]+\.preview\.builtpanel\.net/);
   });
 
   it("DoD: displays expired state and warning banner for an expired preview link", async () => {
@@ -103,7 +98,7 @@ describe("PreviewLinkDialog (T06.14)", () => {
     });
   });
 
-  it("extends an active preview link TTL", async () => {
+  it("makes a new preview link while one is active", async () => {
     renderWithProviders(
       <PreviewLinkDialog open={true} onOpenChange={() => {}} domain={mockDomain} />
     );
@@ -118,8 +113,6 @@ describe("PreviewLinkDialog (T06.14)", () => {
       expect(screen.getByTestId("btn-extend-preview-link")).toBeInTheDocument();
     });
 
-    // Select TTL and click extend
-    fireEvent.change(screen.getByTestId("select-extend-ttl"), { target: { value: "48" } });
     fireEvent.click(screen.getByTestId("btn-extend-preview-link"));
 
     await waitFor(() => {

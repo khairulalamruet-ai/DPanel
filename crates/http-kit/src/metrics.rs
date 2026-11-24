@@ -25,7 +25,7 @@ pub async fn track_http_metrics(request: Request, next: Next) -> Response {
 
     let response = next.run(request).await;
 
-    dhpanel_observability::record_http_request(
+    builtpanel_observability::record_http_request(
         &method,
         &route,
         response.status().as_u16(),

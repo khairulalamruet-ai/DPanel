@@ -11,8 +11,8 @@ use std::net::{IpAddr, SocketAddr};
 
 use axum::extract::ConnectInfo;
 use axum::http::{Extensions, HeaderMap};
-use dhpanel_http_kit::{AppError, FieldError};
-use dhpanel_license::{Binding, BindingError, HostFacts, normalize_name};
+use builtpanel_http_kit::{AppError, FieldError};
+use builtpanel_license::{Binding, BindingError, HostFacts, normalize_name};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -241,7 +241,7 @@ mod tests {
     fn settings() -> Settings {
         Settings {
             issuer: "la".into(),
-            audience: "dhpanel".into(),
+            audience: "builtpanel".into(),
             entitlement_ttl: std::time::Duration::from_secs(1),
             session_ttl: std::time::Duration::from_secs(1),
             nonce_ttl: std::time::Duration::from_secs(1),

@@ -1,6 +1,6 @@
 [package]
-name = "dhpanel-control-api"
-description = "DHPanel control plane HTTP API (Axum)."
+name = "builtpanel-control-api"
+description = "Built Panel control plane HTTP API (Axum)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,62 +8,62 @@ license.workspace = true
 publish.workspace = true
 
 [[bin]]
-name = "dhpanel-control-api"
+name = "builtpanel-control-api"
 path = "src/main.rs"
 
 [features]
 default = []
-# Build with OpenTelemetry span export (see dhpanel-observability).
-otel = ["dhpanel-observability/otel"]
+# Build with OpenTelemetry span export (see builtpanel-observability).
+otel = ["builtpanel-observability/otel"]
 
 [dependencies]
-dhpanel-audit.workspace = true
-dhpanel-auth-core.workspace = true
-dhpanel-node-protocol.workspace = true
+builtpanel-audit.workspace = true
+builtpanel-auth-core.workspace = true
+builtpanel-node-protocol.workspace = true
 # Reads the master key out of its SecretString wrapper at startup.
 secrecy = "0.10"
-dhpanel-cache.workspace = true
-dhpanel-common.workspace = true
-dhpanel-config.workspace = true
-dhpanel-database.workspace = true
+builtpanel-cache.workspace = true
+builtpanel-common.workspace = true
+builtpanel-config.workspace = true
+builtpanel-database.workspace = true
 serde_json = "1"
-dhpanel-http-kit.workspace = true
-dhpanel-mod-admin.workspace = true
-dhpanel-mod-auth.workspace = true
-dhpanel-mod-nodes.workspace = true
-dhpanel-mod-plans.workspace = true
-dhpanel-mod-system.workspace = true
-dhpanel-mod-users.workspace = true
-dhpanel-mod-domains.workspace = true
-dhpanel-mod-databases.workspace = true
-dhpanel-mod-files.workspace = true
-dhpanel-mod-backups.workspace = true
-dhpanel-catalog.workspace = true
-dhpanel-mod-apps.workspace = true
-dhpanel-mod-license.workspace = true
-dhpanel-mod-cron.workspace = true
-dhpanel-mod-mail.workspace = true
-dhpanel-mod-migration.workspace = true
-dhpanel-mod-logs.workspace = true
-dhpanel-mod-notifications.workspace = true
-dhpanel-mod-usage.workspace = true
-dhpanel-mod-services.workspace = true
-dhpanel-mod-security.workspace = true
-dhpanel-backup.workspace = true
-dhpanel-backup-dest.workspace = true
-dhpanel-system-backup.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-mod-admin.workspace = true
+builtpanel-mod-auth.workspace = true
+builtpanel-mod-nodes.workspace = true
+builtpanel-mod-plans.workspace = true
+builtpanel-mod-system.workspace = true
+builtpanel-mod-users.workspace = true
+builtpanel-mod-domains.workspace = true
+builtpanel-mod-databases.workspace = true
+builtpanel-mod-files.workspace = true
+builtpanel-mod-backups.workspace = true
+builtpanel-catalog.workspace = true
+builtpanel-mod-apps.workspace = true
+builtpanel-mod-license.workspace = true
+builtpanel-mod-cron.workspace = true
+builtpanel-mod-mail.workspace = true
+builtpanel-mod-migration.workspace = true
+builtpanel-mod-logs.workspace = true
+builtpanel-mod-notifications.workspace = true
+builtpanel-mod-usage.workspace = true
+builtpanel-mod-services.workspace = true
+builtpanel-mod-security.workspace = true
+builtpanel-backup.workspace = true
+builtpanel-backup-dest.workspace = true
+builtpanel-system-backup.workspace = true
 sha2 = "0.11"
 uuid = { version = "1", features = ["v4"] }
-dhpanel-dispatcher.workspace = true
-dhpanel-dns.workspace = true
-dhpanel-events.workspace = true
-dhpanel-kernel.workspace = true
-dhpanel-node-gateway.workspace = true
-dhpanel-operations.workspace = true
-dhpanel-settings.workspace = true
-dhpanel-observability.workspace = true
-dhpanel-pki.workspace = true
-dhpanel-session.workspace = true
+builtpanel-dispatcher.workspace = true
+builtpanel-dns.workspace = true
+builtpanel-events.workspace = true
+builtpanel-kernel.workspace = true
+builtpanel-node-gateway.workspace = true
+builtpanel-operations.workspace = true
+builtpanel-settings.workspace = true
+builtpanel-observability.workspace = true
+builtpanel-pki.workspace = true
+builtpanel-session.workspace = true
 # HTTP framework and async runtime (fixed stack).
 axum = "0.8"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
@@ -78,7 +78,7 @@ utoipa-scalar = { version = "0.4.0", features = ["axum"] }
 [dev-dependencies]
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "macros", "uuid", "json", "migrate"] }
 # The manifest tests compare declared permission keys with the ones the code checks.
-dhpanel-rbac.workspace = true
+builtpanel-rbac.workspace = true
 tower = { version = "0.5", features = ["util"] }
 tar = { version = "0.4.46", default-features = false }
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }

@@ -13,12 +13,12 @@ use std::{
     sync::Arc,
 };
 
-use dhpanel_docker_manager::{DockerError, NginxCommand};
-use dhpanel_domain::{Fqdn, TenantUsername};
-use dhpanel_node_protocol::{
+use builtpanel_docker_manager::{DockerError, NginxCommand};
+use builtpanel_domain::{Fqdn, TenantUsername};
+use builtpanel_node_protocol::{
     AgentError, ErrorCode, MAX_HOSTS_PER_TENANT, MAX_VHOST_CONFIG_BYTES, Operation, Output,
 };
-use dhpanel_tenant_stack::web_container_name;
+use builtpanel_tenant_stack::web_container_name;
 
 use super::tenant::{TenantContext, docker_error};
 
@@ -83,7 +83,7 @@ fn check_config(config: &str) -> Result<(), AgentError> {
     }
     // Whatever the control plane made, a file that reads other directories or
     // loads code is not written.
-    dhpanel_domain::vhost::check_site_config(config).map_err(|e| invalid(e.message))
+    builtpanel_domain::vhost::check_site_config(config).map_err(|e| invalid(e.message))
 }
 
 /// Puts `content` in `path` (or removes the file for `None`), all at once.
@@ -156,7 +156,7 @@ async fn change(
         for (path, was) in &before {
             if let Err(e) = put(&dir, path, was.as_deref()) {
                 eprintln!(
-                    "dhpanel-agent: could not put back {}: {}",
+                    "builtpanel-agent: could not put back {}: {}",
                     path.display(),
                     e.kind()
                 );
@@ -281,14 +281,14 @@ pub async fn set_php_ini(context: Arc<TenantContext>, op: Operation) -> Result<O
         return Err(super::wrong_operation());
     };
     let username = TenantUsername::parse(&username).map_err(|e| invalid(e.to_string()))?;
-    if ini.len() > dhpanel_node_protocol::MAX_PHP_INI_BYTES {
+    if ini.len() > builtpanel_node_protocol::MAX_PHP_INI_BYTES {
         return Err(invalid("the file is too large"));
     }
-    dhpanel_domain::php_ini::check_text(&ini).map_err(|e| invalid(e.to_string()))?;
+    builtpanel_domain::php_ini::check_text(&ini).map_err(|e| invalid(e.to_string()))?;
     let _one_at_a_time = CHANGING.lock().await;
     let dir = php_ini_dir(&context.vhosts_root, &username)
         .map_err(|e| disk("prepare the directory", &e))?;
-    let path = dir.join("dhpanel.ini");
+    let path = dir.join("builtpanel.ini");
     let content = (!ini.trim().is_empty()).then_some(ini.as_bytes());
     put(&dir, &path, content).map_err(|e| disk("write the file", &e))?;
     // The running PHP containers load it again, finishing the requests in progress.
@@ -297,7 +297,7 @@ pub async fn set_php_ini(context: Arc<TenantContext>, op: Operation) -> Result<O
     for name in php {
         match context
             .docker
-            .signal(&name, dhpanel_docker_manager::Signal::Usr2)
+            .signal(&name, builtpanel_docker_manager::Signal::Usr2)
             .await
         {
             Ok(()) => reloaded += 1,
@@ -359,7 +359,7 @@ pub async fn keep_domains(
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
-    use dhpanel_docker_manager::DockerManager;
+    use builtpanel_docker_manager::DockerManager;
 
     use super::*;
 
@@ -382,7 +382,7 @@ mod tests {
 
     #[tokio::test]
     async fn bad_arguments_are_refused_before_any_file_is_written() {
-        let root = std::env::temp_dir().join(format!("dh-vhost-unit-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("bp-vhost-unit-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let c = context(&root);
         for op in [
@@ -418,7 +418,7 @@ mod tests {
 
     #[tokio::test]
     async fn when_the_web_server_cannot_be_asked_the_file_is_put_back() {
-        let root = std::env::temp_dir().join(format!("dh-vhost-keep-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("bp-vhost-keep-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         // Docker is not there at all: that is a failure (not "no such container"),
         // and the file as it was comes back.
@@ -433,7 +433,7 @@ mod tests {
 
     #[tokio::test]
     async fn keep_domains_checks_its_list_and_does_nothing_when_nothing_is_extra() {
-        let root = std::env::temp_dir().join(format!("dh-vhost-keep2-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("bp-vhost-keep2-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let c = context(&root);
         let keep = |domains: &[&str]| Operation::KeepDomains {
@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn writes_are_all_or_nothing_and_readable_by_the_container() {
-        let root = std::env::temp_dir().join(format!("dh-vhost-put-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("bp-vhost-put-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let alice = TenantUsername::parse("alice").unwrap();
         let dir = conf_dir(&root, &alice).unwrap();

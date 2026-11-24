@@ -8,10 +8,10 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { saveSystemSchedule } from "./adminApi";
 import { Clock, Calendar } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { BackupDestination } from "./types";
 
 interface ScheduleDialogProps {
@@ -45,21 +45,13 @@ export function ScheduleDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-
     try {
       setIsSubmitting(true);
-      await apiFetch("/api/v1/admin/backups/schedules", {
-        method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          cron_expression: cronExpression,
-          destination_id: destinationId || destinations[0]?.id,
-          scope,
-          retention_daily: Number(retentionDaily),
-          retention_weekly: Number(retentionWeekly),
-          retention_monthly: Number(retentionMonthly),
-        }),
+      await saveSystemSchedule({
+        cron: cronExpression.trim(),
+        enabled: true,
+        keep_daily: Number(retentionDaily),
+        keep_weekly: Number(retentionWeekly),
       });
 
       toast({
@@ -96,68 +88,6 @@ export function ScheduleDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          {/* Name */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              {t("adminBackups.scheduleName")}
-            </label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Daily Nightly All Tenants"
-              data-testid="input-schedule-name"
-              autoFocus
-            />
-          </div>
-
-          {/* Scope */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              {t("adminBackups.backupScope")}
-            </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="schedule-scope"
-                  checked={scope === "all_tenants"}
-                  onChange={() => setScope("all_tenants")}
-                  data-testid="scope-all-tenants"
-                />
-                <span>{t("adminBackups.allTenants")}</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="schedule-scope"
-                  checked={scope === "system"}
-                  onChange={() => setScope("system")}
-                  data-testid="scope-system"
-                />
-                <span>{t("adminBackups.systemControlPlane")}</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Destination */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              {t("adminBackups.destination")}
-            </label>
-            <select
-              value={destinationId}
-              onChange={(e) => setDestinationId(e.target.value)}
-              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm font-mono"
-              data-testid="select-schedule-destination"
-            >
-              {destinations.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.type})
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Cron Schedule */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -199,7 +129,7 @@ export function ScheduleDialog({
             <label className="text-sm font-medium">
               {t("adminBackups.retentionPolicy")}
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">{t("adminBackups.keepDaily")}</label>
                 <Input
@@ -222,17 +152,6 @@ export function ScheduleDialog({
                   data-testid="input-retention-weekly"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">{t("adminBackups.keepMonthly")}</label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={retentionMonthly}
-                  onChange={(e) => setRetentionMonthly(Number(e.target.value))}
-                  className="font-mono text-xs"
-                  data-testid="input-retention-monthly"
-                />
-              </div>
             </div>
           </div>
 
@@ -247,7 +166,7 @@ export function ScheduleDialog({
             </Button>
             <Button
               type="submit"
-              disabled={!name.trim() || isSubmitting}
+              disabled={isSubmitting}
               data-testid="btn-submit-schedule"
             >
               {isSubmitting ? t("common.submitting") : t("common.save")}

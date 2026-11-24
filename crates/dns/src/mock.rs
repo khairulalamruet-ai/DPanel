@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use dhpanel_domain::DnsRecord;
+use builtpanel_domain::DnsRecord;
 
 use crate::{BoxFuture, DnsError, DnsProvider, ZoneSpec};
 

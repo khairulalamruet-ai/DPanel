@@ -28,7 +28,7 @@
 - **DoD:** একটা license issue আর revoke করা যায়।
 
 ## 17B — Activation ও Entitlement
-### T17.07 — Installation identity (DHPanel-এর দিকে)
+### T17.07 — Installation identity (Built Panel-এর দিকে)
 - **কী করতে হবে:** Install-এর সময় `installation_id` + key pair। Private key 0600-এ রাখা।
 - **DoD:** Reinstall করলেও identity থাকে (backup-এ যুক্ত)।
 
@@ -52,7 +52,7 @@
 - **কী করতে হবে:** Middleware: restricted হলে management API বন্ধ, read-only আর recovery চালু। **Website, DB, mail, DNS আর backup চলতে থাকবে।**
 - **DoD:** Test: restricted অবস্থায় site 200 দেয়, আর নতুন domain যোগ করলে 423 আসে।
 
-### T17.13 — License UI (DHPanel admin)
+### T17.13 — License UI (Built Panel admin)
 - **DoD:** License অবস্থা, মেয়াদ, feature, key প্রবেশ করানো, আবার যাচাই, recovery request।
 
 ## 17C — Release integrity (পরে)

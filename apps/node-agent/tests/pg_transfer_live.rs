@@ -15,21 +15,25 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_docker_manager::DockerManager;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::DockerManager;
+use builtpanel_node_agent::ops::{
     dbroute::create_database,
     pg::{self, CONTAINER},
     sqlexport::export_sql,
     sqlimport::import_sql,
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{DbEngine, DbPassword, ErrorCode, Operation, Output};
+use builtpanel_node_protocol::{DbEngine, DbPassword, ErrorCode, Operation, Output};
 use sha2::{Digest as _, Sha256};
 use uuid::Uuid;
 
 const TOKEN: &str = "test-token-for-the-transfer";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -235,7 +239,7 @@ async fn a_dump_is_run_as_a_limited_account_and_an_export_loads_again() {
         return;
     }
     let docker = DockerManager::connect(&socket).unwrap();
-    let root = std::env::temp_dir().join(format!("dh-pgx-live-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bp-pgx-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root).unwrap();
     let context = Arc::new(TenantContext {
@@ -247,7 +251,7 @@ async fn a_dump_is_run_as_a_limited_account_and_an_export_loads_again() {
     let _ = Command::new("docker")
         .args(["rm", "-f", CONTAINER])
         .output();
-    for volume in ["dh-pg-data", "dh-pg-conf"] {
+    for volume in ["bp-pg-data", "bp-pg-conf"] {
         let _ = Command::new("docker")
             .args(["volume", "rm", "-f", volume])
             .output();
@@ -466,13 +470,13 @@ async fn a_dump_is_run_as_a_limited_account_and_an_export_loads_again() {
     let _ = Command::new("docker")
         .args(["rm", "-f", CONTAINER])
         .output();
-    for volume in ["dh-pg-data", "dh-pg-conf"] {
+    for volume in ["bp-pg-data", "bp-pg-conf"] {
         let _ = Command::new("docker")
             .args(["volume", "rm", "-f", volume])
             .output();
     }
     let _ = Command::new("docker")
-        .args(["network", "rm", "dh-pg-net"])
+        .args(["network", "rm", "bp-pg-net"])
         .output();
     let _ = pg::port();
     let _ = std::fs::remove_dir_all(&root);

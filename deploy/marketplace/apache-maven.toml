@@ -1,0 +1,8 @@
+slug        = "apache-maven"
+name        = "Apache Maven"
+category    = "java_tools"
+kind        = "unavailable"
+description = "Apache Maven."
+license     = "Apache-2.0"
+covers      = ["Apache Maven"]
+reason      = "a language runtime or build tool, not a service; put it in your own container image (Containers)"

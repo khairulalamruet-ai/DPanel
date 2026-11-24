@@ -5,13 +5,13 @@
 
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use dhpanel_database::nodes::{self, NewNode, NewNodeCertificate};
-use dhpanel_node_agent::stream::{self, Params, client_config};
-use dhpanel_node_gateway::{Gateway, Settings, tls};
-use dhpanel_node_protocol::{
+use builtpanel_database::nodes::{self, NewNode, NewNodeCertificate};
+use builtpanel_node_agent::stream::{self, Params, client_config};
+use builtpanel_node_gateway::{Gateway, Settings, tls};
+use builtpanel_node_protocol::{
     AgentMessage, ControlMessage, Hello, PROTOCOL_VERSION, STREAM_PATH, decode, encode,
 };
-use dhpanel_pki::CertificateAuthority;
+use builtpanel_pki::CertificateAuthority;
 use futures_util::{SinkExt as _, StreamExt as _};
 use rcgen::{CertificateParams, KeyPair};
 use rustls::pki_types::{ServerName, pem::PemObject as _};
@@ -70,7 +70,7 @@ async fn plane_on(pool: &PgPool, ca: Arc<CertificateAuthority>, bind: &str) -> P
     // on a loaded machine, so binding is tried again for a few seconds.
     let started = std::time::Instant::now();
     let listener = loop {
-        match dhpanel_node_gateway::bind(bind.parse().unwrap()).await {
+        match builtpanel_node_gateway::bind(bind.parse().unwrap()).await {
             Ok(listener) => break listener,
             Err(error) if started.elapsed() > Duration::from_secs(10) => {
                 panic!("could not bind {bind}: {error}")
@@ -205,8 +205,8 @@ async fn wait_for_status(pool: &PgPool, id: Uuid, wanted: &str, within: Duration
     }
 }
 
-fn test_executor() -> Arc<dhpanel_node_agent::ops::Executor> {
-    use dhpanel_node_agent::ops::{Executor, Registry, cache::ResultCache};
+fn test_executor() -> Arc<builtpanel_node_agent::ops::Executor> {
+    use builtpanel_node_agent::ops::{Executor, Registry, cache::ResultCache};
     Executor::new(
         Registry::builtin(&std::env::temp_dir()),
         ResultCache::in_memory().unwrap(),
@@ -282,7 +282,7 @@ async fn an_agent_connects_shows_online_and_goes_offline_when_it_stops(pool: PgP
     .fetch_one(&pool)
     .await
     .unwrap();
-    assert_eq!(version, dhpanel_node_agent::AGENT_VERSION);
+    assert_eq!(version, builtpanel_node_agent::AGENT_VERSION);
     assert_eq!(ip, "127.0.0.1");
     assert!(seen);
 

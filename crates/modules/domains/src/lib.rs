@@ -22,7 +22,7 @@
 //! the plan's limit has room (409 `limit_reached`: `max_domains` counts main,
 //! addon and alias names, `max_subdomains` counts subdomains; a plan that does
 //! not list a limit gets the module's default), and the ownership rules of
-//! [`dhpanel_database::domains::add`] (409 `domain_taken`,
+//! [`builtpanel_database::domains::add`] (409 `domain_taken`,
 //! `domain_owned_by_other`). Counting and adding happen under one lock per
 //! account, so two requests cannot both take the last place.
 //!
@@ -53,24 +53,24 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     accounts::DbAccountKind,
     domains::{self, AddError, DomainListing, Filter, NewDomain},
     plans::{self, Plan},
     sqlx::PgPool,
     tenants, users,
 };
-use dhpanel_domain::{
+use builtpanel_domain::{
     Blocklist, Docroot, DomainError, DomainKind, DomainStatus, Fqdn, TenantStatus,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
-use dhpanel_session::{SessionStore, rfc3339};
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_session::{SessionStore, rfc3339};
+use builtpanel_settings::{Scope, SettingsRegistry};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use uuid::Uuid;
@@ -98,13 +98,13 @@ pub struct DomainsState {
     /// The checked settings schemas of all modules.
     pub settings: Arc<SettingsRegistry>,
     /// Asks the public DNS which name servers a domain has.
-    pub resolver: Arc<dyn dhpanel_dns::resolver::NsResolver>,
+    pub resolver: Arc<dyn builtpanel_dns::resolver::NsResolver>,
     /// Limits how often one address may ask whether a name may get a certificate.
-    pub ask_limiter: dhpanel_cache::ratelimit::RateLimiter,
+    pub ask_limiter: builtpanel_cache::ratelimit::RateLimiter,
     /// Limits how often an account may restart its services.
-    pub restart_limiter: dhpanel_cache::ratelimit::RateLimiter,
+    pub restart_limiter: builtpanel_cache::ratelimit::RateLimiter,
     /// Seals the private keys of uploaded certificates.
-    pub master_key: dhpanel_auth_core::secretbox::MasterKey,
+    pub master_key: builtpanel_auth_core::secretbox::MasterKey,
 }
 
 impl FromRef<DomainsState> for PgPool {
@@ -280,7 +280,7 @@ struct Policy {
 
 async fn policy(state: &DomainsState) -> Result<Policy, AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "domains", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "domains", Scope::Global)
         .await
         .map_err(internal)?;
     // One text: names separated by line breaks, commas or spaces.
@@ -454,9 +454,9 @@ async fn add_domain(
     .await
     .map_err(add_error)?;
     let dns_note = dns::provision(&mut tx, hosting, &added, &fqdn).await?;
-    dhpanel_events::publish(
+    builtpanel_events::publish(
         &mut tx,
-        &dhpanel_kernel::Event::DomainAdded {
+        &builtpanel_kernel::Event::DomainAdded {
             tenant_id: hosting.tenant.id,
             domain_id: added.id,
             name: added.fqdn.clone(),
@@ -464,7 +464,7 @@ async fn add_domain(
     )
     .await
     .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("domain.added", who, hosting, added.id).metadata(serde_json::json!({
             "fqdn": added.fqdn,
@@ -535,9 +535,9 @@ async fn delete_domain(
     if !domains::delete(&mut tx, id).await.map_err(internal)? {
         return Err(AppError::not_found("domain"));
     }
-    dhpanel_events::publish(
+    builtpanel_events::publish(
         &mut tx,
-        &dhpanel_kernel::Event::DomainRemoved {
+        &builtpanel_kernel::Event::DomainRemoved {
             tenant_id: hosting.tenant.id,
             domain_id: id,
             name: target.domain.fqdn.clone(),
@@ -545,7 +545,7 @@ async fn delete_domain(
     )
     .await
     .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("domain.deleted", who, hosting, id).metadata(serde_json::json!({
             "fqdn": target.domain.fqdn,
@@ -592,7 +592,7 @@ async fn change_domain(
         domains::set_docroot(&mut tx, id, docroot)
             .await
             .map_err(internal)?;
-        dhpanel_audit::insert(
+        builtpanel_audit::insert(
             &mut *tx,
             &entry("domain.docroot_changed", who, hosting, id).metadata(serde_json::json!({
                 "fqdn": before.domain.fqdn,
@@ -607,7 +607,7 @@ async fn change_domain(
         domains::set_https(&mut tx, id, force_https, hsts)
             .await
             .map_err(internal)?;
-        dhpanel_audit::insert(
+        builtpanel_audit::insert(
             &mut *tx,
             &entry("domain.https_changed", who, hosting, id).metadata(serde_json::json!({
                 "fqdn": before.domain.fqdn,
@@ -638,7 +638,7 @@ async fn change_status(
         DomainStatus::Suspended => "domain.suspended",
         DomainStatus::Active => "domain.unsuspended",
     };
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry(action, who, hosting, id)
             .metadata(serde_json::json!({ "fqdn": before.domain.fqdn })),
@@ -1186,8 +1186,8 @@ pub async fn client_delete(
         vhost_templates::TemplateView, vhost_templates::TemplateList, vhost_templates::TemplateInput,
         vhost_templates::VersionView, vhost_templates::VersionList, vhost_templates::PreviewInput,
         vhost_templates::Preview, vhost_templates::Applied, redirects::RedirectView, redirects::RedirectList, redirects::AddRedirect,
-        redirects::UpdateRedirect, dns::TemplateLine, dns::TemplateView, dns::TemplateList,
-        dns::TemplateInput, records::RecordView, records::RecordList, records::ZoneView,
+        redirects::UpdateRedirect, dns::TemplateLine, dns::DnsTemplateView, dns::DnsTemplateList,
+        dns::DnsTemplateInput, records::RecordView, records::RecordList, records::ZoneView,
         records::AddRecord, records::UpdateRecord, nameservers::Nameservers,
         nameservers::DelegationView, ssl::SslView, ssl::UploadCertificate
     )),

@@ -1,0 +1,8 @@
+slug        = "go-lang"
+name        = "Go Lang"
+category    = "server_side_scripting"
+kind        = "unavailable"
+description = "Go Lang."
+license     = "Apache-2.0"
+covers      = ["Go Lang"]
+reason      = "a language runtime or build tool, not a service; put it in your own container image (Containers)"

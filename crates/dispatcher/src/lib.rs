@@ -12,7 +12,7 @@
 //! Results arrive from the gateway ([`Dispatcher::handle_result`]). A result is
 //! only accepted from the node the operation was sent to: a node cannot finish
 //! another node's operation. Every status change is published on Redis
-//! (`dh:ops` and `dh:ops:<op_id>`, a small JSON event without output) so that
+//! (`bp:ops` and `bp:ops:<op_id>`, a small JSON event without output) so that
 //! the panel can update live; a failing publish never affects the ledger.
 
 pub mod dbisolation;
@@ -20,17 +20,17 @@ pub mod routes;
 
 use std::time::Duration;
 
-use dhpanel_cache::RedisHandle;
-use dhpanel_node_gateway::{Gateway, NodeResult, SendError};
-use dhpanel_node_protocol::{
+use builtpanel_cache::RedisHandle;
+use builtpanel_node_gateway::{Gateway, NodeResult, SendError};
+use builtpanel_node_protocol::{
     AgentError, ErrorCode, OperationResult, ResultStatus, encode_operation,
 };
-use dhpanel_operations::{Operations, Row, Status, envelope};
+use builtpanel_operations::{Operations, Row, Status, envelope};
 use tokio::sync::{mpsc, watch};
 use uuid::Uuid;
 
 /// Redis channel that carries every operation status change.
-pub const EVENT_CHANNEL: &str = "dh:ops";
+pub const EVENT_CHANNEL: &str = "bp:ops";
 
 /// Timing and limits.
 #[derive(Debug, Clone)]
@@ -117,14 +117,17 @@ fn short_hash(text: &str) -> u64 {
 
 /// What a [`SecretFiller`] answers.
 pub type Filled = std::pin::Pin<
-    Box<dyn std::future::Future<Output = Result<dhpanel_node_protocol::Operation, String>> + Send>,
+    Box<
+        dyn std::future::Future<Output = Result<builtpanel_node_protocol::Operation, String>>
+            + Send,
+    >,
 >;
 
 /// Puts back the secrets that are kept out of the ledger: the ledger holds an
 /// operation without them, and this adds them to the frame at the moment it is
 /// sent. The error text must not contain any secret.
 pub type SecretFiller =
-    std::sync::Arc<dyn Fn(dhpanel_node_protocol::Operation) -> Filled + Send + Sync>;
+    std::sync::Arc<dyn Fn(builtpanel_node_protocol::Operation) -> Filled + Send + Sync>;
 
 /// Sends operations and records results.
 #[derive(Clone)]
@@ -205,7 +208,7 @@ impl Dispatcher {
             return 0;
         }
         let max_age = self.settings.capabilities_max_age.as_secs().max(1);
-        let needing = match dhpanel_database::nodes::needing_capabilities(
+        let needing = match builtpanel_database::nodes::needing_capabilities(
             self.ops.db(),
             &nodes,
             i32::try_from(max_age).unwrap_or(i32::MAX),
@@ -221,14 +224,14 @@ impl Dispatcher {
         let slot = u64::try_from(unix_now()).unwrap_or(0) / max_age;
         let mut asked = 0;
         for node in needing {
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::ReportCapabilities,
+                builtpanel_node_protocol::Operation::ReportCapabilities,
                 format!("capabilities:{slot}"),
             );
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => asked += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => asked += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(err) => tracing::warn!(%node, error = %err, "could not request capabilities"),
             }
         }
@@ -243,7 +246,7 @@ impl Dispatcher {
     /// When the node reports success, the operations ledger removes the tenant
     /// (migration 17).
     pub async fn request_purges(&self) -> usize {
-        let due = match dhpanel_database::tenants::due_for_purge(self.ops.db(), 50).await {
+        let due = match builtpanel_database::tenants::due_for_purge(self.ops.db(), 50).await {
             Ok(due) => due,
             Err(err) => {
                 tracing::warn!(error = %err, "could not look for data to purge");
@@ -256,9 +259,9 @@ impl Dispatcher {
             let Ok(uid) = u32::try_from(tenant.uid) else {
                 continue;
             };
-            let mut request = dhpanel_operations::Request::new(
+            let mut request = builtpanel_operations::Request::new(
                 tenant.node_id,
-                dhpanel_node_protocol::Operation::DeleteTenant {
+                builtpanel_node_protocol::Operation::DeleteTenant {
                     tenant_id: tenant.id,
                     username: tenant.username.clone(),
                     uid,
@@ -268,11 +271,11 @@ impl Dispatcher {
             );
             request.tenant_id = Some(tenant.id);
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => {
+                Ok(builtpanel_operations::Enqueued::Created(_)) => {
                     tracing::info!(tenant = %tenant.id, "purge of deleted tenant's data requested");
                     asked += 1;
                 }
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(err) => {
                     tracing::warn!(tenant = %tenant.id, error = %err, "could not request a purge")
                 }
@@ -290,7 +293,7 @@ impl Dispatcher {
     /// tried again at most every five minutes (the ledger puts the tenant back on
     /// the list when it fails).
     pub async fn request_route_syncs(&self) -> usize {
-        let pending = match dhpanel_database::routes::pending(self.ops.db(), 50).await {
+        let pending = match builtpanel_database::routes::pending(self.ops.db(), 50).await {
             Ok(p) => p,
             Err(err) => {
                 tracing::warn!(error = %err, "could not look for routes to send");
@@ -313,10 +316,13 @@ impl Dispatcher {
 
     /// Puts a request in the ledger; `true` when the same request is already there
     /// and has failed (then it waits for the next time slot to be asked afresh).
-    async fn enqueue_failed(&self, request: &dhpanel_operations::Request) -> Result<bool, String> {
+    async fn enqueue_failed(
+        &self,
+        request: &builtpanel_operations::Request,
+    ) -> Result<bool, String> {
         match self.ops.enqueue(request).await.map_err(|e| e.to_string())? {
-            dhpanel_operations::Enqueued::Existing(op) => Ok(op.status == Status::Failed),
-            dhpanel_operations::Enqueued::Created(_) => Ok(false),
+            builtpanel_operations::Enqueued::Existing(op) => Ok(op.status == Status::Failed),
+            builtpanel_operations::Enqueued::Created(_) => Ok(false),
         }
     }
 
@@ -324,12 +330,12 @@ impl Dispatcher {
     /// the node and says "not yet" (the account stays on the list).
     async fn php_ready(
         &self,
-        tenant: &dhpanel_database::routes::Pending,
-        username: &dhpanel_domain::TenantUsername,
+        tenant: &builtpanel_database::routes::Pending,
+        username: &builtpanel_domain::TenantUsername,
         slot: u64,
     ) -> Result<bool, String> {
         let db = self.ops.db();
-        let Some(state) = dhpanel_database::php::state(db, tenant.id)
+        let Some(state) = builtpanel_database::php::state(db, tenant.id)
             .await
             .map_err(|e| e.to_string())?
         else {
@@ -338,20 +344,20 @@ impl Dispatcher {
         if state.state_version == state.applied_version {
             return Ok(true);
         }
-        let account = dhpanel_database::tenants::get(db, tenant.id)
+        let account = builtpanel_database::tenants::get(db, tenant.id)
             .await
             .map_err(|e| e.to_string())?
             .ok_or("the account is gone")?;
-        let plan = dhpanel_database::plans::get(db, account.plan_id)
+        let plan = builtpanel_database::plans::get(db, account.plan_id)
             .await
             .map_err(|e| e.to_string())?
             .ok_or("the plan is gone")?;
-        let extra = dhpanel_database::php::extra_versions(db, tenant.id)
+        let extra = builtpanel_database::php::extra_versions(db, tenant.id)
             .await
             .map_err(|e| e.to_string())?;
-        let request = dhpanel_operations::Request::new(
+        let request = builtpanel_operations::Request::new(
             tenant.node_id,
-            dhpanel_node_protocol::Operation::SetPhpVersions {
+            builtpanel_node_protocol::Operation::SetPhpVersions {
                 tenant_id: tenant.id,
                 username: username.as_str().to_owned(),
                 uid: u32::try_from(account.uid).map_err(|_| "negative uid")?,
@@ -372,40 +378,41 @@ impl Dispatcher {
 
     async fn queue_routes(
         &self,
-        tenant: &dhpanel_database::routes::Pending,
+        tenant: &builtpanel_database::routes::Pending,
         slot: u64,
     ) -> Result<bool, String> {
         let db = self.ops.db();
-        let username =
-            dhpanel_domain::TenantUsername::parse(&tenant.username).map_err(|e| e.to_string())?;
-        let upstream = dhpanel_tenant_stack::web_upstream(&username).map_err(|e| e.to_string())?;
+        let username = builtpanel_domain::TenantUsername::parse(&tenant.username)
+            .map_err(|e| e.to_string())?;
+        let upstream =
+            builtpanel_tenant_stack::web_upstream(&username).map_err(|e| e.to_string())?;
         // PHP first: the web server files point at containers that must exist.
         // (A suspended account has nothing running: it is brought up to date when
         // it is resumed.)
         if tenant.status == "active" && !self.php_ready(tenant, &username, slot).await? {
             return Ok(false);
         }
-        let domains = dhpanel_database::routes::domains(db, tenant.id)
+        let domains = builtpanel_database::routes::domains(db, tenant.id)
             .await
             .map_err(|e| e.to_string())?;
-        let redirects = dhpanel_database::routes::redirects(db, tenant.id)
+        let redirects = builtpanel_database::routes::redirects(db, tenant.id)
             .await
             .map_err(|e| e.to_string())?;
         let mut routes = routes::build(&tenant.status, &upstream, &domains, &redirects);
         // The firewall's policy of each site: what the most specific policy says.
         let ids: Vec<Uuid> = domains.iter().map(|d| d.id).collect();
-        let policies = dhpanel_database::waf::for_domains(db, tenant.id, &ids)
+        let policies = builtpanel_database::waf::for_domains(db, tenant.id, &ids)
             .await
             .map_err(|e| e.to_string())?;
-        let by_host: std::collections::BTreeMap<String, dhpanel_node_protocol::WafSetting> =
+        let by_host: std::collections::BTreeMap<String, builtpanel_node_protocol::WafSetting> =
             domains
                 .iter()
                 .filter_map(|d| {
                     let p = policies.get(&d.id)?;
-                    (p.mode != dhpanel_database::waf::Mode::Off).then(|| {
+                    (p.mode != builtpanel_database::waf::Mode::Off).then(|| {
                         (
                             d.fqdn.clone(),
-                            dhpanel_node_protocol::WafSetting {
+                            builtpanel_node_protocol::WafSetting {
                                 mode: p.mode.as_str().to_owned(),
                                 disabled_rules: p
                                     .disabled_rules
@@ -418,18 +425,27 @@ impl Dispatcher {
                 })
                 .collect();
         routes::apply_waf(&mut routes, &by_host);
-        // The uploaded certificates go first, so a site never answers without the
-        // certificate it should have. Their keys are not in the ledger.
-        let certificates = dhpanel_database::certificates::custom_of_tenant(db, tenant.id)
+        // The addresses each site turns away.
+        let blocks = builtpanel_database::ip_blocks::for_domains(db, tenant.id, &ids)
             .await
             .map_err(|e| e.to_string())?;
-        let mut certs = dhpanel_operations::Request::new(
+        let blocked: std::collections::BTreeMap<String, Vec<String>> = domains
+            .iter()
+            .filter_map(|d| Some((d.fqdn.clone(), blocks.get(&d.id)?.clone())))
+            .collect();
+        routes::apply_ip_blocks(&mut routes, &blocked);
+        // The uploaded certificates go first, so a site never answers without the
+        // certificate it should have. Their keys are not in the ledger.
+        let certificates = builtpanel_database::certificates::custom_of_tenant(db, tenant.id)
+            .await
+            .map_err(|e| e.to_string())?;
+        let mut certs = builtpanel_operations::Request::new(
             tenant.node_id,
-            dhpanel_node_protocol::Operation::SetCustomCertificates {
+            builtpanel_node_protocol::Operation::SetCustomCertificates {
                 username: tenant.username.clone(),
                 items: certificates
                     .into_iter()
-                    .map(|c| dhpanel_node_protocol::CustomCertificate {
+                    .map(|c| builtpanel_node_protocol::CustomCertificate {
                         host: c.fqdn,
                         certificate: c.chain_pem,
                         private_key: None,
@@ -445,11 +461,12 @@ impl Dispatcher {
         // The web server configuration of each site, then the removal of what
         // is no longer a site.
         let files =
-            dhpanel_web_config::site_files(db, tenant.id, &tenant.username, &tenant.status).await?;
+            builtpanel_web_config::site_files(db, tenant.id, &tenant.username, &tenant.status)
+                .await?;
         for (domain, config) in &files {
-            let mut attach = dhpanel_operations::Request::new(
+            let mut attach = builtpanel_operations::Request::new(
                 tenant.node_id,
-                dhpanel_node_protocol::Operation::AttachDomain {
+                builtpanel_node_protocol::Operation::AttachDomain {
                     username: tenant.username.clone(),
                     domain: domain.clone(),
                     config: config.clone(),
@@ -467,9 +484,9 @@ impl Dispatcher {
             self.enqueue_failed(&attach).await?;
         }
         if matches!(tenant.status.as_str(), "active" | "suspended") {
-            let mut keep = dhpanel_operations::Request::new(
+            let mut keep = builtpanel_operations::Request::new(
                 tenant.node_id,
-                dhpanel_node_protocol::Operation::KeepDomains {
+                builtpanel_node_protocol::Operation::KeepDomains {
                     username: tenant.username.clone(),
                     domains: files.into_iter().map(|(d, _)| d).collect(),
                 },
@@ -480,28 +497,28 @@ impl Dispatcher {
         }
         // The account's php.ini options, within what its plan allows now.
         if matches!(tenant.status.as_str(), "active" | "suspended") {
-            let account = dhpanel_database::tenants::get(db, tenant.id)
+            let account = builtpanel_database::tenants::get(db, tenant.id)
                 .await
                 .map_err(|e| e.to_string())?
                 .ok_or("the account is gone")?;
-            let plan = dhpanel_database::plans::get(db, account.plan_id)
+            let plan = builtpanel_database::plans::get(db, account.plan_id)
                 .await
                 .map_err(|e| e.to_string())?
                 .ok_or("the plan is gone")?;
-            let chosen = dhpanel_database::php::settings(db, tenant.id)
+            let chosen = builtpanel_database::php::settings(db, tenant.id)
                 .await
                 .map_err(|e| e.to_string())?;
-            let ini = dhpanel_domain::php_ini::IniSettings::from_stored(&chosen)
-                .render(&dhpanel_domain::php_ini::Caps::from_limits(&plan.limits));
+            let ini = builtpanel_domain::php_ini::IniSettings::from_stored(&chosen)
+                .render(&builtpanel_domain::php_ini::Caps::from_limits(&plan.limits));
             // Nothing chosen: the node is told to have no options file.
             let ini = if chosen.is_empty() {
                 String::new()
             } else {
                 ini
             };
-            let mut php_ini = dhpanel_operations::Request::new(
+            let mut php_ini = builtpanel_operations::Request::new(
                 tenant.node_id,
-                dhpanel_node_protocol::Operation::SetPhpIni {
+                builtpanel_node_protocol::Operation::SetPhpIni {
                     username: tenant.username.clone(),
                     ini,
                 },
@@ -510,9 +527,9 @@ impl Dispatcher {
             php_ini.tenant_id = Some(tenant.id);
             self.enqueue_failed(&php_ini).await?;
         }
-        let mut request = dhpanel_operations::Request::new(
+        let mut request = builtpanel_operations::Request::new(
             tenant.node_id,
-            dhpanel_node_protocol::Operation::SetSiteRoutes {
+            builtpanel_node_protocol::Operation::SetSiteRoutes {
                 username: tenant.username.clone(),
                 routes,
             },
@@ -525,15 +542,15 @@ impl Dispatcher {
             .await
             .map_err(|e| e.to_string())?
         {
-            dhpanel_operations::Enqueued::Created(_) => {}
+            builtpanel_operations::Enqueued::Created(_) => {}
             // The same request again: fine, unless it already failed (then it waits
             // for the next slot to be asked afresh).
-            dhpanel_operations::Enqueued::Existing(op) if op.status == Status::Failed => {
+            builtpanel_operations::Enqueued::Existing(op) if op.status == Status::Failed => {
                 return Ok(false);
             }
-            dhpanel_operations::Enqueued::Existing(_) => {}
+            builtpanel_operations::Enqueued::Existing(_) => {}
         }
-        dhpanel_database::routes::mark_synced(db, tenant.id, tenant.version)
+        builtpanel_database::routes::mark_synced(db, tenant.id, tenant.version)
             .await
             .map_err(|e| e.to_string())
     }
@@ -541,7 +558,7 @@ impl Dispatcher {
     /// Removes the preview links that have expired (which puts their accounts on
     /// the list of accounts whose routes are out of date). Returns how many.
     pub async fn expire_previews(&self) -> u64 {
-        match dhpanel_database::previews::remove_expired(self.ops.db()).await {
+        match builtpanel_database::previews::remove_expired(self.ops.db()).await {
             Ok(n) => n,
             Err(err) => {
                 tracing::warn!(error = %err, "could not remove expired preview links");
@@ -554,7 +571,7 @@ impl Dispatcher {
     /// is made from their content, so each node is told once per version, and a
     /// node that connects later is told too). Returns how many nodes were told.
     pub async fn request_error_pages(&self) -> usize {
-        let custom = match dhpanel_database::error_pages::custom(self.ops.db()).await {
+        let custom = match builtpanel_database::error_pages::custom(self.ops.db()).await {
             Ok(c) => c,
             Err(err) => {
                 tracing::warn!(error = %err, "could not read the error pages");
@@ -562,22 +579,22 @@ impl Dispatcher {
             }
         };
         let version = short_hash(&format!("{custom:?}"));
-        let pages: Vec<dhpanel_node_protocol::ErrorPage> = custom
+        let pages: Vec<builtpanel_node_protocol::ErrorPage> = custom
             .into_iter()
-            .map(|(kind, html)| dhpanel_node_protocol::ErrorPage { kind, html })
+            .map(|(kind, html)| builtpanel_node_protocol::ErrorPage { kind, html })
             .collect();
         let mut told = 0;
         for node in self.gateway.connected_nodes() {
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::SetErrorPages {
+                builtpanel_node_protocol::Operation::SetErrorPages {
                     pages: pages.clone(),
                 },
                 format!("pages:{version:016x}"),
             );
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => told += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => told += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(error) => tracing::warn!(%node, %error, "could not queue the error pages"),
             }
         }
@@ -588,7 +605,7 @@ impl Dispatcher {
     /// is made from the list, so each node is told once per version, and a node that connects
     /// later is told too). Returns how many nodes were told.
     pub async fn request_user_agents(&self) -> usize {
-        let list = match dhpanel_database::user_agents::list(self.ops.db()).await {
+        let list = match builtpanel_database::user_agents::list(self.ops.db()).await {
             Ok(l) => l,
             Err(err) => {
                 tracing::warn!(error = %err, "could not read the blocked User-Agents");
@@ -599,16 +616,16 @@ impl Dispatcher {
         let version = short_hash(&format!("{patterns:?}"));
         let mut told = 0;
         for node in self.gateway.connected_nodes() {
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::SetUserAgentBlocklist {
+                builtpanel_node_protocol::Operation::SetUserAgentBlocklist {
                     patterns: patterns.clone(),
                 },
                 format!("useragents:{version:016x}"),
             );
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => told += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => told += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(error) => tracing::warn!(%node, %error, "could not queue the User-Agent list"),
             }
         }
@@ -619,7 +636,7 @@ impl Dispatcher {
     /// the policy: a node is told once per version, and one that connects later is told too).
     /// A node without a policy is left alone. Returns how many nodes were told.
     pub async fn request_firewalls(&self) -> usize {
-        let all = match dhpanel_database::node_firewalls::all(self.ops.db()).await {
+        let all = match builtpanel_database::node_firewalls::all(self.ops.db()).await {
             Ok(a) => a,
             Err(err) => {
                 tracing::warn!(error = %err, "could not read the node firewalls");
@@ -632,7 +649,7 @@ impl Dispatcher {
             if !connected.contains(&node) {
                 continue;
             }
-            let policy: dhpanel_node_protocol::FirewallPolicy =
+            let policy: builtpanel_node_protocol::FirewallPolicy =
                 match serde_json::from_value(value.clone()) {
                     Ok(p) => p,
                     Err(error) => {
@@ -640,14 +657,14 @@ impl Dispatcher {
                         continue;
                     }
                 };
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::SetFirewallRules { policy },
+                builtpanel_node_protocol::Operation::SetFirewallRules { policy },
                 format!("firewall:{:016x}", short_hash(&value.to_string())),
             );
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => told += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => told += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(error) => tracing::warn!(%node, %error, "could not queue the firewall policy"),
             }
         }
@@ -661,7 +678,7 @@ impl Dispatcher {
     pub async fn request_scans(&self) -> usize {
         let db = self.ops.db();
         // Results first: a finished scan frees a place for a scheduled one.
-        match dhpanel_database::malware::running(db).await {
+        match builtpanel_database::malware::running(db).await {
             Ok(running) => {
                 for (scan_id, op_id) in running {
                     self.settle_scan(scan_id, op_id).await;
@@ -669,15 +686,15 @@ impl Dispatcher {
             }
             Err(err) => tracing::warn!(error = %err, "could not look for running scans"),
         }
-        if dhpanel_database::malware::active_count(db)
+        if builtpanel_database::malware::active_count(db)
             .await
             .is_ok_and(|n| n < 2)
         {
             for kind in ["malware", "wordpress"] {
-                match dhpanel_database::malware::due(db, kind, SCAN_EVERY_SECS, 1).await {
+                match builtpanel_database::malware::due(db, kind, SCAN_EVERY_SECS, 1).await {
                     Ok(due) => {
                         for tenant_id in due {
-                            if let Err(err) = dhpanel_database::malware::request(
+                            if let Err(err) = builtpanel_database::malware::request(
                                 db, tenant_id, kind, None, false, "schedule", None,
                             )
                             .await
@@ -690,7 +707,7 @@ impl Dispatcher {
                 }
             }
         }
-        let queued = match dhpanel_database::malware::queued(db, 20).await {
+        let queued = match builtpanel_database::malware::queued(db, 20).await {
             Ok(q) => q,
             Err(err) => {
                 tracing::warn!(error = %err, "could not read the queued scans");
@@ -705,19 +722,19 @@ impl Dispatcher {
             }
             let uid = u32::try_from(scan.uid).unwrap_or_default();
             let op = if scan.kind == "wordpress" {
-                dhpanel_node_protocol::Operation::InventoryWordPress {
+                builtpanel_node_protocol::Operation::InventoryWordPress {
                     tenant_id: scan.tenant_id,
                     uid,
                 }
             } else {
-                dhpanel_node_protocol::Operation::ScanTenant {
+                builtpanel_node_protocol::Operation::ScanTenant {
                     tenant_id: scan.tenant_id,
                     uid,
                     folder: scan.folder.clone(),
                     quarantine: scan.quarantine,
                 }
             };
-            let mut request = dhpanel_operations::Request::new(
+            let mut request = builtpanel_operations::Request::new(
                 scan.node_id,
                 op,
                 format!("scan:{}", scan.id.simple()),
@@ -727,17 +744,17 @@ impl Dispatcher {
             request.max_attempts = 2;
             match self.ops.enqueue(&request).await {
                 Ok(
-                    dhpanel_operations::Enqueued::Created(op)
-                    | dhpanel_operations::Enqueued::Existing(op),
+                    builtpanel_operations::Enqueued::Created(op)
+                    | builtpanel_operations::Enqueued::Existing(op),
                 ) => {
-                    if let Err(err) = dhpanel_database::malware::sent(db, scan.id, op.id).await {
+                    if let Err(err) = builtpanel_database::malware::sent(db, scan.id, op.id).await {
                         tracing::warn!(scan = %scan.id, error = %err, "could not note a sent scan");
                     }
                     sent += 1;
                 }
                 Err(error) => {
                     tracing::warn!(scan = %scan.id, %error, "could not queue a scan");
-                    let _ = dhpanel_database::malware::fail(
+                    let _ = builtpanel_database::malware::fail(
                         db,
                         scan.id,
                         "the scan could not be queued",
@@ -755,18 +772,18 @@ impl Dispatcher {
             return;
         };
         match row.status {
-            dhpanel_database::operations::Status::Succeeded => {
-                let output = row
-                    .output
-                    .and_then(|o| serde_json::from_value::<dhpanel_node_protocol::Output>(o).ok());
+            builtpanel_database::operations::Status::Succeeded => {
+                let output = row.output.and_then(|o| {
+                    serde_json::from_value::<builtpanel_node_protocol::Output>(o).ok()
+                });
                 let result = match output {
-                    Some(dhpanel_node_protocol::Output::Scanned {
+                    Some(builtpanel_node_protocol::Output::Scanned {
                         scanned,
                         infected,
                         more,
                     }) => {
                         let findings = serde_json::to_value(&infected).unwrap_or_default();
-                        dhpanel_database::malware::finish(
+                        builtpanel_database::malware::finish(
                             db,
                             scan_id,
                             i64::try_from(scanned).unwrap_or(i64::MAX),
@@ -776,7 +793,7 @@ impl Dispatcher {
                         .await
                     }
                     _ => {
-                        dhpanel_database::malware::fail(
+                        builtpanel_database::malware::fail(
                             db,
                             scan_id,
                             "the node's answer is unreadable",
@@ -788,7 +805,7 @@ impl Dispatcher {
                     tracing::warn!(%scan_id, error = %err, "could not keep a scan result");
                 }
             }
-            dhpanel_database::operations::Status::Failed => {
+            builtpanel_database::operations::Status::Failed => {
                 let message = row
                     .error
                     .as_ref()
@@ -796,7 +813,7 @@ impl Dispatcher {
                     .and_then(serde_json::Value::as_str)
                     .unwrap_or("the scan failed")
                     .to_owned();
-                if let Err(err) = dhpanel_database::malware::fail(db, scan_id, &message).await {
+                if let Err(err) = builtpanel_database::malware::fail(db, scan_id, &message).await {
                     tracing::warn!(%scan_id, error = %err, "could not keep a scan failure");
                 }
             }
@@ -815,7 +832,7 @@ impl Dispatcher {
         let Some(node) = self.gateway.connected_nodes().into_iter().min() else {
             return 0;
         };
-        let allowlist = match dhpanel_tenant_stack::Allowlist::embedded() {
+        let allowlist = match builtpanel_tenant_stack::Allowlist::embedded() {
             Ok(a) => a,
             Err(err) => {
                 tracing::warn!(error = %err, "the image list is broken");
@@ -837,7 +854,7 @@ impl Dispatcher {
                     )
                 })
                 .collect();
-            if let Err(err) = dhpanel_database::images::sync(db, &entries).await {
+            if let Err(err) = builtpanel_database::images::sync(db, &entries).await {
                 tracing::warn!(error = %err, "could not keep the image list");
                 return 0;
             }
@@ -852,20 +869,22 @@ impl Dispatcher {
             })
             .collect();
         if !names.is_empty() {
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::CheckImageUpdates { images: names },
+                builtpanel_node_protocol::Operation::CheckImageUpdates { images: names },
                 format!("imgcheck:{}", now / (6 * 3600)),
             );
-            if let Ok(dhpanel_operations::Enqueued::Created(_)) = self.ops.enqueue(&request).await {
+            if let Ok(builtpanel_operations::Enqueued::Created(_)) =
+                self.ops.enqueue(&request).await
+            {
                 queued += 1;
             }
         }
-        match dhpanel_database::images::next_to_scan(db, 24 * 3600).await {
+        match builtpanel_database::images::next_to_scan(db, 24 * 3600).await {
             Ok(Some(reference)) => {
-                let mut request = dhpanel_operations::Request::new(
+                let mut request = builtpanel_operations::Request::new(
                     node,
-                    dhpanel_node_protocol::Operation::ScanImage {
+                    builtpanel_node_protocol::Operation::ScanImage {
                         reference: reference.clone(),
                     },
                     format!("imgscan:{:016x}:{}", short_hash(&reference), now / 3600),
@@ -873,12 +892,12 @@ impl Dispatcher {
                 request.ttl = std::time::Duration::from_secs(3600);
                 request.max_attempts = 2;
                 match self.ops.enqueue(&request).await {
-                    Ok(dhpanel_operations::Enqueued::Created(_)) => {
+                    Ok(builtpanel_operations::Enqueued::Created(_)) => {
                         queued += 1;
-                        let _ = dhpanel_database::images::scan_started(db, &reference).await;
+                        let _ = builtpanel_database::images::scan_started(db, &reference).await;
                     }
-                    Ok(dhpanel_operations::Enqueued::Existing(_)) => {
-                        let _ = dhpanel_database::images::scan_started(db, &reference).await;
+                    Ok(builtpanel_operations::Enqueued::Existing(_)) => {
+                        let _ = builtpanel_database::images::scan_started(db, &reference).await;
                     }
                     Err(error) => tracing::warn!(%error, "could not queue an image scan"),
                 }
@@ -891,12 +910,12 @@ impl Dispatcher {
 
     async fn store_image_results(
         &self,
-        row: &dhpanel_database::operations::Operation,
-        output: &dhpanel_node_protocol::Output,
+        row: &builtpanel_database::operations::Operation,
+        output: &builtpanel_node_protocol::Output,
     ) {
         let db = self.ops.db();
         match output {
-            dhpanel_node_protocol::Output::ImageScanned {
+            builtpanel_node_protocol::Output::ImageScanned {
                 critical,
                 high,
                 medium,
@@ -912,7 +931,7 @@ impl Dispatcher {
                 };
                 let count = |n: &u32| i32::try_from(*n).unwrap_or(i32::MAX);
                 let top = serde_json::to_value(top).unwrap_or_default();
-                if let Err(err) = dhpanel_database::images::store_scan(
+                if let Err(err) = builtpanel_database::images::store_scan(
                     db,
                     reference,
                     [count(critical), count(high), count(medium), count(low)],
@@ -923,11 +942,11 @@ impl Dispatcher {
                     tracing::warn!(error = %err, "could not keep an image scan");
                 }
             }
-            dhpanel_node_protocol::Output::ImageDigests { items } => {
+            builtpanel_node_protocol::Output::ImageDigests { items } => {
                 for item in items {
                     if let Some((name, tag)) = item.image.rsplit_once(':')
                         && let Err(err) =
-                            dhpanel_database::images::store_digest(db, name, tag, &item.digest)
+                            builtpanel_database::images::store_digest(db, name, tag, &item.digest)
                                 .await
                     {
                         tracing::warn!(error = %err, "could not keep an image digest");
@@ -943,7 +962,7 @@ impl Dispatcher {
     /// that was removed leaves the table. Returns how many rows moved.
     pub async fn settle_cache_instances(&self) -> usize {
         let db = self.ops.db();
-        let rows = match dhpanel_database::cache_instances::awaiting(db).await {
+        let rows = match builtpanel_database::cache_instances::awaiting(db).await {
             Ok(r) => r,
             Err(err) => {
                 tracing::warn!(error = %err, "could not look for cache servers under way");
@@ -957,16 +976,16 @@ impl Dispatcher {
                 continue;
             };
             let result = match op.status {
-                dhpanel_database::operations::Status::Succeeded if row.status == "removing" => {
-                    dhpanel_database::cache_instances::forget(db, row.id).await
+                builtpanel_database::operations::Status::Succeeded if row.status == "removing" => {
+                    builtpanel_database::cache_instances::forget(db, row.id).await
                 }
-                dhpanel_database::operations::Status::Succeeded => {
+                builtpanel_database::operations::Status::Succeeded => {
                     let answer = op.output.and_then(|o| {
-                        serde_json::from_value::<dhpanel_node_protocol::Output>(o).ok()
+                        serde_json::from_value::<builtpanel_node_protocol::Output>(o).ok()
                     });
                     match answer {
-                        Some(dhpanel_node_protocol::Output::CacheInstanceSet { host, port }) => {
-                            dhpanel_database::cache_instances::ready(
+                        Some(builtpanel_node_protocol::Output::CacheInstanceSet { host, port }) => {
+                            builtpanel_database::cache_instances::ready(
                                 db,
                                 row.id,
                                 &host,
@@ -975,7 +994,7 @@ impl Dispatcher {
                             .await
                         }
                         _ => {
-                            dhpanel_database::cache_instances::failed(
+                            builtpanel_database::cache_instances::failed(
                                 db,
                                 row.id,
                                 "the node's answer is unreadable",
@@ -984,7 +1003,7 @@ impl Dispatcher {
                         }
                     }
                 }
-                dhpanel_database::operations::Status::Failed => {
+                builtpanel_database::operations::Status::Failed => {
                     let message = op
                         .error
                         .as_ref()
@@ -993,7 +1012,7 @@ impl Dispatcher {
                         .unwrap_or("the node could not do it")
                         .to_owned();
                     // (A removal that failed leaves the row, with the reason, to try again.)
-                    dhpanel_database::cache_instances::failed(db, row.id, &message).await
+                    builtpanel_database::cache_instances::failed(db, row.id, &message).await
                 }
                 _ => continue,
             };
@@ -1011,7 +1030,7 @@ impl Dispatcher {
     /// Returns how many rows moved.
     pub async fn settle_runtime_apps(&self) -> usize {
         let db = self.ops.db();
-        let rows = match dhpanel_database::runtime_apps::awaiting(db).await {
+        let rows = match builtpanel_database::runtime_apps::awaiting(db).await {
             Ok(r) => r,
             Err(err) => {
                 tracing::warn!(error = %err, "could not look for applications under way");
@@ -1025,19 +1044,19 @@ impl Dispatcher {
                 continue;
             };
             let result = match op.status {
-                dhpanel_database::operations::Status::Succeeded if row.status == "removing" => {
-                    dhpanel_database::runtime_apps::forget(db, row.id).await
+                builtpanel_database::operations::Status::Succeeded if row.status == "removing" => {
+                    builtpanel_database::runtime_apps::forget(db, row.id).await
                 }
-                dhpanel_database::operations::Status::Succeeded => {
+                builtpanel_database::operations::Status::Succeeded => {
                     let answer = op.output.and_then(|o| {
-                        serde_json::from_value::<dhpanel_node_protocol::Output>(o).ok()
+                        serde_json::from_value::<builtpanel_node_protocol::Output>(o).ok()
                     });
                     match answer {
-                        Some(dhpanel_node_protocol::Output::RuntimeAppSet { host }) => {
-                            dhpanel_database::runtime_apps::ready(db, row.id, &host).await
+                        Some(builtpanel_node_protocol::Output::RuntimeAppSet { host }) => {
+                            builtpanel_database::runtime_apps::ready(db, row.id, &host).await
                         }
                         _ => {
-                            dhpanel_database::runtime_apps::failed(
+                            builtpanel_database::runtime_apps::failed(
                                 db,
                                 row.id,
                                 "the node's answer is unreadable",
@@ -1046,7 +1065,7 @@ impl Dispatcher {
                         }
                     }
                 }
-                dhpanel_database::operations::Status::Failed => {
+                builtpanel_database::operations::Status::Failed => {
                     let message = op
                         .error
                         .as_ref()
@@ -1054,7 +1073,7 @@ impl Dispatcher {
                         .and_then(serde_json::Value::as_str)
                         .unwrap_or("the node could not do it")
                         .to_owned();
-                    dhpanel_database::runtime_apps::failed(db, row.id, &message).await
+                    builtpanel_database::runtime_apps::failed(db, row.id, &message).await
                 }
                 _ => continue,
             };
@@ -1071,7 +1090,7 @@ impl Dispatcher {
     /// deploy that was removed leaves the table. Returns how many rows moved.
     pub async fn settle_git_deploys(&self) -> usize {
         let db = self.ops.db();
-        let rows = match dhpanel_database::git_deploys::awaiting(db).await {
+        let rows = match builtpanel_database::git_deploys::awaiting(db).await {
             Ok(r) => r,
             Err(err) => {
                 tracing::warn!(error = %err, "could not look for deploys under way");
@@ -1085,19 +1104,20 @@ impl Dispatcher {
                 continue;
             };
             let result = match op.status {
-                dhpanel_database::operations::Status::Succeeded if row.status == "removing" => {
-                    dhpanel_database::git_deploys::forget(db, row.id).await
+                builtpanel_database::operations::Status::Succeeded if row.status == "removing" => {
+                    builtpanel_database::git_deploys::forget(db, row.id).await
                 }
-                dhpanel_database::operations::Status::Succeeded => {
+                builtpanel_database::operations::Status::Succeeded => {
                     let answer = op.output.and_then(|o| {
-                        serde_json::from_value::<dhpanel_node_protocol::Output>(o).ok()
+                        serde_json::from_value::<builtpanel_node_protocol::Output>(o).ok()
                     });
                     match answer {
-                        Some(dhpanel_node_protocol::Output::GitDeployed { commit, log }) => {
-                            dhpanel_database::git_deploys::deployed(db, row.id, &commit, &log).await
+                        Some(builtpanel_node_protocol::Output::GitDeployed { commit, log }) => {
+                            builtpanel_database::git_deploys::deployed(db, row.id, &commit, &log)
+                                .await
                         }
                         _ => {
-                            dhpanel_database::git_deploys::failed(
+                            builtpanel_database::git_deploys::failed(
                                 db,
                                 row.id,
                                 "the node's answer is unreadable",
@@ -1106,7 +1126,7 @@ impl Dispatcher {
                         }
                     }
                 }
-                dhpanel_database::operations::Status::Failed => {
+                builtpanel_database::operations::Status::Failed => {
                     let message = op
                         .error
                         .as_ref()
@@ -1114,7 +1134,7 @@ impl Dispatcher {
                         .and_then(serde_json::Value::as_str)
                         .unwrap_or("the node could not do it")
                         .to_owned();
-                    dhpanel_database::git_deploys::failed(db, row.id, &message).await
+                    builtpanel_database::git_deploys::failed(db, row.id, &message).await
                 }
                 _ => continue,
             };
@@ -1132,7 +1152,7 @@ impl Dispatcher {
     /// Returns how many operations were queued.
     pub async fn request_app_installs(&self) -> usize {
         let db = self.ops.db();
-        let apps = match dhpanel_database::apps::installing(db, 20).await {
+        let apps = match builtpanel_database::apps::installing(db, 20).await {
             Ok(a) => a,
             Err(err) => {
                 tracing::warn!(error = %err, "could not look for installs under way");
@@ -1154,21 +1174,24 @@ impl Dispatcher {
 
     async fn fail_app(
         &self,
-        app: &dhpanel_database::apps::Installing,
+        app: &builtpanel_database::apps::Installing,
         why: &str,
     ) -> Result<bool, String> {
         let db = self.ops.db();
         let why: String = why.chars().filter(|c| !c.is_control()).take(400).collect();
-        dhpanel_database::apps::set_status(db, app.id, "failed", None, Some(&why))
+        builtpanel_database::apps::set_status(db, app.id, "failed", None, Some(&why))
             .await
             .map_err(|e| e.to_string())?;
-        dhpanel_database::apps::forget_secrets(db, app.id)
+        builtpanel_database::apps::forget_secrets(db, app.id)
             .await
             .map_err(|e| e.to_string())?;
         Ok(false)
     }
 
-    async fn step_install(&self, app: &dhpanel_database::apps::Installing) -> Result<bool, String> {
+    async fn step_install(
+        &self,
+        app: &builtpanel_database::apps::Installing,
+    ) -> Result<bool, String> {
         let db = self.ops.db();
         let text = |key: &str| {
             app.settings
@@ -1183,7 +1206,7 @@ impl Dispatcher {
                 let (Some(db_id), Some(user_id)) = (id_of("db_id"), id_of("user_id")) else {
                     return Ok(false);
                 };
-                let Some(state) = dhpanel_database::apps::setup_state(db, db_id, user_id)
+                let Some(state) = builtpanel_database::apps::setup_state(db, db_id, user_id)
                     .await
                     .map_err(|e| e.to_string())?
                 else {
@@ -1196,7 +1219,7 @@ impl Dispatcher {
                     return Ok(false);
                 }
                 let mut conn = db.acquire().await.map_err(|e| e.to_string())?;
-                dhpanel_database::databases::set_grant(
+                builtpanel_database::databases::set_grant(
                     &mut conn,
                     app.tenant_id,
                     db_id,
@@ -1206,13 +1229,13 @@ impl Dispatcher {
                 .await
                 .map_err(|e| e.to_string())?;
                 drop(conn);
-                let mut request = dhpanel_operations::Request::new(
+                let mut request = builtpanel_operations::Request::new(
                     app.node_id,
-                    dhpanel_node_protocol::Operation::GrantDb {
+                    builtpanel_node_protocol::Operation::GrantDb {
                         database: state.database,
                         user: state.user,
                         access: "all".to_owned(),
-                        engine: dhpanel_node_protocol::DbEngine::Mysql,
+                        engine: builtpanel_node_protocol::DbEngine::Mysql,
                         dedicated: None,
                     },
                     format!("appgrant:{}", app.id.simple()),
@@ -1224,12 +1247,12 @@ impl Dispatcher {
                     .await
                     .map_err(|e| e.to_string())?
                 {
-                    dhpanel_operations::Enqueued::Created(op)
-                    | dhpanel_operations::Enqueued::Existing(op) => op,
+                    builtpanel_operations::Enqueued::Created(op)
+                    | builtpanel_operations::Enqueued::Existing(op) => op,
                 };
                 settings["stage"] = "grant".into();
                 settings["op"] = op.id.to_string().into();
-                dhpanel_database::apps::set_settings(db, app.id, &settings)
+                builtpanel_database::apps::set_settings(db, app.id, &settings)
                     .await
                     .map_err(|e| e.to_string())?;
                 Ok(true)
@@ -1250,8 +1273,8 @@ impl Dispatcher {
                             .await;
                     };
                     match row.status {
-                        dhpanel_database::operations::Status::Succeeded => {}
-                        dhpanel_database::operations::Status::Failed => {
+                        builtpanel_database::operations::Status::Succeeded => {}
+                        builtpanel_database::operations::Status::Failed => {
                             return self
                                 .fail_app(app, "the database could not be given to its user")
                                 .await;
@@ -1278,19 +1301,19 @@ impl Dispatcher {
                         .get("plugins")
                         .and_then(|p| serde_json::from_value(p.clone()).ok())
                         .unwrap_or_default();
-                    dhpanel_node_protocol::Operation::InstallWordPress {
+                    builtpanel_node_protocol::Operation::InstallWordPress {
                         app_id: app.id,
                         tenant_id: app.tenant_id,
                         username: app.username.clone(),
                         uid,
                         path: text("folder").unwrap_or_default(),
-                        database: dhpanel_node_protocol::WpDatabase {
+                        database: builtpanel_node_protocol::WpDatabase {
                             name: db_name.clone(),
                             user: db_name,
                         },
                         // Not in the ledger: opened from the sealed copies at send time.
                         database_password: None,
-                        site: dhpanel_node_protocol::WpSite {
+                        site: builtpanel_node_protocol::WpSite {
                             url,
                             title,
                             admin_user,
@@ -1303,26 +1326,28 @@ impl Dispatcher {
                     }
                 } else {
                     let Some(definition) = app.settings.get("definition").and_then(|d| {
-                        serde_json::from_value::<dhpanel_node_protocol::AppDefinition>(d.clone())
+                        serde_json::from_value::<builtpanel_node_protocol::AppDefinition>(d.clone())
                             .ok()
                     }) else {
                         return self
                             .fail_app(app, "the install's definition is missing")
                             .await;
                     };
-                    dhpanel_node_protocol::Operation::InstallApp {
+                    builtpanel_node_protocol::Operation::InstallApp {
                         app_id: app.id,
                         tenant_id: app.tenant_id,
                         username: app.username.clone(),
                         uid,
                         path: text("folder").unwrap_or_default(),
                         definition: Box::new(definition),
-                        database: text("database").map(|name| dhpanel_node_protocol::WpDatabase {
-                            name: name.clone(),
-                            user: name,
+                        database: text("database").map(|name| {
+                            builtpanel_node_protocol::WpDatabase {
+                                name: name.clone(),
+                                user: name,
+                            }
                         }),
                         database_password: None,
-                        site: dhpanel_node_protocol::AppSite {
+                        site: builtpanel_node_protocol::AppSite {
                             url,
                             title,
                             admin_user: text("admin_user").unwrap_or_default(),
@@ -1331,7 +1356,7 @@ impl Dispatcher {
                         admin_password: None,
                     }
                 };
-                let mut request = dhpanel_operations::Request::new(
+                let mut request = builtpanel_operations::Request::new(
                     app.node_id,
                     operation,
                     format!("appinstall:{}", app.id.simple()),
@@ -1345,12 +1370,12 @@ impl Dispatcher {
                     .await
                     .map_err(|e| e.to_string())?
                 {
-                    dhpanel_operations::Enqueued::Created(op)
-                    | dhpanel_operations::Enqueued::Existing(op) => op,
+                    builtpanel_operations::Enqueued::Created(op)
+                    | builtpanel_operations::Enqueued::Existing(op) => op,
                 };
                 settings["stage"] = "install".into();
                 settings["op"] = op.id.to_string().into();
-                dhpanel_database::apps::set_settings(db, app.id, &settings)
+                builtpanel_database::apps::set_settings(db, app.id, &settings)
                     .await
                     .map_err(|e| e.to_string())?;
                 Ok(true)
@@ -1367,20 +1392,22 @@ impl Dispatcher {
                         .await;
                 };
                 match row.status {
-                    dhpanel_database::operations::Status::Succeeded => {
+                    builtpanel_database::operations::Status::Succeeded => {
                         let version = row
                             .output
                             .and_then(|o| {
-                                serde_json::from_value::<dhpanel_node_protocol::Output>(o).ok()
+                                serde_json::from_value::<builtpanel_node_protocol::Output>(o).ok()
                             })
                             .and_then(|o| match o {
-                                dhpanel_node_protocol::Output::WordPressInstalled { version }
-                                | dhpanel_node_protocol::Output::AppInstalled { version } => {
+                                builtpanel_node_protocol::Output::WordPressInstalled {
+                                    version,
+                                }
+                                | builtpanel_node_protocol::Output::AppInstalled { version } => {
                                     Some(version)
                                 }
                                 _ => None,
                             });
-                        dhpanel_database::apps::set_status(
+                        builtpanel_database::apps::set_status(
                             db,
                             app.id,
                             "active",
@@ -1389,12 +1416,12 @@ impl Dispatcher {
                         )
                         .await
                         .map_err(|e| e.to_string())?;
-                        dhpanel_database::apps::forget_secrets(db, app.id)
+                        builtpanel_database::apps::forget_secrets(db, app.id)
                             .await
                             .map_err(|e| e.to_string())?;
                         Ok(false)
                     }
-                    dhpanel_database::operations::Status::Failed => {
+                    builtpanel_database::operations::Status::Failed => {
                         let message = row
                             .error
                             .as_ref()
@@ -1417,15 +1444,15 @@ impl Dispatcher {
         let slot = u64::try_from(unix_now()).unwrap_or(0) / (6 * 3600);
         let mut told = 0;
         for node in self.gateway.connected_nodes() {
-            let mut request = dhpanel_operations::Request::new(
+            let mut request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::UpdateMalwareSignatures,
+                builtpanel_node_protocol::Operation::UpdateMalwareSignatures,
                 format!("clamsig:{slot}"),
             );
             request.max_attempts = 3;
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => told += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => told += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(error) => tracing::warn!(%node, %error, "could not queue the signature update"),
             }
         }
@@ -1442,14 +1469,14 @@ impl Dispatcher {
             / self.settings.certificates_every.as_secs().max(1);
         let mut asked = 0;
         for node in self.gateway.connected_nodes() {
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::ReportCertificates,
+                builtpanel_node_protocol::Operation::ReportCertificates,
                 format!("certificates:{slot}"),
             );
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => asked += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => asked += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(err) => tracing::warn!(%node, error = %err, "could not request certificates"),
             }
         }
@@ -1469,17 +1496,21 @@ impl Dispatcher {
             for (engine, op, key) in [
                 (
                     "mysql",
-                    dhpanel_node_protocol::Operation::ReportDbSizes,
+                    builtpanel_node_protocol::Operation::ReportDbSizes,
                     "dbsizes",
                 ),
                 (
                     "postgres",
-                    dhpanel_node_protocol::Operation::ReportPgSizes,
+                    builtpanel_node_protocol::Operation::ReportPgSizes,
                     "pgsizes",
                 ),
             ] {
-                match dhpanel_database::databases::node_has_databases(self.ops.db(), node, engine)
-                    .await
+                match builtpanel_database::databases::node_has_databases(
+                    self.ops.db(),
+                    node,
+                    engine,
+                )
+                .await
                 {
                     Ok(true) => {}
                     Ok(false) => continue,
@@ -1488,10 +1519,11 @@ impl Dispatcher {
                         continue;
                     }
                 }
-                let request = dhpanel_operations::Request::new(node, op, format!("{key}:{slot}"));
+                let request =
+                    builtpanel_operations::Request::new(node, op, format!("{key}:{slot}"));
                 match self.ops.enqueue(&request).await {
-                    Ok(dhpanel_operations::Enqueued::Created(_)) => asked += 1,
-                    Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                    Ok(builtpanel_operations::Enqueued::Created(_)) => asked += 1,
+                    Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                     Err(error) => {
                         tracing::warn!(%node, %error, "could not queue the size report");
                     }
@@ -1508,7 +1540,7 @@ impl Dispatcher {
         let slot = u64::try_from(unix_now()).unwrap_or(0) / 60;
         let mut asked = 0;
         for node in self.gateway.connected_nodes() {
-            match dhpanel_database::mail::node_has_mail(self.ops.db(), node).await {
+            match builtpanel_database::mail::node_has_mail(self.ops.db(), node).await {
                 Ok(true) => {}
                 Ok(false) => continue,
                 Err(err) => {
@@ -1516,14 +1548,14 @@ impl Dispatcher {
                     continue;
                 }
             }
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::ReportMail,
+                builtpanel_node_protocol::Operation::ReportMail,
                 format!("mailreport:{slot}"),
             );
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => asked += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => asked += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(error) => tracing::warn!(%node, %error, "could not queue the mail report"),
             }
         }
@@ -1533,8 +1565,8 @@ impl Dispatcher {
     async fn store_mail_report(
         &self,
         node_id: Uuid,
-        usage: &[dhpanel_node_protocol::MailUsage],
-        queue: &[dhpanel_node_protocol::MailQueueItem],
+        usage: &[builtpanel_node_protocol::MailUsage],
+        queue: &[builtpanel_node_protocol::MailQueueItem],
         total: u64,
     ) {
         let sizes: Vec<(String, i64)> = usage
@@ -1548,8 +1580,8 @@ impl Dispatcher {
             .collect();
         let items = serde_json::to_value(queue).unwrap_or_default();
         let result = async {
-            dhpanel_database::mail::set_usage(self.ops.db(), node_id, &sizes).await?;
-            dhpanel_database::mail::save_queue(
+            builtpanel_database::mail::set_usage(self.ops.db(), node_id, &sizes).await?;
+            builtpanel_database::mail::save_queue(
                 self.ops.db(),
                 node_id,
                 &items,
@@ -1571,16 +1603,20 @@ impl Dispatcher {
         let mut asked = 0;
         for node in self.gateway.connected_nodes() {
             for (op, key) in [
-                (dhpanel_node_protocol::Operation::ReportServices, "services"),
                 (
-                    dhpanel_node_protocol::Operation::ReportWebService,
+                    builtpanel_node_protocol::Operation::ReportServices,
+                    "services",
+                ),
+                (
+                    builtpanel_node_protocol::Operation::ReportWebService,
                     "webservice",
                 ),
             ] {
-                let request = dhpanel_operations::Request::new(node, op, format!("{key}:{slot}"));
+                let request =
+                    builtpanel_operations::Request::new(node, op, format!("{key}:{slot}"));
                 match self.ops.enqueue(&request).await {
-                    Ok(dhpanel_operations::Enqueued::Created(_)) => asked += 1,
-                    Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                    Ok(builtpanel_operations::Enqueued::Created(_)) => asked += 1,
+                    Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                     Err(error) => {
                         tracing::warn!(%node, %error, "could not queue the services report")
                     }
@@ -1596,14 +1632,14 @@ impl Dispatcher {
         let slot = u64::try_from(unix_now()).unwrap_or(0) / 60;
         let mut asked = 0;
         for node in self.gateway.connected_nodes() {
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::CollectMetrics,
+                builtpanel_node_protocol::Operation::CollectMetrics,
                 format!("metrics:{slot}"),
             );
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => asked += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => asked += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(error) => tracing::warn!(%node, %error, "could not queue the metrics reading"),
             }
         }
@@ -1614,7 +1650,7 @@ impl Dispatcher {
     /// (the key has a thirty-second slot). The answers become the jobs' last results (a
     /// trigger of the ledger). Returns how many were asked.
     pub async fn request_cron_runs(&self) -> usize {
-        let nodes = match dhpanel_database::cron_jobs::nodes_with_jobs(self.ops.db()).await {
+        let nodes = match builtpanel_database::cron_jobs::nodes_with_jobs(self.ops.db()).await {
             Ok(n) => n,
             Err(err) => {
                 tracing::warn!(error = %err, "could not look for cron jobs");
@@ -1626,14 +1662,14 @@ impl Dispatcher {
         let connected = self.gateway.connected_nodes();
         let mut asked = 0;
         for node in nodes.into_iter().filter(|n| connected.contains(n)) {
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::ReportCronRuns { since: now - 1800 },
+                builtpanel_node_protocol::Operation::ReportCronRuns { since: now - 1800 },
                 format!("cronruns:{slot}"),
             );
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => asked += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => asked += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(error) => tracing::warn!(%node, %error, "could not queue the cron report"),
             }
         }
@@ -1644,7 +1680,7 @@ impl Dispatcher {
     /// ten-second slot, so each import is asked about once per slot). Returns how
     /// many were asked.
     pub async fn request_import_progress(&self) -> usize {
-        let running = match dhpanel_database::imports::running(self.ops.db()).await {
+        let running = match builtpanel_database::imports::running(self.ops.db()).await {
             Ok(r) => r,
             Err(err) => {
                 tracing::warn!(error = %err, "could not look for running imports");
@@ -1658,14 +1694,14 @@ impl Dispatcher {
             if !connected.contains(&node) {
                 continue;
             }
-            let request = dhpanel_operations::Request::new(
+            let request = builtpanel_operations::Request::new(
                 node,
-                dhpanel_node_protocol::Operation::ReportImportProgress { import_id },
+                builtpanel_node_protocol::Operation::ReportImportProgress { import_id },
                 format!("importprog:{}:{slot}", import_id.simple()),
             );
             match self.ops.enqueue(&request).await {
-                Ok(dhpanel_operations::Enqueued::Created(_)) => asked += 1,
-                Ok(dhpanel_operations::Enqueued::Existing(_)) => {}
+                Ok(builtpanel_operations::Enqueued::Created(_)) => asked += 1,
+                Ok(builtpanel_operations::Enqueued::Existing(_)) => {}
                 Err(error) => {
                     tracing::warn!(%node, %error, "could not queue an import progress request")
                 }
@@ -1674,8 +1710,12 @@ impl Dispatcher {
         asked
     }
 
-    async fn store_import_progress(&self, import_id: Uuid, report: &dhpanel_node_protocol::Output) {
-        let dhpanel_node_protocol::Output::ImportProgress {
+    async fn store_import_progress(
+        &self,
+        import_id: Uuid,
+        report: &builtpanel_node_protocol::Output,
+    ) {
+        let builtpanel_node_protocol::Output::ImportProgress {
             stage,
             bytes_done,
             statements,
@@ -1687,9 +1727,9 @@ impl Dispatcher {
         let result = if stage == "unknown" {
             // The node has no such import: it restarted, so the run is lost. (A
             // young import may only not have been noticed by the node yet.)
-            dhpanel_database::imports::lost(self.ops.db(), import_id).await
+            builtpanel_database::imports::lost(self.ops.db(), import_id).await
         } else {
-            dhpanel_database::imports::record_progress(
+            builtpanel_database::imports::record_progress(
                 self.ops.db(),
                 import_id,
                 stage,
@@ -1703,11 +1743,15 @@ impl Dispatcher {
         }
     }
 
-    async fn store_services(&self, node_id: Uuid, items: &[dhpanel_node_protocol::ServiceStatus]) {
+    async fn store_services(
+        &self,
+        node_id: Uuid,
+        items: &[builtpanel_node_protocol::ServiceStatus],
+    ) {
         let result = async {
             let mut tx = self.ops.db().begin().await?;
             for item in items {
-                let change = dhpanel_database::node_services::record(
+                let change = builtpanel_database::node_services::record(
                     &mut tx,
                     node_id,
                     &item.name,
@@ -1716,29 +1760,29 @@ impl Dispatcher {
                 )
                 .await?;
                 let event = match change {
-                    dhpanel_database::node_services::Change::Down => {
-                        Some(dhpanel_kernel::Event::NodeServiceDown {
+                    builtpanel_database::node_services::Change::Down => {
+                        Some(builtpanel_kernel::Event::NodeServiceDown {
                             node_id,
                             service: item.name.clone(),
                             state: item.state.clone(),
                         })
                     }
-                    dhpanel_database::node_services::Change::Recovered => {
-                        Some(dhpanel_kernel::Event::NodeServiceRecovered {
+                    builtpanel_database::node_services::Change::Recovered => {
+                        Some(builtpanel_kernel::Event::NodeServiceRecovered {
                             node_id,
                             service: item.name.clone(),
                         })
                     }
-                    dhpanel_database::node_services::Change::None => None,
+                    builtpanel_database::node_services::Change::None => None,
                 };
                 if let Some(event) = &event {
-                    dhpanel_events::publish(&mut tx, event)
+                    builtpanel_events::publish(&mut tx, event)
                         .await
-                        .map_err(|e| dhpanel_database::sqlx::Error::Protocol(e.to_string()))?;
+                        .map_err(|e| builtpanel_database::sqlx::Error::Protocol(e.to_string()))?;
                 }
             }
             tx.commit().await?;
-            Ok::<_, dhpanel_database::sqlx::Error>(())
+            Ok::<_, builtpanel_database::sqlx::Error>(())
         }
         .await;
         if let Err(err) = result {
@@ -1750,12 +1794,12 @@ impl Dispatcher {
         &self,
         node_id: Uuid,
         at: i64,
-        node: &dhpanel_node_protocol::NodeMetrics,
-        containers: &[dhpanel_node_protocol::ContainerMetrics],
+        node: &builtpanel_node_protocol::NodeMetrics,
+        containers: &[builtpanel_node_protocol::ContainerMetrics],
     ) {
-        let containers: Vec<dhpanel_database::usage::Container> = containers
+        let containers: Vec<builtpanel_database::usage::Container> = containers
             .iter()
-            .map(|c| dhpanel_database::usage::Container {
+            .map(|c| builtpanel_database::usage::Container {
                 name: c.name.clone(),
                 memory_bytes: c.memory_bytes,
                 cpu_nanos: c.cpu_nanos,
@@ -1766,7 +1810,7 @@ impl Dispatcher {
                 io_write: c.io_write_bytes,
             })
             .collect();
-        let node = dhpanel_database::usage::Node {
+        let node = builtpanel_database::usage::Node {
             cpus: node.cpus,
             busy_jiffies: node.cpu_busy_jiffies,
             total_jiffies: node.cpu_total_jiffies,
@@ -1780,22 +1824,22 @@ impl Dispatcher {
             disk_total: node.disk_total_bytes,
         };
         if let Err(err) =
-            dhpanel_database::usage::record(self.ops.db(), node_id, at, &node, &containers).await
+            builtpanel_database::usage::record(self.ops.db(), node_id, at, &node, &containers).await
         {
             tracing::warn!(%node_id, error = %err, "could not keep a usage reading");
         }
     }
 
-    async fn store_db_sizes(&self, node_id: Uuid, items: &[dhpanel_node_protocol::DbSize]) {
+    async fn store_db_sizes(&self, node_id: Uuid, items: &[builtpanel_node_protocol::DbSize]) {
         let sizes: Vec<(String, i64)> = items
             .iter()
             .map(|d| (d.name.clone(), i64::try_from(d.bytes).unwrap_or(i64::MAX)))
             .collect();
         let result = async {
             let mut tx = self.ops.db().begin().await?;
-            let n = dhpanel_database::databases::record_sizes(&mut tx, node_id, &sizes).await?;
+            let n = builtpanel_database::databases::record_sizes(&mut tx, node_id, &sizes).await?;
             tx.commit().await?;
-            Ok::<_, dhpanel_database::sqlx::Error>(n)
+            Ok::<_, builtpanel_database::sqlx::Error>(n)
         }
         .await;
         if let Err(err) = result {
@@ -1806,11 +1850,11 @@ impl Dispatcher {
     async fn store_certificates(
         &self,
         node_id: Uuid,
-        items: &[dhpanel_node_protocol::CertificateInfo],
+        items: &[builtpanel_node_protocol::CertificateInfo],
     ) {
-        let reported: Vec<dhpanel_database::certificates::Reported<'_>> = items
+        let reported: Vec<builtpanel_database::certificates::Reported<'_>> = items
             .iter()
-            .map(|c| dhpanel_database::certificates::Reported {
+            .map(|c| builtpanel_database::certificates::Reported {
                 host: &c.host,
                 issuer: &c.issuer,
                 not_before: c.not_before,
@@ -1819,10 +1863,10 @@ impl Dispatcher {
             .collect();
         let result = async {
             let mut tx = self.ops.db().begin().await?;
-            let n = dhpanel_database::certificates::record_reported(&mut tx, node_id, &reported)
+            let n = builtpanel_database::certificates::record_reported(&mut tx, node_id, &reported)
                 .await?;
             tx.commit().await?;
-            Ok::<_, dhpanel_database::sqlx::Error>(n)
+            Ok::<_, builtpanel_database::sqlx::Error>(n)
         }
         .await;
         if let Err(err) = result {
@@ -1837,7 +1881,7 @@ impl Dispatcher {
     pub async fn announce_expiring(&self) -> usize {
         let result = async {
             let mut tx = self.ops.db().begin().await.map_err(|e| e.to_string())?;
-            let due = dhpanel_database::certificates::expiring(
+            let due = builtpanel_database::certificates::expiring(
                 &mut tx,
                 self.settings.expiry_warning_days,
                 200,
@@ -1845,9 +1889,9 @@ impl Dispatcher {
             .await
             .map_err(|e| e.to_string())?;
             for c in &due {
-                dhpanel_events::publish(
+                builtpanel_events::publish(
                     &mut tx,
-                    &dhpanel_kernel::Event::CertificateExpiring {
+                    &builtpanel_kernel::Event::CertificateExpiring {
                         tenant_id: c.tenant_id,
                         domain_id: c.domain_id,
                         name: c.fqdn.clone(),
@@ -1856,7 +1900,7 @@ impl Dispatcher {
                 )
                 .await
                 .map_err(|e| e.to_string())?;
-                dhpanel_database::certificates::mark_notified(&mut tx, c.domain_id)
+                builtpanel_database::certificates::mark_notified(&mut tx, c.domain_id)
                     .await
                     .map_err(|e| e.to_string())?;
             }
@@ -1992,16 +2036,16 @@ impl Dispatcher {
         };
         match status {
             ResultStatus::Succeeded => {
-                if let Some(dhpanel_node_protocol::Output::Capabilities(report)) = &output {
+                if let Some(builtpanel_node_protocol::Output::Capabilities(report)) = &output {
                     self.store_capabilities(node_id, report).await;
                 }
-                if let Some(dhpanel_node_protocol::Output::Certificates { items }) = &output {
+                if let Some(builtpanel_node_protocol::Output::Certificates { items }) = &output {
                     self.store_certificates(node_id, items).await;
                 }
-                if let Some(dhpanel_node_protocol::Output::DbSizes { items }) = &output {
+                if let Some(builtpanel_node_protocol::Output::DbSizes { items }) = &output {
                     self.store_db_sizes(node_id, items).await;
                 }
-                if let Some(dhpanel_node_protocol::Output::MailReport {
+                if let Some(builtpanel_node_protocol::Output::MailReport {
                     usage,
                     queue,
                     queue_total,
@@ -2010,10 +2054,10 @@ impl Dispatcher {
                     self.store_mail_report(node_id, usage, queue, *queue_total)
                         .await;
                 }
-                if let Some(dhpanel_node_protocol::Output::Services { items }) = &output {
+                if let Some(builtpanel_node_protocol::Output::Services { items }) = &output {
                     self.store_services(node_id, items).await;
                 }
-                if let Some(dhpanel_node_protocol::Output::Metrics {
+                if let Some(builtpanel_node_protocol::Output::Metrics {
                     at,
                     node,
                     containers,
@@ -2021,9 +2065,9 @@ impl Dispatcher {
                 {
                     self.store_metrics(node_id, *at, node, containers).await;
                 }
-                if let Some(dhpanel_node_protocol::Output::File {
+                if let Some(builtpanel_node_protocol::Output::File {
                     result:
-                        dhpanel_node_protocol::files::FileResult::Usage {
+                        builtpanel_node_protocol::files::FileResult::Usage {
                             total_bytes,
                             inodes,
                             folders,
@@ -2033,7 +2077,7 @@ impl Dispatcher {
                     && let Some(tenant_id) = row.tenant_id
                 {
                     let folders = serde_json::to_value(folders).unwrap_or_default();
-                    if let Err(err) = dhpanel_database::file_transfers::record_usage(
+                    if let Err(err) = builtpanel_database::file_transfers::record_usage(
                         self.ops.db(),
                         tenant_id,
                         i64::try_from(*total_bytes).unwrap_or(i64::MAX),
@@ -2047,13 +2091,14 @@ impl Dispatcher {
                     }
                 }
                 if let Some(
-                    result @ (dhpanel_node_protocol::Output::ImageScanned { .. }
-                    | dhpanel_node_protocol::Output::ImageDigests { .. }),
+                    result @ (builtpanel_node_protocol::Output::ImageScanned { .. }
+                    | builtpanel_node_protocol::Output::ImageDigests { .. }),
                 ) = &output
                 {
                     self.store_image_results(&row, result).await;
                 }
-                if let Some(report @ dhpanel_node_protocol::Output::ImportProgress { .. }) = &output
+                if let Some(report @ builtpanel_node_protocol::Output::ImportProgress { .. }) =
+                    &output
                     && let Some(import_id) = row
                         .payload
                         .get("import_id")
@@ -2088,7 +2133,7 @@ impl Dispatcher {
     async fn store_capabilities(
         &self,
         node_id: Uuid,
-        report: &dhpanel_node_protocol::Capabilities,
+        report: &builtpanel_node_protocol::Capabilities,
     ) {
         let clip =
             |s: &str| -> String { s.chars().filter(|c| !c.is_control()).take(128).collect() };
@@ -2100,7 +2145,7 @@ impl Dispatcher {
             return;
         };
         if let Err(err) =
-            dhpanel_database::nodes::set_capabilities(self.ops.db(), node_id, &json).await
+            builtpanel_database::nodes::set_capabilities(self.ops.db(), node_id, &json).await
         {
             tracing::warn!(%node_id, error = %err, "could not store the capability report");
         }

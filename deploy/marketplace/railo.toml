@@ -1,0 +1,8 @@
+slug        = "railo"
+name        = "Railo"
+category    = "java_tools"
+kind        = "unavailable"
+description = "Railo."
+license     = "LGPL-2.1-only"
+covers      = ["Railo"]
+reason      = "the project is discontinued and no longer gets security fixes"

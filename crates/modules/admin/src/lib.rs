@@ -34,22 +34,22 @@ use axum::{
     http::StatusCode,
     routing::{get, post, put},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_auth_core::password::PasswordHasher;
-use dhpanel_auth_core::policy::PasswordPolicy;
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_auth_core::password::PasswordHasher;
+use builtpanel_auth_core::policy::PasswordPolicy;
+use builtpanel_database::{
     accounts::{self, DbAccountStatus, InsertAccountError, NewAccount},
     admins::{self, AdminRow, SUPER_ADMIN_ROLE, UpdateAdminError},
     rbac::{self, AssignRole},
     sqlx::{PgConnection, PgPool, Postgres, Transaction},
 };
-use dhpanel_domain::{AccountKind, Email, Username};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_domain::{AccountKind, Email, Username};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{AdministratorsManage, AdministratorsRead, RolesRead},
 };
-use dhpanel_session::{RevokeReason, SessionStore, rfc3339};
+use builtpanel_session::{RevokeReason, SessionStore, rfc3339};
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, OpenApi, ToSchema};
@@ -520,7 +520,7 @@ pub async fn create_administrator(
     admins::update_admin(&mut tx, id, None, None, Some(require_mfa))
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("admin.administrator_created", &who, id).metadata(serde_json::json!({
             "username": username.as_str(),
@@ -621,7 +621,7 @@ pub async fn update_administrator(
     if let Some(r) = req.require_mfa {
         metadata["require_mfa"] = r.into();
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("admin.administrator_updated", &who, id).metadata(metadata),
     )
@@ -674,7 +674,7 @@ pub async fn delete_administrator(
     // not locked those rows yet.
     end_sessions(&state, id, RevokeReason::Admin).await;
     admins::delete_admin(&mut tx, id).await.map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("admin.administrator_deleted", &who, id)
             .metadata(serde_json::json!({ "username": target.username })),
@@ -726,7 +726,7 @@ pub async fn assign_administrator_role(
         AssignRole::UnknownRole => return Err(AppError::not_found("role")),
         AssignRole::AlreadyAssigned => {}
         AssignRole::Assigned => {
-            dhpanel_audit::insert(
+            builtpanel_audit::insert(
                 &mut *tx,
                 &entry("admin.role_assigned", &who, id)
                     .metadata(serde_json::json!({ "role": role })),
@@ -774,7 +774,7 @@ pub async fn revoke_administrator_role(
         .await
         .map_err(internal)?
     {
-        dhpanel_audit::insert(
+        builtpanel_audit::insert(
             &mut *tx,
             &entry("admin.role_revoked", &who, id).metadata(serde_json::json!({ "role": role })),
         )
@@ -813,7 +813,7 @@ pub async fn reset_administrator_mfa(
     let mut tx = begin_locked(&state.db).await?;
     load_target(&mut tx, id).await?;
     let had_factor = admins::reset_mfa(&mut tx, id).await.map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("admin.mfa_reset", &who, id)
             .metadata(serde_json::json!({ "had_factor": had_factor })),
@@ -861,7 +861,7 @@ pub async fn end_administrator_sessions(
         .revoke_all(id, None, RevokeReason::Admin)
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &entry("admin.sessions_ended", &who, id)
             .metadata(serde_json::json!({ "revoked": revoked })),
@@ -910,7 +910,7 @@ pub async fn list_permissions(
     State(state): State<AdminState>,
     _who: Require<RolesRead>,
 ) -> Result<Json<PermissionList>, AppError> {
-    let items = dhpanel_database::permissions::list(&state.db)
+    let items = builtpanel_database::permissions::list(&state.db)
         .await
         .map_err(AppError::internal)?
         .into_iter()

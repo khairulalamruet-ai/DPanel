@@ -1,0 +1,9 @@
+slug        = "clamav"
+name        = "ClamAV"
+category    = "security"
+kind        = "unavailable"
+description = "An antivirus engine."
+license     = "GPL-2.0-only"
+homepage    = "https://www.clamav.net"
+covers      = ["ClamAV (security)"]
+reason      = "its image starts as root and then switches to its own user"

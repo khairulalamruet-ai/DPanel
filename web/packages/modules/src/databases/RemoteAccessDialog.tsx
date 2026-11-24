@@ -8,36 +8,43 @@ import {
   DialogFooter,
   Button,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { setRemoteHosts } from "./api";
 import { Network, Plus, Trash2, ShieldCheck, AlertCircle } from "lucide-react";
-import { UpdateRemoteHostsPayload } from "./types";
-import { useTranslation } from "@dhpanel/i18n";
+import type { DatabaseUserItem } from "./types";
+import { useTranslation } from "@builtpanel/i18n";
 
 interface RemoteAccessDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  remoteHosts: string[];
+  /** The addresses are set per database user. */
+  users: DatabaseUserItem[];
   onHostsUpdated: (newHosts: string[]) => void;
 }
 
 export function RemoteAccessDialog({
   open,
   onOpenChange,
-  remoteHosts,
+  users,
   onHostsUpdated,
 }: RemoteAccessDialogProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [hosts, setHosts] = useState<string[]>(remoteHosts);
+  const [userId, setUserId] = useState<string>(users[0]?.id ?? "");
+  const selected = users.find((u) => u.id === userId) ?? users[0];
+  const [hosts, setHosts] = useState<string[]>(selected?.remote_hosts ?? []);
   const [newHostInput, setNewHostInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputError, setInputError] = useState<string | null>(null);
 
   React.useEffect(() => {
-    setHosts(remoteHosts);
-  }, [remoteHosts]);
+    if (!users.some((u) => u.id === userId)) setUserId(users[0]?.id ?? "");
+  }, [users, userId]);
+
+  React.useEffect(() => {
+    setHosts(selected?.remote_hosts ?? []);
+  }, [selected]);
 
   const handleAddHost = () => {
     const val = newHostInput.trim();
@@ -45,7 +52,7 @@ export function RemoteAccessDialog({
 
     // Simple IP / CIDR validation
     const ipCidrRegex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
-    if (!ipCidrRegex.test(val) && val !== "%") {
+    if (!ipCidrRegex.test(val)) {
       setInputError(t("databases.remote.invalidIp", "Enter a valid IPv4 address or CIDR (e.g. 192.168.1.100 or 10.5.0.0/16)"));
       return;
     }
@@ -67,14 +74,8 @@ export function RemoteAccessDialog({
   const handleSave = async () => {
     try {
       setIsSubmitting(true);
-      const payload: UpdateRemoteHostsPayload = {
-        remote_db_hosts: hosts,
-      };
-
-      await apiFetch("/api/v1/client/databases/remote-hosts", {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
+      if (!selected) return;
+      await setRemoteHosts(selected.id, hosts);
 
       toast({
         title: t("common.success"),
@@ -116,6 +117,25 @@ export function RemoteAccessDialog({
         </DialogHeader>
 
         <div className="mt-4 space-y-4">
+          {/* The database user the addresses belong to */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-foreground">
+              {t("databases.remote.user", "Database user")}
+            </label>
+            <select
+              value={selected?.id ?? ""}
+              onChange={(e) => setUserId(e.target.value)}
+              className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs font-mono"
+              data-testid="select-remote-user"
+            >
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.username}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Add input */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-foreground">
@@ -209,7 +229,7 @@ export function RemoteAccessDialog({
           <Button
             size="sm"
             onClick={handleSave}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !selected}
             data-testid="btn-save-remote-hosts"
           >
             {isSubmitting ? t("common.saving") : t("common.save", "Save Allowed Hosts")}

@@ -5,12 +5,12 @@ User panel-এর binary ভেতরে খোলা হয়নি, তাই
 
 ## Feature set (plan প্রিসেট)
 OpenPanel-এ ৪টা প্রিসেট ফাইল আছে: `default.txt` (সব), `basic.txt`, `dns_only.txt`, `mysql_only.txt`।
-**DHPanel-এ:** "Feature set" database-এর একটা entity হবে, আর প্রতিটা plan একটা feature set-এর সঙ্গে যুক্ত থাকবে।
+**Built Panel-এ:** "Feature set" database-এর একটা entity হবে, আর প্রতিটা plan একটা feature set-এর সঙ্গে যুক্ত থাকবে।
 
 ## ফিচার তালিকা (module অনুযায়ী)
 
 ### অ্যাকাউন্ট ও নিরাপত্তা
-| Flag | কাজ | DHPanel module |
+| Flag | কাজ | Built Panel module |
 |---|---|---|
 | `account` | প্রোফাইল, ইমেইল, পাসওয়ার্ড | `account` |
 | `sessions` | সক্রিয় session দেখা ও বন্ধ করা | `auth` |
@@ -107,4 +107,4 @@ OpenPanel-এ ৪টা প্রিসেট ফাইল আছে: `default.t
 - **DATABASES:** import size সীমা, সংরক্ষিত নাম, username prefix।
 - **SECURITY:** IP-cookie যাচাই, user-agent blacklist।
 
-DHPanel-এ এই সব settings একটা টাইপ করা `settings` টেবিলে যাবে (key, scope, value, schema)। INI ফাইল থাকবে না।
+Built Panel-এ এই সব settings একটা টাইপ করা `settings` টেবিলে যাবে (key, scope, value, schema)। INI ফাইল থাকবে না।

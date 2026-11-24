@@ -8,8 +8,8 @@ import {
   DialogFooter,
   Button,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { LifeBuoy, AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react";
 import { RecoveryRequestPayload, RecoveryRequestResponse } from "./types";
 

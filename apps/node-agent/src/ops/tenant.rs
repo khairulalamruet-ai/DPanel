@@ -20,13 +20,13 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_docker_manager::{
+use builtpanel_docker_manager::{
     ContainerSpec, DockerError, DockerManager, ImageRef, Name, Network, NginxCommand, VolumeMount,
 };
-use dhpanel_domain::{TenantUsername, UidRange};
-use dhpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
-use dhpanel_priv_helper::protocol::{Action, ErrorCode as HelperCode, Request, Response};
-use dhpanel_tenant_stack::{
+use builtpanel_domain::{TenantUsername, UidRange};
+use builtpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
+use builtpanel_priv_helper::protocol::{Action, ErrorCode as HelperCode, Request, Response};
+use builtpanel_tenant_stack::{
     Allowlist, PlanResources, Role, Tenant, conf_volume_name, files_volume_name, network_name,
     php_ini_volume_name, plan_limits, render, web_container_name,
 };
@@ -230,7 +230,7 @@ async fn existing_extra_php(
     docker: &DockerManager,
     username: &TenantUsername,
 ) -> Result<Vec<(String, Name)>, AgentError> {
-    let prefix = format!("dh-{}-php-", username.as_str());
+    let prefix = format!("bp-{}-php-", username.as_str());
     let mut found = Vec::new();
     for name in docker.list().await.map_err(|e| docker_error(&e))? {
         let Some(rest) = name.strip_prefix(&prefix) else {
@@ -238,7 +238,7 @@ async fn existing_extra_php(
         };
         // `8-3`: the version the name stands for, if it is one.
         let version = rest.replace('-', ".");
-        if dhpanel_tenant_stack::is_php_version(&version)
+        if builtpanel_tenant_stack::is_php_version(&version)
             && let Ok(parsed) = Name::parse(&name)
         {
             found.push((version, parsed));
@@ -381,7 +381,7 @@ async fn converge_stack(
 async fn roll_php(
     docker: &DockerManager,
     username: &TenantUsername,
-    spec: &dhpanel_docker_manager::ContainerSpec,
+    spec: &builtpanel_docker_manager::ContainerSpec,
     allowlist: &Allowlist,
 ) -> Result<(), AgentError> {
     let name = spec.name.as_str();
@@ -459,7 +459,7 @@ pub async fn pull_with_fallback(
         Some(official) => {
             if pull_first(docker, &[image, official]).await? == 1 {
                 eprintln!(
-                    "dhpanel-agent: {} could not be pulled; using the official image",
+                    "builtpanel-agent: {} could not be pulled; using the official image",
                     image.as_str().split('@').next().unwrap_or("image")
                 );
                 Ok(official.clone())
@@ -482,7 +482,7 @@ pub async fn pull_with_fallback(
 /// its fallback, so a site never waits for our registry.
 async fn create_container(
     docker: &DockerManager,
-    spec: &dhpanel_docker_manager::ContainerSpec,
+    spec: &builtpanel_docker_manager::ContainerSpec,
     allowlist: &Allowlist,
 ) -> Result<(), AgentError> {
     let mut spec = spec.clone();
@@ -600,7 +600,7 @@ pub async fn set_php_versions(
         return Err(super::wrong_operation());
     };
     let username = parse_username(&username)?;
-    if extra_php.len() > dhpanel_node_protocol::MAX_EXTRA_PHP_VERSIONS {
+    if extra_php.len() > builtpanel_node_protocol::MAX_EXTRA_PHP_VERSIONS {
         return Err(invalid_arg("too many PHP versions"));
     }
     let extra: Vec<&str> = extra_php.iter().map(String::as_str).collect();
@@ -658,7 +658,7 @@ pub async fn set_up_tenant(
     else {
         return Err(super::wrong_operation());
     };
-    dhpanel_node_protocol::check_skeleton(&skeleton)
+    builtpanel_node_protocol::check_skeleton(&skeleton)
         .map_err(|m| AgentError::new(ErrorCode::InvalidArguments, m))?;
     create_tenant_with(context.clone(), tenant_id, &username, uid, &skeleton).await?;
     let mut storage_quota = None;
@@ -744,7 +744,7 @@ pub(super) async fn php_container_names(
 }
 
 fn name_of(username: &TenantUsername, role: &str) -> Result<Name, AgentError> {
-    Name::parse(&format!("dh-{}-{role}", username.as_str()))
+    Name::parse(&format!("bp-{}-{role}", username.as_str()))
         .map_err(|e| AgentError::new(ErrorCode::InvalidArguments, e.to_string()))
 }
 
@@ -858,7 +858,7 @@ async fn delete_files(
         .map_err(|e| invalid_arg(&e.to_string()))?
         .clone();
     let name =
-        Name::parse(&format!("dh-{username}-purge")).map_err(|e| invalid_arg(&e.to_string()))?;
+        Name::parse(&format!("bp-{username}-purge")).map_err(|e| invalid_arg(&e.to_string()))?;
     let mut spec = ContainerSpec::new(name.clone(), image.clone());
     spec.command = ["find", "/data", "-mindepth", "1", "-delete"]
         .map(str::to_owned)
@@ -1066,7 +1066,7 @@ async fn create_tenant_with(
     tenant_id: Uuid,
     username: &str,
     uid: u32,
-    skeleton: &[dhpanel_node_protocol::SkeletonFile],
+    skeleton: &[builtpanel_node_protocol::SkeletonFile],
 ) -> Result<Output, AgentError> {
     let invalid = |m: &str| AgentError::new(ErrorCode::InvalidArguments, m.to_owned());
     let username = TenantUsername::parse(username).map_err(|e| invalid(&e.to_string()))?;
@@ -1082,9 +1082,9 @@ async fn create_tenant_with(
 
     // 1. Directories (blocking socket call off the async runtime).
     let socket = context.helper_socket.clone();
-    let skeleton: Vec<dhpanel_priv_helper::protocol::SkeletonFile> = skeleton
+    let skeleton: Vec<builtpanel_priv_helper::protocol::SkeletonFile> = skeleton
         .iter()
-        .map(|f| dhpanel_priv_helper::protocol::SkeletonFile {
+        .map(|f| builtpanel_priv_helper::protocol::SkeletonFile {
             path: f.path.clone(),
             content: f.content.clone(),
         })

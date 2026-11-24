@@ -21,10 +21,10 @@ use axum::{
     extract::{Path, State},
     routing::{get, post},
 };
-use dhpanel_database::{page_cache, plans};
-use dhpanel_domain::{DomainKind, vhost::PageCache};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_database::{page_cache, plans};
+use builtpanel_domain::{DomainKind, vhost::PageCache};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
@@ -158,7 +158,7 @@ async fn set_cache(
     page_cache::set(&mut tx, id, req.enabled, i16::try_from(ttl).unwrap_or(10))
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("domain.page_cache_changed", who, hosting, id).metadata(serde_json::json!({
             "fqdn": domain.domain.fqdn,
@@ -187,7 +187,7 @@ async fn purge(
             "The page cache of this domain has never been switched on.",
         )]));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("domain.page_cache_purged", who, hosting, id)
             .metadata(serde_json::json!({ "fqdn": domain.domain.fqdn })),

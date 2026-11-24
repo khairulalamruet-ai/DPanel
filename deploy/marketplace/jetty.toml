@@ -1,0 +1,16 @@
+slug        = "jetty"
+name        = "Eclipse Jetty"
+category    = "java_containers"
+kind        = "container"
+description = "A Java web server and servlet container."
+license     = "Apache-2.0"
+homepage    = "https://jetty.org"
+covers      = ["Jetty"]
+version     = "12.1.15"
+image       = "docker.io/library/jetty"
+track       = "12"
+tag         = "12.1.15"
+digest      = "sha256:643c6efbc1a0003e2729b48e6ad27e719d0bcb0c05e664c61bd8fcc0bdfa5a71"
+port        = 8080
+memory_mb   = 512
+usage       = "Host \"jetty\", port 8080, from inside your account or on a domain."

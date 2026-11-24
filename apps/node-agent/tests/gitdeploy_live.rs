@@ -10,17 +10,21 @@ use std::{
     sync::Arc,
 };
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, Name, Network, VolumeMount};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, Name, Network, VolumeMount};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_agent::ops::{
     gitdeploy::{remove_git_deploy, run_git_deploy},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -79,7 +83,7 @@ fn publish(work: &Path, srv: &Path, version: &str) {
 #[tokio::test]
 #[ignore = "needs rootless Docker, git and the network"]
 async fn a_repository_is_fetched_built_and_switched_in_atomically() {
-    let base = std::env::temp_dir().join(format!("dh-gitdeploy-live-{}", Uuid::now_v7().simple()));
+    let base = std::env::temp_dir().join(format!("bp-gitdeploy-live-{}", Uuid::now_v7().simple()));
     let _ = std::fs::remove_dir_all(&base);
     let tenants = base.join("tenants");
     let state = base.join("state");
@@ -102,12 +106,12 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
     let docker = DockerManager::connect(&docker_socket()).unwrap();
     let network = network_name(&username).unwrap();
     let files = files_volume_name(&username).unwrap();
-    for n in ["dh-alice-gitsrv"] {
+    for n in ["bp-alice-gitsrv"] {
         let _ = docker.remove(&Name::parse(n).unwrap(), true).await;
     }
     let _ = docker.remove_volume(&files).await;
     let _ = docker
-        .remove_volume(&Name::parse("dh-alice-gitsrv-data").unwrap())
+        .remove_volume(&Name::parse("bp-alice-gitsrv-data").unwrap())
         .await;
     docker.ensure_network(&network, false).await.unwrap();
     docker
@@ -116,14 +120,14 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
         .unwrap();
     // The repository's server: Python's own http server on the tenant's network.
     let allowlist = Allowlist::embedded().unwrap();
-    let data = Name::parse("dh-alice-gitsrv-data").unwrap();
+    let data = Name::parse("bp-alice-gitsrv-data").unwrap();
     docker.create_bind_volume(&data, &srv, &base).await.unwrap();
     let image = allowlist
         .runtime_image(Role::Python, "3.13")
         .unwrap()
         .clone();
     docker.pull_image(&image).await.unwrap();
-    let mut server = ContainerSpec::new(Name::parse("dh-alice-gitsrv").unwrap(), image);
+    let mut server = ContainerSpec::new(Name::parse("bp-alice-gitsrv").unwrap(), image);
     server.entrypoint = vec![
         "python".into(),
         "-m".into(),
@@ -140,7 +144,7 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
     }];
     docker.create_container(&server).await.unwrap();
     docker
-        .start(&Name::parse("dh-alice-gitsrv").unwrap())
+        .start(&Name::parse("bp-alice-gitsrv").unwrap())
         .await
         .unwrap();
     tokio::time::sleep(std::time::Duration::from_secs(3)).await;
@@ -170,7 +174,7 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
             restart_app: None,
             token: None,
         };
-    let repo = "http://dh-alice-gitsrv:8000/site.git";
+    let repo = "http://bp-alice-gitsrv:8000/site.git";
     let build: &[&[&str]] = &[&[
         "node",
         "-e",
@@ -183,7 +187,7 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
         deploy("git@github.com:a/b.git", "main", "site", &[]),
         deploy("file:///etc", "main", "site", &[]),
         deploy(repo, "main", "../outside", &[]),
-        deploy(repo, "main", ".dh-releases/x", &[]),
+        deploy(repo, "main", ".bp-releases/x", &[]),
         deploy(repo, "main", "site", &[&[]]),
     ] {
         let err = run_git_deploy(context.clone(), bad).await.unwrap_err();
@@ -203,7 +207,7 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
         "{log}"
     );
     let first = std::fs::read_link(www.join("site")).unwrap();
-    assert!(first.starts_with(".dh-releases/site/"), "{first:?}");
+    assert!(first.starts_with(".bp-releases/site/"), "{first:?}");
     assert_eq!(
         std::fs::read_to_string(www.join("site/built.txt")).unwrap(),
         "built v1"
@@ -240,7 +244,7 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
 
     // A build that fails leaves what is live alone and leaves no release behind.
     let releases = |www: &Path| {
-        std::fs::read_dir(www.join(".dh-releases/site"))
+        std::fs::read_dir(www.join(".bp-releases/site"))
             .unwrap()
             .count()
     };
@@ -266,7 +270,7 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
     // A repository or a branch that is not there.
     let err = run_git_deploy(
         context.clone(),
-        deploy("http://dh-alice-gitsrv:8000/none.git", "main", "site", &[]),
+        deploy("http://bp-alice-gitsrv:8000/none.git", "main", "site", &[]),
     )
     .await
     .unwrap_err();
@@ -303,7 +307,7 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
     assert!(
         std::fs::read_link(www.join("apps/site"))
             .unwrap()
-            .starts_with("../.dh-releases/")
+            .starts_with("../.bp-releases/")
     );
     assert_eq!(
         std::fs::read_to_string(www.join("apps/site/index.html")).unwrap(),
@@ -337,6 +341,6 @@ async fn a_repository_is_fetched_built_and_switched_in_atomically() {
     assert_eq!(out, Output::GitDeployRemoved);
     assert!(www.join("site/index.html").exists());
     let _ = docker
-        .remove(&Name::parse("dh-alice-gitsrv").unwrap(), true)
+        .remove(&Name::parse("bp-alice-gitsrv").unwrap(), true)
         .await;
 }

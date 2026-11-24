@@ -11,19 +11,19 @@ use axum::{
     http::{Request, StatusCode, header},
     routing::get,
 };
-use dhpanel_auth_core::password::{Argon2Params, PasswordHasher};
-use dhpanel_cache::RedisHandle;
-use dhpanel_config::LicenseConfig;
-use dhpanel_database::modules as db;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_license::{FileSigningKey, SigningKey as _};
-use dhpanel_license_authority::{
+use builtpanel_auth_core::password::{Argon2Params, PasswordHasher};
+use builtpanel_cache::RedisHandle;
+use builtpanel_config::LicenseConfig;
+use builtpanel_database::modules as db;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_license::{FileSigningKey, SigningKey as _};
+use builtpanel_license_authority::{
     LaState, Settings, config::LaConfig, migrate, register_key, router as la_router,
 };
-use dhpanel_mod_license::{
+use builtpanel_mod_license::{
     LicenseState, Restrictor, admin_router, restrict, service::LicenseService,
 };
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -78,7 +78,7 @@ async fn authority() -> Authority {
         .unwrap();
     let la_db = sqlx::PgPool::connect(&la_url).await.unwrap();
     migrate(&la_db).await.unwrap();
-    let dir = std::env::temp_dir().join(format!("dh-lic-mod-{}", Uuid::new_v4().simple()));
+    let dir = std::env::temp_dir().join(format!("bp-lic-mod-{}", Uuid::new_v4().simple()));
     std::fs::create_dir_all(&dir).unwrap();
     let key = FileSigningKey::generate_to_file(&dir.join("license-1.key"), "license-1").unwrap();
     register_key(&la_db, &key).await.unwrap();
@@ -103,7 +103,7 @@ async fn authority() -> Authority {
         db: la_db.clone(),
         signer: Arc::new(std::sync::RwLock::new(Arc::new(key))),
         settings: Settings::from_config(&config),
-        prover: dhpanel_license_authority::domain_proof::default_prover(),
+        prover: builtpanel_license_authority::domain_proof::default_prover(),
         hasher: hasher.clone(),
     };
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -211,7 +211,7 @@ async fn make_license(a: &Authority, max: i32) -> (String, String) {
         Some(json!({"name": "Acme", "email": format!("{}@acme.example", Uuid::new_v4().simple())})),
     )
     .await;
-    let p = la_call(&a.url, "POST", "/api/v1/admin/products", Some(&a.admin_token), Some(json!({"slug": format!("p{}", &Uuid::new_v4().simple().to_string()[..8]), "name": "DHPanel"}))).await;
+    let p = la_call(&a.url, "POST", "/api/v1/admin/products", Some(&a.admin_token), Some(json!({"slug": format!("p{}", &Uuid::new_v4().simple().to_string()[..8]), "name": "Built Panel"}))).await;
     let plan = la_call(&a.url, "POST", "/api/v1/admin/plans", Some(&a.admin_token), Some(json!({"product_id": p["id"], "name": "Pro", "features": ["mail", "resellers"], "limits": {"max_nodes": 2, "max_tenants": -1}, "max_activations": max, "valid_days": 30}))).await;
     let l = la_call(
         &a.url,
@@ -236,7 +236,7 @@ fn this_host() -> String {
 }
 
 fn config_for(a: Option<&Authority>) -> LicenseConfig {
-    let dir = std::env::temp_dir().join(format!("dh-lic-ident-{}", Uuid::new_v4().simple()));
+    let dir = std::env::temp_dir().join(format!("bp-lic-ident-{}", Uuid::new_v4().simple()));
     LicenseConfig {
         authority_url: a.map(|a| a.url.clone()),
         identity_dir: dir,
@@ -266,7 +266,7 @@ async fn env(pool: &PgPool, service: Arc<LicenseService>) -> Env {
                     service: service.clone(),
                 })),
                 public: Some(
-                    dhpanel_mod_license::public_router().with_state(LicenseState {
+                    builtpanel_mod_license::public_router().with_state(LicenseState {
                         db: pool.clone(),
                         sessions: sessions.clone(),
                         service: service.clone(),
@@ -371,7 +371,7 @@ async fn admin(pool: &PgPool) -> Uuid {
     .fetch_one(pool)
     .await
     .unwrap();
-    dhpanel_database::rbac::assign_role(pool, id, "super_admin", None)
+    builtpanel_database::rbac::assign_role(pool, id, "super_admin", None)
         .await
         .unwrap();
     id
@@ -676,14 +676,14 @@ async fn admin_again(pool: &PgPool) -> Uuid {
 #[sqlx::test(migrations = "../../../migrations")]
 #[ignore = "needs PostgreSQL"]
 async fn the_panel_scans_the_programs_it_runs_and_a_changed_one_fails(pool: PgPool) {
-    use dhpanel_license::{ReleaseManifest, SignedManifest};
+    use builtpanel_license::{ReleaseManifest, SignedManifest};
     let a = authority().await;
     let (_, key) = make_license(&a, 1).await;
     let programs = a.dir.join("installed");
     std::fs::create_dir_all(&programs).unwrap();
     let files = vec![
-        ("dhpanel-control-api".to_owned(), b"control api".to_vec()),
-        ("dhpanel-worker".to_owned(), b"worker".to_vec()),
+        ("builtpanel-control-api".to_owned(), b"control api".to_vec()),
+        ("builtpanel-worker".to_owned(), b"worker".to_vec()),
     ];
     for (name, bytes) in &files {
         std::fs::write(programs.join(name), bytes).unwrap();
@@ -723,16 +723,16 @@ async fn the_panel_scans_the_programs_it_runs_and_a_changed_one_fails(pool: PgPo
     let scan = service.integrity_scan().await.unwrap();
     assert_eq!(scan.result, "passed", "{scan:?}");
     // One program is changed on disk: the next scan fails and names it.
-    std::fs::write(programs.join("dhpanel-worker"), b"worker, patched").unwrap();
+    std::fs::write(programs.join("builtpanel-worker"), b"worker, patched").unwrap();
     let scan = service.integrity_scan().await.unwrap();
     assert_eq!(
         (scan.result.as_str(), scan.mismatched),
-        ("failed", vec!["dhpanel-worker".to_owned()])
+        ("failed", vec!["builtpanel-worker".to_owned()])
     );
     // A program that is gone is noticed too.
-    std::fs::remove_file(programs.join("dhpanel-control-api")).unwrap();
+    std::fs::remove_file(programs.join("builtpanel-control-api")).unwrap();
     let scan = service.integrity_scan().await.unwrap();
-    assert_eq!(scan.missing, vec!["dhpanel-control-api".to_owned()]);
+    assert_eq!(scan.missing, vec!["builtpanel-control-api".to_owned()]);
     let events: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM integrity_events WHERE kind IN ('mismatch', 'unverifiable')",
     )

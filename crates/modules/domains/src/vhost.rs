@@ -19,10 +19,10 @@ use axum::{
     extract::{Path, State},
     routing::get,
 };
-use dhpanel_database::{domain_policies, plans};
-use dhpanel_domain::vhost::{MAX_CUSTOM_BYTES, check_custom_block};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_database::{domain_policies, plans};
+use builtpanel_domain::vhost::{MAX_CUSTOM_BYTES, check_custom_block};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
@@ -94,7 +94,7 @@ async fn show(
     let domain = owned_domain(state, hosting.tenant.id, id).await?;
     // An alias runs on its domain's file.
     let file_name = match (domain.domain.kind, domain.domain.parent_domain_id) {
-        (dhpanel_domain::DomainKind::Alias, Some(parent)) => {
+        (builtpanel_domain::DomainKind::Alias, Some(parent)) => {
             owned_domain(state, hosting.tenant.id, parent)
                 .await?
                 .domain
@@ -102,7 +102,7 @@ async fn show(
         }
         _ => domain.domain.fqdn.clone(),
     };
-    let files = dhpanel_web_config::site_files(
+    let files = builtpanel_web_config::site_files(
         &state.db,
         hosting.tenant.id,
         &hosting.tenant.username,
@@ -133,7 +133,7 @@ async fn set(
 ) -> Result<Json<VhostView>, AppError> {
     let domain = owned_domain(state, hosting.tenant.id, id).await?;
     require_feature(state, hosting).await?;
-    if domain.domain.kind == dhpanel_domain::DomainKind::Alias {
+    if domain.domain.kind == builtpanel_domain::DomainKind::Alias {
         return Err(AppError::validation(vec![FieldError::new(
             "custom_block",
             "alias_has_no_file",
@@ -147,7 +147,7 @@ async fn set(
     domain_policies::set_custom_block(&mut tx, id, &req.custom_block)
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("domain.vhost_changed", who, hosting, id).metadata(serde_json::json!({
             "fqdn": domain.domain.fqdn,

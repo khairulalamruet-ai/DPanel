@@ -12,7 +12,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use dhpanel_node_protocol::{AgentError, ErrorCode};
+use builtpanel_node_protocol::{AgentError, ErrorCode};
 
 use super::tenant::TenantContext;
 
@@ -60,7 +60,7 @@ impl Kind {
 #[must_use]
 pub fn container(kind: Kind, shared: &str) -> String {
     match current() {
-        Some(t) => format!("dh-{t}-{}", kind.short()),
+        Some(t) => format!("bp-{t}-{}", kind.short()),
         None => shared.to_owned(),
     }
 }
@@ -69,7 +69,7 @@ pub fn container(kind: Kind, shared: &str) -> String {
 #[must_use]
 pub fn volume(kind: Kind, shared: &str) -> String {
     match current() {
-        Some(t) => format!("dh-{t}-{}-data", kind.short()),
+        Some(t) => format!("bp-{t}-{}-data", kind.short()),
         None => shared.to_owned(),
     }
 }
@@ -148,13 +148,13 @@ mod tests {
 
     #[tokio::test]
     async fn names_follow_the_server_the_task_works_on() {
-        assert_eq!(container(Kind::Mariadb, "dh-db"), "dh-db");
+        assert_eq!(container(Kind::Mariadb, "bp-db"), "bp-db");
         assert_eq!(current(), None);
         scope(Some("alice".into()), async {
             assert_eq!(current().as_deref(), Some("alice"));
-            assert_eq!(container(Kind::Mariadb, "dh-db"), "dh-alice-db");
-            assert_eq!(container(Kind::Postgres, "dh-pg"), "dh-alice-pg");
-            assert_eq!(volume(Kind::Postgres, "dh-pg-data"), "dh-alice-pg-data");
+            assert_eq!(container(Kind::Mariadb, "bp-db"), "bp-alice-db");
+            assert_eq!(container(Kind::Postgres, "bp-pg"), "bp-alice-pg");
+            assert_eq!(volume(Kind::Postgres, "bp-pg-data"), "bp-alice-pg-data");
             assert_eq!(secret_name(Kind::Mariadb), "mariadb-root-alice");
         })
         .await;

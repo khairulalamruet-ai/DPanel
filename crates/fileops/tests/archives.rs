@@ -7,15 +7,15 @@ use std::{
     path::PathBuf,
 };
 
-use dhpanel_fileops::handle;
-use dhpanel_node_protocol::files::{ArchiveFormat, FileErrorCode, FileRequest as R, FileResult};
-use dhpanel_safe_fs::Root;
+use builtpanel_fileops::handle;
+use builtpanel_node_protocol::files::{ArchiveFormat, FileErrorCode, FileRequest as R, FileResult};
+use builtpanel_safe_fs::Root;
 
 struct Scratch(PathBuf);
 
 impl Scratch {
     fn new(tag: &str) -> Self {
-        let dir = std::env::temp_dir().join(format!("dh-arch-{tag}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bp-arch-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("tenant")).unwrap();
         Self(dir)
@@ -307,8 +307,8 @@ fn links_are_skipped_modes_are_cut_and_limits_hold() {
 
 #[test]
 fn the_files_of_an_account_are_packed_into_an_encrypted_stream_that_unpacks_the_same() {
-    use dhpanel_backup::{KEY_LEN, StreamReader};
-    use dhpanel_fileops::backup::pack_files;
+    use builtpanel_backup::{KEY_LEN, StreamReader};
+    use builtpanel_fileops::backup::pack_files;
     use std::io::Read as _;
     let s = Scratch::new("pack");
     let root = s.root();
@@ -368,8 +368,8 @@ fn the_files_of_an_account_are_packed_into_an_encrypted_stream_that_unpacks_the_
 
 #[test]
 fn the_last_pass_of_a_transfer_packs_only_what_is_newer_than_the_first_copy() {
-    use dhpanel_backup::{KEY_LEN, StreamReader};
-    use dhpanel_fileops::backup::pack_files;
+    use builtpanel_backup::{KEY_LEN, StreamReader};
+    use builtpanel_fileops::backup::pack_files;
     use std::io::Read as _;
     let s = Scratch::new("since");
     let root = s.root();
@@ -413,8 +413,8 @@ fn the_last_pass_of_a_transfer_packs_only_what_is_newer_than_the_first_copy() {
 
 #[test]
 fn packed_files_are_put_back_over_changes_and_only_where_asked() {
-    use dhpanel_backup::KEY_LEN;
-    use dhpanel_fileops::backup::{pack_files, unpack_files};
+    use builtpanel_backup::KEY_LEN;
+    use builtpanel_fileops::backup::{pack_files, unpack_files};
     let s = Scratch::new("unpack");
     let root = s.root();
     std::fs::create_dir_all(s.path("www/sub")).unwrap();

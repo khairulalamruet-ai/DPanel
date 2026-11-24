@@ -9,9 +9,9 @@ import {
   Badge,
   Input,
   useToast,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { AlertTriangle, ShieldAlert, Terminal, XCircle, Power } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { ProcessItem, ProcessSignal } from "./types";
 
 interface KillProcessDialogProps {

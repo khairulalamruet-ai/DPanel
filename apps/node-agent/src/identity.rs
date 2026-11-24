@@ -1,7 +1,7 @@
 //! The agent's identity on disk.
 //!
 //! ```text
-//! /var/lib/dhpanel-agent/        0700 (nothing for group/others), owned by dhpanel-agent
+//! /var/lib/builtpanel-agent/        0700 (nothing for group/others), owned by builtpanel-agent
 //!   node.key        0600  private key; created on this machine, never leaves it
 //!   node.crt        0644  node certificate
 //!   ca.crt          0644  CA certificate (pinned during enrolment)
@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Where the identity lives unless told otherwise.
-pub const DEFAULT_STATE_DIR: &str = "/var/lib/dhpanel-agent";
+pub const DEFAULT_STATE_DIR: &str = "/var/lib/builtpanel-agent";
 /// Private key file name.
 pub const KEY_FILE: &str = "node.key";
 /// Node certificate file name.
@@ -324,7 +324,7 @@ mod tests {
             .unwrap()
             .as_nanos();
         std::env::temp_dir().join(format!(
-            "dhpanel-agent-{tag}-{}-{nanos}",
+            "builtpanel-agent-{tag}-{}-{nanos}",
             std::process::id()
         ))
     }

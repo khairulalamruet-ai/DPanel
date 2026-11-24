@@ -8,7 +8,7 @@
 
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
-use dhpanel_domain::{DnsRecord, DnsRecordType};
+use builtpanel_domain::{DnsRecord, DnsRecordType};
 use secrecy::{ExposeSecret as _, SecretString};
 use serde_json::{Value, json};
 
@@ -68,7 +68,7 @@ impl PowerDns {
             .timeout_global(Some(TIMEOUT))
             // The API key must go nowhere else.
             .max_redirects(0)
-            .user_agent(format!("dhpanel/{}", env!("CARGO_PKG_VERSION")))
+            .user_agent(format!("builtpanel/{}", env!("CARGO_PKG_VERSION")))
             .build()
             .into();
         Self {

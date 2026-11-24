@@ -14,10 +14,10 @@ import {
   TableRow,
   TableCell,
   useToast,
-} from "@dhpanel/ui";
-import { useTranslation, useFormatters } from "@dhpanel/i18n";
-import { apiFetch, getCsrfToken } from "@dhpanel/api";
-import { useSession } from "@dhpanel/auth";
+} from "@builtpanel/ui";
+import { useTranslation, useFormatters } from "@builtpanel/i18n";
+import { listOperations, retryOperation } from "./api";
+import { useSession } from "@builtpanel/auth";
 import {
   Activity,
   Filter,
@@ -32,6 +32,9 @@ import {
 import type { OperationItem } from "./types";
 import { OperationDetailDialog } from "./OperationDetailDialog";
 import { ApplyToAllDialog } from "./ApplyToAllDialog";
+
+/** Rolling an operation over all nodes has no backend yet (phase 16), so its button is off. */
+const CLUSTER_ROLLOUT = false;
 
 export function OperationsPage() {
   const { t } = useTranslation();
@@ -59,16 +62,12 @@ export function OperationsPage() {
       setIsLoading(true);
       setError(null);
 
-      const params: Record<string, string> = {};
-      if (statusFilter !== "all") params.status = statusFilter;
-      if (opTypeFilter.trim()) params.op_type = opTypeFilter.trim();
-      if (nodeFilter.trim()) params.node_id = nodeFilter.trim();
-
-      const searchParams = new URLSearchParams(params).toString();
-      const url = `/api/v1/admin/operations${searchParams ? `?${searchParams}` : ""}`;
-
-      const res = await apiFetch<{ items: OperationItem[]; total: number }>(url);
-      setOperations(res.items || []);
+      const items = await listOperations({
+        status: statusFilter,
+        kind: opTypeFilter.trim() || undefined,
+        nodeId: nodeFilter.trim() || undefined,
+      });
+      setOperations(items);
     } catch {
       setError(t("common.error"));
     } finally {
@@ -94,21 +93,13 @@ export function OperationsPage() {
   const handleRetry = async (opId: string) => {
     try {
       setRetryingId(opId);
-      const res = await apiFetch<{ success: boolean; operation: OperationItem }>(
-        `/api/v1/admin/operations/${opId}/retry`,
-        {
-          method: "POST",
-          headers: {
-            "X-CSRF-Token": getCsrfToken() || "",
-          },
-        }
-      );
+      const operation = await retryOperation(opId);
       toast({
         title: t("operations.retrySuccess"),
         variant: "default",
       });
       if (selectedOp && selectedOp.id === opId) {
-        setSelectedOp(res.operation);
+        setSelectedOp(operation);
       }
       fetchOperations();
     } catch {
@@ -188,8 +179,8 @@ export function OperationsPage() {
           <p className="text-sm text-muted-foreground">{t("operations.desc")}</p>
         </div>
         <div className="flex items-center gap-2">
-          {hasPermission("admin.operations.write") && (
-            <Button
+          {CLUSTER_ROLLOUT && hasPermission("admin.operations.write") && (
+              <Button
               size="sm"
               onClick={() => setIsApplyAllOpen(true)}
               data-testid="btn-open-apply-all"

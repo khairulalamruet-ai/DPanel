@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Button, useToast } from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+import { Button, useToast } from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
 import { Plus, Key, RefreshCw } from "lucide-react";
 import { ApiTokenItem, CreateTokenResponse } from "./types";
 import { ApiTokensTable } from "./ApiTokensTable";

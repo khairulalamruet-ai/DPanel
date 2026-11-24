@@ -8,8 +8,8 @@
 //!   SELECT and INSERT.
 //! * **Context is automatic**: [`insert`] fills in the correlation ID and the
 //!   actor's IP from the request scope set up by
-//!   [`dhpanel_http_kit::request_id::correlation_id_layer`] and
-//!   [`dhpanel_http_kit::client_ip::client_ip_layer`], so handlers only say
+//!   [`builtpanel_http_kit::request_id::correlation_id_layer`] and
+//!   [`builtpanel_http_kit::client_ip::client_ip_layer`], so handlers only say
 //!   *who did what to which object*.
 //! * **Two ways to write**:
 //!   * [`AuditWriter::record_or_log`] — best effort. A failure is logged and
@@ -27,7 +27,7 @@ pub mod api;
 
 use std::net::IpAddr;
 
-use dhpanel_http_kit::{client_ip, request_id};
+use builtpanel_http_kit::{client_ip, request_id};
 use serde_json::{Value, json};
 use sqlx::{PgExecutor, PgPool};
 use uuid::Uuid;
@@ -80,7 +80,7 @@ impl AuditEntry {
     #[must_use]
     pub fn new(action: &'static str, outcome: Outcome) -> Self {
         debug_assert!(
-            dhpanel_rbac::is_valid_key(action),
+            builtpanel_rbac::is_valid_key(action),
             "audit action {action:?} must be dotted lowercase segments"
         );
         Self {

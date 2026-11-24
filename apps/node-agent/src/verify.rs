@@ -14,7 +14,7 @@
 //! hand the agent a certificate for a key it does not hold, a different CA than
 //! the pinned one, or an identity with extra powers.
 
-use dhpanel_node_protocol::EnrollResponse;
+use builtpanel_node_protocol::EnrollResponse;
 use sha2::{Digest as _, Sha256};
 use x509_parser::prelude::{FromDer as _, GeneralName, X509Certificate};
 
@@ -165,18 +165,18 @@ pub fn verify_enrollment(
             "it is not for client authentication only",
         ));
     }
-    let expected_uri = format!("urn:dhpanel:node:{}", response.node_id);
+    let expected_uris = [format!("urn:builtpanel:node:{}", response.node_id)];
     let names_this_node = cert
         .subject_alternative_name()
         .ok()
         .flatten()
         .is_some_and(|san| {
             san.value.general_names.len() == 1
-                && matches!(&san.value.general_names[0], GeneralName::URI(u) if *u == expected_uri)
+                && matches!(&san.value.general_names[0], GeneralName::URI(u) if expected_uris.iter().any(|e| e == u))
         });
     if !names_this_node {
         return Err(VerifyError::BadCertificate(
-            "it does not name this node (urn:dhpanel:node:<id>)",
+            "it does not name this node (urn:builtpanel:node:<id>)",
         ));
     }
     let (not_before, not_after) = (
@@ -205,7 +205,7 @@ pub fn verify_enrollment(
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
-    use dhpanel_pki::{CertificateAuthority, DEFAULT_NODE_VALIDITY};
+    use builtpanel_pki::{CertificateAuthority, DEFAULT_NODE_VALIDITY};
     use rcgen::{
         BasicConstraints, CertificateParams, DnType, ExtendedKeyUsagePurpose, IsCa, Issuer,
         KeyPair, KeyUsagePurpose, SanType, string::Ia5String,
@@ -260,7 +260,7 @@ mod tests {
             p.distinguished_name
                 .push(DnType::CommonName, format!("node-{}", self.node_id));
             p.subject_alt_names = vec![SanType::URI(
-                Ia5String::try_from(format!("urn:dhpanel:node:{}", self.node_id)).unwrap(),
+                Ia5String::try_from(format!("urn:builtpanel:node:{}", self.node_id)).unwrap(),
             )];
             p.is_ca = IsCa::ExplicitNoCa;
             p.key_usages = vec![KeyUsagePurpose::DigitalSignature];
@@ -465,7 +465,7 @@ mod tests {
                 "another node's identity",
                 Box::new(|p| {
                     p.subject_alt_names = vec![SanType::URI(
-                        Ia5String::try_from(format!("urn:dhpanel:node:{}", Uuid::now_v7()))
+                        Ia5String::try_from(format!("urn:builtpanel:node:{}", Uuid::now_v7()))
                             .unwrap(),
                     )]
                 }),

@@ -24,13 +24,13 @@ use axum::{
     http::StatusCode,
     routing::{get, put},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     container_images::{self as images, Image, Removed},
     runtime_apps as store,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require,
     permissions::{AppsManage, AppsRead},
 };
@@ -199,7 +199,7 @@ fn check_image(req: &SetImage, creating: bool) -> Result<(), AppError> {
     }
 }
 
-fn audit(action: &'static str, who: &Principal, id: Uuid) -> AuditEntry {
+pub(crate) fn audit(action: &'static str, who: &Principal, id: Uuid) -> AuditEntry {
     AuditEntry::new(action, Outcome::Success)
         .actor(who.account_id())
         .target("container_image", id)
@@ -252,7 +252,7 @@ pub async fn admin_add(
         ),
         images::WriteError::Database(db) => internal(db),
     })?;
-    dhpanel_audit::insert(&state.db, &audit("container_image.added", &who, made.id))
+    builtpanel_audit::insert(&state.db, &audit("container_image.added", &who, made.id))
         .await
         .map_err(internal)?;
     Ok((StatusCode::CREATED, Json(image_view(made, true))))
@@ -297,7 +297,7 @@ pub async fn admin_change(
     if !found {
         return Err(AppError::not_found("image"));
     }
-    dhpanel_audit::insert(&state.db, &audit("container_image.changed", &who, id))
+    builtpanel_audit::insert(&state.db, &audit("container_image.changed", &who, id))
         .await
         .map_err(internal)?;
     let image = images::get(&state.db, id)
@@ -326,7 +326,7 @@ pub async fn admin_remove(
             "A container runs this image: stop offering it instead.",
         )),
         Removed::Yes => {
-            dhpanel_audit::insert(&state.db, &audit("container_image.removed", &who, id))
+            builtpanel_audit::insert(&state.db, &audit("container_image.removed", &who, id))
                 .await
                 .map_err(internal)?;
             Ok(StatusCode::NO_CONTENT)
@@ -513,7 +513,7 @@ pub async fn client_create(
     if !(32..=4096).contains(&memory_mb) {
         return Err(bad("memory_mb", "32 to 4096 MiB."));
     }
-    dhpanel_database::domains::lock_tenant(&mut tx, tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, tenant.id)
         .await
         .map_err(internal)?;
     if let Some(limit) = limit_of(&plan, "max_runtime_apps", DEFAULT_MAX_APPS)
@@ -567,7 +567,7 @@ pub async fn client_create(
         .map_err(internal)?;
     let row = load_in(&mut tx, tenant.id, id).await?;
     queue_set(&mut tx, &who, &tenant, &row, false).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("container_app.created", Outcome::Success)
             .actor(who.account_id())
@@ -628,7 +628,7 @@ pub async fn client_update(
         return Err(bad("memory_mb", "32 to 4096 MiB."));
     }
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, tenant.id)
         .await
         .map_err(internal)?;
     if let Some(image_id) = req.image_id {
@@ -684,7 +684,7 @@ pub async fn client_update(
     }
     let row = load_in(&mut tx, tenant.id, id).await?;
     queue_set(&mut tx, &who, &tenant, &row, false).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("container_app.updated", Outcome::Success)
             .actor(who.account_id())

@@ -13,7 +13,7 @@ pub const MAX_LOG_LINES: i64 = 2000;
 pub struct Transfer {
     /// Id.
     pub id: Uuid,
-    /// `cpanel`, `cyberpanel`, `openpanel` or `dhpanel_archive`.
+    /// `cpanel`, `cyberpanel`, `openpanel` or `builtpanel_archive`.
     pub source_type: String,
     /// The server it was fetched from.
     pub source_host: Option<String>,

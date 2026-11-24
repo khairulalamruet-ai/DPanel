@@ -2,7 +2,7 @@
 --
 -- A name is stored lower-case in its ASCII form (punycode for international
 -- names) and is unique across the whole panel: one site answers for one name.
--- The checks below repeat what `dhpanel_domain::Fqdn` / `Docroot` decide, so a
+-- The checks below repeat what `builtpanel_domain::Fqdn` / `Docroot` decide, so a
 -- row that skipped the application cannot get in either.
 --
 -- Kinds (crates/domain, `DomainKind`):

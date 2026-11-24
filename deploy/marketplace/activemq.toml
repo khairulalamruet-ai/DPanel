@@ -1,0 +1,16 @@
+slug        = "activemq"
+name        = "Apache ActiveMQ"
+category    = "message_queue"
+kind        = "container"
+description = "A message broker (OpenWire, AMQP, MQTT, STOMP)."
+license     = "Apache-2.0"
+homepage    = "https://activemq.apache.org"
+covers      = ["Apache ActiveMQ"]
+version     = "6.1.8"
+image       = "docker.io/apache/activemq-classic"
+track       = "6.1"
+tag         = "6.1.8"
+digest      = "sha256:015faf259d726f296be16ab9d6e0a97bc195dc321f1d68c931dfdff03e600d72"
+port        = 61616
+memory_mb   = 768
+usage       = "Brokers on host \"activemq\", port 61616; the web console is on 8161 from inside your account."

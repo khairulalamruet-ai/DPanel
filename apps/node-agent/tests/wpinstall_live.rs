@@ -4,19 +4,23 @@
 
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
-use dhpanel_docker_manager::{Capability, ContainerSpec, DockerManager, Name, Network};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{Capability, ContainerSpec, DockerManager, Name, Network};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_agent::ops::{
     tenant::TenantContext,
     wpinstall::{install_as, manage_as},
 };
-use dhpanel_node_protocol::{
+use builtpanel_node_protocol::{
     DbPassword, ErrorCode, Operation, Output, WpCommand, WpDatabase, WpSite,
 };
-use dhpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
+use builtpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -29,7 +33,7 @@ fn docker_socket() -> PathBuf {
 #[tokio::test]
 #[ignore = "needs rootless Docker and the network"]
 async fn wordpress_is_installed_in_a_tenants_files_within_two_minutes() {
-    let base = std::env::temp_dir().join("dh-wpinstall-live");
+    let base = std::env::temp_dir().join("bp-wpinstall-live");
     let _ = std::fs::remove_dir_all(&base);
     let tenants = base.join("tenants");
     let state = base.join("state");
@@ -43,7 +47,7 @@ async fn wordpress_is_installed_in_a_tenants_files_within_two_minutes() {
     let network = network_name(&username).unwrap();
     let files = files_volume_name(&username).unwrap();
     let _ = docker
-        .remove(&Name::parse("dh-wpit-db").unwrap(), true)
+        .remove(&Name::parse("bp-wpit-db").unwrap(), true)
         .await;
     let _ = docker.remove_volume(&files).await;
     docker.ensure_network(&network, false).await.unwrap();
@@ -55,7 +59,7 @@ async fn wordpress_is_installed_in_a_tenants_files_within_two_minutes() {
     let allowlist = Allowlist::embedded().unwrap();
     let image = allowlist.current(Role::Db).unwrap().clone();
     docker.pull_image(&image).await.unwrap();
-    let mut spec = ContainerSpec::new(Name::parse("dh-wpit-db").unwrap(), image);
+    let mut spec = ContainerSpec::new(Name::parse("bp-wpit-db").unwrap(), image);
     spec.env
         .insert("MARIADB_ROOT_PASSWORD".into(), "rootpw-for-the-test".into());
     spec.env
@@ -73,7 +77,7 @@ async fn wordpress_is_installed_in_a_tenants_files_within_two_minutes() {
         Capability::Setuid,
     ];
     // Its own network first (as the node's database server has), then the tenant's, as `db`.
-    let aux = Name::parse("dh-wpit-aux").unwrap();
+    let aux = Name::parse("bp-wpit-aux").unwrap();
     docker.ensure_network(&aux, false).await.unwrap();
     spec.network = Network::Named(aux);
     docker.create_container(&spec).await.unwrap();
@@ -160,7 +164,7 @@ async fn wordpress_is_installed_in_a_tenants_files_within_two_minutes() {
     // of the installer (nothing is left in the state folder).
     let r = docker
         .run_user_command(
-            &Name::parse("dh-wpit-db").unwrap(),
+            &Name::parse("bp-wpit-db").unwrap(),
             "mariadb -uroot -prootpw-for-the-test -N -e \"select user_login from alice_blog.wp_users\"",
             "/",
             std::time::Duration::from_secs(20),
@@ -178,7 +182,7 @@ async fn wordpress_is_installed_in_a_tenants_files_within_two_minutes() {
     // The manager: an old plugin is put in place by hand, the overview sees its update, the
     // update is done, maintenance mode is switched, a password is reset.
     let wpcli = allowlist.current(Role::Wpcli).unwrap().clone();
-    let mut old = ContainerSpec::new(Name::parse("dh-wpit-old").unwrap(), wpcli);
+    let mut old = ContainerSpec::new(Name::parse("bp-wpit-old").unwrap(), wpcli);
     old.entrypoint = vec![
         "sh".into(),
         "-c".into(),
@@ -188,7 +192,7 @@ async fn wordpress_is_installed_in_a_tenants_files_within_two_minutes() {
     old.memory_bytes = 1024 * 1024 * 1024;
     old.writable_root = true;
     old.network = Network::Named(network.clone());
-    old.volumes = vec![dhpanel_docker_manager::VolumeMount {
+    old.volumes = vec![builtpanel_docker_manager::VolumeMount {
         volume: files.clone(),
         target: "/var/www/html".into(),
         read_only: false,
@@ -427,9 +431,9 @@ async fn wordpress_is_installed_in_a_tenants_files_within_two_minutes() {
         .unwrap_err();
     assert_eq!(bad.code, ErrorCode::InvalidArguments);
     let left = docker.list().await.unwrap();
-    assert!(left.iter().all(|n| !n.starts_with("dh-wpi-")), "{left:?}");
+    assert!(left.iter().all(|n| !n.starts_with("bp-wpi-")), "{left:?}");
     let _ = docker
-        .remove(&Name::parse("dh-wpit-db").unwrap(), true)
+        .remove(&Name::parse("bp-wpit-db").unwrap(), true)
         .await;
     let _ = docker.remove_volume(&files).await;
     let _ = std::fs::remove_dir_all(&base);

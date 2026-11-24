@@ -8,7 +8,7 @@
 - **DoD:** README-তে প্রজেক্টের পরিচয় আর dev শুরু করার ধাপ আছে।
 
 ### T00.02 — Rust workspace কঙ্কাল
-- **কী করতে হবে:** `Cargo.toml` workspace। খালি `apps/{control-api,worker,node-agent,priv-helper,dhctl}`, `crates/{kernel,common,domain,database,http-kit,observability}`। `rust-toolchain.toml` (stable, pinned)।
+- **কী করতে হবে:** `Cargo.toml` workspace। খালি `apps/{control-api,worker,node-agent,priv-helper,bpctl}`, `crates/{kernel,common,domain,database,http-kit,observability}`। `rust-toolchain.toml` (stable, pinned)।
 - **DoD:** `cargo build --workspace` সফল।
 
 ### T00.03 — Observability init
@@ -16,7 +16,7 @@
 - **DoD:** control-api চালু করলে JSON log আসে, আর `/metrics`-এ HTTP counter দেখা যায়।
 
 ### T00.04 — Config লোডার
-- **কী করতে হবে:** `figment` দিয়ে `control.toml` + `DHPANEL_*` env। Secret ফাইল থেকে পড়া। শুরুতে validation।
+- **কী করতে হবে:** `figment` দিয়ে `control.toml` + `BUILTPANEL_*` env। Secret ফাইল থেকে পড়া। শুরুতে validation।
 - **DoD:** ভুল config দিলে পরিষ্কার error দিয়ে বন্ধ হয়।
 
 ### T00.05 — Error ও response মান
@@ -29,7 +29,7 @@
 
 ### T00.07 — PostgreSQL + SQLx
 - **কী করতে হবে:** `database` crate-এ pool, transaction helper, `sqlx migrate`। প্রথম migration-এ `schema_info` আর UUID v7 function বা extension।
-- **DoD:** `dhctl migrate` চলে। `sqlx::test` দিয়ে একটা test pass করে।
+- **DoD:** `bpctl migrate` চলে। `sqlx::test` দিয়ে একটা test pass করে।
 
 ### T00.08 — Redis
 - **কী করতে হবে:** Redis client, health check, `/ready`-এ যুক্ত করা।

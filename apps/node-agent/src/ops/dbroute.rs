@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use dhpanel_node_protocol::{AgentError, DbEngine, Operation, Output};
+use builtpanel_node_protocol::{AgentError, DbEngine, Operation, Output};
 
 use super::{db, dbserver, pg, sqlexport, sqlimport, tenant::TenantContext};
 

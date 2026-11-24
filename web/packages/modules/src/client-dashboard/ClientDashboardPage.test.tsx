@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
+import { ToastProvider } from "@builtpanel/ui";
 import { ClientDashboardPage } from "./ClientDashboardPage";
 
 function renderWithToast(ui: React.ReactElement) {
   return render(<ToastProvider>{ui}</ToastProvider>);
 }
 
-// Mock @dhpanel/i18n
-vi.mock("@dhpanel/i18n", () => ({
+// Mock @builtpanel/i18n
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: any) => {
       const dict: Record<string, string> = {
@@ -55,14 +55,14 @@ const mockDashboardData = {
     plan_name: "Standard Business Plan",
     node_name: "node-sgp-01 (Singapore)",
     server_ip: "167.104.101.81",
-    nameservers: ["ns1.dhpanel.net", "ns2.dhpanel.net"],
+    nameservers: ["ns1.builtpanel.net", "ns2.builtpanel.net"],
     created_at: "2026-10-01T00:00:00Z",
     status: "active" as const,
   },
   container: {
     status: "running" as const,
-    name: "dh-tenant-alpha",
-    image: "dhpanel/stack-php83-nginx:latest",
+    name: "bp-tenant-alpha",
+    image: "builtpanel/stack-php83-nginx:latest",
     php_version: "8.3.12",
     uptime: "Up 14 days, 6 hours",
     ip_address: "172.28.0.5",
@@ -135,9 +135,9 @@ const mockDashboardData = {
   ],
 };
 
-const mockApiFetch = vi.fn();
-vi.mock("@dhpanel/api", () => ({
-  apiFetch: (...args: any[]) => mockApiFetch(...args),
+const { mockLoad } = vi.hoisted(() => ({ mockLoad: vi.fn() }));
+vi.mock("./api", () => ({
+  loadClientDashboard: (...args: any[]) => mockLoad(...args),
 }));
 
 const mockLocalStorage: Record<string, string> = {};
@@ -145,7 +145,7 @@ const mockLocalStorage: Record<string, string> = {};
 describe("ClientDashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockApiFetch.mockResolvedValue(mockDashboardData);
+    mockLoad.mockResolvedValue(mockDashboardData);
     Object.keys(mockLocalStorage).forEach((k) => delete mockLocalStorage[k]);
     vi.stubGlobal("localStorage", {
       getItem: vi.fn((key: string) => mockLocalStorage[key] || null),
@@ -245,7 +245,7 @@ describe("ClientDashboardPage", () => {
     expect(
       screen.getByText("Let's Encrypt Authority X3 (76d remaining)")
     ).toBeInTheDocument();
-    expect(screen.getByText("ns1.dhpanel.net, ns2.dhpanel.net")).toBeInTheDocument();
+    expect(screen.getByText("ns1.builtpanel.net, ns2.builtpanel.net")).toBeInTheDocument();
 
     // Activity
     expect(screen.getByText("Recent Stack Events")).toBeInTheDocument();
@@ -294,7 +294,7 @@ describe("ClientDashboardPage", () => {
     const cronFavBtn = screen.getByTestId("btn-favorite-cron");
     fireEvent.click(cronFavBtn);
 
-    const savedFavs = JSON.parse(localStorage.getItem("dhpanel-client-favorites") || "[]");
+    const savedFavs = JSON.parse(localStorage.getItem("builtpanel-client-favorites") || "[]");
     expect(savedFavs).toContain("cron");
   });
 

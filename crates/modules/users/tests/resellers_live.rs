@@ -9,12 +9,12 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_auth_core::password::{Argon2Params, PasswordHasher};
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::{modules as db, rbac::assign_role};
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_users::{UsersState, reseller, router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_auth_core::password::{Argon2Params, PasswordHasher};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::{modules as db, rbac::assign_role};
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_users::{UsersState, reseller, router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;

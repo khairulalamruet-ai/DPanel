@@ -7,7 +7,7 @@
 
 use std::path::Path;
 
-use dhpanel_node_protocol::OperationResult;
+use builtpanel_node_protocol::OperationResult;
 use redb::{
     Database, ReadableDatabase as _, ReadableTable as _, ReadableTableMetadata as _,
     TableDefinition,
@@ -173,7 +173,7 @@ impl ResultCache {
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
-    use dhpanel_node_protocol::{AgentError, ErrorCode, Output};
+    use builtpanel_node_protocol::{AgentError, ErrorCode, Output};
 
     use super::*;
 
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn the_first_answer_is_kept_and_survives_reopening() {
         let path =
-            std::env::temp_dir().join(format!("dhpanel-ops-{}.redb", Uuid::now_v7().simple()));
+            std::env::temp_dir().join(format!("builtpanel-ops-{}.redb", Uuid::now_v7().simple()));
         let id = Uuid::now_v7();
         {
             let cache = ResultCache::open(&path).unwrap();
@@ -223,8 +223,10 @@ mod tests {
 
     #[test]
     fn a_file_that_is_not_a_cache_is_an_error_not_a_panic() {
-        let path =
-            std::env::temp_dir().join(format!("dhpanel-ops-bad-{}.redb", Uuid::now_v7().simple()));
+        let path = std::env::temp_dir().join(format!(
+            "builtpanel-ops-bad-{}.redb",
+            Uuid::now_v7().simple()
+        ));
         std::fs::write(&path, b"this is not a database").unwrap();
         assert!(ResultCache::open(&path).is_err());
         let _ = std::fs::remove_file(&path);

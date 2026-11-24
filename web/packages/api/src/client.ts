@@ -88,15 +88,20 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     } catch {
       errorBody = { message: response.statusText };
     }
-    const err = new Error(errorBody.message || errorBody.title || "API request failed");
+    // The backend answers with RFC 9457 problem details: `detail` says what went
+    // wrong in words, `code` is the stable machine code, `errors` the field errors.
+    const err = new Error(errorBody.detail || errorBody.message || errorBody.title || "API request failed");
     (err as any).status = response.status;
+    (err as any).code = errorBody.code;
+    (err as any).errors = errorBody.errors;
     (err as any).details = errorBody;
     throw err;
   }
 
-  if (response.status === 204) {
+  // 202 and 204 answers usually carry no body.
+  const text = await response.text();
+  if (text.trim() === "") {
     return {} as T;
   }
-
-  return response.json();
+  return JSON.parse(text) as T;
 }

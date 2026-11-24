@@ -1,0 +1,8 @@
+slug        = "dns"
+name        = "DNS"
+category    = "utilities"
+kind        = "builtin"
+description = "DNS zones of every domain."
+license     = "MPL-2.0"
+covers      = ["BIND (service)"]
+provided_by = "Domains > DNS"

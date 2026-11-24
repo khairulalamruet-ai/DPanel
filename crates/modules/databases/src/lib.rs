@@ -24,6 +24,7 @@
 pub mod exports;
 pub mod imports;
 pub mod phpmyadmin;
+pub mod studio;
 
 use std::{path::PathBuf, sync::Arc};
 
@@ -33,9 +34,9 @@ use axum::{
     http::StatusCode,
     routing::{delete, get, put},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_database::{
     accounts::DbAccountKind,
     databases::{self as store, AddError, Db, DbUser},
     operations::{self, EnqueueError, NewOperation},
@@ -43,12 +44,12 @@ use dhpanel_database::{
     sqlx::PgPool,
     tenants, users,
 };
-use dhpanel_domain::databases::{Access, check_password, full_name, host_for_remote};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::{DbEngine, DbPassword, MAX_DB_REMOTE_HOSTS, Operation};
-use dhpanel_rbac::{Principal, Require, permissions::DatabasesRead};
-use dhpanel_session::{SessionStore, rfc3339};
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_domain::databases::{Access, check_password, full_name, host_for_remote};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::{DbEngine, DbPassword, MAX_DB_REMOTE_HOSTS, Operation};
+use builtpanel_rbac::{Principal, Require, permissions::DatabasesRead};
+use builtpanel_session::{SessionStore, rfc3339};
+use builtpanel_settings::{Scope, SettingsRegistry};
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
 use uuid::Uuid;
@@ -117,6 +118,7 @@ pub fn client_router() -> Router<DatabasesState> {
         .merge(imports::client_router())
         .merge(exports::client_router())
         .merge(phpmyadmin::client_router())
+        .merge(studio::client_router())
 }
 
 /// Routes without a session (the node fetching an SQL dump with its token).
@@ -206,7 +208,7 @@ fn running(hosting: &Hosting) -> Result<(), AppError> {
 
 async fn prefix_required(state: &DatabasesState) -> Result<bool, AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "databases", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "databases", Scope::Global)
         .await
         .map_err(internal)?;
     Ok(values
@@ -230,7 +232,7 @@ fn entry(
 
 /// Puts work for the node in the ledger, inside the caller's transaction.
 async fn queue(
-    tx: &mut dhpanel_database::sqlx::PgConnection,
+    tx: &mut builtpanel_database::sqlx::PgConnection,
     hosting: &Hosting,
     op: &Operation,
     key: String,
@@ -261,7 +263,7 @@ async fn queue(
     Ok(queued.operation().id)
 }
 
-fn name_error(err: dhpanel_domain::databases::DbNameError) -> AppError {
+fn name_error(err: builtpanel_domain::databases::DbNameError) -> AppError {
     AppError::validation(vec![FieldError::new("name", err.code(), err.to_string())])
 }
 
@@ -311,7 +313,7 @@ async fn server_for(
     hosting: &Hosting,
     engine: DbEngine,
 ) -> Result<Option<String>, AppError> {
-    dhpanel_database::tenant_db::dedicated_for(
+    builtpanel_database::tenant_db::dedicated_for(
         &state.db,
         hosting.tenant.id,
         &hosting.tenant.username,
@@ -618,13 +620,13 @@ pub async fn create_database(
     require_feature(&state, &h, "databases", "Databases are").await?;
     running(&h)?;
     let tenant_name =
-        dhpanel_domain::TenantUsername::parse(&h.tenant.username).map_err(internal)?;
+        builtpanel_domain::TenantUsername::parse(&h.tenant.username).map_err(internal)?;
     let engine = chosen_engine(&state, &h, req.engine.as_deref()).await?;
     let name =
         full_name(&tenant_name, &req.name, prefix_required(&state).await?).map_err(name_error)?;
     check_engine_name(engine, &name)?;
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, h.tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, h.tenant.id)
         .await
         .map_err(internal)?;
     if let Some(limit) = plan_limit(&h.plan, "max_databases", 10)
@@ -653,7 +655,7 @@ pub async fn create_database(
         &who,
     )
     .await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("database.created", &who, &h, "database", made.id)
             .metadata(serde_json::json!({ "name": name, "engine": engine.as_str() })),
@@ -867,7 +869,7 @@ pub async fn delete_database(
         &who,
     )
     .await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("database.deleted", &who, &h, "database", id)
             .metadata(serde_json::json!({ "name": gone.name })),
@@ -910,7 +912,7 @@ pub async fn list_users(
 /// union of every user's remote addresses on the node, as the rows stand in this
 /// transaction. The node sets its packet filter first and opens the port after.
 async fn queue_remote_access(
-    tx: &mut dhpanel_database::sqlx::PgConnection,
+    tx: &mut builtpanel_database::sqlx::PgConnection,
     h: &Hosting,
     who: &Principal,
     engine: DbEngine,
@@ -937,7 +939,7 @@ async fn queue_remote_access(
 /// Seals a password for the dispatcher to deliver and queues the work.
 async fn queue_user(
     state: &DatabasesState,
-    tx: &mut dhpanel_database::sqlx::PgConnection,
+    tx: &mut builtpanel_database::sqlx::PgConnection,
     h: &Hosting,
     who: &Principal,
     user: &DbUser,
@@ -1006,14 +1008,14 @@ pub async fn create_user(
     require_feature(&state, &h, "databases", "Databases are").await?;
     running(&h)?;
     let tenant_name =
-        dhpanel_domain::TenantUsername::parse(&h.tenant.username).map_err(internal)?;
+        builtpanel_domain::TenantUsername::parse(&h.tenant.username).map_err(internal)?;
     let engine = chosen_engine(&state, &h, req.engine.as_deref()).await?;
     let name =
         full_name(&tenant_name, &req.name, prefix_required(&state).await?).map_err(name_error)?;
     check_engine_name(engine, &name)?;
     let (password, generated) = password_for(req.password)?;
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, h.tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, h.tenant.id)
         .await
         .map_err(internal)?;
     if let Some(limit) = plan_limit(&h.plan, "max_db_users", 10)
@@ -1034,7 +1036,7 @@ pub async fn create_user(
             AddError::Database(db) => internal(db),
         })?;
     queue_user(&state, &mut tx, &h, &who, &made, &password).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("db_user.created", &who, &h, "db_user", made.id)
             .metadata(serde_json::json!({ "name": name })),
@@ -1093,7 +1095,7 @@ pub async fn change_password(
     let (password, generated) = password_for(req.password)?;
     let mut tx = state.db.begin().await.map_err(internal)?;
     queue_user(&state, &mut tx, &h, &who, &user, &password).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("db_user.password_changed", &who, &h, "db_user", id)
             .metadata(serde_json::json!({ "name": user.name })),
@@ -1158,7 +1160,7 @@ pub async fn delete_user(
     {
         queue_remote_access(&mut tx, &h, &who, engine_of(&gone.engine)).await?;
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("db_user.deleted", &who, &h, "db_user", id)
             .metadata(serde_json::json!({ "name": gone.name })),
@@ -1260,7 +1262,7 @@ pub async fn set_grant(
         &who,
     )
     .await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("database.grant_set", &who, &h, "database", db.id).metadata(
             serde_json::json!({ "database": db.name, "user": user.name, "access": access.as_str() }),
@@ -1339,7 +1341,7 @@ pub async fn remove_grant(
         &who,
     )
     .await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("database.grant_removed", &who, &h, "database", db.id)
             .metadata(serde_json::json!({ "database": db.name, "user": user.name })),
@@ -1469,7 +1471,7 @@ pub async fn set_remote(
     )
     .await?;
     queue_remote_access(&mut tx, &h, &who, engine_of(&user.engine)).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("db_user.remote_hosts_set", &who, &h, "db_user", user.id)
             .metadata(serde_json::json!({ "user": user.name, "count": cidrs.len() })),
@@ -1490,14 +1492,20 @@ pub async fn set_remote(
         imports::put_chunk, imports::complete_import, imports::cancel_import,
         exports::start_export, exports::list_exports, exports::get_export,
         exports::make_link, exports::delete_export,
-        phpmyadmin::open_phpmyadmin
+        phpmyadmin::open_phpmyadmin, studio::studio
     ),
     components(schemas(
         GrantView, DatabaseView, DatabaseList, UserGrantView, DbUserView, DbUserList,
         DbUserCreated, AddDatabase, AddDbUser, NewPassword, SetAccess, RemoteHosts,
         NodeDatabases, DatabaseOverview, BigDatabase, BigDatabaseList, imports::ImportView, imports::ImportList, imports::StartImport,
         exports::ExportView, exports::ExportList, exports::DownloadLink,
-        phpmyadmin::PhpMyAdminLink
+        phpmyadmin::PhpMyAdminLink,
+        builtpanel_node_protocol::studio::StudioRequest, builtpanel_node_protocol::studio::StudioResult,
+        builtpanel_node_protocol::studio::Filter, builtpanel_node_protocol::studio::FilterOp,
+        builtpanel_node_protocol::studio::Assignment, builtpanel_node_protocol::studio::KeyPart,
+        builtpanel_node_protocol::studio::TableInfo, builtpanel_node_protocol::studio::ColumnInfo,
+        builtpanel_node_protocol::studio::IndexInfo, builtpanel_node_protocol::studio::Grid,
+        builtpanel_node_protocol::studio::StudioErrorCode
     )),
     tags((name = "databases", description = "Databases, their users and grants"))
 )]

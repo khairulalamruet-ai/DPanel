@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
+import { ToastProvider } from "@builtpanel/ui";
 import { ClientBackupsPage } from "./ClientBackupsPage";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -36,13 +36,13 @@ describe("ClientBackupsPage (T09.09)", () => {
     });
 
     const searchInput = screen.getByTestId("input-search-backups");
-    fireEvent.change(searchInput, { target: { value: "dbs" } });
+    fireEvent.change(searchInput, { target: { value: "schedule" } });
 
     expect(screen.getByTestId("backup-name-bk_02")).toBeInTheDocument();
     expect(screen.queryByTestId("backup-name-bk_01")).not.toBeInTheDocument();
   });
 
-  it("triggers manual backup creation via CreateBackupDialog", async () => {
+  it("makes a backup now (the whole account) via CreateBackupDialog", async () => {
     renderWithProviders(<ClientBackupsPage />);
 
     await waitFor(() => {
@@ -53,14 +53,6 @@ describe("ClientBackupsPage (T09.09)", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("create-backup-dialog-title")).toBeInTheDocument();
-    });
-
-    // Select files only
-    fireEvent.click(screen.getByTestId("type-select-files"));
-
-    // Enter note
-    fireEvent.change(screen.getByTestId("input-backup-note"), {
-      target: { value: "Pre-deployment files backup" },
     });
 
     fireEvent.click(screen.getByTestId("btn-submit-create-backup"));

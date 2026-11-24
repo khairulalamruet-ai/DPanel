@@ -1,7 +1,7 @@
 import React from "react";
-import { Card, CardHeader, CardTitle, CardContent, Button, useToast } from "@dhpanel/ui";
+import { Card, CardHeader, CardTitle, CardContent, Button, useToast } from "@builtpanel/ui";
 import { Server, Copy, Check, Shield } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { FtpConnectionInfo } from "./types";
 
 interface FtpConnectionInfoCardProps {

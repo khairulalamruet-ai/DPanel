@@ -14,7 +14,7 @@
 //! account with a web server send its files again (the same pass that follows any
 //! change of a domain), so the new text reaches the nodes a few accounts at a
 //! time. A template that does not pass the checks of
-//! [`dhpanel_domain::vhost::check_template`] is refused with 422 and the reason.
+//! [`builtpanel_domain::vhost::check_template`] is refused with 422 and the reason.
 //! `preview` fills a template in for a made-up site that uses every part
 //! (aliases, policy, the owner's own block) and shows the result.
 
@@ -24,18 +24,18 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::vhost_templates::{self as store, VhostTemplate, WriteError};
-use dhpanel_domain::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::vhost_templates::{self as store, VhostTemplate, WriteError};
+use builtpanel_domain::{
     Docroot, Fqdn,
     vhost::{self, Header, MAX_TEMPLATE_BYTES, Policy, Site},
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
-use dhpanel_session::rfc3339;
+use builtpanel_session::rfc3339;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -313,7 +313,7 @@ pub async fn create(
     let id = store::create(&mut tx, &input.name, &input.body, Some(who.account_id()))
         .await
         .map_err(write_error)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit(
             "admin.vhost_template_created",
@@ -371,7 +371,7 @@ pub async fn update(
     .await
     .map_err(write_error)?
     .ok_or_else(|| AppError::not_found("template"))?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit(
             "admin.vhost_template_updated",
@@ -432,7 +432,7 @@ pub async fn remove(
     if !store::delete(&mut tx, id).await.map_err(internal)? {
         return Err(AppError::not_found("template"));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit(
             "admin.vhost_template_deleted",
@@ -513,7 +513,7 @@ pub async fn set_default(
     if !store::make_default(&mut tx, id).await.map_err(internal)? {
         return Err(AppError::not_found("template"));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit(
             "admin.vhost_template_default",
@@ -569,7 +569,7 @@ pub async fn preview(
             domain: &domain,
             aliases: &aliases,
             docroot: &docroot,
-            php_upstream: "dh-example-php:9000",
+            php_upstream: "bp-example-php:9000",
             policy: &policy,
             custom: "location /old { return 301 /new; }",
             proxy: None,
@@ -598,7 +598,7 @@ pub async fn apply(
 ) -> Result<(StatusCode, Json<Applied>), AppError> {
     let mut tx = state.db.begin().await.map_err(internal)?;
     let tenants = store::resend_all(&mut tx).await.map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &audit(
             "admin.vhost_templates_applied",

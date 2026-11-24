@@ -14,8 +14,8 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   Globe,
   Settings,
@@ -40,9 +40,9 @@ interface WordPressManagerDialogProps {
   details: WordPressDetails | null;
   onClose: () => void;
   onUpdatePlugin: (appId: string, pluginSlug: string) => Promise<void>;
-  onTogglePlugin: (appId: string, pluginSlug: string) => Promise<void>;
   onToggleMaintenance: (appId: string, enabled: boolean) => Promise<void>;
-  onCloneStaging: (appId: string) => Promise<void>;
+  onScan: (appId: string) => Promise<void>;
+  onHarden: (appId: string) => Promise<void>;
 }
 
 export function WordPressManagerDialog({
@@ -51,14 +51,14 @@ export function WordPressManagerDialog({
   details,
   onClose,
   onUpdatePlugin,
-  onTogglePlugin,
   onToggleMaintenance,
-  onCloneStaging,
+  onScan,
+  onHarden,
 }: WordPressManagerDialogProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"overview" | "plugins" | "themes" | "security">("overview");
   const [updatingPlugins, setUpdatingPlugins] = useState<Record<string, boolean>>({});
-  const [isCloning, setIsCloning] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [isTogglingMaint, setIsTogglingMaint] = useState(false);
 
   if (!app) return null;
@@ -82,14 +82,7 @@ export function WordPressManagerDialog({
     }
   };
 
-  const handleStagingClone = async () => {
-    setIsCloning(true);
-    try {
-      await onCloneStaging(app.id);
-    } finally {
-      setIsCloning(false);
-    }
-  };
+
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
@@ -221,42 +214,6 @@ export function WordPressManagerDialog({
                   </div>
                 </div>
               </div>
-
-              {/* Staging Clone Feature (T12.03) */}
-              <div className="p-4 bg-muted/40 border rounded-lg flex items-center justify-between">
-                <div>
-                  <h4 className="font-bold text-sm flex items-center gap-1.5">
-                    <Copy className="h-4 w-4 text-primary" />
-                    {t("wpManager.stagingTitle", "Staging Environment")}
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {details?.staging_url
-                      ? t("wpManager.stagingActiveNotice", "Staging environment is ready at {{url}}", { url: details.staging_url })
-                      : t("wpManager.stagingDesc", "Create a 1-click clone to safely test plugin updates or design changes.")}
-                  </p>
-                </div>
-                {details?.staging_url ? (
-                  <a
-                    href={details.staging_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="h-8 px-2.5 inline-flex items-center justify-center rounded-md text-xs font-semibold border border-input bg-background hover:bg-accent transition-colors"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                    {t("wpManager.visitStaging", "Visit Staging")}
-                  </a>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={handleStagingClone}
-                    disabled={isCloning}
-                    data-testid="btn-create-staging"
-                    className="h-8 text-xs font-semibold"
-                  >
-                    {isCloning ? t("wpManager.cloning", "Cloning...") : t("wpManager.createStaging", "Create Staging Clone")}
-                  </Button>
-                )}
-              </div>
             </div>
           )}
 
@@ -312,8 +269,7 @@ export function WordPressManagerDialog({
                         <TableCell>
                           <Badge
                             variant={plugin.active ? "secondary" : "outline"}
-                            className="text-xs font-medium cursor-pointer"
-                            onClick={() => onTogglePlugin(app.id, plugin.slug)}
+                            className="text-xs font-medium"
                             data-testid={`badge-plugin-status-${plugin.slug}`}
                           >
                             {plugin.active ? t("wpManager.active", "Active") : t("wpManager.inactive", "Inactive")}
@@ -378,32 +334,70 @@ export function WordPressManagerDialog({
           {/* Security & Hardening Tab (T12.04) */}
           {activeTab === "security" && (
             <div className="space-y-3" data-testid="wp-security-content">
-              <h4 className="font-bold text-sm">{t("wpManager.hardeningOptions", "WordPress Security Hardening")}</h4>
-              <div className="space-y-2">
-                <div className="p-3 border rounded-lg bg-card flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-xs block">{t("wpManager.xmlrpcTitle", "Disable XML-RPC")}</span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {t("wpManager.xmlrpcDesc", "Protects against brute-force amplification and DDoS targeting xmlrpc.php.")}
-                    </span>
-                  </div>
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs">
-                    Protected
-                  </Badge>
-                </div>
-
-                <div className="p-3 border rounded-lg bg-card flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-xs block">{t("wpManager.debugModeTitle", "WP_DEBUG Disabled")}</span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {t("wpManager.debugModeDesc", "Prevents database queries and sensitive stack traces from leaking on frontend.")}
-                    </span>
-                  </div>
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs">
-                    Disabled (Safe)
-                  </Badge>
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-sm">{t("wpManager.hardeningOptions", "WordPress Security Hardening")}</h4>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isScanning}
+                    data-testid="btn-wp-scan"
+                    onClick={async () => {
+                      setIsScanning(true);
+                      try {
+                        await onScan(app.id);
+                      } finally {
+                        setIsScanning(false);
+                      }
+                    }}
+                  >
+                    {isScanning ? t("wpManager.scanning", "Scanning...") : t("wpManager.scan", "Scan")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={isScanning || !details?.scan}
+                    data-testid="btn-wp-harden"
+                    onClick={async () => {
+                      setIsScanning(true);
+                      try {
+                        await onHarden(app.id);
+                      } finally {
+                        setIsScanning(false);
+                      }
+                    }}
+                  >
+                    {t("wpManager.harden", "Fix the settings")}
+                  </Button>
                 </div>
               </div>
+              {!details?.scan ? (
+                <p className="text-xs text-muted-foreground">{t("wpManager.scanFirst", "Scan the site to see how it is set up.")}</p>
+              ) : (
+                <div className="space-y-2" data-testid="wp-scan-result">
+                  {[
+                    { label: t("wpManager.coreFiles", "Core files match WordPress's checksums"), ok: details.scan.checksums_ok },
+                    { label: t("wpManager.xmlrpcTitle", "Disable XML-RPC"), ok: details.scan.xmlrpc_disabled },
+                    { label: t("wpManager.debugModeTitle", "WP_DEBUG Disabled"), ok: !details.scan.debug },
+                    { label: t("wpManager.fileEditOff", "The file editor is off"), ok: !details.scan.file_edit_allowed },
+                    { label: t("wpManager.noWritable", "No world-writable files"), ok: details.scan.world_writable === 0 },
+                  ].map((row) => (
+                    <div key={row.label} className="p-3 border rounded-lg bg-card flex items-center justify-between">
+                      <span className="font-semibold text-xs">{row.label}</span>
+                      <Badge
+                        variant="outline"
+                        className={row.ok ? "bg-emerald-50 text-emerald-700 border-emerald-300 text-xs" : "bg-amber-50 text-amber-700 border-amber-300 text-xs"}
+                      >
+                        {row.ok ? t("wpManager.ok", "OK") : t("wpManager.needsFix", "Needs fixing")}
+                      </Badge>
+                    </div>
+                  ))}
+                  {(details.scan.modified.length > 0 || details.scan.missing.length > 0 || details.scan.extra.length > 0) && (
+                    <p className="text-[11px] text-muted-foreground font-mono break-all">
+                      {[...details.scan.modified.map((f) => `~ ${f}`), ...details.scan.missing.map((f) => `- ${f}`), ...details.scan.extra.map((f) => `+ ${f}`)].slice(0, 20).join("  ")}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

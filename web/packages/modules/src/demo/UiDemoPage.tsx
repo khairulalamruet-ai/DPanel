@@ -22,9 +22,9 @@ import {
   TableHead,
   TableCell,
   useToast,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { ShieldAlert, Trash2, PlusCircle, CheckCircle2, Globe, Calendar, HardDrive, DollarSign, Hash } from "lucide-react";
-import { useFormatters } from "@dhpanel/i18n";
+import { useFormatters } from "@builtpanel/i18n";
 
 export function UiDemoPage() {
   const { toast } = useToast();
@@ -39,7 +39,7 @@ export function UiDemoPage() {
 
   const mockDomains = [
     { id: "1", name: "example.com", status: "active", ssl: true, php: "8.3" },
-    { id: "2", name: "api.dhpanel.io", status: "active", ssl: true, php: "8.2" },
+    { id: "2", name: "api.builtpanel.io", status: "active", ssl: true, php: "8.2" },
     { id: "3", name: "staging.test", status: "pending", ssl: false, php: "8.1" },
   ];
 

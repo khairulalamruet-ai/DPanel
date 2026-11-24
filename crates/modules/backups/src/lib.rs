@@ -18,19 +18,19 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_database::{
     backups::{self as store, Destination, SaveError},
     sqlx::PgPool,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require,
     permissions::{BackupsManage, BackupsRead},
 };
-use dhpanel_session::{SessionStore, rfc3339};
-use dhpanel_settings::SettingsRegistry;
+use builtpanel_session::{SessionStore, rfc3339};
+use builtpanel_settings::SettingsRegistry;
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
 use uuid::Uuid;
@@ -505,7 +505,7 @@ pub async fn add_destination(
             .await
             .map_err(internal)?;
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &audit("backup_destination.added", &who.0, id, &name),
     )
@@ -591,7 +591,7 @@ pub async fn change_destination(
             .await
             .map_err(internal)?;
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &audit("backup_destination.changed", &who.0, id, &name),
     )
@@ -632,7 +632,7 @@ pub async fn make_default(
         .await
         .map_err(internal)?
         .ok_or_else(|| AppError::not_found("backup_destination"))?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &audit("backup_destination.default", &who.0, id, &now.name),
     )
@@ -682,7 +682,7 @@ pub async fn remove_destination(
             "Backups or schedules still use this destination.",
         ));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &audit("backup_destination.removed", &who.0, id, &d.name),
     )
@@ -706,8 +706,8 @@ pub async fn remove_destination(
         DestinationView, DestinationList, AddDestination, ChangeDestination,
         client::BackupView, client::BackupList, client::PartView, client::StartRestore,
         client::RestoreView, client::RestoreList, client::ScheduleView, client::StartExport,
-        client::ExportView, client::ExportList, import::StartImport,
-        transfer::TransferView, transfer::StartTransfer
+        client::BackupExportView, client::BackupExportList, import::BackupStartImport,
+        transfer::NodeTransferView, transfer::StartTransfer
     )),
     tags((name = "backups", description = "Backups"))
 )]

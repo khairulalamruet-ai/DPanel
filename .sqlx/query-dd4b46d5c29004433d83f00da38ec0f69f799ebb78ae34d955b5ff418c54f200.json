@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE accounts SET status = 'disabled'\n         WHERE username = 'root' AND kind = 'admin' AND password_hash = '!system:root'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "dd4b46d5c29004433d83f00da38ec0f69f799ebb78ae34d955b5ff418c54f200"
+}

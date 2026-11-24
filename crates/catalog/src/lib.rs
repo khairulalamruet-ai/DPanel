@@ -3,12 +3,14 @@
 //! engine that installs them (on the node) only knows the fixed steps of the definitions.
 //!
 //! The files shipped with the build are compiled in (see `build.rs`); an operator can add
-//! more in a directory (`DHPANEL_CATALOG_DIR`), where a file with the slug of a built-in one
+//! more in a directory (`BUILTPANEL_CATALOG_DIR`), where a file with the slug of a built-in one
 //! replaces it.
 
 use std::{collections::BTreeMap, path::Path};
 
-use dhpanel_node_protocol::AppDefinition;
+use builtpanel_node_protocol::AppDefinition;
+
+pub mod marketplace;
 
 include!(concat!(env!("OUT_DIR"), "/catalog_files.rs"));
 
@@ -144,7 +146,7 @@ mod tests {
 
     #[test]
     fn a_new_application_is_a_file_and_a_bad_one_is_refused() {
-        let dir = std::env::temp_dir().join(format!("dh-catalog-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bp-catalog-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(

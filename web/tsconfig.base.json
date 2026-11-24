@@ -17,18 +17,18 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@dhpanel/ui": ["./packages/ui/src"],
-      "@dhpanel/ui/*": ["./packages/ui/src/*"],
-      "@dhpanel/api": ["./packages/api/src"],
-      "@dhpanel/api/*": ["./packages/api/src/*"],
-      "@dhpanel/auth": ["./packages/auth/src"],
-      "@dhpanel/auth/*": ["./packages/auth/src/*"],
-      "@dhpanel/i18n": ["./packages/i18n/src"],
-      "@dhpanel/i18n/*": ["./packages/i18n/src/*"],
-      "@dhpanel/shell": ["./packages/shell/src"],
-      "@dhpanel/shell/*": ["./packages/shell/src/*"],
-      "@dhpanel/modules": ["./packages/modules/src"],
-      "@dhpanel/modules/*": ["./packages/modules/src/*"]
+      "@builtpanel/ui": ["./packages/ui/src"],
+      "@builtpanel/ui/*": ["./packages/ui/src/*"],
+      "@builtpanel/api": ["./packages/api/src"],
+      "@builtpanel/api/*": ["./packages/api/src/*"],
+      "@builtpanel/auth": ["./packages/auth/src"],
+      "@builtpanel/auth/*": ["./packages/auth/src/*"],
+      "@builtpanel/i18n": ["./packages/i18n/src"],
+      "@builtpanel/i18n/*": ["./packages/i18n/src/*"],
+      "@builtpanel/shell": ["./packages/shell/src"],
+      "@builtpanel/shell/*": ["./packages/shell/src/*"],
+      "@builtpanel/modules": ["./packages/modules/src"],
+      "@builtpanel/modules/*": ["./packages/modules/src/*"]
     }
   }
 }

@@ -25,7 +25,7 @@ CREATE TRIGGER domain_custom_blocks_routes_changed
     FOR EACH ROW EXECUTE FUNCTION domain_custom_blocks_routes_changed();
 
 -- The default template gets the place for it (only when nobody has edited it).
-UPDATE vhost_templates SET body = $new$# Managed by DHPanel for {{domain}}. Changes made here are overwritten.
+UPDATE vhost_templates SET body = $new$# Managed by Built Panel for {{domain}}. Changes made here are overwritten.
 {{policy_http}}
 server {
     listen 8080;
@@ -51,7 +51,7 @@ server {
     }
 }
 $new$
- WHERE server = 'nginx' AND name = 'Default' AND body = $old$# Managed by DHPanel for {{domain}}. Changes made here are overwritten.
+ WHERE server = 'nginx' AND name = 'Default' AND body = $old$# Managed by Built Panel for {{domain}}. Changes made here are overwritten.
 {{policy_http}}
 server {
     listen 8080;

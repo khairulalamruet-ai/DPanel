@@ -9,7 +9,7 @@ import {
   Badge,
   Input,
   useToast,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import {
   ShieldAlert,
   ShieldCheck,
@@ -17,11 +17,11 @@ import {
   Ban,
   Server,
   RefreshCw,
-  Gauge,
   Lock,
 } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+import { useTranslation } from "@builtpanel/i18n";
+import { listNodeChoices, type NodeChoice } from "../nodes/api";
+import { loadFirewall, openPort, closePort, blockAddress, unblockAddress } from "./api";
 import { AdminFirewallOverview, NodePortRule, GlobalIpBan } from "./types";
 import { AdminPortsTable } from "./AdminPortsTable";
 import { AdminBansTable } from "./AdminBansTable";
@@ -30,25 +30,28 @@ export function AdminFirewallPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [selectedNode, setSelectedNode] = useState("node-1");
-  const [activeTab, setActiveTab] = useState<"ports" | "bans" | "ratelimit">("ports");
+  const [nodes, setNodes] = useState<NodeChoice[]>([]);
+  const [selectedNode, setSelectedNode] = useState("");
+  const [activeTab, setActiveTab] = useState<"ports" | "bans">("ports");
   const [overview, setOverview] = useState<AdminFirewallOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Rate limit state
-  const [rateLimitEnabled, setRateLimitEnabled] = useState(true);
-  const [rateLimitRps, setRateLimitRps] = useState(50);
-  const [isSavingRateLimit, setIsSavingRateLimit] = useState(false);
+  useEffect(() => {
+    listNodeChoices()
+      .then((list) => {
+        setNodes(list);
+        setSelectedNode((current) => current || list[0]?.id || "");
+      })
+      .catch((err: any) =>
+        toast({ title: t("common.error"), description: err?.message || t("common.unknownError"), variant: "destructive" }),
+      );
+  }, []);
 
   const fetchOverview = useCallback(async () => {
+    if (!selectedNode) return;
     try {
       setIsLoading(true);
-      const data = await apiFetch<AdminFirewallOverview>(
-        `/api/v1/admin/firewall/overview?node=${encodeURIComponent(selectedNode)}`
-      );
-      setOverview(data);
-      setRateLimitEnabled(data.rate_limit_enabled);
-      setRateLimitRps(data.rate_limit_rps);
+      setOverview((await loadFirewall(selectedNode)).overview);
     } catch (err: any) {
       toast({
         title: t("common.error"),
@@ -64,12 +67,9 @@ export function AdminFirewallPage() {
     fetchOverview();
   }, [fetchOverview]);
 
-  const handleOpenPort = async (port: number, protocol: "tcp" | "udp", serviceName: string) => {
+  const handleOpenPort = async (port: number, protocol: "tcp" | "udp", _serviceName: string) => {
     try {
-      await apiFetch("/api/v1/admin/firewall/ports", {
-        method: "POST",
-        body: JSON.stringify({ node: selectedNode, port, protocol, service_name: serviceName }),
-      });
+      await openPort(selectedNode, port, protocol);
       toast({
         title: t("common.success"),
         description: t("firewall.portOpenedSuccess", { port, protocol }),
@@ -87,10 +87,7 @@ export function AdminFirewallPage() {
 
   const handleClosePort = async (portId: string, port: number) => {
     try {
-      await apiFetch(`/api/v1/admin/firewall/ports/${encodeURIComponent(portId)}`, {
-        method: "DELETE",
-        body: JSON.stringify({ node: selectedNode, port }),
-      });
+      await closePort(selectedNode, portId);
       toast({
         title: t("common.success"),
         description: t("firewall.portClosedSuccess", { port }),
@@ -105,12 +102,9 @@ export function AdminFirewallPage() {
     }
   };
 
-  const handleAddBan = async (ip: string, reason: string, durationHours: number) => {
+  const handleAddBan = async (ip: string, _reason: string, _durationHours: number) => {
     try {
-      await apiFetch("/api/v1/admin/firewall/bans", {
-        method: "POST",
-        body: JSON.stringify({ node: selectedNode, ip, reason, duration_hours: durationHours }),
-      });
+      await blockAddress(selectedNode, ip);
       toast({
         title: t("common.success"),
         description: t("firewall.ipBannedSuccess", { ip }),
@@ -126,12 +120,9 @@ export function AdminFirewallPage() {
     }
   };
 
-  const handleUnban = async (banId: string, ip: string) => {
+  const handleUnban = async (_banId: string, ip: string) => {
     try {
-      await apiFetch(`/api/v1/admin/firewall/bans/${encodeURIComponent(banId)}`, {
-        method: "DELETE",
-        body: JSON.stringify({ node: selectedNode, ip }),
-      });
+      await unblockAddress(selectedNode, ip);
       toast({
         title: t("common.success"),
         description: t("firewall.ipUnbannedSuccess", { ip }),
@@ -143,33 +134,6 @@ export function AdminFirewallPage() {
         description: err.message || t("common.unknownError"),
         variant: "destructive",
       });
-    }
-  };
-
-  const handleSaveRateLimit = async () => {
-    try {
-      setIsSavingRateLimit(true);
-      await apiFetch("/api/v1/admin/firewall/rate-limit", {
-        method: "POST",
-        body: JSON.stringify({
-          node: selectedNode,
-          enabled: rateLimitEnabled,
-          rate_limit_rps: rateLimitRps,
-        }),
-      });
-      toast({
-        title: t("common.success"),
-        description: t("firewall.rateLimitSavedSuccess"),
-      });
-      await fetchOverview();
-    } catch (err: any) {
-      toast({
-        title: t("common.error"),
-        description: err.message || t("common.unknownError"),
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingRateLimit(false);
     }
   };
 
@@ -203,8 +167,11 @@ export function AdminFirewallPage() {
               onChange={(e) => setSelectedNode(e.target.value)}
               className="bg-transparent font-medium focus:outline-none"
             >
-              <option value="node-1">node-1 (Primary Control Node)</option>
-              <option value="node-2">node-2 (Worker Node East)</option>
+              {nodes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -282,20 +249,6 @@ export function AdminFirewallPage() {
             {overview?.active_bans.length ?? 0}
           </Badge>
         </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("ratelimit")}
-          data-testid="tab-firewall-ratelimit"
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
-            activeTab === "ratelimit"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Gauge className="h-4 w-4" />
-          <span>{t("firewall.rateLimitTab")}</span>
-        </button>
       </div>
 
       {/* Tab Contents */}
@@ -315,63 +268,6 @@ export function AdminFirewallPage() {
           onUnban={handleUnban}
           isLoading={isLoading}
         />
-      )}
-
-      {activeTab === "ratelimit" && (
-        <Card className="max-w-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Gauge className="h-4 w-4 text-primary" />
-              <span data-testid="title-rate-limiting">{t("firewall.rateLimitingTitle")}</span>
-            </CardTitle>
-            <CardDescription className="text-xs text-muted-foreground">
-              {t("firewall.rateLimitingDescription")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-xs font-medium">{t("firewall.enableRateLimiting")}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {t("firewall.enableRateLimitingSubtext")}
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={rateLimitEnabled}
-                onChange={(e) => setRateLimitEnabled(e.target.checked)}
-                data-testid="checkbox-rate-limit-toggle"
-                className="h-4 w-4 rounded border-input"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-foreground">
-                {t("firewall.maxRpsPerIp")}
-              </label>
-              <Input
-                data-testid="input-rate-limit-rps"
-                type="number"
-                min={1}
-                max={5000}
-                value={rateLimitRps}
-                onChange={(e) => setRateLimitRps(Number(e.target.value))}
-                className="mt-1 font-mono text-xs w-36"
-                disabled={!rateLimitEnabled}
-              />
-            </div>
-
-            <Button
-              size="sm"
-              onClick={handleSaveRateLimit}
-              disabled={isSavingRateLimit}
-              data-testid="btn-save-rate-limit"
-              className="text-xs"
-            >
-              {isSavingRateLimit ? t("common.saving") : t("common.save")}
-            </Button>
-          </CardContent>
-        </Card>
       )}
     </div>
   );

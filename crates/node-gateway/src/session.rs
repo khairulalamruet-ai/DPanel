@@ -2,8 +2,8 @@
 
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use dhpanel_database::nodes;
-use dhpanel_node_protocol::{
+use builtpanel_database::nodes;
+use builtpanel_node_protocol::{
     AgentMessage, ControlMessage, MAX_FRAME_BYTES, STREAM_PATH, Welcome, decode, encode,
     negotiate_version,
 };

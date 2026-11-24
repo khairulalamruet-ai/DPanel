@@ -1,0 +1,9 @@
+slug        = "awstats"
+name        = "AWStats"
+category    = "statistics"
+kind        = "unavailable"
+description = "Web statistics from the access logs."
+license     = "GPL-3.0-or-later"
+homepage    = "https://awstats.org"
+covers      = ["AWStats"]
+reason      = "not packaged for the panel yet"

@@ -8,11 +8,11 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { extract } from "./api";
 import { Archive } from "lucide-react";
 import { FileItem, ExtractPayload } from "./types";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 interface ExtractDialogProps {
   open: boolean;
@@ -46,13 +46,7 @@ export function ExtractDialog({
 
     try {
       setIsSubmitting(true);
-      await apiFetch("/api/v1/client/files/extract", {
-        method: "POST",
-        body: JSON.stringify({
-          archive_path: file.path,
-          destination_path: destinationPath.trim(),
-        } as ExtractPayload),
-      });
+      await extract(file.path, destinationPath.trim());
 
       toast({
         title: t("common.success"),
@@ -102,7 +96,7 @@ export function ExtractDialog({
             <Input
               value={destinationPath}
               onChange={(e) => setDestinationPath(e.target.value)}
-              placeholder="/home/demo/public_html"
+              placeholder="/public_html"
               data-testid="extract-destination-input"
             />
           </div>

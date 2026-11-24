@@ -1,0 +1,54 @@
+# The Built Panel license authority (T17.01, T19.02): a separate service on a separate server.
+# It needs the network and its signing key (read only); its database is another PostgreSQL.
+[Unit]
+Description=Built Panel license authority
+Documentation=https://docs.builtpanel.dev/license-authority
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=builtpanel-la
+Group=builtpanel-la
+ExecStart=/usr/local/bin/builtpanel-license-authority
+Environment=BUILTPANEL_LA_CONFIG=/etc/builtpanel/license-authority.toml
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+
+# The signing key and the configuration live in /etc/builtpanel (the key 0600, owned by the
+# service user). A key rotation writes the new key next to it, so the folder is writable.
+ConfigurationDirectory=builtpanel
+ConfigurationDirectoryMode=0750
+ReadWritePaths=/etc/builtpanel
+
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateUsers=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RemoveIPC=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @mount @swap @reboot @raw-io @debug @obsolete @cpu-emulation @clock
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

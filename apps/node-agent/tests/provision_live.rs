@@ -1,17 +1,21 @@
 //! `provision_tenant_stack` for real: the helper (root, started by the live
 //! script), the agent's handlers and the box's rootless Docker.
-//! Ignored by default; skips without DHPANEL_TEST_HELPER_SOCKET and
-//! DHPANEL_TEST_TENANTS_ROOT.
+//! Ignored by default; skips without BUILTPANEL_TEST_HELPER_SOCKET and
+//! BUILTPANEL_TEST_TENANTS_ROOT.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::{path::PathBuf, process::Command, sync::Arc};
 
-use dhpanel_docker_manager::{DockerManager, Name};
-use dhpanel_node_agent::ops::tenant::{TenantContext, create_tenant, provision_tenant_stack};
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_docker_manager::{DockerManager, Name};
+use builtpanel_node_agent::ops::tenant::{TenantContext, create_tenant, provision_tenant_stack};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -36,8 +40,8 @@ fn inspect(socket: &std::path::Path, name: &str, format: &str) -> String {
 #[ignore = "needs the privileged helper running as root, Docker and registry access"]
 async fn the_stack_runs_as_the_tenant_not_as_root_and_provisioning_can_be_repeated() {
     let (Some(helper_socket), Some(tenants_root)) = (
-        std::env::var_os("DHPANEL_TEST_HELPER_SOCKET"),
-        std::env::var_os("DHPANEL_TEST_TENANTS_ROOT"),
+        std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET"),
+        std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT"),
     ) else {
         eprintln!("skipped: no helper (see the live script)");
         return;
@@ -48,7 +52,7 @@ async fn the_stack_runs_as_the_tenant_not_as_root_and_provisioning_can_be_repeat
         helper_socket: PathBuf::from(helper_socket),
         tenants_root: PathBuf::from(tenants_root),
         docker: docker.clone(),
-        vhosts_root: std::env::temp_dir().join(format!("dh-vhosts-{}", std::process::id())),
+        vhosts_root: std::env::temp_dir().join(format!("bp-vhosts-{}", std::process::id())),
     });
     let tenant_id = Uuid::now_v7();
     let username = format!("p{}x", std::process::id());
@@ -89,7 +93,7 @@ async fn the_stack_runs_as_the_tenant_not_as_root_and_provisioning_can_be_repeat
     };
     assert_eq!(
         containers,
-        [format!("dh-{username}-php"), format!("dh-{username}-web")],
+        [format!("bp-{username}-php"), format!("bp-{username}-web")],
         "PHP starts before the web server"
     );
 
@@ -129,7 +133,7 @@ async fn the_stack_runs_as_the_tenant_not_as_root_and_provisioning_can_be_repeat
     // owners and modes were not copied into it.
     {
         use std::os::unix::fs::MetadataExt as _;
-        let www = PathBuf::from(std::env::var_os("DHPANEL_TEST_TENANTS_ROOT").unwrap())
+        let www = PathBuf::from(std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT").unwrap())
             .join(tenant_id.to_string())
             .join("www");
         let meta = std::fs::metadata(&www).unwrap();
@@ -152,20 +156,20 @@ async fn the_stack_runs_as_the_tenant_not_as_root_and_provisioning_can_be_repeat
         let _ = docker.remove(&Name::parse(name).unwrap(), true).await;
     }
     let _ = docker
-        .remove_volume(&Name::parse(&format!("dh-{username}-www")).unwrap())
+        .remove_volume(&Name::parse(&format!("bp-{username}-www")).unwrap())
         .await;
     let _ = docker
-        .remove_network(&Name::parse(&format!("dh-{username}-net")).unwrap())
+        .remove_network(&Name::parse(&format!("bp-{username}-net")).unwrap())
         .await;
 }
 
 #[tokio::test]
 #[ignore = "needs the privileged helper running as root, Docker and registry access"]
 async fn changing_the_plan_changes_the_limits_of_the_running_stack() {
-    use dhpanel_node_agent::ops::tenant::set_resource_limits;
+    use builtpanel_node_agent::ops::tenant::set_resource_limits;
     let (Some(helper_socket), Some(tenants_root)) = (
-        std::env::var_os("DHPANEL_TEST_HELPER_SOCKET"),
-        std::env::var_os("DHPANEL_TEST_TENANTS_ROOT"),
+        std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET"),
+        std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT"),
     ) else {
         eprintln!("skipped: no helper (see the live script)");
         return;
@@ -175,7 +179,7 @@ async fn changing_the_plan_changes_the_limits_of_the_running_stack() {
         helper_socket: PathBuf::from(helper_socket),
         tenants_root: PathBuf::from(tenants_root),
         docker: docker.clone(),
-        vhosts_root: std::env::temp_dir().join(format!("dh-vhosts-{}", std::process::id())),
+        vhosts_root: std::env::temp_dir().join(format!("bp-vhosts-{}", std::process::id())),
     });
     let username = format!("l{}x", std::process::id());
     let limits_op = |memory_bytes, pids| Operation::SetResourceLimits {
@@ -218,8 +222,8 @@ async fn changing_the_plan_changes_the_limits_of_the_running_stack() {
     .await
     .expect("stack provisioned");
 
-    let php = Name::parse(&format!("dh-{username}-php")).unwrap();
-    let web = Name::parse(&format!("dh-{username}-web")).unwrap();
+    let php = Name::parse(&format!("bp-{username}-php")).unwrap();
+    let web = Name::parse(&format!("bp-{username}-web")).unwrap();
     let before = docker.inspect(&php).await.unwrap();
     assert_eq!(before.limits.memory_bytes, 192 << 20, "75% of 256 MiB");
 
@@ -267,21 +271,21 @@ async fn changing_the_plan_changes_the_limits_of_the_running_stack() {
         let _ = docker.remove(name, true).await;
     }
     let _ = docker
-        .remove_volume(&Name::parse(&format!("dh-{username}-www")).unwrap())
+        .remove_volume(&Name::parse(&format!("bp-{username}-www")).unwrap())
         .await;
     let _ = docker
-        .remove_network(&Name::parse(&format!("dh-{username}-net")).unwrap())
+        .remove_network(&Name::parse(&format!("bp-{username}-net")).unwrap())
         .await;
 }
 
 #[tokio::test]
 #[ignore = "needs the privileged helper running as root, Docker and registry access"]
 async fn suspend_keeps_the_files_resume_restores_the_site_and_delete_removes_everything() {
-    use dhpanel_docker_manager::DockerError;
-    use dhpanel_node_agent::ops::tenant::{delete_tenant, resume_tenant, suspend_tenant};
+    use builtpanel_docker_manager::DockerError;
+    use builtpanel_node_agent::ops::tenant::{delete_tenant, resume_tenant, suspend_tenant};
     let (Some(helper_socket), Some(tenants_root)) = (
-        std::env::var_os("DHPANEL_TEST_HELPER_SOCKET"),
-        std::env::var_os("DHPANEL_TEST_TENANTS_ROOT"),
+        std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET"),
+        std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT"),
     ) else {
         eprintln!("skipped: no helper (see the live script)");
         return;
@@ -293,13 +297,13 @@ async fn suspend_keeps_the_files_resume_restores_the_site_and_delete_removes_eve
         helper_socket: PathBuf::from(helper_socket),
         tenants_root: tenants_root.clone(),
         docker: docker.clone(),
-        vhosts_root: std::env::temp_dir().join(format!("dh-vhosts-{}", std::process::id())),
+        vhosts_root: std::env::temp_dir().join(format!("bp-vhosts-{}", std::process::id())),
     });
     let tenant_id = Uuid::now_v7();
     let username = format!("d{}x", std::process::id());
     let uid = 10_079;
-    let php = Name::parse(&format!("dh-{username}-php")).unwrap();
-    let web = Name::parse(&format!("dh-{username}-web")).unwrap();
+    let php = Name::parse(&format!("bp-{username}-php")).unwrap();
+    let web = Name::parse(&format!("bp-{username}-web")).unwrap();
     let root = tenants_root.join(tenant_id.to_string());
     let docker_cli = |args: &[&str]| {
         Command::new("docker")
@@ -400,9 +404,9 @@ async fn suspend_keeps_the_files_resume_restores_the_site_and_delete_removes_eve
         ));
     }
     let listed = docker_cli(&["network", "ls", "--format", "{{.Name}}"]);
-    assert!(!String::from_utf8_lossy(&listed.stdout).contains(&format!("dh-{username}-net")));
+    assert!(!String::from_utf8_lossy(&listed.stdout).contains(&format!("bp-{username}-net")));
     let volumes = docker_cli(&["volume", "ls", "--format", "{{.Name}}"]);
-    assert!(!String::from_utf8_lossy(&volumes.stdout).contains(&format!("dh-{username}-www")));
+    assert!(!String::from_utf8_lossy(&volumes.stdout).contains(&format!("bp-{username}-www")));
     assert!(root.join("www/index.php").exists(), "the files are kept");
     delete_tenant(context.clone(), soft)
         .await
@@ -433,10 +437,10 @@ async fn suspend_keeps_the_files_resume_restores_the_site_and_delete_removes_eve
 #[tokio::test]
 #[ignore = "needs the privileged helper running as root, Docker and registry access"]
 async fn one_operation_sets_a_tenant_up_and_repeating_it_is_fine() {
-    use dhpanel_node_agent::ops::tenant::{delete_tenant, set_up_tenant};
+    use builtpanel_node_agent::ops::tenant::{delete_tenant, set_up_tenant};
     let (Some(helper_socket), Some(tenants_root)) = (
-        std::env::var_os("DHPANEL_TEST_HELPER_SOCKET"),
-        std::env::var_os("DHPANEL_TEST_TENANTS_ROOT"),
+        std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET"),
+        std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT"),
     ) else {
         eprintln!("skipped: no helper (see the live script)");
         return;
@@ -446,7 +450,7 @@ async fn one_operation_sets_a_tenant_up_and_repeating_it_is_fine() {
         helper_socket: PathBuf::from(helper_socket),
         tenants_root: PathBuf::from(tenants_root),
         docker: docker.clone(),
-        vhosts_root: std::env::temp_dir().join(format!("dh-vhosts-{}", std::process::id())),
+        vhosts_root: std::env::temp_dir().join(format!("bp-vhosts-{}", std::process::id())),
     });
     let tenant_id = Uuid::now_v7();
     let username = format!("s{}x", std::process::id());
@@ -462,11 +466,11 @@ async fn one_operation_sets_a_tenant_up_and_repeating_it_is_fine() {
         memory_bytes: Some(256 << 20),
         pids: Some(100),
         skeleton: vec![
-            dhpanel_node_protocol::SkeletonFile {
+            builtpanel_node_protocol::SkeletonFile {
                 path: "index.html".into(),
                 content: "<h1>Welcome</h1>".into(),
             },
-            dhpanel_node_protocol::SkeletonFile {
+            builtpanel_node_protocol::SkeletonFile {
                 path: "assets/site.css".into(),
                 content: "body{margin:0}".into(),
             },
@@ -485,7 +489,7 @@ async fn one_operation_sets_a_tenant_up_and_repeating_it_is_fine() {
     assert_eq!(containers.len(), 2);
     {
         use std::os::unix::fs::MetadataExt as _;
-        let www = PathBuf::from(std::env::var_os("DHPANEL_TEST_TENANTS_ROOT").unwrap())
+        let www = PathBuf::from(std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT").unwrap())
             .join(tenant_id.to_string())
             .join("www");
         assert_eq!(

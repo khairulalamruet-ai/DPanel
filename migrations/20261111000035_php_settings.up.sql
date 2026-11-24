@@ -1,4 +1,4 @@
--- T06.10: the php.ini options of an account (see dhpanel_domain::php_ini). One
+-- T06.10: the php.ini options of an account (see builtpanel_domain::php_ini). One
 -- row per account that changed anything; a change makes the account's files and
 -- settings out of date so the node is told.
 CREATE TABLE php_settings (

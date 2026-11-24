@@ -1,8 +1,8 @@
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
-import { resetMockDns } from "@dhpanel/api";
+import { ToastProvider } from "@builtpanel/ui";
+import { resetMockDns } from "@builtpanel/api";
 import { DnsEditorPage } from "./DnsEditorPage";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -30,7 +30,7 @@ describe("DnsEditorPage (T05.11)", () => {
     expect(screen.getByText("2001:db8::1")).toBeInTheDocument();
 
     // Verify nameserver info
-    expect(screen.getByText(/ns1\.dhpanel\.net/)).toBeInTheDocument();
+    expect(screen.getByText(/ns1\.builtpanel\.net/)).toBeInTheDocument();
     expect(screen.getByTestId("btn-verify-ns")).toBeInTheDocument();
   });
 
@@ -170,7 +170,7 @@ describe("DnsEditorPage (T05.11)", () => {
 
     const exportPre = screen.getByTestId("pre-bind-export");
     expect(exportPre.textContent).toContain("$ORIGIN alpha-hosting.com.");
-    expect(exportPre.textContent).toContain("IN  SOA");
+    expect(exportPre.textContent).toContain("IN\tSOA");
     expect(exportPre.textContent).toContain("192.168.1.100");
 
     // Switch to Import Tab

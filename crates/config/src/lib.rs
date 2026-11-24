@@ -1,10 +1,10 @@
-//! Typed service configuration for DHPanel binaries.
+//! Typed service configuration for Built Panel binaries.
 //!
 //! Layers, lowest to highest priority:
 //! 1. built-in defaults,
-//! 2. a TOML file (default `/etc/dhpanel/control.toml`, override with `DHPANEL_CONFIG`),
-//! 3. environment variables prefixed `DHPANEL_`, with `__` separating nested keys
-//!    (e.g. `DHPANEL_DATABASE__MAX_CONNECTIONS=20`).
+//! 2. a TOML file (default `/etc/builtpanel/control.toml`, override with `BUILTPANEL_CONFIG`),
+//! 3. environment variables prefixed `BUILTPANEL_`, with `__` separating nested keys
+//!    (e.g. `BUILTPANEL_DATABASE__MAX_CONNECTIONS=20`).
 //!
 //! Secrets (database and Redis URLs) can be given inline or, preferably, as
 //! `*_file` paths. Secret files must not be readable by group or others.
@@ -23,9 +23,9 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
 /// Default config file path for the control plane.
-pub const DEFAULT_CONTROL_CONFIG: &str = "/etc/dhpanel/control.toml";
+pub const DEFAULT_CONTROL_CONFIG: &str = "/etc/builtpanel/control.toml";
 /// Environment variable that overrides the config file path.
-pub const CONFIG_PATH_ENV: &str = "DHPANEL_CONFIG";
+pub const CONFIG_PATH_ENV: &str = "BUILTPANEL_CONFIG";
 
 /// Control plane (`control-api` and `worker`) configuration.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -90,7 +90,7 @@ pub struct ImportsConfig {
 impl Default for ImportsConfig {
     fn default() -> Self {
         Self {
-            spool_dir: PathBuf::from("/var/lib/dhpanel/spool/imports"),
+            spool_dir: PathBuf::from("/var/lib/builtpanel/spool/imports"),
         }
     }
 }
@@ -149,11 +149,11 @@ impl Default for LicenseConfig {
     fn default() -> Self {
         Self {
             authority_url: None,
-            identity_dir: PathBuf::from("/var/lib/dhpanel/license"),
+            identity_dir: PathBuf::from("/var/lib/builtpanel/license"),
             public_keys_file: None,
             domain: None,
-            issuer: "dhpanel-la".to_owned(),
-            audience: "dhpanel".to_owned(),
+            issuer: "builtpanel-la".to_owned(),
+            audience: "builtpanel".to_owned(),
             heartbeat_hours: 6,
             refresh_hours: 12,
             grace_hours: 72,
@@ -168,7 +168,7 @@ impl Default for LicenseConfig {
 #[serde(deny_unknown_fields)]
 pub struct PkiConfig {
     /// Directory holding `node_ca.crt` and `node_ca.key` (created by
-    /// `dhctl ca init`). If the CA is missing, node enrollment is switched off
+    /// `bpctl ca init`). If the CA is missing, node enrollment is switched off
     /// and says so; a CA that exists but is unusable stops the service.
     pub ca_dir: PathBuf,
 }
@@ -187,7 +187,7 @@ pub struct AgentConfig {
     /// Address the agent port (mutual TLS, WebSocket) listens on, e.g.
     /// `0.0.0.0:8444`. Without it the port is off and agents cannot connect.
     /// Needs the node CA and `server.crt`/`server.key` in `pki.ca_dir`
-    /// (`dhctl ca issue-server`).
+    /// (`bpctl ca issue-server`).
     pub stream_listen: Option<std::net::SocketAddr>,
     /// Address agents use to reach the agent port, e.g.
     /// `https://panel.example.com:8444`; handed to a node when it enrols and
@@ -262,6 +262,10 @@ pub struct AuthConfig {
     pub ip_lockout_minutes: u32,
     /// Name shown in authenticator apps for TOTP entries (1..=64 characters, no `:`).
     pub totp_issuer: String,
+    /// Socket of `builtpanel-root-auth`, the root helper that checks the server's root password
+    /// for the administrator `root` (WHM-style root login). Unset: `root` cannot log in.
+    #[serde(default)]
+    pub root_login_socket: Option<PathBuf>,
 }
 
 /// Logging settings.
@@ -270,7 +274,7 @@ pub struct AuthConfig {
 pub struct LogConfig {
     /// `json` (default) or `pretty`.
     pub format: LogFormat,
-    /// `EnvFilter` directives, e.g. `info,dhpanel=debug`.
+    /// `EnvFilter` directives, e.g. `info,builtpanel=debug`.
     pub filter: String,
     /// Optional OTLP/HTTP traces endpoint.
     pub otlp_endpoint: Option<String>,
@@ -329,7 +333,7 @@ impl Default for ControlConfig {
                 url: None,
                 url_file: None,
             },
-            // OWASP argon2id baseline; see dhpanel_auth_core::password::Argon2Params.
+            // OWASP argon2id baseline; see builtpanel_auth_core::password::Argon2Params.
             auth: AuthConfig {
                 argon2_memory_kib: 19 * 1024,
                 argon2_iterations: 2,
@@ -342,7 +346,8 @@ impl Default for ControlConfig {
                 lockout_minutes: 15,
                 ip_lockout_threshold: 10,
                 ip_lockout_minutes: 60,
-                totp_issuer: "DHPanel".to_owned(),
+                totp_issuer: "Built Panel".to_owned(),
+                root_login_socket: None,
             },
             secrets: SecretsConfig {
                 master_key: None,
@@ -355,7 +360,7 @@ impl Default for ControlConfig {
                 stream_url: None,
             },
             pki: PkiConfig {
-                ca_dir: PathBuf::from("/etc/dhpanel/secrets"),
+                ca_dir: PathBuf::from("/etc/builtpanel/secrets"),
             },
             license: LicenseConfig::default(),
             dns: DnsConfig {
@@ -408,8 +413,8 @@ pub enum ConfigError {
 }
 
 impl ControlConfig {
-    /// Loads from defaults, the config file named by `DHPANEL_CONFIG` (or the
-    /// default path, if it exists) and `DHPANEL_*` env, then validates.
+    /// Loads from defaults, the config file named by `BUILTPANEL_CONFIG` (or the
+    /// default path, if it exists) and `BUILTPANEL_*` env, then validates.
     ///
     /// # Errors
     /// Returns [`ConfigError`] for parse, validation or secret-file problems.
@@ -420,7 +425,7 @@ impl ControlConfig {
             .unwrap_or_else(|| PathBuf::from(DEFAULT_CONTROL_CONFIG));
         if explicit.is_some() && !path.exists() {
             return Err(ConfigError::Invalid {
-                key: "DHPANEL_CONFIG",
+                key: "BUILTPANEL_CONFIG",
                 reason: format!("file {} does not exist", path.display()),
             });
         }
@@ -435,7 +440,7 @@ impl ControlConfig {
     pub fn load_from(path: &Path) -> Result<Self, ConfigError> {
         let config: Self = Figment::from(Serialized::defaults(Self::default()))
             .merge(Toml::file(path))
-            .merge(Env::prefixed("DHPANEL_").ignore(&["CONFIG"]).split("__"))
+            .merge(Env::prefixed("BUILTPANEL_").ignore(&["CONFIG"]).split("__"))
             .extract()
             .map_err(describe_figment_error)?;
         config.validate()?;
@@ -630,7 +635,7 @@ impl ControlConfig {
 
     /// Resolves the base64 master key from `secrets.master_key` or
     /// `secrets.master_key_file`. Decoding and length checks are done by
-    /// `dhpanel_auth_core::secretbox::MasterKey::from_base64`.
+    /// `builtpanel_auth_core::secretbox::MasterKey::from_base64`.
     ///
     /// # Errors
     /// Missing secret, unreadable file or unsafe permissions.
@@ -712,7 +717,7 @@ impl ControlConfig {
 }
 
 /// Turns figment's error chain into one line per problem:
-/// `` `database.max_connections`: invalid type: found string "lots", expected u32 (from `DHPANEL_` environment variable(s)) ``.
+/// `` `database.max_connections`: invalid type: found string "lots", expected u32 (from `BUILTPANEL_` environment variable(s)) ``.
 /// Key paths come from figment; the `default` profile prefix is dropped.
 fn describe_figment_error(err: figment::Error) -> ConfigError {
     let problems = err
@@ -829,7 +834,7 @@ mod tests {
                 max_connections = 20
                 "#,
             )?;
-            jail.set_env("DHPANEL_DATABASE__MAX_CONNECTIONS", "30");
+            jail.set_env("BUILTPANEL_DATABASE__MAX_CONNECTIONS", "30");
             let cfg = load(jail).expect("valid");
             assert_eq!(cfg.listen.port(), 9000); // from file
             assert_eq!(cfg.log.format, LogFormat::Pretty); // from file
@@ -857,7 +862,7 @@ mod tests {
         Jail::expect_with(|jail| {
             // Isolate from the developer's shell (e.g. `devenv.sh env` exports).
             jail.clear_env();
-            jail.set_env("DHPANEL_DATABASE__MAX_CONNECTIONS", "lots");
+            jail.set_env("BUILTPANEL_DATABASE__MAX_CONNECTIONS", "lots");
             let msg = load(jail).expect_err("must fail").to_string();
             assert!(msg.contains("`database.max_connections`"), "{msg}");
             assert!(msg.contains("environment"), "{msg}");
@@ -870,7 +875,7 @@ mod tests {
         Jail::expect_with(|jail| {
             // Isolate from the developer's shell (e.g. `devenv.sh env` exports).
             jail.clear_env();
-            jail.set_env("DHPANEL_DATABASE__MAX_CONNECTIONS", "0");
+            jail.set_env("BUILTPANEL_DATABASE__MAX_CONNECTIONS", "0");
             let msg = load(jail).expect_err("must fail").to_string();
             assert!(msg.contains("database.max_connections"), "{msg}");
             Ok(())
@@ -881,7 +886,7 @@ mod tests {
     fn weak_argon2_settings_are_rejected() {
         Jail::expect_with(|jail| {
             jail.clear_env();
-            jail.set_env("DHPANEL_AUTH__ARGON2_MEMORY_KIB", "4096");
+            jail.set_env("BUILTPANEL_AUTH__ARGON2_MEMORY_KIB", "4096");
             let msg = load(jail).expect_err("too little memory").to_string();
             assert!(msg.contains("auth.argon2_memory_kib"), "{msg}");
             Ok(())
@@ -892,11 +897,11 @@ mod tests {
     fn session_timeouts_are_validated() {
         Jail::expect_with(|jail| {
             jail.clear_env();
-            jail.set_env("DHPANEL_AUTH__SESSION_IDLE_MINUTES", "1");
+            jail.set_env("BUILTPANEL_AUTH__SESSION_IDLE_MINUTES", "1");
             let msg = load(jail).expect_err("too short").to_string();
             assert!(msg.contains("auth.session_idle_minutes"), "{msg}");
-            jail.set_env("DHPANEL_AUTH__SESSION_IDLE_MINUTES", "120");
-            jail.set_env("DHPANEL_AUTH__SESSION_ABSOLUTE_HOURS", "1");
+            jail.set_env("BUILTPANEL_AUTH__SESSION_IDLE_MINUTES", "120");
+            jail.set_env("BUILTPANEL_AUTH__SESSION_ABSOLUTE_HOURS", "1");
             let msg = load(jail).expect_err("idle > absolute").to_string();
             assert!(msg.contains("must not exceed"), "{msg}");
             Ok(())
@@ -917,11 +922,11 @@ mod tests {
                 ),
                 (5, 15, 15, 10)
             );
-            jail.set_env("DHPANEL_AUTH__LOCKOUT_THRESHOLD", "0");
+            jail.set_env("BUILTPANEL_AUTH__LOCKOUT_THRESHOLD", "0");
             let msg = load(jail).expect_err("zero").to_string();
             assert!(msg.contains("auth.lockout_threshold"), "{msg}");
-            jail.set_env("DHPANEL_AUTH__LOCKOUT_THRESHOLD", "10");
-            jail.set_env("DHPANEL_AUTH__IP_LOCKOUT_THRESHOLD", "5");
+            jail.set_env("BUILTPANEL_AUTH__LOCKOUT_THRESHOLD", "10");
+            jail.set_env("BUILTPANEL_AUTH__IP_LOCKOUT_THRESHOLD", "5");
             let msg = load(jail).expect_err("ip < account").to_string();
             assert!(msg.contains("auth.ip_lockout_threshold"), "{msg}");
             Ok(())
@@ -937,14 +942,14 @@ mod tests {
             assert!(msg.contains("secrets.master_key"), "{msg}");
 
             jail.set_env(
-                "DHPANEL_SECRETS__MASTER_KEY",
+                "BUILTPANEL_SECRETS__MASTER_KEY",
                 "c2VjcmV0LWtleS1tYXRlcmlhbA==",
             );
             let cfg = load(jail).expect("inline");
             assert!(cfg.master_key().is_ok());
             assert!(!format!("{cfg:?}").contains("c2VjcmV0"), "{cfg:?}");
 
-            jail.set_env("DHPANEL_SECRETS__MASTER_KEY_FILE", "/nonexistent");
+            jail.set_env("BUILTPANEL_SECRETS__MASTER_KEY_FILE", "/nonexistent");
             let msg = load(jail).expect_err("both").to_string();
             assert!(msg.contains("secrets.master_key"), "{msg}");
             Ok(())
@@ -961,8 +966,8 @@ mod tests {
             assert_eq!(cfg.dns.sync_seconds, 30);
             assert!(cfg.powerdns_api_key().is_err(), "no key until one is set");
 
-            jail.set_env("DHPANEL_DNS__POWERDNS_URL", "http://127.0.0.1:8053");
-            jail.set_env("DHPANEL_DNS__POWERDNS_API_KEY", "dns-key-material");
+            jail.set_env("BUILTPANEL_DNS__POWERDNS_URL", "http://127.0.0.1:8053");
+            jail.set_env("BUILTPANEL_DNS__POWERDNS_API_KEY", "dns-key-material");
             let cfg = load(jail).expect("set");
             assert!(cfg.powerdns_api_key().is_ok());
             assert!(
@@ -977,18 +982,21 @@ mod tests {
                 "http://a b",
                 "http://x;y",
             ] {
-                jail.set_env("DHPANEL_DNS__POWERDNS_URL", bad);
+                jail.set_env("BUILTPANEL_DNS__POWERDNS_URL", bad);
                 let msg = load(jail).expect_err(bad).to_string();
                 assert!(msg.contains("dns.powerdns_url"), "{bad}: {msg}");
             }
-            jail.set_env("DHPANEL_DNS__POWERDNS_URL", "https://dns.example.net:8443");
+            jail.set_env(
+                "BUILTPANEL_DNS__POWERDNS_URL",
+                "https://dns.example.net:8443",
+            );
             assert!(load(jail).is_ok());
             for bad in ["4", "3601", "0"] {
-                jail.set_env("DHPANEL_DNS__SYNC_SECONDS", bad);
+                jail.set_env("BUILTPANEL_DNS__SYNC_SECONDS", bad);
                 let msg = load(jail).expect_err(bad).to_string();
                 assert!(msg.contains("dns.sync_seconds"), "{bad}: {msg}");
             }
-            jail.set_env("DHPANEL_DNS__SYNC_SECONDS", "30");
+            jail.set_env("BUILTPANEL_DNS__SYNC_SECONDS", "30");
             Ok(())
         });
     }
@@ -998,8 +1006,8 @@ mod tests {
         Jail::expect_with(|jail| {
             jail.clear_env();
             let cfg = load(jail).expect("defaults");
-            assert_eq!(cfg.pki.ca_dir, PathBuf::from("/etc/dhpanel/secrets"));
-            jail.set_env("DHPANEL_PKI__CA_DIR", "/srv/ca");
+            assert_eq!(cfg.pki.ca_dir, PathBuf::from("/etc/builtpanel/secrets"));
+            jail.set_env("BUILTPANEL_PKI__CA_DIR", "/srv/ca");
             assert_eq!(
                 load(jail).expect("env").pki.ca_dir,
                 PathBuf::from("/srv/ca")
@@ -1022,7 +1030,7 @@ mod tests {
                 "http://localhost:8443",
                 "http://127.0.0.1",
             ] {
-                jail.set_env("DHPANEL_AGENT__PUBLIC_URL", ok);
+                jail.set_env("BUILTPANEL_AGENT__PUBLIC_URL", ok);
                 assert!(load(jail).is_ok(), "{ok}");
             }
             for bad in [
@@ -1040,13 +1048,13 @@ mod tests {
                 "panel.example.com",
                 &format!("https://{}", "a".repeat(200)),
             ] {
-                jail.set_env("DHPANEL_AGENT__PUBLIC_URL", bad);
+                jail.set_env("BUILTPANEL_AGENT__PUBLIC_URL", bad);
                 let msg = load(jail).expect_err(bad).to_string();
                 assert!(msg.contains("agent.public_url"), "{bad}: {msg}");
             }
-            jail.set_env("DHPANEL_AGENT__PUBLIC_URL", "https://panel.example.com");
+            jail.set_env("BUILTPANEL_AGENT__PUBLIC_URL", "https://panel.example.com");
             for bad in ["0", "61"] {
-                jail.set_env("DHPANEL_AGENT__ENROLLMENT_TOKEN_MINUTES", bad);
+                jail.set_env("BUILTPANEL_AGENT__ENROLLMENT_TOKEN_MINUTES", bad);
                 let msg = load(jail).expect_err(bad).to_string();
                 assert!(msg.contains("agent.enrollment_token_minutes"), "{msg}");
             }
@@ -1059,7 +1067,7 @@ mod tests {
         Jail::expect_with(|jail| {
             jail.clear_env();
             assert_eq!(load(jail).expect("defaults").auth.sudo_minutes, 10);
-            jail.set_env("DHPANEL_AUTH__SUDO_MINUTES", "0");
+            jail.set_env("BUILTPANEL_AUTH__SUDO_MINUTES", "0");
             let msg = load(jail).expect_err("zero").to_string();
             assert!(msg.contains("auth.sudo_minutes"), "{msg}");
             Ok(())
@@ -1070,9 +1078,12 @@ mod tests {
     fn totp_issuer_is_validated() {
         Jail::expect_with(|jail| {
             jail.clear_env();
-            assert_eq!(load(jail).expect("defaults").auth.totp_issuer, "DHPanel");
+            assert_eq!(
+                load(jail).expect("defaults").auth.totp_issuer,
+                "Built Panel"
+            );
             for bad in ["", "My:Panel"] {
-                jail.set_env("DHPANEL_AUTH__TOTP_ISSUER", bad);
+                jail.set_env("BUILTPANEL_AUTH__TOTP_ISSUER", bad);
                 let msg = load(jail).expect_err("bad issuer").to_string();
                 assert!(msg.contains("auth.totp_issuer"), "{msg}");
             }
@@ -1124,7 +1135,7 @@ mod tests {
         Jail::expect_with(|jail| {
             // Isolate from the developer's shell (e.g. `devenv.sh env` exports).
             jail.clear_env();
-            jail.set_env("DHPANEL_DATABASE__URL", "postgres://u:hunter2@db/x");
+            jail.set_env("BUILTPANEL_DATABASE__URL", "postgres://u:hunter2@db/x");
             let cfg = load(jail).expect("valid");
             assert!(!format!("{cfg:?}").contains("hunter2"));
             assert_eq!(
@@ -1140,7 +1151,7 @@ mod tests {
         Jail::expect_with(|jail| {
             // Isolate from the developer's shell (e.g. `devenv.sh env` exports).
             jail.clear_env();
-            jail.set_env("DHPANEL_REDIS__URL", "http://cache");
+            jail.set_env("BUILTPANEL_REDIS__URL", "http://cache");
             let cfg = load(jail).expect("valid");
             let msg = cfg.redis_url().expect_err("scheme").to_string();
             assert!(msg.contains("redis://"), "{msg}");
@@ -1153,8 +1164,8 @@ mod tests {
         Jail::expect_with(|jail| {
             // Isolate from the developer's shell (e.g. `devenv.sh env` exports).
             jail.clear_env();
-            jail.set_env("DHPANEL_REDIS__URL", "redis://a");
-            jail.set_env("DHPANEL_REDIS__URL_FILE", "/tmp/x");
+            jail.set_env("BUILTPANEL_REDIS__URL", "redis://a");
+            jail.set_env("BUILTPANEL_REDIS__URL_FILE", "/tmp/x");
             assert!(load(jail).is_err());
             Ok(())
         });
@@ -1169,7 +1180,7 @@ mod tests {
             jail.clear_env();
             let path = jail.directory().join("db_url");
             std::fs::write(&path, "postgres://u:p@db/x\n").expect("write");
-            jail.set_env("DHPANEL_DATABASE__URL_FILE", path.display());
+            jail.set_env("BUILTPANEL_DATABASE__URL_FILE", path.display());
 
             std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).expect("chmod");
             let cfg = load(jail).expect("valid");

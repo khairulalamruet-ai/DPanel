@@ -382,8 +382,8 @@ export const initialPageTemplates: PageTemplateItem[] = [
     variables: [
       { name: "{{domain}}", description: "Suspended domain name", sample: "example.com" },
       { name: "{{reason}}", description: "Reason for domain suspension", sample: "Terms of service review" },
-      { name: "{{contact_email}}", description: "Support or admin contact email", sample: "admin@dhpanel.net" },
-      { name: "{{panel_name}}", description: "Platform / branding name", sample: "DHPanel" },
+      { name: "{{contact_email}}", description: "Support or admin contact email", sample: "admin@builtpanel.net" },
+      { name: "{{panel_name}}", description: "Platform / branding name", sample: "Built Panel" },
       { name: "{{year}}", description: "Current calendar year", sample: "2026" },
     ],
   },
@@ -400,8 +400,8 @@ export const initialPageTemplates: PageTemplateItem[] = [
     variables: [
       { name: "{{username}}", description: "Suspended user account name", sample: "tenant_user" },
       { name: "{{domain}}", description: "Domain name being accessed", sample: "client-site.com" },
-      { name: "{{contact_email}}", description: "Administrative support email", sample: "support@dhpanel.net" },
-      { name: "{{panel_name}}", description: "Platform / branding name", sample: "DHPanel" },
+      { name: "{{contact_email}}", description: "Administrative support email", sample: "support@builtpanel.net" },
+      { name: "{{panel_name}}", description: "Platform / branding name", sample: "Built Panel" },
       { name: "{{year}}", description: "Current calendar year", sample: "2026" },
     ],
   },
@@ -418,7 +418,7 @@ export const initialPageTemplates: PageTemplateItem[] = [
     variables: [
       { name: "{{domain}}", description: "Host domain name", sample: "my-app.net" },
       { name: "{{path}}", description: "Missing request path", sample: "/old-missing-page" },
-      { name: "{{panel_name}}", description: "Platform / branding name", sample: "DHPanel" },
+      { name: "{{panel_name}}", description: "Platform / branding name", sample: "Built Panel" },
       { name: "{{year}}", description: "Current calendar year", sample: "2026" },
     ],
   },
@@ -435,7 +435,7 @@ export const initialPageTemplates: PageTemplateItem[] = [
     variables: [
       { name: "{{domain}}", description: "Host domain name", sample: "api-server.org" },
       { name: "{{service}}", description: "Failing upstream daemon name", sample: "php-fpm-8.3" },
-      { name: "{{panel_name}}", description: "Platform / branding name", sample: "DHPanel" },
+      { name: "{{panel_name}}", description: "Platform / branding name", sample: "Built Panel" },
       { name: "{{year}}", description: "Current calendar year", sample: "2026" },
     ],
   },

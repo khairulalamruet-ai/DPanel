@@ -2,7 +2,7 @@
 --
 -- account_mfa: one row per account and factor kind. `secret_enc` is the TOTP
 -- secret encrypted with the master key (XChaCha20-Poly1305, see
--- dhpanel_auth_core::secretbox); the plaintext never reaches the database.
+-- builtpanel_auth_core::secretbox); the plaintext never reaches the database.
 -- A row with confirmed_at IS NULL is an enrolment in progress and does not
 -- protect logins yet. `last_used_step` is the newest accepted TOTP time step;
 -- codes for that step or older are refused (replay protection).

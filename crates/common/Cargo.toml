@@ -1,6 +1,6 @@
 [package]
-name = "dhpanel-common"
-description = "Shared primitives used across DHPanel crates and apps."
+name = "builtpanel-common"
+description = "Shared primitives used across Built Panel crates and apps."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

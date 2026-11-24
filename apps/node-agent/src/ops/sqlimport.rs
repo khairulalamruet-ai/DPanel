@@ -19,8 +19,8 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
 use mysql_async::prelude::Queryable as _;
 use sha2::{Digest as _, Sha256};
 use uuid::Uuid;
@@ -282,8 +282,9 @@ pub async fn import_sql(context: Arc<TenantContext>, op: Operation) -> Result<Ou
     };
     // Arguments first: nothing is touched for a bad request.
     TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
-    dhpanel_domain::databases::check_identifier(&database).map_err(|e| invalid(&e.to_string()))?;
-    if engine == dhpanel_node_protocol::DbEngine::Postgres {
+    builtpanel_domain::databases::check_identifier(&database)
+        .map_err(|e| invalid(&e.to_string()))?;
+    if engine == builtpanel_node_protocol::DbEngine::Postgres {
         super::pg::identifier(&database)?;
     }
     let local = url.starts_with("http://127.0.0.1")
@@ -343,7 +344,7 @@ pub async fn import_sql(context: Arc<TenantContext>, op: Operation) -> Result<Ou
 #[allow(clippy::too_many_arguments)]
 async fn run(
     context: &TenantContext,
-    engine: dhpanel_node_protocol::DbEngine,
+    engine: builtpanel_node_protocol::DbEngine,
     database: &str,
     import_id: Uuid,
     url: &str,
@@ -376,7 +377,7 @@ async fn run(
 #[allow(clippy::too_many_arguments)]
 async fn run_with_file(
     context: &TenantContext,
-    engine: dhpanel_node_protocol::DbEngine,
+    engine: builtpanel_node_protocol::DbEngine,
     database: &str,
     import_id: Uuid,
     url: &str,
@@ -409,10 +410,10 @@ async fn run_with_file(
         ));
     }
     match engine {
-        dhpanel_node_protocol::DbEngine::Mysql => {
+        builtpanel_node_protocol::DbEngine::Mysql => {
             import_file(context, database, import_id, path, gzip).await
         }
-        dhpanel_node_protocol::DbEngine::Postgres => {
+        builtpanel_node_protocol::DbEngine::Postgres => {
             super::pgimport::import_file(context, database, import_id, path, gzip).await
         }
     }
@@ -460,7 +461,7 @@ pub(super) async fn import_file(
             ))
             .await
             .map_err(|e| failed(&server_words(&e)))?;
-        let privileges = dhpanel_domain::databases::Access::All
+        let privileges = builtpanel_domain::databases::Access::All
             .privileges()
             .join(", ");
         admin
@@ -720,7 +721,10 @@ mod tests {
     #[test]
     fn the_temporary_password_is_long_and_mixed() {
         let p = random_password().unwrap();
-        assert!(dhpanel_domain::databases::check_password(&p).is_ok(), "{p}");
+        assert!(
+            builtpanel_domain::databases::check_password(&p).is_ok(),
+            "{p}"
+        );
         assert_ne!(p, random_password().unwrap());
     }
 

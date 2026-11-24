@@ -5,7 +5,7 @@
 //!   certificate signing request (CSR) the agent made with its own key. The
 //!   CSR only proves the agent holds that key: **everything else in it is
 //!   ignored**. The name (`node-<uuid>`), the identity URI
-//!   (`urn:dhpanel:node:<uuid>`), the key usages, "not a CA" and the validity
+//!   (`urn:builtpanel:node:<uuid>`), the key usages, "not a CA" and the validity
 //!   are set here, so an agent cannot ask for another node's identity, a server
 //!   role or CA powers.
 //! * **server certificates** for the control plane's agent-facing port.
@@ -37,8 +37,8 @@ use uuid::Uuid;
 pub const CA_CERT_FILE: &str = "node_ca.crt";
 /// File name of the CA private key inside the CA directory.
 pub const CA_KEY_FILE: &str = "node_ca.key";
-/// Prefix of the identity URI in node certificates: `urn:dhpanel:node:<uuid>`.
-pub const NODE_URI_PREFIX: &str = "urn:dhpanel:node:";
+/// Prefix of the identity URI in node certificates: `urn:builtpanel:node:<uuid>`.
+pub const NODE_URI_PREFIX: &str = "urn:builtpanel:node:";
 /// Default lifetime of node certificates (ADR 0004: 90 days, rotated by the agent).
 pub const DEFAULT_NODE_VALIDITY: Duration = Duration::days(90);
 /// Longest lifetime allowed for a node or server certificate.
@@ -171,7 +171,7 @@ fn fingerprint(der: &[u8]) -> String {
 
 fn dn(common_name: &str) -> DistinguishedName {
     let mut dn = DistinguishedName::new();
-    dn.push(DnType::OrganizationName, "DHPanel");
+    dn.push(DnType::OrganizationName, "Built Panel");
     dn.push(DnType::CommonName, common_name);
     dn
 }
@@ -937,7 +937,7 @@ mod tests {
     }
 
     fn temp_dir(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("dhpanel-pki-{tag}-{}", Uuid::now_v7()));
+        let dir = std::env::temp_dir().join(format!("builtpanel-pki-{tag}-{}", Uuid::now_v7()));
         fs::create_dir_all(&dir).unwrap();
         dir
     }

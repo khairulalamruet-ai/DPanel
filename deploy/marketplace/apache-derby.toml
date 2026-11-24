@@ -1,0 +1,8 @@
+slug        = "apache-derby"
+name        = "Apache Derby"
+category    = "java_tools"
+kind        = "unavailable"
+description = "Apache Derby."
+license     = "Apache-2.0"
+covers      = ["Apache Derby"]
+reason      = "not packaged for the panel yet"

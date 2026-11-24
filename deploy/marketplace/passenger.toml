@@ -1,0 +1,8 @@
+slug        = "passenger"
+name        = "Passenger"
+category    = "utilities"
+kind        = "unavailable"
+description = "Passenger."
+license     = "GPL-3.0-only"
+covers      = ["Passenger"]
+reason      = "an Apache/Nginx module; the panel runs Node.js and Python applications itself"

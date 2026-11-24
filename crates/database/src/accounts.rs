@@ -1,6 +1,6 @@
 //! Account persistence.
 
-use dhpanel_domain::{AccountKind, Email, Username};
+use builtpanel_domain::{AccountKind, Email, Username};
 use sqlx::{PgConnection, PgPool, types::Uuid};
 
 /// Mirrors the `account_kind` PostgreSQL enum.
@@ -212,6 +212,69 @@ pub async fn find_for_reauth(pool: &PgPool, id: Uuid) -> Result<Option<LoginAcco
     )
     .fetch_optional(pool)
     .await
+}
+
+/// The `password_hash` of the administrator named `root`: it has no panel password, the
+/// server's own root password is checked instead (by the `builtpanel-root-auth` helper).
+pub const SYSTEM_ROOT_PASSWORD: &str = "!system:root";
+
+/// The administrator `root` that logs in with the server's root password, if it is set up.
+///
+/// # Errors
+/// Database errors.
+pub async fn find_system_root(pool: &PgPool) -> Result<Option<LoginAccount>, sqlx::Error> {
+    sqlx::query_as!(
+        LoginAccount,
+        r#"SELECT id, effective_account_status(id) AS "status!: DbAccountStatus", password_hash
+           FROM accounts
+           WHERE username = 'root' AND kind = 'admin' AND password_hash = '!system:root'"#,
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+/// Creates the administrator `root` (or turns it back on) with no panel password of its own.
+/// Returns its id and whether it was created now.
+///
+/// # Errors
+/// [`InsertAccountError::EmailTaken`] when another account uses the email; database errors.
+pub async fn enable_system_root(
+    pool: &PgPool,
+    email: &Email,
+) -> Result<(Uuid, bool), InsertAccountError> {
+    let row = sqlx::query!(
+        r#"INSERT INTO accounts (kind, username, email, password_hash)
+           VALUES ('admin', 'root', $1, '!system:root')
+           ON CONFLICT (username) DO UPDATE
+               SET password_hash = '!system:root', status = 'active'
+               WHERE accounts.kind = 'admin'
+           RETURNING id, (xmax = 0) AS "created!""#,
+        email.as_str(),
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(
+        |err| match err.as_database_error().and_then(|e| e.constraint()) {
+            Some("accounts_email_key") => InsertAccountError::EmailTaken,
+            _ => InsertAccountError::Database(err),
+        },
+    )?;
+    row.map(|r| (r.id, r.created))
+        .ok_or(InsertAccountError::UsernameTaken)
+}
+
+/// Turns off the login with the server's root password. Returns whether there was one.
+///
+/// # Errors
+/// Database errors.
+pub async fn disable_system_root(pool: &PgPool) -> Result<bool, sqlx::Error> {
+    let done = sqlx::query!(
+        "UPDATE accounts SET status = 'disabled'
+         WHERE username = 'root' AND kind = 'admin' AND password_hash = '!system:root'"
+    )
+    .execute(pool)
+    .await?;
+    Ok(done.rows_affected() > 0)
 }
 
 /// Replaces the stored password hash (used when upgrading hash parameters).

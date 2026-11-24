@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
+import { ToastProvider } from "@builtpanel/ui";
 import { UserCreateWizardPage } from "./UserCreateWizardPage";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -130,7 +130,7 @@ describe("UserCreateWizardPage (T04.16)", () => {
     );
 
     // Verify container name displayed
-    expect(screen.getByText("dh-tenant-demouser")).toBeInTheDocument();
+    expect(screen.getByText("bp-tenant-demouser")).toBeInTheDocument();
   });
 
   it("DoD T16.02: auto placement strictly excludes draining nodes from scheduling", async () => {

@@ -9,8 +9,8 @@ import {
   Button,
   Input,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Layers, Cpu, Server, Save, HardDrive, Globe, Network, MapPin, Tag } from "lucide-react";
 import { Plan, CreatePlanPayload, PlanResources, PlanLimits } from "./types";
 import { PRESET_NODE_GROUPS, getNodeGroupById } from "./node-groups";

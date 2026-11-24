@@ -1,17 +1,17 @@
 //! A tenant's own cache server (T12.10): Redis or Memcached in a container of the tenant.
 //!
 //! The container sits on the tenant's network only (no port is published), under its container
-//! name (`dh-<account>-redis`) there, runs as the tenant's own user id with a read-only root and a
+//! name (`bp-<account>-redis`) there, runs as the tenant's own user id with a read-only root and a
 //! memory limit, and is replaced when its memory or password changes. Redis keeps nothing on
 //! disk and asks for a password; the password is in a small configuration file in a folder of
 //! the agent's state (mounted read-only), never in the container's command line.
 
 use std::{os::unix::fs::PermissionsExt as _, sync::Arc};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerError, Network, Restart, Tmpfs, VolumeMount};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role, network_name};
+use builtpanel_docker_manager::{ContainerSpec, DockerError, Network, Restart, Tmpfs, VolumeMount};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role, network_name};
 
 use super::{
     db,
@@ -94,7 +94,7 @@ pub async fn set_cache_instance(
         .pull_image(&image)
         .await
         .map_err(|e| docker_error(&e))?;
-    let name = db::name(&format!("dh-{}-{kind}", username.as_str()))?;
+    let name = db::name(&format!("bp-{}-{kind}", username.as_str()))?;
     let mut spec = ContainerSpec::new(name.clone(), image);
     spec.user = Some((uid, uid));
     // The limit is for the data; the server itself needs a little more.
@@ -121,7 +121,7 @@ pub async fn set_cache_instance(
             std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
                 .map_err(|e| failed(&format!("cannot set rights: {e}")))?;
         }
-        let volume = db::name(&format!("dh-{}-{kind}-conf", username.as_str()))?;
+        let volume = db::name(&format!("bp-{}-{kind}-conf", username.as_str()))?;
         let _ = docker.remove_volume(&volume).await;
         docker
             .create_bind_volume(&volume, &dir, &state(&context)?)
@@ -129,10 +129,10 @@ pub async fn set_cache_instance(
             .map_err(|e| docker_error(&e))?;
         spec.volumes = vec![VolumeMount {
             volume,
-            target: "/opt/dh-redis".into(),
+            target: "/opt/bp-redis".into(),
             read_only: true,
         }];
-        spec.command = vec!["redis-server".into(), "/opt/dh-redis/redis.conf".into()];
+        spec.command = vec!["redis-server".into(), "/opt/bp-redis/redis.conf".into()];
     } else {
         spec.command = vec![
             "memcached".into(),
@@ -186,14 +186,14 @@ pub async fn remove_cache_instance(
     kind_of(&kind)?;
     let username = TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
     let docker = &context.docker;
-    let name = db::name(&format!("dh-{}-{kind}", username.as_str()))?;
+    let name = db::name(&format!("bp-{}-{kind}", username.as_str()))?;
     let existed = match docker.remove(&name, true).await {
         Ok(()) => true,
         Err(DockerError::NotFound) => false,
         Err(e) => return Err(docker_error(&e)),
     };
     let _ = docker
-        .remove_volume(&db::name(&format!("dh-{}-{kind}-conf", username.as_str()))?)
+        .remove_volume(&db::name(&format!("bp-{}-{kind}-conf", username.as_str()))?)
         .await;
     let _ = std::fs::remove_dir_all(
         state(&context)?

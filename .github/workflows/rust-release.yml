@@ -87,20 +87,20 @@ jobs:
       - name: The tag matches the version in Cargo.toml
         run: |
           want="${GITHUB_REF_NAME#v}"
-          have="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="dhpanel-control-api"))')"
+          have="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="builtpanel-control-api"))')"
           [ "$want" = "$have" ] || { echo "tag $GITHUB_REF_NAME but Cargo.toml says $have"; exit 1; }
       - name: Build (locked, reproducible flags)
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           export RUSTFLAGS="--remap-path-prefix=$PWD=/src --remap-path-prefix=$HOME/.cargo=/cargo -C strip=symbols"
-          cargo build --release --locked -p dhpanel-control-api -p dhpanel-dhctl -p dhpanel-node-agent -p dhpanel-priv-helper -p dhpanel-license-authority
+          cargo build --release --locked -p builtpanel-control-api -p builtpanel-bpctl -p builtpanel-node-agent -p builtpanel-priv-helper -p builtpanel-root-auth -p builtpanel-license-authority
           # No program may need a newer glibc than the oldest system the installer supports.
-          for f in target/release/dhpanel-control-api target/release/dhctl target/release/dhpanel-agent target/release/dhpanel-priv-helper target/release/dhpanel-license-authority; do
+          for f in target/release/builtpanel-control-api target/release/bpctl target/release/builtpanel-agent target/release/builtpanel-priv-helper target/release/builtpanel-root-auth target/release/builtpanel-license-authority; do
             v="$(objdump -T "$f" | grep -o 'GLIBC_[0-9.]*' | sort -V | tail -1 | cut -d_ -f2)"
             [ "$(printf '%s\n2.35\n' "$v" | sort -V | tail -1)" = 2.35 ] || { echo "$f needs glibc $v (more than 2.35)"; exit 1; }
           done
           mkdir -p dist/bin
-          for b in dhpanel-control-api dhctl dhpanel-agent dhpanel-priv-helper dhpanel-license-authority; do
+          for b in builtpanel-control-api bpctl builtpanel-agent builtpanel-priv-helper builtpanel-root-auth builtpanel-license-authority; do
             install -m 0755 "target/release/$b" dist/bin/
           done
       - name: SBOM
@@ -116,9 +116,9 @@ jobs:
       - name: Package
         run: |
           v="${GITHUB_REF_NAME#v}"
-          cp -r deploy/install.sh deploy/systemd deploy/agent deploy/config deploy/runbooks deploy/release dist/
+          cp -r deploy/install.sh deploy/ui.sh deploy/systemd deploy/agent deploy/config deploy/runbooks deploy/release dist/
           cp openapi.json dist/
-          name="dhpanel-${v}-linux-${{ matrix.arch }}"
+          name="builtpanel-${v}-linux-${{ matrix.arch }}"
           mkdir "$name" && cp -r dist/* "$name"/
           # Deterministic archive: sorted names, fixed owner and time.
           tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git log -1 --format=%ct)" -cf - "$name" | gzip -n -9 > "$name.tar.gz"
@@ -126,7 +126,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.arch }}
-          path: dhpanel-*.tar.gz*
+          path: builtpanel-*.tar.gz*
 
   reproduce:
     name: the build is reproducible
@@ -138,16 +138,17 @@ jobs:
         with:
           fetch-depth: 0
       - run: rustup toolchain install && rustup show active-toolchain
-      - name: Build again, from another path
+      - name: Build again, from the same path
         run: |
-          mkdir /tmp/second && git archive HEAD | tar -x -C /tmp/second
-          cd /tmp/second
-          export SOURCE_DATE_EPOCH="$(git -C "$GITHUB_WORKSPACE" log -1 --format=%ct)"
+          # The vendored OpenSSL writes the folder it was built in into the program (its engines
+          # and modules folders), and the compiler's path remapping does not reach that, so a
+          # second build is compared from the same path as the first (a fresh runner).
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           export RUSTFLAGS="--remap-path-prefix=$PWD=/src --remap-path-prefix=$HOME/.cargo=/cargo -C strip=symbols"
           # The same packages as the real build: building a different set unifies features
           # differently and gives different bytes.
-          cargo build --release --locked -p dhpanel-control-api -p dhpanel-dhctl -p dhpanel-node-agent -p dhpanel-priv-helper -p dhpanel-license-authority
-          sha256sum target/release/dhpanel-control-api target/release/dhctl | awk '{print $1}' > /tmp/second.sha
+          cargo build --release --locked -p builtpanel-control-api -p builtpanel-bpctl -p builtpanel-node-agent -p builtpanel-priv-helper -p builtpanel-root-auth -p builtpanel-license-authority
+          sha256sum target/release/builtpanel-control-api target/release/bpctl | awk '{print $1}' > /tmp/second.sha
       - uses: actions/download-artifact@v7
         with:
           name: release-x86_64
@@ -155,9 +156,25 @@ jobs:
       - name: Same bytes
         run: |
           v="${GITHUB_REF_NAME#v}"
-          tar -xzf first/dhpanel-${v}-linux-x86_64.tar.gz -C first
-          sha256sum first/dhpanel-${v}-linux-x86_64/bin/dhpanel-control-api first/dhpanel-${v}-linux-x86_64/bin/dhctl | awk '{print $1}' > /tmp/first.sha
+          tar -xzf first/builtpanel-${v}-linux-x86_64.tar.gz -C first
+          sha256sum first/builtpanel-${v}-linux-x86_64/bin/builtpanel-control-api first/builtpanel-${v}-linux-x86_64/bin/bpctl | awk '{print $1}' > /tmp/first.sha
           diff /tmp/first.sha /tmp/second.sha && echo "the two builds are identical"
+      - name: Keep both programs when they differ, to find out why
+        if: failure()
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          mkdir -p /tmp/diag/first /tmp/diag/second
+          cp first/builtpanel-${v}-linux-x86_64/bin/builtpanel-control-api /tmp/diag/first/
+          cp target/release/builtpanel-control-api /tmp/diag/second/
+          cmp -l /tmp/diag/first/builtpanel-control-api /tmp/diag/second/builtpanel-control-api | wc -l
+          for d in first second; do strings -a /tmp/diag/$d/builtpanel-control-api > /tmp/diag/$d.str; done
+          diff /tmp/diag/first.str /tmp/diag/second.str | head -40 || true
+      - name: Upload the two programs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reproduce-diagnosis
+          path: /tmp/diag/
 
   release:
     name: signed manifest and publish
@@ -175,9 +192,10 @@ jobs:
           pattern: release-*
           merge-multiple: true
           path: out
-      - uses: sigstore/cosign-installer@v4
+      - uses: sigstore/cosign-installer@v4.1.3
       - name: The one-command installer is a release file too
-        run: cp deploy/get.sh out/get.sh
+        # The published get.sh carries the installer's look (deploy/ui.sh) inside it.
+        run: sed '/^# @UI@$/r deploy/ui.sh' deploy/get.sh > out/get.sh && bash -n out/get.sh
       - name: Manifest (files, sizes, hashes, commit) and its signature
         run: |
           cd out
@@ -208,20 +226,22 @@ jobs:
           # The manifest lists the programs themselves (what an installation runs and what the
           # daily integrity scan hashes) and the two web archives, taken out of the x86_64 archive.
           v="${GITHUB_REF_NAME#v}"
-          mkdir -p bin web && tar -xzf out/dhpanel-${v}-linux-x86_64.tar.gz -C bin --strip-components=2 "dhpanel-${v}-linux-x86_64/bin"
-          tar -xzf out/dhpanel-${v}-linux-x86_64.tar.gz -C web --strip-components=2 "dhpanel-${v}-linux-x86_64/web"
+          # Not in the checkout: it has a web/ folder of its own (the source of the interface).
+          rel="$RUNNER_TEMP/release-files"; mkdir -p "$rel/bin" "$rel/web"
+          tar -xzf out/builtpanel-${v}-linux-x86_64.tar.gz -C "$rel/bin" --strip-components=2 "builtpanel-${v}-linux-x86_64/bin"
+          tar -xzf out/builtpanel-${v}-linux-x86_64.tar.gz -C "$rel/web" --strip-components=2 "builtpanel-${v}-linux-x86_64/web"
           umask 077
           printf '%s' "$RELEASE_SIGNING_KEY" > "$RUNNER_TEMP/release.key"
-          bin/dhctl release sign --key "$RUNNER_TEMP/release.key" --kid "$RELEASE_KID" \
+          "$rel/bin/bpctl" release sign --key "$RUNNER_TEMP/release.key" --kid "$RELEASE_KID" \
             --version "$v" --commit "$GITHUB_SHA" --created-at "$(git log -1 --format=%ct)" \
-            --out out/release-manifest.json bin/* web/*
+            --out out/release-manifest.json "$rel"/bin/* "$rel"/web/*
           rm -f "$RUNNER_TEMP/release.key"
       - name: Changelog
         run: deploy/release/changelog.sh "$GITHUB_REF_NAME" > out/CHANGELOG.md
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" out/* --title "DHPanel ${GITHUB_REF_NAME#v}" --notes-file out/CHANGELOG.md --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" out/* --title "Built Panel ${GITHUB_REF_NAME#v}" --notes-file out/CHANGELOG.md --verify-tag
       - uses: actions/upload-artifact@v7
         with:
           name: published
@@ -243,6 +263,6 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: deploy/release/remote-deploy.sh "out/dhpanel-${GITHUB_REF_NAME#v}-linux-x86_64.tar.gz" out/release-manifest.json
+        run: deploy/release/remote-deploy.sh "out/builtpanel-${GITHUB_REF_NAME#v}-linux-x86_64.tar.gz" out/release-manifest.json
       - name: Smoke test
         run: deploy/release/smoke.sh "${{ vars.PANEL_URL }}"

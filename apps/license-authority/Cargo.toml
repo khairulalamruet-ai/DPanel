@@ -1,6 +1,6 @@
 [package]
-name = "dhpanel-license-authority"
-description = "DHPanel license authority: customers, licenses, activations and signed entitlements."
+name = "builtpanel-license-authority"
+description = "Built Panel license authority: customers, licenses, activations and signed entitlements."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,21 +8,21 @@ license.workspace = true
 publish.workspace = true
 
 [lib]
-name = "dhpanel_license_authority"
+name = "builtpanel_license_authority"
 path = "src/lib.rs"
 
 [[bin]]
-name = "dhpanel-license-authority"
+name = "builtpanel-license-authority"
 path = "src/main.rs"
 
 [lints]
 workspace = true
 
 [dependencies]
-dhpanel-auth-core.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-license.workspace = true
-dhpanel-observability.workspace = true
+builtpanel-auth-core.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-license.workspace = true
+builtpanel-observability.workspace = true
 axum = "0.8"
 base64 = "0.23"
 figment = { version = "0.10", features = ["toml", "env"] }
@@ -38,6 +38,6 @@ tracing = "0.1.44"
 uuid = { version = "1", features = ["serde", "v4", "v7"] }
 
 [dev-dependencies]
-dhpanel-license-client.workspace = true
+builtpanel-license-client.workspace = true
 figment = { version = "0.10", features = ["toml", "env", "test"] }
 tower = { version = "0.5", features = ["util"] }

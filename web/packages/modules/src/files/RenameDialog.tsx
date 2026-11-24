@@ -8,11 +8,11 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { renameItem } from "./api";
 import { Edit } from "lucide-react";
 import { FileItem, RenamePayload } from "./types";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 interface RenameDialogProps {
   open: boolean;
@@ -49,13 +49,7 @@ export function RenameDialog({
 
     try {
       setIsSubmitting(true);
-      await apiFetch("/api/v1/client/files/rename", {
-        method: "PUT",
-        body: JSON.stringify({
-          old_path: file.path,
-          new_name: trimmed,
-        } as RenamePayload),
-      });
+      await renameItem(file.path, trimmed);
 
       toast({
         title: t("common.success"),

@@ -1,5 +1,5 @@
 //! The entitlement a license authority issues (T17.04, T17.09): claims, signed, and checked
-//! by the DHPanel installation it was issued to.
+//! by the Built Panel installation it was issued to.
 //!
 //! A [`Document`] is the claims in canonical JSON plus the key id and the Ed25519 signature
 //! over a domain-separated form of those bytes. [`Document::verify`] refuses an unknown key,
@@ -23,7 +23,7 @@ pub const SCHEMA_VERSION: u32 = 1;
 
 /// What a signature covers is prefixed with this, so a signature made for one purpose is
 /// never valid for another (entitlements, release manifests and so on use their own).
-pub const ENTITLEMENT_DOMAIN: &[u8] = b"dhpanel-entitlement-v1\n";
+pub const ENTITLEMENT_DOMAIN: &[u8] = b"builtpanel-entitlement-v1\n";
 
 /// What a license is bound to. All three lists are part of the signed claims, so they cannot be
 /// changed by whoever holds the entitlement. A host name or domain is written in lower case, a
@@ -135,7 +135,7 @@ pub struct Claims {
     pub v: u32,
     /// Who issued it (the authority's name).
     pub iss: String,
-    /// Who it is for (`dhpanel`).
+    /// Who it is for (`builtpanel`).
     pub aud: String,
     /// The license.
     pub license_id: Uuid,
@@ -305,8 +305,8 @@ mod tests {
     fn claims(installation: Uuid) -> Claims {
         Claims {
             v: SCHEMA_VERSION,
-            iss: "dhpanel-la".into(),
-            aud: "dhpanel".into(),
+            iss: "builtpanel-la".into(),
+            aud: "builtpanel".into(),
             license_id: Uuid::from_u128(1),
             installation_id: installation,
             features: vec!["resellers".into(), "mail".into()],
@@ -324,7 +324,7 @@ mod tests {
     }
 
     fn setup() -> (FileSigningKey, PublicKeys, Uuid) {
-        let dir = std::env::temp_dir().join(format!("dh-license-doc-{}", Uuid::new_v4().simple()));
+        let dir = std::env::temp_dir().join(format!("bp-license-doc-{}", Uuid::new_v4().simple()));
         std::fs::create_dir_all(&dir).unwrap();
         let key = FileSigningKey::generate_to_file(&dir.join("k"), "lic-1").unwrap();
         let keys = PublicKeys::new().with("lic-1", key.public_key()).unwrap();
@@ -333,8 +333,8 @@ mod tests {
 
     fn expect(installation: Uuid) -> Expect<'static> {
         Expect {
-            issuer: "dhpanel-la",
-            audience: "dhpanel",
+            issuer: "builtpanel-la",
+            audience: "builtpanel",
             installation_id: installation,
             clock_skew: 60,
             host: HostFacts {
@@ -475,7 +475,7 @@ mod tests {
         );
         // A signature made for another purpose does not pass as an entitlement.
         let other_purpose = key
-            .sign(&signed_bytes(b"dhpanel-release-v1\n", &payload))
+            .sign(&signed_bytes(b"builtpanel-release-v1\n", &payload))
             .unwrap();
         let reused = Document {
             signature: URL_SAFE_NO_PAD.encode(other_purpose),

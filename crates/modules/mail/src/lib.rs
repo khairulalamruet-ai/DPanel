@@ -32,9 +32,9 @@ use axum::{
     http::StatusCode,
     routing::{delete, get, post, put},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_database::{
     accounts::DbAccountKind,
     domains,
     mail::{self as store, MailDomain, Mailbox, MakeError},
@@ -43,15 +43,15 @@ use dhpanel_database::{
     sqlx::PgPool,
     tenants, users,
 };
-use dhpanel_domain::{Fqdn, databases::check_password};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::{MailQueueItem, Operation};
-use dhpanel_rbac::{
+use builtpanel_domain::{Fqdn, databases::check_password};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::{MailQueueItem, Operation};
+use builtpanel_rbac::{
     Principal, Require,
     permissions::{EmailManage, EmailRead},
 };
-use dhpanel_session::{SessionStore, rfc3339};
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_session::{SessionStore, rfc3339};
+use builtpanel_settings::{Scope, SettingsRegistry};
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
 use uuid::Uuid;
@@ -164,7 +164,7 @@ pub struct Rules {
 /// Database errors.
 pub async fn rules(registry: &SettingsRegistry, db: &PgPool) -> Result<Rules, AppError> {
     let mut conn = db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(registry, &mut conn, "mail", Scope::Global)
+    let values = builtpanel_settings::get(registry, &mut conn, "mail", Scope::Global)
         .await
         .map_err(internal)?;
     let text = |key: &str| {
@@ -255,7 +255,7 @@ async fn audit(
     if let Some(tenant) = tenant {
         entry = entry.tenant(tenant);
     }
-    dhpanel_audit::insert(&state.db, &entry)
+    builtpanel_audit::insert(&state.db, &entry)
         .await
         .map_err(internal)
 }
@@ -763,7 +763,7 @@ pub async fn open_webmail(
             "Webmail has no name yet; ask the administrator.",
         ));
     }
-    let recent: i64 = dhpanel_database::sqlx::query_scalar(
+    let recent: i64 = builtpanel_database::sqlx::query_scalar(
         "SELECT count(*) FROM operations
          WHERE tenant_id = $1 AND kind = 'open_webmail' AND created_at > now() - interval '10 minutes'",
     )
@@ -1590,12 +1590,15 @@ fn trimmed(text: &str) -> String {
 }
 
 /// Compares what the mail server asked for with what the domain's zone holds.
-fn check_zone(md: &MailDomain, zone: &[dhpanel_database::dns::StoredRecord]) -> DeliverabilityView {
-    use dhpanel_domain::DnsRecordType as T;
-    let wanted: Vec<dhpanel_node_protocol::MailDnsRecord> =
+fn check_zone(
+    md: &MailDomain,
+    zone: &[builtpanel_database::dns::StoredRecord],
+) -> DeliverabilityView {
+    use builtpanel_domain::DnsRecordType as T;
+    let wanted: Vec<builtpanel_node_protocol::MailDnsRecord> =
         serde_json::from_value(md.records.clone()).unwrap_or_default();
     let mut notes = Vec::new();
-    let in_zone = |name: &str, rtype: T| -> Vec<&dhpanel_domain::DnsRecord> {
+    let in_zone = |name: &str, rtype: T| -> Vec<&builtpanel_domain::DnsRecord> {
         zone.iter()
             .map(|r| &r.record)
             .filter(|r| r.name == name && r.rtype == rtype)
@@ -1603,7 +1606,7 @@ fn check_zone(md: &MailDomain, zone: &[dhpanel_database::dns::StoredRecord]) -> 
     };
     let wanted_of = |name_is: &dyn Fn(&str) -> bool,
                      rtype: &str|
-     -> Vec<&dhpanel_node_protocol::MailDnsRecord> {
+     -> Vec<&builtpanel_node_protocol::MailDnsRecord> {
         wanted
             .iter()
             .filter(|w| w.rtype == rtype && name_is(&w.name))
@@ -1718,12 +1721,12 @@ pub async fn deliverability(
             continue;
         }
         let zone = match match md.domain_id {
-            Some(id) => dhpanel_database::dns::zone_of_domain(&state.db, id)
+            Some(id) => builtpanel_database::dns::zone_of_domain(&state.db, id)
                 .await
                 .map_err(internal)?,
             None => None,
         } {
-            Some(z) => dhpanel_database::dns::records(&state.db, z.id)
+            Some(z) => builtpanel_database::dns::records(&state.db, z.id)
                 .await
                 .map_err(internal)?,
             None => Vec::new(),

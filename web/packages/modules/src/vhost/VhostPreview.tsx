@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
-import { Input, Button } from "@dhpanel/ui";
+import React, { useState, useMemo, useEffect } from "react";
+import { previewTemplate } from "./api";
+import { Input, Button } from "@builtpanel/ui";
 import { Eye, SlidersHorizontal, RotateCcw } from "lucide-react";
 
 interface VhostPreviewProps {
@@ -28,6 +29,22 @@ export function VhostPreview({ content }: VhostPreviewProps) {
     }
     return result;
   }, [content, variables]);
+
+  // What the server makes of it (a site that uses every part); until it answers, or when it
+  // cannot, the text is filled in here with the sample variables.
+  const [serverRendered, setServerRendered] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    const timer = setTimeout(() => {
+      previewTemplate(content)
+        .then((r) => live && setServerRendered(r))
+        .catch(() => live && setServerRendered(null));
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [content]);
 
   const handleResetVars = () => {
     setVariables(defaultVariables);
@@ -121,7 +138,7 @@ export function VhostPreview({ content }: VhostPreviewProps) {
           className="p-4 text-emerald-400 font-mono text-[12px] leading-5 overflow-x-auto selection:bg-emerald-800/50"
           data-testid="pre-vhost-rendered"
         >
-          {renderedContent}
+          {serverRendered ?? renderedContent}
         </pre>
       </div>
     </div>

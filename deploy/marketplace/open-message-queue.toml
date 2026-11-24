@@ -1,0 +1,8 @@
+slug        = "open-message-queue"
+name        = "Open Message Queue"
+category    = "message_queue"
+kind        = "unavailable"
+description = "The Java message broker of GlassFish."
+license     = "CDDL-1.1"
+covers      = ["Open Message Queue"]
+reason      = "not packaged for the panel yet"

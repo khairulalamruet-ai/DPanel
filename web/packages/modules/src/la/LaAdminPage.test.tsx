@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { LaAdminPage } from "./LaAdminPage";
-import { ToastProvider } from "@dhpanel/ui";
-import * as dhpanelApi from "@dhpanel/api";
+import { ToastProvider } from "@builtpanel/ui";
+import * as builtpanelApi from "@builtpanel/api";
 import type { LaLicenseItem, LaOverviewMetrics } from "./types";
 
 let mockHasPermission = true;
 
-vi.mock("@dhpanel/auth", () => ({
+vi.mock("@builtpanel/auth", () => ({
   useSession: () => ({
     data: {
       user: { id: "00000000-0000-0000-0000-000000000001", username: "admin" },
@@ -21,7 +21,7 @@ vi.mock("@dhpanel/auth", () => ({
   }),
 }));
 
-vi.mock("@dhpanel/i18n", () => ({
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const dict: Record<string, string> = {
@@ -114,7 +114,7 @@ describe("LaAdminPage (T17.06)", () => {
     mockHasPermission = true;
     mockLicenses = [...mockLicensesInitial];
 
-    vi.spyOn(dhpanelApi, "apiFetch").mockImplementation(async (url: string, opts?: any) => {
+    vi.spyOn(builtpanelApi, "apiFetch").mockImplementation(async (url: string, opts?: any) => {
       if (url === "/api/v1/la/overview") {
         return {
           total_licenses: mockLicenses.length,

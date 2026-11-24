@@ -1,0 +1,8 @@
+slug        = "ssh2"
+name        = "SSH2"
+category    = "modules"
+kind        = "unavailable"
+description = "A PHP module."
+license     = "PHP-3.01"
+covers      = ["SSH2 (library)"]
+reason      = "a PHP extension; the panel's PHP images carry the extensions sites need"

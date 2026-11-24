@@ -6,15 +6,15 @@ use std::{
     path::PathBuf,
 };
 
-use dhpanel_fileops::handle;
-use dhpanel_node_protocol::files::{EntryKind, FileErrorCode, FileRequest as R, FileResult};
-use dhpanel_safe_fs::Root;
+use builtpanel_fileops::handle;
+use builtpanel_node_protocol::files::{EntryKind, FileErrorCode, FileRequest as R, FileResult};
+use builtpanel_safe_fs::Root;
 
 struct Scratch(PathBuf);
 
 impl Scratch {
     fn new(tag: &str) -> Self {
-        let dir = std::env::temp_dir().join(format!("dh-fileops-{tag}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bp-fileops-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("tenant")).unwrap();
         Self(dir)

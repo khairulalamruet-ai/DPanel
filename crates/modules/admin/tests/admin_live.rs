@@ -10,11 +10,11 @@ use axum::{
     extract::connect_info::MockConnectInfo,
     http::{Request, StatusCode, header},
 };
-use dhpanel_auth_core::password::{Argon2Params, PasswordHasher};
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::{mfa, rbac::assign_role};
-use dhpanel_mod_admin::{AdminState, router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_auth_core::password::{Argon2Params, PasswordHasher};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::{mfa, rbac::assign_role};
+use builtpanel_mod_admin::{AdminState, router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -631,7 +631,7 @@ async fn deleting_an_administrator_ends_their_sessions_and_keeps_the_history(poo
     let r = e.sign_in(root).await;
     let o = e.sign_in(other).await;
     e.sessions
-        .revoke_all(other, None, dhpanel_session::RevokeReason::Admin)
+        .revoke_all(other, None, builtpanel_session::RevokeReason::Admin)
         .await
         .unwrap();
     let o2 = e.sign_in(other).await;
@@ -653,9 +653,10 @@ async fn deleting_an_administrator_ends_their_sessions_and_keeps_the_history(poo
     );
 
     // Their own earlier activity is in the log.
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &pool,
-        &dhpanel_audit::AuditEntry::new("auth.login", dhpanel_audit::Outcome::Success).actor(other),
+        &builtpanel_audit::AuditEntry::new("auth.login", builtpanel_audit::Outcome::Success)
+            .actor(other),
     )
     .await
     .unwrap();
@@ -858,9 +859,9 @@ async fn an_administrator_who_must_use_2fa_is_blocked_until_enrolled(pool: PgPoo
 #[ignore = "needs PostgreSQL + Redis"]
 async fn the_permission_catalogue_is_listed_for_the_role_editor(pool: PgPool) {
     let e = env(&pool, 600);
-    dhpanel_database::modules::sync(
+    builtpanel_database::modules::sync(
         &pool,
-        &[dhpanel_database::modules::ModuleRecord {
+        &[builtpanel_database::modules::ModuleRecord {
             name: "domains",
             version: "1.0.0",
             category: "web",
@@ -870,7 +871,7 @@ async fn the_permission_catalogue_is_listed_for_the_role_editor(pool: PgPool) {
     )
     .await
     .unwrap();
-    dhpanel_database::permissions::sync(
+    builtpanel_database::permissions::sync(
         &pool,
         &[("domains.read", "domains"), ("domains.create", "domains")],
     )

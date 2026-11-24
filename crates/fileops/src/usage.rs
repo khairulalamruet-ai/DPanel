@@ -6,7 +6,7 @@
 
 use std::os::fd::OwnedFd;
 
-use dhpanel_node_protocol::files::{FileErrorCode, FileResult, FolderUsage};
+use builtpanel_node_protocol::files::{FileErrorCode, FileResult, FolderUsage};
 use rustix::fs::{FileType, Mode, OFlags};
 
 use super::{EntryKind, Out, fail, kind_of, names, stat_at, sys};
@@ -23,7 +23,7 @@ struct Walk {
     folders: Vec<FolderUsage>,
 }
 
-pub(super) fn disk_usage(root: &dhpanel_safe_fs::Root, top: u32) -> Out<FileResult> {
+pub(super) fn disk_usage(root: &builtpanel_safe_fs::Root, top: u32) -> Out<FileResult> {
     if !(1..=100).contains(&top) {
         return fail(FileErrorCode::InvalidArguments, "name 1 to 100 folders");
     }

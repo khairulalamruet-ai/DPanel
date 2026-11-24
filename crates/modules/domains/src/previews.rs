@@ -18,11 +18,11 @@ use axum::{
     http::StatusCode,
     routing::{delete, get},
 };
-use dhpanel_database::previews;
-use dhpanel_domain::{DomainKind, DomainStatus, Fqdn};
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_session::rfc3339;
-use dhpanel_settings::Scope;
+use builtpanel_database::previews;
+use builtpanel_domain::{DomainKind, DomainStatus, Fqdn};
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_session::rfc3339;
+use builtpanel_settings::Scope;
 use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -78,7 +78,7 @@ fn view(p: previews::Preview) -> PreviewView {
 /// The preview domain and how long a link lives.
 async fn settings(state: &DomainsState) -> Result<(Option<String>, i32), AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "domains", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "domains", Scope::Global)
         .await
         .map_err(internal)?;
     let domain = values
@@ -112,7 +112,7 @@ async fn settings(state: &DomainsState) -> Result<(Option<String>, i32), AppErro
 )]
 pub async fn list(
     State(state): State<DomainsState>,
-    who: dhpanel_rbac::Principal,
+    who: builtpanel_rbac::Principal,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PreviewList>, AppError> {
     let hosting = client_hosting(&state, &who).await?;
@@ -149,7 +149,7 @@ pub async fn list(
 )]
 pub async fn create(
     State(state): State<DomainsState>,
-    who: dhpanel_rbac::Principal,
+    who: builtpanel_rbac::Principal,
     Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<PreviewView>), AppError> {
     let hosting = client_hosting(&state, &who).await?;
@@ -174,7 +174,7 @@ pub async fn create(
     }
     let mut tx = state.db.begin().await.map_err(internal)?;
     // One at a time per account, so two requests cannot together pass the limit.
-    dhpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
         .await
         .map_err(internal)?;
     if previews::count_active(&mut tx, hosting.tenant.id)
@@ -212,7 +212,7 @@ pub async fn create(
         }
     }
     let made = made.ok_or_else(|| internal(std::io::Error::other("no free preview name")))?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("domain.preview_created", &who, &hosting, id)
             .metadata(serde_json::json!({ "fqdn": domain.domain.fqdn, "hours": hours })),
@@ -243,7 +243,7 @@ pub async fn create(
 )]
 pub async fn remove(
     State(state): State<DomainsState>,
-    who: dhpanel_rbac::Principal,
+    who: builtpanel_rbac::Principal,
     Path((id, preview_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
     let hosting = client_hosting(&state, &who).await?;
@@ -255,7 +255,7 @@ pub async fn remove(
     {
         return Err(AppError::not_found("preview"));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("domain.preview_deleted", &who, &hosting, id)
             .metadata(serde_json::json!({ "fqdn": domain.domain.fqdn })),

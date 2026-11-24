@@ -5,6 +5,7 @@
 //! | POST | `/api/v1/public/auth/login` | none |
 //! | POST | `/api/v1/auth/logout` | session |
 //! | GET  | `/api/v1/auth/me` | session |
+//! | GET, PUT | `/api/v1/auth/preferences` | session |
 //!
 //! Two-factor authentication and sudo mode are in [`mfa`]; session listing
 //! and revocation in [`sessions`].
@@ -21,18 +22,23 @@
 //!   names behave the same) and per client address. Reaching a threshold
 //!   answers 429 `too_many_attempts` with `Retry-After` until the lock expires,
 //!   even for the correct password. A successful login clears the account count.
+//! * `root` logs in with the server's own root password (like WHM), checked by
+//!   the `builtpanel-root-auth` helper; see [`root_login`]. The same lockout applies.
 //!
 //! The server must be run with `into_make_service_with_connect_info::<SocketAddr>()`
 //! so the client IP is available.
 //!
 //! CSRF: login and `/me` return the session's `csrf_token`; the client keeps it
 //! in memory and sends it as `X-CSRF-Token` on every state-changing request
-//! (enforced by [`dhpanel_session::Authenticated`]). Login itself is exempt:
+//! (enforced by [`builtpanel_session::Authenticated`]). Login itself is exempt:
 //! it has no session yet, accepts only `application/json` (which a cross-site
 //! form cannot send without a CORS preflight) and rotates any prior session.
 
 pub mod impersonate;
 pub mod mfa;
+mod password;
+pub mod preferences;
+pub mod root_login;
 pub mod sessions;
 
 use std::{
@@ -49,22 +55,25 @@ use axum::{
     routing::{get, post},
 };
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use dhpanel_audit::{AuditEntry, AuditWriter, Outcome};
-use dhpanel_auth_core::{password::PasswordHasher, secretbox::MasterKey};
-use dhpanel_cache::{
+use builtpanel_audit::{AuditEntry, AuditWriter, Outcome};
+use builtpanel_auth_core::{
+    password::{PasswordHasher, Verification},
+    secretbox::MasterKey,
+};
+use builtpanel_cache::{
     RedisHandle,
     lockout::{FailureLimiter, LockoutPolicy},
 };
-use dhpanel_database::{
+use builtpanel_database::{
     accounts::{self, AccountProfile, DbAccountKind, DbAccountStatus, LoginEvent, LoginOutcome},
     sqlx::PgPool,
 };
-use dhpanel_domain::{Email, Username};
-use dhpanel_http_kit::{
+use builtpanel_domain::{Email, Username};
+use builtpanel_http_kit::{
     AppError, ProblemDetails,
     client_ip::{client_ip, rate_limit_key},
 };
-use dhpanel_session::{
+use builtpanel_session::{
     Authenticated, CsrfToken, NewSession, RevokeReason, SessionStore, clear_cookie, cookie_value,
     set_cookie,
 };
@@ -104,6 +113,9 @@ pub struct AuthState {
     pub totp_issuer: Arc<str>,
     /// Audit log.
     pub audit: AuditWriter,
+    /// The helper that checks the server's root password for the administrator `root`;
+    /// `None` turns that login off.
+    pub root_login: Option<root_login::RootLogin>,
 }
 
 impl FromRef<AuthState> for PgPool {
@@ -168,6 +180,8 @@ pub fn router() -> Router<AuthState> {
         .route("/api/v1/auth/me", get(me))
         .merge(mfa::router())
         .merge(sessions::router())
+        .merge(preferences::router())
+        .merge(password::router())
 }
 
 /// Login request body.
@@ -251,7 +265,7 @@ impl Me {
         csrf: &CsrfToken,
         impersonator: Option<(Uuid, String)>,
     ) -> Result<Self, AppError> {
-        let access = dhpanel_database::rbac::load_access(db, p.id)
+        let access = builtpanel_database::rbac::load_access(db, p.id)
             .await
             .map_err(AppError::internal)?;
         let (roles, permissions, mfa_enabled, mfa_required) = access
@@ -355,14 +369,15 @@ fn login_audit_entry(ev: &LoginEvent<'_>) -> Option<AuditEntry> {
     operation_id = "login",
     request_body = LoginRequest,
     responses(
-        (status = 202, description = "Password accepted but a second factor is required: a short-lived `__Host-dh_mfa` cookie is set; continue with POST /api/v1/public/auth/login/mfa", body = mfa::MfaChallenge),
+        (status = 202, description = "Password accepted but a second factor is required: a short-lived `__Host-bp_mfa` cookie is set; continue with POST /api/v1/public/auth/login/mfa", body = mfa::MfaChallenge),
         (status = 200, description = "Logged in; session cookie set", body = Me,
-         headers(("set-cookie" = String, description = "__Host-dh_session=…; Path=/; Secure; HttpOnly; SameSite=Strict"))),
+         headers(("set-cookie" = String, description = "__Host-bp_session=…; Path=/; Secure; HttpOnly; SameSite=Strict"))),
         (status = 401, description = "Invalid username or password", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 403, description = "Correct password but account suspended or disabled", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 422, description = "Malformed body", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 429, description = "Too many failed attempts for this account or address", body = ProblemDetails, content_type = "application/problem+json",
-         headers(("retry-after" = u64, description = "Seconds until the lock expires")))
+         headers(("retry-after" = u64, description = "Seconds until the lock expires"))),
+        (status = 503, description = "`root` with the server's root password: the root login helper is not reachable", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
 pub async fn login(
@@ -404,13 +419,23 @@ pub async fn login(
         return Err(invalid_credentials());
     }
 
+    // `root` is a reserved name: it only ever means the server's root (see [`root_login`]).
+    let as_root = attempted.eq_ignore_ascii_case("root");
     // Identifiers that cannot exist (bad format, reserved) simply match nothing.
     let (username, email) = if attempted.contains('@') {
         (None, Email::parse(attempted).ok())
     } else {
         (Username::parse(attempted).ok(), None)
     };
-    let account = if username.is_some() || email.is_some() {
+    let account = if as_root {
+        if state.root_login.is_some() {
+            accounts::find_system_root(&state.db)
+                .await
+                .map_err(AppError::internal)?
+        } else {
+            None
+        }
+    } else if username.is_some() || email.is_some() {
         accounts::find_for_login(&state.db, username.as_ref(), email.as_ref())
             .await
             .map_err(AppError::internal)?
@@ -419,6 +444,7 @@ pub async fn login(
     };
 
     let normalised = match (&username, &email) {
+        _ if as_root => "root".to_owned(),
         (Some(u), _) => u.as_str().to_owned(),
         (_, Some(e)) => e.as_str().to_owned(),
         _ => attempted.to_lowercase(),
@@ -444,11 +470,7 @@ pub async fn login(
         return Err(invalid_credentials());
     };
 
-    let verification = state
-        .hasher
-        .verify_async(password.clone(), account.password_hash.clone())
-        .await
-        .map_err(AppError::internal)?;
+    let verification = check_password(&state, &password, &account.password_hash).await?;
     if !verification.matches {
         count_failure(&state.limits.account, &subject).await?;
         count_failure(&state.limits.ip, &ip_subject).await?;
@@ -498,7 +520,7 @@ pub async fn login(
         }
     }
 
-    if dhpanel_database::mfa::totp_enabled(&state.db, account.id)
+    if builtpanel_database::mfa::totp_enabled(&state.db, account.id)
         .await
         .map_err(AppError::internal)?
     {
@@ -512,6 +534,61 @@ pub async fn login(
         tracing::warn!(error = %err, "failed-login counter not reset");
     }
     finish_login(&state, account.id, attempted, ip, &headers).await
+}
+
+/// Checks a password against an account's stored hash, or, for the administrator `root`,
+/// against the server's root password through the root helper.
+///
+/// # Errors
+/// Internal errors; 503 `root_login_unavailable` when the root helper cannot be asked.
+pub(crate) async fn check_password(
+    state: &AuthState,
+    password: &SecretString,
+    stored: &str,
+) -> Result<Verification, AppError> {
+    if stored != accounts::SYSTEM_ROOT_PASSWORD {
+        return state
+            .hasher
+            .verify_async(password.clone(), stored.to_owned())
+            .await
+            .map_err(AppError::internal);
+    }
+    let Some(helper) = &state.root_login else {
+        // Turned off in the configuration: as slow as a wrong password, and as silent.
+        let _ = state.hasher.verify_dummy_async(password.clone()).await;
+        return Ok(Verification {
+            matches: false,
+            needs_rehash: false,
+        });
+    };
+    let matches = match helper.check(password).await {
+        Ok(root_login::RootCheck::Match) => true,
+        Ok(root_login::RootCheck::Mismatch) => false,
+        Ok(root_login::RootCheck::NoPassword) => {
+            tracing::warn!(
+                "root login refused: root has no password on this server (set one with `passwd`)"
+            );
+            false
+        }
+        Ok(root_login::RootCheck::UnsupportedScheme) => {
+            tracing::warn!(
+                "root login refused: root's password hash uses a scheme the helper does not know \
+                 (set it again with `passwd` to store it as yescrypt or SHA-512)"
+            );
+            false
+        }
+        Err(err) => {
+            tracing::error!(error = %err, "root login: the root helper could not be asked");
+            return Err(AppError::unavailable(
+                "root_login_unavailable",
+                "Logging in as root is not available right now. Try again later or use another administrator.",
+            ));
+        }
+    };
+    Ok(Verification {
+        matches,
+        needs_rehash: false,
+    })
 }
 
 /// Completes a login after every required factor has been verified: rotates
@@ -658,7 +735,7 @@ impl Modify for SessionCookieScheme {
         components.add_security_scheme(
             "session",
             SecurityScheme::ApiKey(ApiKey::Cookie(ApiKeyValue::with_description(
-                dhpanel_session::COOKIE_NAME,
+                builtpanel_session::COOKIE_NAME,
                 "HttpOnly session cookie set by POST /api/v1/public/auth/login",
             ))),
         );
@@ -672,12 +749,12 @@ impl Modify for SessionCookieScheme {
         login, logout, me, impersonate::redeem,
         mfa::login_mfa, mfa::sudo, mfa::status, mfa::enroll_totp, mfa::confirm_totp,
         mfa::disable_totp, sessions::list, sessions::revoke, sessions::revoke_others,
-        sessions::logout_all
+        sessions::logout_all, preferences::read, preferences::replace, password::change
     ),
     components(schemas(
         LoginRequest, Me, Impersonator, impersonate::RedeemRequest, mfa::MfaChallenge, mfa::MfaLoginRequest, mfa::MfaStatus,
         mfa::SudoRequest, mfa::SudoStatus, mfa::TotpEnrollment, mfa::CodeRequest, mfa::BackupCodes, sessions::SessionView, sessions::SessionList,
-        sessions::RevokedCount
+        sessions::RevokedCount, preferences::Preferences, password::ChangePassword, password::PasswordChanged
     )),
     modifiers(&SessionCookieScheme),
     tags((name = "auth", description = "Login, logout, the current account and two-factor authentication"))
@@ -724,6 +801,6 @@ mod tests {
         ] {
             assert!(json.contains(p), "{p}");
         }
-        assert!(json.contains("__Host-dh_session"));
+        assert!(json.contains("__Host-bp_session"));
     }
 }

@@ -6,8 +6,8 @@ import {
   CardDescription,
   CardContent,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { History, CheckCircle2, RotateCcw, AlertTriangle } from "lucide-react";
 import { UpdateHistoryItem } from "./types";
 

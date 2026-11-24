@@ -1,12 +1,12 @@
 # Control plane configuration for local development.
 # Secret file paths are supplied by `deploy/dev/devenv.sh env`
-# (DHPANEL_DATABASE__URL_FILE / DHPANEL_REDIS__URL_FILE).
+# (BUILTPANEL_DATABASE__URL_FILE / BUILTPANEL_REDIS__URL_FILE).
 
 listen = "127.0.0.1:8080"
 
 [log]
 format = "pretty"
-filter = "info,dhpanel=debug,tower_http=debug"
+filter = "info,builtpanel=debug,tower_http=debug"
 
 [database]
 max_connections = 5

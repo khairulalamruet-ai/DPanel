@@ -17,12 +17,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@dhpanel/ui": path.resolve(__dirname, "../../packages/ui/src"),
-      "@dhpanel/api": path.resolve(__dirname, "../../packages/api/src"),
-      "@dhpanel/auth": path.resolve(__dirname, "../../packages/auth/src"),
-      "@dhpanel/i18n": path.resolve(__dirname, "../../packages/i18n/src"),
-      "@dhpanel/shell": path.resolve(__dirname, "../../packages/shell/src"),
-      "@dhpanel/modules": path.resolve(__dirname, "../../packages/modules/src"),
+      "@builtpanel/ui": path.resolve(__dirname, "../../packages/ui/src"),
+      "@builtpanel/api": path.resolve(__dirname, "../../packages/api/src"),
+      "@builtpanel/auth": path.resolve(__dirname, "../../packages/auth/src"),
+      "@builtpanel/i18n": path.resolve(__dirname, "../../packages/i18n/src"),
+      "@builtpanel/shell": path.resolve(__dirname, "../../packages/shell/src"),
+      "@builtpanel/modules": path.resolve(__dirname, "../../packages/modules/src"),
     },
   },
 });

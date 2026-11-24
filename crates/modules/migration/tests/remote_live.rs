@@ -4,8 +4,8 @@
 
 mod common;
 
+use builtpanel_mod_migration::remote::{self, Credential, FetchError, Source};
 use common::{PASSWORD, PATH, serve};
-use dhpanel_mod_migration::remote::{self, Credential, FetchError, Source};
 use secrecy::SecretString;
 
 fn source(port: u16, password: &str, host_key: Option<&str>, path: &str, local: bool) -> Source {
@@ -21,7 +21,7 @@ fn source(port: u16, password: &str, host_key: Option<&str>, path: &str, local: 
 }
 
 fn temp(name: &str) -> std::path::PathBuf {
-    std::env::temp_dir().join(format!("dh-fetch-{}-{name}", uuid::Uuid::new_v4().simple()))
+    std::env::temp_dir().join(format!("bp-fetch-{}-{name}", uuid::Uuid::new_v4().simple()))
 }
 
 #[tokio::test]

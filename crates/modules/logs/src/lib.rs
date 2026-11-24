@@ -18,17 +18,20 @@ use axum::{
     response::{IntoResponse as _, Response},
     routing::get,
 };
-use dhpanel_database::{
+use builtpanel_database::{
     accounts::DbAccountKind,
     operations::{self, NewOperation, Status},
     plans,
     sqlx::PgPool,
     tenants,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::{LogLine, LogSource, MAX_LOG_LINES, Operation, Output};
-use dhpanel_rbac::Principal;
-use dhpanel_session::SessionStore;
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::{
+    LogLine, LogSource, MAX_LOG_LINES, MAX_TRAFFIC_PATHS, MAX_WAF_EVENTS, MAX_WAF_HOSTS, Operation,
+    Output,
+};
+use builtpanel_rbac::Principal;
+use builtpanel_session::SessionStore;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use uuid::Uuid;
@@ -64,7 +67,11 @@ pub const DEFAULT_WAIT: Duration = Duration::from_secs(8);
 
 /// Routes for hosting accounts.
 pub fn client_router() -> Router<LogsState> {
-    Router::new().route("/api/v1/client/logs", get(read_logs))
+    Router::new()
+        .route("/api/v1/client/logs", get(read_logs))
+        .route("/api/v1/client/activity", get(activity))
+        .route("/api/v1/client/traffic", get(traffic))
+        .route("/api/v1/client/waf/events", get(waf_events))
 }
 
 fn internal(err: impl Into<Box<dyn std::error::Error + Send + Sync + 'static>>) -> AppError {
@@ -142,31 +149,7 @@ pub async fn read_logs(
             "This is for hosting accounts.",
         ));
     }
-    let user = dhpanel_database::users::get(&state.db, who.account_id())
-        .await
-        .map_err(internal)?;
-    let owned = user.and_then(|u| u.tenant).ok_or_else(|| {
-        AppError::conflict("no_hosting", "This account has no hosting account yet.")
-    })?;
-    let tenant = tenants::get(&state.db, owned.id)
-        .await
-        .map_err(internal)?
-        .ok_or_else(|| AppError::not_found("user"))?;
-    if !plans::includes_feature(&state.db, tenant.plan_id, "logs")
-        .await
-        .map_err(internal)?
-    {
-        return Err(AppError::forbidden(
-            "feature_disabled",
-            "Logs are not included in this plan.",
-        ));
-    }
-    if tenant.status.as_str() != "active" {
-        return Err(AppError::conflict(
-            "tenant_not_running",
-            "Only a running account has logs to read.",
-        ));
-    }
+    let tenant = running_hosting(&state, &who).await?;
     let source = match q.source.as_str() {
         "web_access" => LogSource::WebAccess,
         "web_error" => LogSource::WebError,
@@ -199,7 +182,71 @@ pub async fn read_logs(
         tail: lines,
         contains: search,
     };
-    let payload = serde_json::to_value(&op).map_err(internal)?;
+    match ask_node(&state, &tenant, who.account_id(), &op, "log").await? {
+        Answer::Slow(id) => {
+            Ok((StatusCode::ACCEPTED, Json(Pending { operation_id: id })).into_response())
+        }
+        Answer::Done(Output::LogLines { lines, truncated }) => Ok(Json(LogView {
+            lines: lines
+                .into_iter()
+                .map(|LogLine { at_ms, text }| LogLineView { at_ms, text })
+                .collect(),
+            truncated,
+        })
+        .into_response()),
+        Answer::Done(_) => Err(internal(std::io::Error::other("an unexpected answer"))),
+    }
+}
+
+/// What the node said.
+enum Answer {
+    Done(Output),
+    /// Not yet: the operation to ask about again.
+    Slow(Uuid),
+}
+
+/// The account's hosting, when its plan has logs and it is running.
+async fn running_hosting(
+    state: &LogsState,
+    who: &Principal,
+) -> Result<builtpanel_database::tenants::Tenant, AppError> {
+    let user = builtpanel_database::users::get(&state.db, who.account_id())
+        .await
+        .map_err(internal)?;
+    let owned = user.and_then(|u| u.tenant).ok_or_else(|| {
+        AppError::conflict("no_hosting", "This account has no hosting account yet.")
+    })?;
+    let tenant = tenants::get(&state.db, owned.id)
+        .await
+        .map_err(internal)?
+        .ok_or_else(|| AppError::not_found("user"))?;
+    if !plans::includes_feature(&state.db, tenant.plan_id, "logs")
+        .await
+        .map_err(internal)?
+    {
+        return Err(AppError::forbidden(
+            "feature_disabled",
+            "Logs are not included in this plan.",
+        ));
+    }
+    if tenant.status.as_str() != "active" {
+        return Err(AppError::conflict(
+            "tenant_not_running",
+            "Only a running account has logs to read.",
+        ));
+    }
+    Ok(tenant)
+}
+
+/// Sends an operation to the account's node and waits a little for its answer.
+async fn ask_node(
+    state: &LogsState,
+    tenant: &builtpanel_database::tenants::Tenant,
+    by: Uuid,
+    op: &Operation,
+    key: &str,
+) -> Result<Answer, AppError> {
+    let payload = serde_json::to_value(op).map_err(internal)?;
     let queued = operations::enqueue(
         &state.db,
         &NewOperation {
@@ -207,8 +254,8 @@ pub async fn read_logs(
             kind: op.type_name(),
             tenant_id: Some(tenant.id),
             payload: &payload,
-            idempotency_key: &format!("log:{}", Uuid::new_v4().simple()),
-            created_by: Some(who.account_id()),
+            idempotency_key: &format!("{key}:{}", Uuid::new_v4().simple()),
+            created_by: Some(by),
             ttl_secs: 60,
             max_attempts: 1,
         },
@@ -234,17 +281,7 @@ pub async fn read_logs(
                     .output
                     .and_then(|o| serde_json::from_value(o).ok())
                     .ok_or_else(|| internal(std::io::Error::other("an unreadable answer")))?;
-                let Output::LogLines { lines, truncated } = output else {
-                    return Err(internal(std::io::Error::other("an unexpected answer")));
-                };
-                return Ok(Json(LogView {
-                    lines: lines
-                        .into_iter()
-                        .map(|LogLine { at_ms, text }| LogLineView { at_ms, text })
-                        .collect(),
-                    truncated,
-                })
-                .into_response());
+                return Ok(Answer::Done(output));
             }
             Status::Failed => {
                 return Err(AppError::unavailable(
@@ -255,17 +292,465 @@ pub async fn read_logs(
             Status::Pending | Status::Dispatched | Status::Retryable => {}
         }
         if started.elapsed() >= state.wait {
-            return Ok((StatusCode::ACCEPTED, Json(Pending { operation_id: id })).into_response());
+            return Ok(Answer::Slow(id));
         }
         tokio::time::sleep(Duration::from_millis(60)).await;
     }
 }
 
+/// Which page of the activity.
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct ActivityQuery {
+    /// How many entries (1-200, default 50).
+    pub limit: Option<i64>,
+    /// `next_cursor` of the page before.
+    pub cursor: Option<String>,
+    /// Only actions that start with this (`login`, `database`, ...).
+    pub action: Option<String>,
+}
+
+/// One thing that happened in the account.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ActivityItem {
+    /// Entry id.
+    pub id: Uuid,
+    /// When (RFC 3339, UTC).
+    pub at: String,
+    /// What happened, e.g. `database.create`.
+    pub action: String,
+    /// `success`, `failure` or `denied`.
+    pub outcome: String,
+    /// What it was done to (`domain`, `database`, ...).
+    pub target_type: Option<String>,
+    /// Which one.
+    pub target_id: Option<String>,
+    /// Whether the account's own login did it (otherwise staff did, on its behalf).
+    pub by_you: bool,
+    /// Where from: only for what the account did itself.
+    pub ip: Option<String>,
+}
+
+/// A page of the activity.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ActivityPage {
+    /// Newest first.
+    pub items: Vec<ActivityItem>,
+    /// Pass this as `cursor` for the next page (`null`: the end).
+    pub next_cursor: Option<String>,
+}
+
+/// What happened in the account, newest first (logins, changes, failures).
+#[utoipa::path(
+    get,
+    path = "/api/v1/client/activity",
+    tag = "logs",
+    operation_id = "clientActivity",
+    security(("session" = [])),
+    params(ActivityQuery),
+    responses(
+        (status = 200, description = "A page of entries", body = ActivityPage),
+        (status = 403, description = "`client_only`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "A count or cursor that is not usable", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn activity(
+    State(state): State<LogsState>,
+    who: Principal,
+    Query(q): Query<ActivityQuery>,
+) -> Result<Json<ActivityPage>, AppError> {
+    if who.kind != DbAccountKind::Client {
+        return Err(AppError::forbidden(
+            "client_only",
+            "This is for hosting accounts.",
+        ));
+    }
+    let limit = q.limit.unwrap_or(50);
+    if !(1..=200).contains(&limit) {
+        return Err(bad("limit", "out_of_range", "Between 1 and 200."));
+    }
+    let cursor = match q.cursor.as_deref() {
+        None => None,
+        Some(c) => {
+            let (micros, id) = c
+                .split_once('.')
+                .and_then(|(m, i)| Some((m.parse::<i64>().ok()?, Uuid::parse_str(i).ok()?)))
+                .ok_or_else(|| bad("cursor", "invalid", "Not a cursor this API gave."))?;
+            Some((micros, id))
+        }
+    };
+    let action = match q.action.as_deref() {
+        None | Some("") => None,
+        Some(a)
+            if a.len() <= 64
+                && a.bytes().all(|b| {
+                    b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'.'
+                }) =>
+        {
+            Some(a.to_owned())
+        }
+        Some(_) => {
+            return Err(bad(
+                "action",
+                "invalid",
+                "Lowercase letters, digits, `_` and `.`.",
+            ));
+        }
+    };
+    let user = builtpanel_database::users::get(&state.db, who.account_id())
+        .await
+        .map_err(internal)?;
+    let owned = user.and_then(|u| u.tenant).ok_or_else(|| {
+        AppError::conflict("no_hosting", "This account has no hosting account yet.")
+    })?;
+    let me = who.account_id();
+    let (cursor_micros, cursor_id) = cursor.unzip();
+    let mut rows = builtpanel_database::sqlx::query_as::<
+        _,
+        (Uuid, i64, Uuid, Option<String>, String, String, Option<String>, Option<String>),
+    >(
+        "SELECT id, (extract(epoch FROM at) * 1000000)::bigint, COALESCE(actor_id, '00000000-0000-0000-0000-000000000000'::uuid),
+                host(actor_ip), action, outcome, target_type, target_id
+         FROM audit_logs
+         WHERE tenant_id = $1
+           AND ($2::text IS NULL OR starts_with(action, $2))
+           AND ($3::bigint IS NULL
+                OR (at, id) < ('epoch'::timestamptz + $3::bigint * interval '1 microsecond', $4::uuid))
+         ORDER BY at DESC, id DESC
+         LIMIT $5",
+    )
+    .bind(owned.id)
+    .bind(action)
+    .bind(cursor_micros)
+    .bind(cursor_id)
+    .bind(limit + 1)
+    .fetch_all(&state.db)
+    .await
+    .map_err(internal)?;
+    let has_more = i64::try_from(rows.len()).is_ok_and(|n| n > limit);
+    if has_more {
+        rows.truncate(usize::try_from(limit).unwrap_or(usize::MAX));
+    }
+    let next_cursor = has_more
+        .then(|| rows.last().map(|r| format!("{}.{}", r.1, r.0)))
+        .flatten();
+    let items = rows
+        .into_iter()
+        .map(
+            |(id, micros, actor, ip, action, outcome, target_type, target_id)| {
+                let by_you = actor == me;
+                ActivityItem {
+                    id,
+                    at: rfc3339(micros),
+                    action,
+                    outcome,
+                    target_type,
+                    target_id,
+                    by_you,
+                    ip: if by_you { ip } else { None },
+                }
+            },
+        )
+        .collect();
+    Ok(Json(ActivityPage { items, next_cursor }))
+}
+
+/// Which time, how many pages.
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct TrafficQuery {
+    /// `24h` (default), `7d` or `30d`.
+    pub range: Option<String>,
+    /// How many of the most asked pages (1-50, default 10).
+    pub top: Option<u32>,
+}
+
+/// One hour of traffic.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TrafficHourView {
+    /// The start of the hour (Unix milliseconds, UTC).
+    pub at_ms: i64,
+    /// Requests in it.
+    pub requests: u64,
+    /// Bytes sent in it.
+    pub bytes: u64,
+}
+
+/// A page and its requests.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TrafficPathView {
+    /// The path (no query string).
+    pub path: String,
+    /// Requests for it.
+    pub requests: u64,
+}
+
+/// An account's web traffic.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TrafficView {
+    /// The range asked for.
+    pub range: String,
+    /// Requests counted.
+    pub requests: u64,
+    /// Bytes sent.
+    pub bytes: u64,
+    /// Answers 200-299.
+    pub status_2xx: u64,
+    /// Answers 300-399.
+    pub status_3xx: u64,
+    /// Answers 400-499.
+    pub status_4xx: u64,
+    /// Answers 500-599.
+    pub status_5xx: u64,
+    /// Requests from robots (by their User-Agent).
+    pub bots: u64,
+    /// Per hour, oldest first (hours without a request are left out).
+    pub hours: Vec<TrafficHourView>,
+    /// The most asked pages, most first.
+    pub top_paths: Vec<TrafficPathView>,
+    /// The log held less than the range (the numbers are a lower bound).
+    pub partial: bool,
+}
+
+/// How many requests the account's website got: totals, by kind of answer, per hour and the
+/// most asked pages. Counted from the web server's log, which the node keeps for a while only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/client/traffic",
+    tag = "logs",
+    operation_id = "clientTraffic",
+    security(("session" = [])),
+    params(TrafficQuery),
+    responses(
+        (status = 200, description = "The counts", body = TrafficView),
+        (status = 202, description = "The node is slow; ask again", body = Pending),
+        (status = 403, description = "`client_only` or `feature_disabled`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 409, description = "`tenant_not_running`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "A range or count that is not usable", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 503, description = "`node_unavailable`", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn traffic(
+    State(state): State<LogsState>,
+    who: Principal,
+    Query(q): Query<TrafficQuery>,
+) -> Result<Response, AppError> {
+    if who.kind != DbAccountKind::Client {
+        return Err(AppError::forbidden(
+            "client_only",
+            "This is for hosting accounts.",
+        ));
+    }
+    let range = q.range.unwrap_or_else(|| "24h".to_owned());
+    let hours: i64 = match range.as_str() {
+        "24h" => 24,
+        "7d" => 7 * 24,
+        "30d" => 30 * 24,
+        _ => return Err(bad("range", "invalid", "24h, 7d or 30d.")),
+    };
+    let top = q.top.unwrap_or(10);
+    if !(1..=MAX_TRAFFIC_PATHS).contains(&top) {
+        return Err(bad("top", "out_of_range", "Between 1 and 50."));
+    }
+    let tenant = running_hosting(&state, &who).await?;
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(0));
+    let op = Operation::ReadTraffic {
+        tenant_id: tenant.id,
+        username: tenant.username.clone(),
+        since_ms: (now_ms - hours * 3_600_000).max(0),
+        top,
+    };
+    match ask_node(&state, &tenant, who.account_id(), &op, "traffic").await? {
+        Answer::Slow(id) => {
+            Ok((StatusCode::ACCEPTED, Json(Pending { operation_id: id })).into_response())
+        }
+        Answer::Done(Output::Traffic {
+            requests,
+            bytes,
+            status_2xx,
+            status_3xx,
+            status_4xx,
+            status_5xx,
+            bots,
+            hours,
+            top_paths,
+            partial,
+        }) => Ok(Json(TrafficView {
+            range,
+            requests,
+            bytes,
+            status_2xx,
+            status_3xx,
+            status_4xx,
+            status_5xx,
+            bots,
+            hours: hours
+                .into_iter()
+                .map(|h| TrafficHourView {
+                    at_ms: h.at_ms,
+                    requests: h.requests,
+                    bytes: h.bytes,
+                })
+                .collect(),
+            top_paths: top_paths
+                .into_iter()
+                .map(|p| TrafficPathView {
+                    path: p.path,
+                    requests: p.requests,
+                })
+                .collect(),
+            partial,
+        })
+        .into_response()),
+        Answer::Done(_) => Err(internal(std::io::Error::other("an unexpected answer"))),
+    }
+}
+
+/// Which time, how many.
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct WafEventsQuery {
+    /// `24h` (default), `7d` or `30d`.
+    pub range: Option<String>,
+    /// How many events at most, the newest (1-200, default 50).
+    pub limit: Option<u32>,
+}
+
+/// One request the firewall stopped.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct WafEventView {
+    /// When (Unix milliseconds, UTC).
+    pub at_ms: i64,
+    /// The request method.
+    pub method: String,
+    /// The name asked for.
+    pub host: String,
+    /// The path and query asked for.
+    pub uri: String,
+    /// The rule that named the attack (0: not told).
+    pub rule_id: u32,
+    /// What the rule says.
+    pub message: String,
+    /// The request was refused.
+    pub blocked: bool,
+}
+
+/// What the firewall stopped.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct WafEventList {
+    /// The range asked for.
+    pub range: String,
+    /// The node's web server has the firewall and its log; without, `items` is empty and says nothing.
+    pub available: bool,
+    /// The newest first.
+    pub items: Vec<WafEventView>,
+    /// There were more than were returned, or the log held less than the range.
+    pub partial: bool,
+}
+
+/// The requests the account's web application firewall refused, the newest first, read from the
+/// firewall's log on the node (which holds the recent past only).
+#[utoipa::path(
+    get,
+    path = "/api/v1/client/waf/events",
+    tag = "logs",
+    operation_id = "clientWafEvents",
+    security(("session" = [])),
+    params(WafEventsQuery),
+    responses(
+        (status = 200, description = "The events", body = WafEventList),
+        (status = 202, description = "The node is slow; ask again", body = Pending),
+        (status = 403, description = "`client_only` or `feature_disabled`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 409, description = "`tenant_not_running`", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 422, description = "A range or count that is not usable", body = ProblemDetails, content_type = "application/problem+json"),
+        (status = 503, description = "`node_unavailable`", body = ProblemDetails, content_type = "application/problem+json")
+    )
+)]
+pub async fn waf_events(
+    State(state): State<LogsState>,
+    who: Principal,
+    Query(q): Query<WafEventsQuery>,
+) -> Result<Response, AppError> {
+    if who.kind != DbAccountKind::Client {
+        return Err(AppError::forbidden(
+            "client_only",
+            "This is for hosting accounts.",
+        ));
+    }
+    let range = q.range.unwrap_or_else(|| "24h".to_owned());
+    let hours: i64 = match range.as_str() {
+        "24h" => 24,
+        "7d" => 7 * 24,
+        "30d" => 30 * 24,
+        _ => return Err(bad("range", "invalid", "24h, 7d or 30d.")),
+    };
+    let limit = q.limit.unwrap_or(50);
+    if !(1..=MAX_WAF_EVENTS).contains(&limit) {
+        return Err(bad("limit", "out_of_range", "Between 1 and 200."));
+    }
+    let tenant = running_hosting(&state, &who).await?;
+    // The names of the account's sites: the log is of the whole node.
+    let hosts: Vec<String> = builtpanel_database::routes::domains(&state.db, tenant.id)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .map(|d| d.fqdn)
+        .take(MAX_WAF_HOSTS)
+        .collect();
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(0));
+    let op = Operation::ReadWafEvents {
+        tenant_id: tenant.id,
+        hosts,
+        since_ms: (now_ms - hours * 3_600_000).max(0),
+        limit,
+    };
+    match ask_node(&state, &tenant, who.account_id(), &op, "waf_events").await? {
+        Answer::Slow(id) => {
+            Ok((StatusCode::ACCEPTED, Json(Pending { operation_id: id })).into_response())
+        }
+        Answer::Done(Output::WafEvents {
+            available,
+            events,
+            partial,
+        }) => Ok(Json(WafEventList {
+            range,
+            available,
+            items: events
+                .into_iter()
+                .map(|e| WafEventView {
+                    at_ms: e.at_ms,
+                    method: e.method,
+                    host: e.host,
+                    uri: e.uri,
+                    rule_id: e.rule_id,
+                    message: e.message,
+                    blocked: e.blocked,
+                })
+                .collect(),
+            partial,
+        })
+        .into_response()),
+        Answer::Done(_) => Err(internal(std::io::Error::other("an unexpected answer"))),
+    }
+}
+
+/// Microseconds since the epoch as RFC 3339 (UTC).
+fn rfc3339(micros: i64) -> String {
+    time::OffsetDateTime::from_unix_timestamp_nanos(i128::from(micros) * 1000)
+        .ok()
+        .and_then(|t| {
+            t.format(&time::format_description::well_known::Rfc3339)
+                .ok()
+        })
+        .unwrap_or_default()
+}
+
 /// The module's OpenAPI document.
 #[derive(OpenApi)]
 #[openapi(
-    paths(read_logs),
-    components(schemas(LogView, LogLineView, Pending)),
+    paths(read_logs, activity, traffic, waf_events),
+    components(schemas(LogView, LogLineView, Pending, ActivityItem, ActivityPage, TrafficView, TrafficHourView, TrafficPathView, WafEventView, WafEventList)),
     tags((name = "logs", description = "Logs"))
 )]
 pub struct LogsApi;

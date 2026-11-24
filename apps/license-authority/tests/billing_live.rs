@@ -9,9 +9,9 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_auth_core::password::{Argon2Params, PasswordHasher};
-use dhpanel_license::FileSigningKey;
-use dhpanel_license_authority::{
+use builtpanel_auth_core::password::{Argon2Params, PasswordHasher};
+use builtpanel_license::FileSigningKey;
+use builtpanel_license_authority::{
     LaState, Settings,
     billing::{self, Timing},
     config::LaConfig,
@@ -32,7 +32,7 @@ struct Env {
 }
 
 async fn env(pool: &PgPool, secret: Option<&str>) -> Env {
-    let key_dir = std::env::temp_dir().join(format!("dh-la-{}", Uuid::new_v4().simple()));
+    let key_dir = std::env::temp_dir().join(format!("bp-la-{}", Uuid::new_v4().simple()));
     std::fs::create_dir_all(&key_dir).unwrap();
     let key =
         FileSigningKey::generate_to_file(&key_dir.join("license-1.key"), "license-1").unwrap();
@@ -46,7 +46,7 @@ async fn env(pool: &PgPool, secret: Option<&str>) -> Env {
         db: pool.clone(),
         signer: Arc::new(std::sync::RwLock::new(Arc::new(key))),
         settings: Settings::from_config(&config),
-        prover: dhpanel_license_authority::domain_proof::default_prover(),
+        prover: builtpanel_license_authority::domain_proof::default_prover(),
         hasher: Arc::new(
             PasswordHasher::new(Argon2Params {
                 memory_kib: 19 * 1024,
@@ -146,7 +146,7 @@ async fn license(env: &Env, token: &str, max: i32, features: &[&str]) -> (String
         Some(json!({"name": "Acme", "email": format!("{}@acme.example", Uuid::new_v4().simple())})),
     )
     .await;
-    let (_, product) = call(&env.app, "POST", "/api/v1/admin/products", Some(token), Some(json!({"slug": format!("p{}", &Uuid::new_v4().simple().to_string()[..8]), "name": "DHPanel"}))).await;
+    let (_, product) = call(&env.app, "POST", "/api/v1/admin/products", Some(token), Some(json!({"slug": format!("p{}", &Uuid::new_v4().simple().to_string()[..8]), "name": "Built Panel"}))).await;
     let (status, plan) = call(
         &env.app,
         "POST",
@@ -188,7 +188,7 @@ async fn hook(env: &Env, body: &Value, signed_at: i64, secret: &str) -> (StatusC
         .method("POST")
         .uri("/api/v1/webhooks/payments")
         .header(header::CONTENT_TYPE, "application/json")
-        .header("x-dhpanel-signature", header)
+        .header("x-builtpanel-signature", header)
         .body(Body::from(text))
         .unwrap();
     let res = env.app.clone().oneshot(req).await.unwrap();

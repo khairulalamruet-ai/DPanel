@@ -7,7 +7,7 @@
 
 use std::{path::Path, time::Duration};
 
-use dhpanel_node_protocol::{AgentError, Capabilities, DockerMode, ErrorCode};
+use builtpanel_node_protocol::{AgentError, Capabilities, DockerMode, ErrorCode};
 use tokio::{
     io::{AsyncReadExt as _, AsyncWriteExt as _},
     net::UnixStream,
@@ -49,7 +49,7 @@ impl Sources {
                 .ok()
                 .and_then(|host| host.strip_prefix("unix://").map(Into::into)),
             tenants_root: Some(
-                std::env::var_os("DHPANEL_AGENT_TENANTS_ROOT")
+                std::env::var_os("BUILTPANEL_AGENT_TENANTS_ROOT")
                     .map_or_else(|| "/srv/tenants".into(), Into::into),
             ),
         }
@@ -233,7 +233,7 @@ pub async fn collect(sources: &Sources) -> Result<Capabilities, AgentError> {
         user_namespaces: userns_limit && userns_switch,
         storage_quota: sources.tenants_root.as_deref().and_then(|root| {
             let mountinfo = read(&sources.proc_dir.join("self/mountinfo"))?;
-            dhpanel_priv_helper::quota::detect(&mountinfo, root).map(|b| b.name().to_owned())
+            builtpanel_priv_helper::quota::detect(&mountinfo, root).map(|b| b.name().to_owned())
         }),
     })
 }
@@ -297,7 +297,7 @@ mod tests {
 
     fn fixture(files: &[(&str, &str)]) -> std::path::PathBuf {
         let root =
-            std::env::temp_dir().join(format!("dhpanel-caps-{}", uuid::Uuid::now_v7().simple()));
+            std::env::temp_dir().join(format!("builtpanel-caps-{}", uuid::Uuid::now_v7().simple()));
         for (path, text) in files {
             let full = root.join(path);
             std::fs::create_dir_all(full.parent().unwrap()).unwrap();

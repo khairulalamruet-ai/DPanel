@@ -9,12 +9,12 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::modules as db;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_cron::{CronState, SETTINGS_SCHEMA, client_router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
-use dhpanel_settings::{Scope, SettingsRegistry};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::modules as db;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_cron::{CronState, SETTINGS_SCHEMA, client_router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_settings::{Scope, SettingsRegistry};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -166,7 +166,7 @@ async fn admin(pool: &PgPool, name: &str, roles: &[&str]) -> Uuid {
     .await
     .unwrap();
     for role in roles {
-        dhpanel_database::rbac::assign_role(pool, id, role, None)
+        builtpanel_database::rbac::assign_role(pool, id, role, None)
             .await
             .unwrap();
     }
@@ -330,7 +330,7 @@ async fn jobs_are_checked_against_the_rules_and_kept_per_account(pool: PgPool) {
 
     // The setting changes the rule: with one minute allowed, every minute is fine.
     let mut tx = pool.begin().await.unwrap();
-    dhpanel_settings::set(
+    builtpanel_settings::set(
         &e.settings,
         &mut tx,
         "cron",

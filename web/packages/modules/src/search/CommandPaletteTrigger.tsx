@@ -1,5 +1,5 @@
 import React from "react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { Search } from "lucide-react";
 
 interface CommandPaletteTriggerProps {

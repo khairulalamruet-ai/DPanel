@@ -1,0 +1,8 @@
+slug        = "hbase"
+name        = "HBase"
+category    = "databases"
+kind        = "unavailable"
+description = "HBase."
+license     = "Apache-2.0"
+covers      = ["HBase"]
+reason      = "not packaged for the panel yet"

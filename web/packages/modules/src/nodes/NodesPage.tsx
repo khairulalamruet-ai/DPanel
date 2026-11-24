@@ -15,10 +15,11 @@ import {
   TableCell,
   ConfirmDialog,
   useToast,
-} from "@dhpanel/ui";
-import { useTranslation, useFormatters } from "@dhpanel/i18n";
-import { apiFetch, getCsrfToken } from "@dhpanel/api";
-import { useSession } from "@dhpanel/auth";
+} from "@builtpanel/ui";
+import { useTranslation, useFormatters } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
+import { listNodes, revokeNode } from "./api";
+import { useSession } from "@builtpanel/auth";
 import {
   Server,
   Plus,
@@ -46,6 +47,12 @@ import { computeNodeSaturation, getSaturationColor } from "./capacity";
 import { SchedulerConfigDialog } from "./SchedulerConfigDialog";
 import { NodeFailoverDialog } from "./NodeFailoverDialog";
 
+/**
+ * Draining, failover and capacity (oversell) of nodes have no backend yet (phase 16), so their
+ * buttons are off; they come back when the endpoints exist.
+ */
+const CLUSTER_SCHEDULER = false;
+
 export function NodesPage() {
   const { t } = useTranslation();
   const { formatDate } = useFormatters();
@@ -60,7 +67,6 @@ export function NodesPage() {
   // Dialog states
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
-  const [drainingNodeId, setDrainingNodeId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<NodeItem | null>(null);
   const [revokingNode, setRevokingNode] = useState<NodeItem | null>(null);
   const [cancellingEnrollmentId, setCancellingEnrollmentId] = useState<string | null>(null);
@@ -73,8 +79,7 @@ export function NodesPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiFetch<{ items: NodeItem[]; total: number }>("/api/v1/admin/nodes");
-      setNodes(res.items || []);
+      setNodes(await listNodes());
     } catch {
       setError(t("common.error"));
     } finally {
@@ -102,15 +107,7 @@ export function NodesPage() {
   const handleRevokeConfirm = async () => {
     if (!revokingNode) return;
     try {
-      await apiFetch<{ success: boolean; message: string }>(
-        `/api/v1/admin/nodes/${revokingNode.id}/revoke`,
-        {
-          method: "POST",
-          headers: {
-            "X-CSRF-Token": getCsrfToken() || "",
-          },
-        }
-      );
+      await revokeNode(revokingNode.id);
       toast({
         title: t("nodes.revoke.success"),
         variant: "default",
@@ -126,44 +123,10 @@ export function NodesPage() {
     }
   };
 
-  const handleDrainToggle = async (node: NodeItem) => {
-    const action = node.status === "draining" ? "undrain" : "drain";
-    try {
-      setDrainingNodeId(node.id);
-      // TODO(api:T16.01, T16.02): node drain/undrain toggle endpoint
-      await apiFetch<{ success: boolean; status: NodeStatus }>(
-        `/api/v1/admin/nodes/${node.id}/${action}`,
-        {
-          method: "POST",
-          headers: {
-            "X-CSRF-Token": getCsrfToken() || "",
-          },
-        }
-      );
-      toast({
-        title: action === "drain" ? t("nodes.scheduler.drainSuccess") : t("nodes.scheduler.undrainSuccess"),
-        variant: "default",
-      });
-      fetchNodes();
-    } catch {
-      toast({
-        title: t("common.error"),
-        variant: "destructive",
-      });
-    } finally {
-      setDrainingNodeId(null);
-    }
-  };
-
   const handleCancelEnrollment = async (id: string) => {
     try {
       setCancellingEnrollmentId(id);
-      await apiFetch(`/api/v1/admin/nodes/enrollments/${id}`, {
-        method: "DELETE",
-        headers: {
-          "X-CSRF-Token": getCsrfToken() || "",
-        },
-      });
+      await apiFetch(`/api/v1/admin/nodes/enrollments/${id}`, { method: "DELETE" });
       toast({
         title: t("nodes.enrollments.cancelSuccess"),
         variant: "default",
@@ -542,7 +505,7 @@ export function NodesPage() {
                                 {t("nodes.update.actionBtn")}
                               </Button>
                             )}
-                            {hasPermission("admin.nodes.write") && (
+                            {CLUSTER_SCHEDULER && hasPermission("admin.nodes.write") && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -554,23 +517,7 @@ export function NodesPage() {
                                 <span className="hidden xl:inline">{t("nodes.table.editCapacity")}</span>
                               </Button>
                             )}
-                            {hasPermission("admin.nodes.write") && (node.status === "online" || node.status === "draining") && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDrainToggle(node)}
-                                disabled={drainingNodeId === node.id}
-                                className={`h-8 px-2 text-xs gap-1 ${
-                                  node.status === "draining"
-                                    ? "text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10"
-                                    : "text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
-                                }`}
-                              >
-                                <ArrowDownRight className="h-3.5 w-3.5" />
-                                {node.status === "draining" ? t("nodes.scheduler.undrain") : t("nodes.scheduler.drain")}
-                              </Button>
-                            )}
-                            {hasPermission("admin.nodes.write") && node.status === "offline" && (
+                            {CLUSTER_SCHEDULER && hasPermission("admin.nodes.write") && node.status === "offline" && (
                               <Button
                                 variant="outline"
                                 size="sm"

@@ -5,10 +5,10 @@ import {
   createRootRoute,
   Outlet,
 } from "@tanstack/react-router";
-import { ThemeProvider, ToastProvider } from "@dhpanel/ui";
-import { SessionProvider, useSession, LoginPage, AccountSecurityPage } from "@dhpanel/auth";
-import { queryClient, QueryClientProvider } from "@dhpanel/api";
-import { AppShell, NotFoundPage, RouteErrorFallback } from "@dhpanel/shell";
+import { ThemeProvider, ToastProvider } from "@builtpanel/ui";
+import { SessionProvider, useSession, LoginPage, AccountSecurityPage } from "@builtpanel/auth";
+import { queryClient, QueryClientProvider } from "@builtpanel/api";
+import { AppShell, NotFoundPage, RouteErrorFallback } from "@builtpanel/shell";
 import {
   DashboardPage,
   UiDemoPage,
@@ -59,6 +59,7 @@ import {
   CommandPalette,
   CommandPaletteTrigger,
   UpdatePage,
+  AppInstallerPage,
   ApiTokensPage,
   SupportReportPage,
   AdminDnsClusterPage,
@@ -69,11 +70,13 @@ import {
   AdminFirewallPage,
   ResellerPortalPage,
   AdminResellersPage,
+  AdministratorsPage,
   AdminSecurityCenterPage,
+  AdminSystemToolsPage,
   filterNavItems,
   registeredFrontendModules,
-} from "@dhpanel/modules";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/modules";
+import { useTranslation } from "@builtpanel/i18n";
 
 function AuthenticatedContent() {
   const { data: session, isLoading } = useSession();
@@ -127,7 +130,7 @@ function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="system">
         <ToastProvider>
-          <SessionProvider>
+          <SessionProvider bootstrapPath="/api/v1/admin/bootstrap">
             <AuthenticatedContent />
           </SessionProvider>
         </ToastProvider>
@@ -566,6 +569,12 @@ const adminUpdateRoute = createRoute({
   component: UpdatePage,
 });
 
+const appInstallerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/app-installer",
+  component: AppInstallerPage,
+});
+
 // 50. API Tokens & Docs routes (T18.11)
 const apiTokensRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -604,6 +613,12 @@ const adminFirewallRoute = createRoute({
 });
 
 // 52. Security Center routes (T11.11)
+const systemToolsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/system-tools",
+  component: AdminSystemToolsPage,
+});
+
 const adminSecurityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/security",
@@ -659,6 +674,12 @@ const resellerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/reseller",
   component: ResellerPortalPage,
+});
+
+const administratorsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/administrators",
+  component: AdministratorsPage,
 });
 
 const adminResellersRoute = createRoute({
@@ -752,6 +773,7 @@ const routeTree = rootRoute.addChildren([
   clientFirewallRoute,
   adminFirewallRoute,
   adminSecurityRoute,
+  systemToolsRoute,
   adminSecurityCenterRoute,
   securityCenterRoute,
   appsRoute,
@@ -761,6 +783,7 @@ const routeTree = rootRoute.addChildren([
   adminEmailRoute,
   resellerRoute,
   adminResellersRoute,
+  administratorsRoute,
   adminResellerRoute,
   adminMigrationRoute,
   clientMigrationRoute,
@@ -773,6 +796,7 @@ const routeTree = rootRoute.addChildren([
   adminBrandingRoute,
   brandingRoute,
   updateRoute,
+  appInstallerRoute,
   adminUpdateRoute,
   apiTokensRoute,
   adminApiTokensRoute,

@@ -2,7 +2,7 @@
 //! its recovery. Ignored by default; see tests/migrations.rs.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use dhpanel_database::node_services::{self, Change};
+use builtpanel_database::node_services::{self, Change};
 use sqlx::PgPool;
 
 #[sqlx::test(migrations = "../../migrations")]

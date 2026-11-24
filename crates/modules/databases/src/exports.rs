@@ -23,13 +23,13 @@ use axum::{
     response::Response,
     routing::{get, post, put},
 };
-use dhpanel_database::exports::{self as store, Export, StartError};
-use dhpanel_domain::TenantUsername;
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::Operation;
-use dhpanel_rbac::Principal;
-use dhpanel_session::rfc3339;
-use dhpanel_settings::Scope;
+use builtpanel_database::exports::{self as store, Export, StartError};
+use builtpanel_domain::TenantUsername;
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::Operation;
+use builtpanel_rbac::Principal;
+use builtpanel_session::rfc3339;
+use builtpanel_settings::Scope;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tower::ServiceExt;
@@ -140,7 +140,7 @@ pub struct DownloadLink {
 
 async fn max_size_mb(state: &DatabasesState) -> Result<i64, AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "databases", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "databases", Scope::Global)
         .await
         .map_err(internal)?;
     Ok(values
@@ -193,7 +193,7 @@ pub async fn start_export(
             "Exports are not set up on this panel (agent.public_url).",
         ));
     };
-    let db = dhpanel_database::databases::get(&state.db, h.tenant.id, database_id)
+    let db = builtpanel_database::databases::get(&state.db, h.tenant.id, database_id)
         .await
         .map_err(internal)?
         .ok_or_else(|| AppError::not_found("database"))?;
@@ -231,11 +231,11 @@ pub async fn start_export(
             export_id: id,
             url: format!("{agent_url}/api/v1/public/exports/{id}"),
             token: None,
-            engine: dhpanel_node_protocol::DbEngine::parse(&db.engine).unwrap_or_default(),
+            engine: builtpanel_node_protocol::DbEngine::parse(&db.engine).unwrap_or_default(),
             dedicated: super::server_for(
                 &state,
                 &h,
-                dhpanel_node_protocol::DbEngine::parse(&db.engine).unwrap_or_default(),
+                builtpanel_node_protocol::DbEngine::parse(&db.engine).unwrap_or_default(),
             )
             .await?,
         },
@@ -243,7 +243,7 @@ pub async fn start_export(
         &who,
     )
     .await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("database.export_started", &who, &h, "database_export", id)
             .metadata(serde_json::json!({ "database": db.name })),
@@ -345,7 +345,7 @@ pub async fn make_link(
     .await
     .map_err(internal)?
     .ok_or_else(|| AppError::conflict("not_ready", "This export is not ready."))?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &entry("database.export_link", &who, &h, "database_export", id),
     )
@@ -395,7 +395,7 @@ pub async fn delete_export(
         ));
     }
     let _ = tokio::fs::remove_file(spool_path(&state.spool_dir, id)).await;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &entry("database.export_removed", &who, &h, "database_export", id),
     )

@@ -1,20 +1,20 @@
 //! `create_backup` for real (T09.04): the privileged helper (root, started by the live
 //! script), the agent's handlers, the box's rootless Docker and a real MariaDB. Ignored by
-//! default; skips without DHPANEL_TEST_HELPER_SOCKET and DHPANEL_TEST_TENANTS_ROOT.
+//! default; skips without BUILTPANEL_TEST_HELPER_SOCKET and BUILTPANEL_TEST_TENANTS_ROOT.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::{io::Read as _, path::PathBuf, sync::Arc};
 
-use dhpanel_backup::{KEY_LEN, Manifest, StreamReader};
-use dhpanel_backup_dest::{Destination as _, local::Local};
-use dhpanel_docker_manager::{DockerManager, Name};
-use dhpanel_node_agent::ops::{
+use builtpanel_backup::{KEY_LEN, Manifest, StreamReader};
+use builtpanel_backup_dest::{Destination as _, local::Local};
+use builtpanel_docker_manager::{DockerManager, Name};
+use builtpanel_node_agent::ops::{
     backup::{create_backup, delete_backup, export_backup, import_export, restore_backup},
     db::{CONTAINER, create_database, ensure_db_server, port},
     files::file_op,
     tenant::{TenantContext, create_tenant},
 };
-use dhpanel_node_protocol::{
+use builtpanel_node_protocol::{
     BackupTarget, DbPassword, ErrorCode, Operation, Output,
     files::{FileRequest, FileResult},
 };
@@ -22,6 +22,10 @@ use mysql_async::prelude::Queryable as _;
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -39,8 +43,8 @@ fn hex_key(byte: u8) -> (String, [u8; KEY_LEN]) {
 #[ignore = "needs the privileged helper running as root, Docker and registry access"]
 async fn an_account_is_backed_up_encrypted_and_every_part_checks_out() {
     let (Some(helper_socket), Some(tenants_root)) = (
-        std::env::var_os("DHPANEL_TEST_HELPER_SOCKET"),
-        std::env::var_os("DHPANEL_TEST_TENANTS_ROOT"),
+        std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET"),
+        std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT"),
     ) else {
         eprintln!("skipped: no helper (see the live script)");
         return;
@@ -48,9 +52,9 @@ async fn an_account_is_backed_up_encrypted_and_every_part_checks_out() {
     let docker = DockerManager::connect(&docker_socket()).unwrap();
     let _ = docker.remove(&Name::parse(CONTAINER).unwrap(), true).await;
     let _ = docker
-        .remove_volume(&Name::parse("dh-db-data").unwrap())
+        .remove_volume(&Name::parse("bp-db-data").unwrap())
         .await;
-    let base = std::env::temp_dir().join(format!("dh-backup-live-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("bp-backup-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     let dest_dir = base.join("destination");
     std::fs::create_dir_all(&dest_dir).unwrap();
@@ -134,7 +138,7 @@ async fn an_account_is_backed_up_encrypted_and_every_part_checks_out() {
         context.clone(),
         Operation::CreateDatabase {
             name: "bkp_shop".into(),
-            engine: dhpanel_node_protocol::DbEngine::Mysql,
+            engine: builtpanel_node_protocol::DbEngine::Mysql,
             dedicated: None,
         },
     )
@@ -222,7 +226,7 @@ async fn an_account_is_backed_up_encrypted_and_every_part_checks_out() {
         .read_to_end(&mut sealed)
         .unwrap();
     assert_eq!(
-        dhpanel_backup::manifest::hash_of(&sealed[..]).unwrap().1,
+        builtpanel_backup::manifest::hash_of(&sealed[..]).unwrap().1,
         manifest_sha256
     );
     let manifest = Manifest::from_reader(StreamReader::new(&sealed[..], &key)).unwrap();
@@ -535,7 +539,7 @@ async fn an_account_is_backed_up_encrypted_and_every_part_checks_out() {
     }
     assert!(before.iter().any(|n| n == "www/new.txt"), "{before:?}");
     // The transfer folder is left clean.
-    let transfers = std::env::var_os("DHPANEL_AGENT_TRANSFERS").map(PathBuf::from);
+    let transfers = std::env::var_os("BUILTPANEL_AGENT_TRANSFERS").map(PathBuf::from);
     if let Some(t) = transfers {
         assert!(
             std::fs::read_dir(t)
@@ -547,7 +551,7 @@ async fn an_account_is_backed_up_encrypted_and_every_part_checks_out() {
     }
 
     // ---- Export (T09.11): one file, taken to another destination, restored from there.
-    let header = dhpanel_backup::export::Header::new(
+    let header = builtpanel_backup::export::Header::new(
         &id,
         &username,
         1_700_000_000,
@@ -623,7 +627,7 @@ async fn an_account_is_backed_up_encrypted_and_every_part_checks_out() {
     };
     assert_eq!(imported_parts.len(), 4, "{imported_parts:?}");
     // The key comes out of the header with the passphrase, and the imported backup restores.
-    let unwrapped = dhpanel_backup::export::Header::from_reader(&header.to_json().unwrap()[..])
+    let unwrapped = builtpanel_backup::export::Header::from_reader(&header.to_json().unwrap()[..])
         .unwrap()
         .unwrap_key("a long enough passphrase")
         .unwrap();
@@ -697,7 +701,7 @@ async fn an_account_is_backed_up_encrypted_and_every_part_checks_out() {
 
     let _ = docker.remove(&Name::parse(CONTAINER).unwrap(), true).await;
     let _ = docker
-        .remove_volume(&Name::parse("dh-db-data").unwrap())
+        .remove_volume(&Name::parse("bp-db-data").unwrap())
         .await;
     let _ = std::fs::remove_dir_all(&base);
 }

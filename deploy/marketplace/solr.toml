@@ -1,0 +1,16 @@
+slug        = "solr"
+name        = "Apache Solr"
+category    = "java_tools"
+kind        = "container"
+description = "A search platform."
+license     = "Apache-2.0"
+homepage    = "https://solr.apache.org"
+covers      = ["Apache Solr"]
+version     = "9.11.0"
+image       = "docker.io/library/solr"
+track       = "9"
+tag         = "9.11.0"
+digest      = "sha256:5217d3f4dcb88412492e9cb1fb435ae0f30132d3bd9baca3344bec83cc9932a6"
+port        = 8983
+memory_mb   = 768
+usage       = "Admin page and API on host \"solr\", port 8983, from inside your account."

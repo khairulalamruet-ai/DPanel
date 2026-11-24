@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-tenant-stack"
+name = "builtpanel-tenant-stack"
 description = "What runs for one tenant: the stack template, the image allow-list, and the container specs rendered from them."
 version.workspace = true
 edition.workspace = true
@@ -11,8 +11,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-docker-manager.workspace = true
-dhpanel-domain.workspace = true
+builtpanel-docker-manager.workspace = true
+builtpanel-domain.workspace = true
 serde = { version = "1", features = ["derive"] }
 thiserror = "2.0.21"
 toml = "1"

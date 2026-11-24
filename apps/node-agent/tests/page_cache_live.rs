@@ -6,14 +6,14 @@
 
 use std::{path::PathBuf, process::Command, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{DockerManager, PublishedPort};
-use dhpanel_domain::{TenantUsername, UidRange};
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{DockerManager, PublishedPort};
+use builtpanel_domain::{TenantUsername, UidRange};
+use builtpanel_node_agent::ops::{
     tenant::TenantContext,
     vhost::{attach_domain, conf_dir},
 };
-use dhpanel_node_protocol::{Operation, Output};
-use dhpanel_tenant_stack::{
+use builtpanel_node_protocol::{Operation, Output};
+use builtpanel_tenant_stack::{
     Allowlist, PlanResources, Tenant, conf_volume_name, files_volume_name, network_name, render,
 };
 use uuid::Uuid;
@@ -21,6 +21,10 @@ use uuid::Uuid;
 const PORT: u16 = 18_092;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -73,7 +77,7 @@ async fn a_cached_page_is_given_again_except_to_signed_in_visitors_and_a_purge_m
         return;
     }
     let docker = DockerManager::connect(&socket).unwrap();
-    let root = std::env::temp_dir().join(format!("dh-pcache-live-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bp-pcache-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let context = Arc::new(TenantContext {
         helper_socket: "/nonexistent".into(),
@@ -130,10 +134,10 @@ async fn a_cached_page_is_given_again_except_to_signed_in_visitors_and_a_purge_m
         .await
         .unwrap();
     // The PHP container also reads its options from a directory of the tenant.
-    let ini = dhpanel_node_agent::ops::vhost::php_ini_dir(&root, &owner).unwrap();
+    let ini = builtpanel_node_agent::ops::vhost::php_ini_dir(&root, &owner).unwrap();
     docker
         .create_bind_volume(
-            &dhpanel_tenant_stack::php_ini_volume_name(&owner).unwrap(),
+            &builtpanel_tenant_stack::php_ini_volume_name(&owner).unwrap(),
             &ini,
             &root,
         )
@@ -163,17 +167,17 @@ async fn a_cached_page_is_given_again_except_to_signed_in_visitors_and_a_purge_m
     assert!(write.status.success(), "{write:?}");
 
     let attach = |generation: u32| {
-        let policy = dhpanel_domain::vhost::Policy::default().with_page_cache(Some(
-            dhpanel_domain::vhost::PageCache::parse(5, generation).unwrap(),
+        let policy = builtpanel_domain::vhost::Policy::default().with_page_cache(Some(
+            builtpanel_domain::vhost::PageCache::parse(5, generation).unwrap(),
         ));
-        let domain = dhpanel_domain::Fqdn::parse("example.com").unwrap();
-        let config = dhpanel_domain::vhost::render(
-            dhpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE,
-            &dhpanel_domain::vhost::Site {
+        let domain = builtpanel_domain::Fqdn::parse("example.com").unwrap();
+        let config = builtpanel_domain::vhost::render(
+            builtpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE,
+            &builtpanel_domain::vhost::Site {
                 domain: &domain,
                 aliases: &[],
-                docroot: &dhpanel_domain::Docroot::default(),
-                php_upstream: &dhpanel_tenant_stack::php_upstream(&owner).unwrap(),
+                docroot: &builtpanel_domain::Docroot::default(),
+                php_upstream: &builtpanel_tenant_stack::php_upstream(&owner).unwrap(),
                 policy: &policy,
                 custom: "",
                 proxy: None,
@@ -233,7 +237,7 @@ async fn a_cached_page_is_given_again_except_to_signed_in_visitors_and_a_purge_m
     for v in [
         conf_volume_name(&owner).unwrap(),
         files_volume_name(&owner).unwrap(),
-        dhpanel_tenant_stack::php_ini_volume_name(&owner).unwrap(),
+        builtpanel_tenant_stack::php_ini_volume_name(&owner).unwrap(),
     ] {
         let _ = docker.remove_volume(&v).await;
     }

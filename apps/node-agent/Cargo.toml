@@ -1,6 +1,6 @@
 [package]
-name = "dhpanel-node-agent"
-description = "DHPanel per-server node agent (typed operations only, never a shell)."
+name = "builtpanel-node-agent"
+description = "Built Panel per-server node agent (typed operations only, never a shell)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,25 +8,25 @@ license.workspace = true
 publish.workspace = true
 
 [lib]
-name = "dhpanel_node_agent"
+name = "builtpanel_node_agent"
 path = "src/lib.rs"
 
 [[bin]]
-# `dhpanel-agent` is the name used in the enrol command shown by the panel.
-name = "dhpanel-agent"
+# `builtpanel-agent` is the name used in the enrol command shown by the panel.
+name = "builtpanel-agent"
 path = "src/main.rs"
 
 [dependencies]
-dhpanel-common.workspace = true
-dhpanel-node-protocol.workspace = true
-dhpanel-docker-manager.workspace = true
-dhpanel-domain.workspace = true
+builtpanel-common.workspace = true
+builtpanel-node-protocol.workspace = true
+builtpanel-docker-manager.workspace = true
+builtpanel-domain.workspace = true
 # Checks an uploaded certificate and its key before the web server gets them.
-dhpanel-pki.workspace = true
-dhpanel-priv-helper = { path = "../priv-helper" }
-dhpanel-backup.workspace = true
-dhpanel-backup-dest.workspace = true
-dhpanel-tenant-stack.workspace = true
+builtpanel-pki.workspace = true
+builtpanel-priv-helper = { path = "../priv-helper" }
+builtpanel-backup.workspace = true
+builtpanel-backup-dest.workspace = true
+builtpanel-tenant-stack.workspace = true
 rustls.workspace = true
 tokio-rustls.workspace = true
 tokio-tungstenite.workspace = true
@@ -70,17 +70,17 @@ redb = "4"
 rustix = { version = "1", default-features = false, features = ["std", "fs"] }
 
 [dev-dependencies]
-dhpanel-catalog.workspace = true
-dhpanel-node-gateway.workspace = true
-dhpanel-operations.workspace = true
+builtpanel-catalog.workspace = true
+builtpanel-node-gateway.workspace = true
+builtpanel-operations.workspace = true
 # Tests play the control plane: they make a real CA, and the enrolment test runs
 # the real enrollment endpoint on a local port.
-dhpanel-audit.workspace = true
-dhpanel-cache.workspace = true
-dhpanel-database.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-mod-nodes.workspace = true
-dhpanel-session.workspace = true
+builtpanel-audit.workspace = true
+builtpanel-cache.workspace = true
+builtpanel-database.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-mod-nodes.workspace = true
+builtpanel-session.workspace = true
 axum = "0.8"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "macros", "uuid", "migrate"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "time", "test-util"] }

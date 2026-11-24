@@ -16,11 +16,11 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_backup::schedule::Cron;
-use dhpanel_database::backups as store;
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_backup::schedule::Cron;
+use builtpanel_database::backups as store;
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_rbac::{
     Require,
     permissions::{BackupsManage, BackupsRead},
 };
@@ -35,10 +35,10 @@ use crate::{
 async fn record(
     state: &BackupsState,
     action: &'static str,
-    who: &dhpanel_rbac::Principal,
+    who: &builtpanel_rbac::Principal,
     id: Uuid,
 ) -> Result<(), AppError> {
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &AuditEntry::new(action, Outcome::Success)
             .actor(who.account_id())

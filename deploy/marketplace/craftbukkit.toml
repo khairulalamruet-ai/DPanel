@@ -1,0 +1,8 @@
+slug        = "craftbukkit"
+name        = "CraftBukkit"
+category    = "utilities"
+kind        = "unavailable"
+description = "CraftBukkit."
+license     = "GPL-3.0-only"
+covers      = ["CraftBukkit"]
+reason      = "it is built from source with the vendor's tools and a game license (EULA) the customer has to accept; not offered yet"

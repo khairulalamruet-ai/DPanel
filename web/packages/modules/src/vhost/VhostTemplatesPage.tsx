@@ -5,9 +5,9 @@ import {
   Button,
   Badge,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { listTemplates, saveTemplate } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   FileCode2,
   Server,
@@ -45,9 +45,7 @@ export function VhostTemplatesPage() {
   const fetchTemplates = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<{ items: VhostTemplate[]; total: number }>(
-        "/api/v1/admin/vhost-templates"
-      );
+      const res = { items: await listTemplates() };
       setTemplates(res.items);
       if (res.items.length > 0 && !selectedTemplateId) {
         setSelectedTemplateId(res.items[0].id);
@@ -83,16 +81,7 @@ export function VhostTemplatesPage() {
     if (!selectedTemplate) return;
     try {
       setIsSaving(true);
-      const updated = await apiFetch<VhostTemplate>(
-        `/api/v1/admin/vhost-templates/${selectedTemplate.id}`,
-        {
-          method: "PUT",
-          body: JSON.stringify({
-            content: currentContent,
-            changelog: `Saved edits via web admin vhost editor`,
-          }),
-        }
-      );
+      const updated = await saveTemplate(selectedTemplate, currentContent);
 
       setTemplates((prev) =>
         prev.map((t) => (t.id === updated.id ? updated : t))

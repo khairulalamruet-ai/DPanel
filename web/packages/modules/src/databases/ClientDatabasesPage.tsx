@@ -19,8 +19,8 @@ import {
   DialogDescription,
   DialogFooter,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { formatBytes, loadDatabases, deleteDatabase, deleteDbUser, exportDatabase, phpMyAdminUrl } from "./api";
 import {
   Database,
   Users,
@@ -28,6 +28,7 @@ import {
   Plus,
   RefreshCw,
   ExternalLink,
+  Table2,
   UploadCloud,
   Download,
   Trash2,
@@ -40,15 +41,14 @@ import {
   DatabaseItem,
   DatabaseUserItem,
   ClientDatabasesResponse,
-  PhpMyAdminSsoResponse,
-  ExportDatabaseResponse,
 } from "./types";
 import { CreateDatabaseDialog } from "./CreateDatabaseDialog";
 import { CreateDatabaseUserDialog } from "./CreateDatabaseUserDialog";
 import { ManageGrantsDialog } from "./ManageGrantsDialog";
 import { SqlImportDialog } from "./SqlImportDialog";
 import { RemoteAccessDialog } from "./RemoteAccessDialog";
-import { useTranslation } from "@dhpanel/i18n";
+import { DatabaseStudio } from "./studio";
+import { useTranslation } from "@builtpanel/i18n";
 
 export function ClientDatabasesPage() {
   const { t } = useTranslation();
@@ -63,6 +63,7 @@ export function ClientDatabasesPage() {
   const [createDbOpen, setCreateDbOpen] = useState(false);
   const [createUserOpen, setCreateUserOpen] = useState(false);
   const [importDb, setImportDb] = useState<DatabaseItem | null>(null);
+  const [studioDb, setStudioDb] = useState<DatabaseItem | null>(null);
   const [manageGrantsUser, setManageGrantsUser] = useState<DatabaseUserItem | null>(null);
   const [remoteAccessOpen, setRemoteAccessOpen] = useState(false);
 
@@ -79,7 +80,7 @@ export function ClientDatabasesPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiFetch<ClientDatabasesResponse>("/api/v1/client/databases");
+      const res = await loadDatabases();
       setData(res);
     } catch (err: any) {
       setError(err?.message || "Failed to load database configuration");
@@ -93,18 +94,15 @@ export function ClientDatabasesPage() {
   }, [fetchDatabases]);
 
   // Derived tenant prefix from existing databases or user session
-  const tenantPrefix = data?.databases[0]?.prefix || "demo_";
+  const tenantPrefix = data?.prefix || "";
 
   // Actions
-  const handlePhpMyAdminSso = async () => {
+  const handlePhpMyAdminSso = async (db: DatabaseItem) => {
     try {
       setIsSsoLoading(true);
-      const res = await apiFetch<PhpMyAdminSsoResponse>(
-        "/api/v1/client/databases/phpmyadmin-sso",
-        { method: "POST" }
-      );
+      const url = await phpMyAdminUrl(db.id);
       // Open in new tab
-      window.open(res.redirect_url, "_blank");
+      window.open(url, "_blank");
     } catch (err: any) {
       toast({
         title: t("common.error"),
@@ -124,22 +122,19 @@ export function ClientDatabasesPage() {
         variant: "default",
       });
 
-      const res = await apiFetch<ExportDatabaseResponse>(
-        `/api/v1/client/databases/${db.id}/export`,
-        { method: "POST" }
-      );
+      const url = await exportDatabase(db.id);
 
       // Trigger download
       const a = document.createElement("a");
-      a.href = res.download_url;
-      a.download = res.filename;
+      a.href = url;
+      a.download = `${db.name}.sql.gz`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
 
       toast({
         title: t("common.success"),
-        description: t("databases.toast.exportReady", "Download started for {{file}}", { file: res.filename }),
+        description: t("databases.toast.exportReady", "Download started for {{file}}", { file: `${db.name}.sql.gz` }),
         variant: "default",
       });
     } catch (err: any) {
@@ -155,7 +150,7 @@ export function ClientDatabasesPage() {
     if (!deletingDb) return;
     try {
       setIsDeletingDb(true);
-      await apiFetch(`/api/v1/client/databases/${deletingDb.id}`, { method: "DELETE" });
+      await deleteDatabase(deletingDb.id);
 
       toast({
         title: t("common.success"),
@@ -180,7 +175,7 @@ export function ClientDatabasesPage() {
     if (!deletingUser) return;
     try {
       setIsDeletingUser(true);
-      await apiFetch(`/api/v1/client/databases/users/${deletingUser.id}`, { method: "DELETE" });
+      await deleteDbUser(deletingUser.id);
 
       toast({
         title: t("common.success"),
@@ -217,7 +212,11 @@ export function ClientDatabasesPage() {
     );
   }
 
-  const { databases, users, limits, remote_db_hosts } = data;
+  if (studioDb) {
+    return <DatabaseStudio database={studioDb} onClose={() => setStudioDb(null)} />;
+  }
+
+  const { databases, users, limits } = data;
   const isDbLimitReached = limits.max_databases !== -1 && limits.used_databases >= limits.max_databases;
   const isUserLimitReached = limits.max_db_users !== -1 && limits.used_db_users >= limits.max_db_users;
 
@@ -239,8 +238,11 @@ export function ClientDatabasesPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handlePhpMyAdminSso}
-            disabled={isSsoLoading}
+            onClick={() => {
+              const first = databases.find((d) => d.engine !== "postgres" && d.status === "ready");
+              if (first) void handlePhpMyAdminSso(first);
+            }}
+            disabled={isSsoLoading || !databases.some((d) => d.engine !== "postgres" && d.status === "ready")}
             className="text-xs"
             data-testid="btn-phpmyadmin-sso"
           >
@@ -328,7 +330,7 @@ export function ClientDatabasesPage() {
               </p>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-2xl font-bold font-mono text-foreground" data-testid="metric-db-size">
-                  {limits.used_db_size_mb !== undefined ? `${limits.used_db_size_mb} MB` : "42.5 MB"}
+                  {formatBytes(limits.used_db_size_bytes)}
                 </span>
               </div>
             </div>
@@ -404,8 +406,8 @@ export function ClientDatabasesPage() {
                 <TableRow>
                   <TableHead>{t("databases.table.name", "Database Name")}</TableHead>
                   <TableHead>{t("databases.table.size", "Size")}</TableHead>
-                  <TableHead>{t("databases.table.tables", "Tables")}</TableHead>
-                  <TableHead>{t("databases.table.charset", "Charset / Collation")}</TableHead>
+                  <TableHead>{t("databases.table.engine", "Engine")}</TableHead>
+                  <TableHead>{t("common.status", "Status")}</TableHead>
                   <TableHead>{t("databases.table.assignedUsers", "Assigned Users")}</TableHead>
                   <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
                 </TableRow>
@@ -430,10 +432,10 @@ export function ClientDatabasesPage() {
                         {db.size_formatted}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {db.tables_count}
+                        {db.engine === "postgres" ? "PostgreSQL" : "MariaDB"}
                       </TableCell>
                       <TableCell className="font-mono text-[11px] text-muted-foreground">
-                        {db.collation}
+                        {db.status}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
@@ -450,6 +452,20 @@ export function ClientDatabasesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {/* Database studio (MariaDB and PostgreSQL on the node's shared servers) */}
+                          {db.status === "ready" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setStudioDb(db)}
+                              className="h-8 w-8 p-0"
+                              title={t("databases.actions.studio", "Open the database studio")}
+                              data-testid={`btn-studio-${db.id}`}
+                            >
+                              <Table2 className="h-4 w-4" />
+                            </Button>
+                          )}
+
                           {/* SQL Import */}
                           <Button
                             variant="ghost"
@@ -541,7 +557,7 @@ export function ClientDatabasesPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {usr.host}
+                        {usr.engine === "postgres" ? "PostgreSQL" : "MariaDB"}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1.5">
@@ -549,8 +565,8 @@ export function ClientDatabasesPage() {
                             <span className="text-xs text-muted-foreground italic">No databases assigned</span>
                           ) : (
                             usr.grants.map((g) => (
-                              <Badge key={g.db_name} variant="outline" className="text-[10px] font-mono">
-                                {g.db_name} ({g.privileges.includes("ALL PRIVILEGES") ? "ALL" : `${g.privileges.length} privs`})
+                              <Badge key={g.db_id} variant="outline" className="text-[10px] font-mono">
+                                {g.db_name} ({g.access.replace("_", " ")})
                               </Badge>
                             ))
                           )}
@@ -632,10 +648,8 @@ export function ClientDatabasesPage() {
       <RemoteAccessDialog
         open={remoteAccessOpen}
         onOpenChange={setRemoteAccessOpen}
-        remoteHosts={remote_db_hosts}
-        onHostsUpdated={(newHosts) => {
-          setData((prev) => (prev ? { ...prev, remote_db_hosts: newHosts } : prev));
-        }}
+        users={users}
+        onHostsUpdated={() => fetchDatabases()}
       />
 
       {/* Delete Database Confirmation Dialog */}

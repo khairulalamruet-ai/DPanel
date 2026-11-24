@@ -155,8 +155,8 @@ pub fn post_webhook(url: &str, secret: &[u8], event: &str, body: &str) -> Result
     let mut response = webhook_agent()
         .post(url)
         .header("Content-Type", "application/json")
-        .header("X-DHPanel-Event", event)
-        .header("X-DHPanel-Signature", signature(secret, body.as_bytes()))
+        .header("X-BuiltPanel-Event", event)
+        .header("X-BuiltPanel-Signature", signature(secret, body.as_bytes()))
         .send(body)
         .map_err(|e| format!("the call failed: {e}"))?;
     let status = response.status().as_u16();

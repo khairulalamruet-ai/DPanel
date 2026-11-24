@@ -9,9 +9,9 @@ import {
   Button,
   Input,
   Badge,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { Globe, Clock, Lock, Check } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 const COMMON_TIMEZONES = [
   "UTC",

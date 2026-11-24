@@ -1,4 +1,5 @@
-export type FtpAccountStatus = "active" | "suspended";
+/** `active` and `suspended` are derived; the rest is the backend status (`pending`, `failed`, `deleting`). */
+export type FtpAccountStatus = string;
 
 export interface FtpAccount {
   id: string;
@@ -9,7 +10,8 @@ export interface FtpAccount {
   used_bytes: number;
   used_formatted: string;
   status: FtpAccountStatus;
-  created_at: string;
+  /** Protocols the account may use. */
+  access: string;
 }
 
 export interface FtpConnectionInfo {

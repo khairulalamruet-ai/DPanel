@@ -3,7 +3,7 @@
 //! Unpacking is two passes over the archive: the first reads only names, kinds and
 //! sizes and refuses the whole archive for an entry that would leave the folder
 //! (`../../etc/passwd`, an absolute name), for too many entries or too many bytes;
-//! the second writes, through `dhpanel-safe-fs`, so even a folder that turns into a
+//! the second writes, through `builtpanel-safe-fs`, so even a folder that turns into a
 //! link between the passes cannot be followed. Links, devices and the like inside an
 //! archive are skipped, never created; the permission bits that come with an entry
 //! are cut to `0777` (no setuid) and always leave the owner able to use the file.
@@ -13,8 +13,8 @@ use std::{
     os::fd::OwnedFd,
 };
 
-use dhpanel_node_protocol::files::{ArchiveFormat, FileErrorCode, FileResult};
-use dhpanel_safe_fs::{FsError, Root};
+use builtpanel_node_protocol::files::{ArchiveFormat, FileErrorCode, FileResult};
+use builtpanel_safe_fs::{FsError, Root};
 use rustix::fs::{Mode, OFlags};
 
 use super::{EntryKind, Out, fail, fs, kind_of, names, stat_at, sys, user_path};
@@ -144,7 +144,7 @@ pub(super) fn archive(
             count: u32::try_from(items.len()).unwrap_or(u32::MAX),
         }),
         Err(message) => {
-            let _ = dhpanel_safe_fs::remove(&dest_dir, &dest_name, false);
+            let _ = builtpanel_safe_fs::remove(&dest_dir, &dest_name, false);
             Err((FileErrorCode::Failed, message))
         }
     }
@@ -234,7 +234,8 @@ struct Seen {
 
 /// Checks a name from an archive and splits it.
 pub(super) fn entry_parts(raw: &str) -> Out<Vec<String>> {
-    let parts = dhpanel_safe_fs::parts(raw).map_err(|_| bad("an entry would leave the folder"))?;
+    let parts =
+        builtpanel_safe_fs::parts(raw).map_err(|_| bad("an entry would leave the folder"))?;
     // A name with a backslash is a Windows path in disguise.
     if parts.iter().any(|p| p.contains('\\')) {
         return Err(bad("an entry has a backslash in its name"));
@@ -254,7 +255,7 @@ pub(super) fn extract(
     max_bytes: u64,
     max_entries: u32,
 ) -> Out<FileResult> {
-    let dest_parts = fs(dhpanel_safe_fs::parts(user_path(dest)?).map_err(FsError::Path))?;
+    let dest_parts = fs(builtpanel_safe_fs::parts(user_path(dest)?).map_err(FsError::Path))?;
     let archive_fd = fs(root.open_at(
         user_path(path)?,
         OFlags::RDONLY | OFlags::NONBLOCK,
@@ -449,7 +450,7 @@ fn put(root: &Root, base: &str, item: &Seen, reader: &mut dyn Read, max_bytes: u
     let copied = std::io::copy(&mut reader.take(promised + 1), &mut out);
     let ok = copied.is_ok_and(|n| n == item.size);
     if !ok {
-        let _ = dhpanel_safe_fs::remove(&parent, &name, false);
+        let _ = builtpanel_safe_fs::remove(&parent, &name, false);
         return Err(bad("an entry is not the size it says"));
     }
     // The mode of a new file is cut by the umask; set exactly what was asked.

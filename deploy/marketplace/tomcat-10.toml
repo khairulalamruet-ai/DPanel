@@ -1,0 +1,16 @@
+slug        = "tomcat-10"
+name        = "Apache Tomcat 10"
+category    = "java_containers"
+kind        = "container"
+description = "A servlet container for Java web applications."
+license     = "Apache-2.0"
+homepage    = "https://tomcat.apache.org"
+covers      = ["Tomcat 10"]
+version     = "10.1.62"
+image       = "docker.io/library/tomcat"
+track       = "10.1"
+tag         = "10.1.62"
+digest      = "sha256:e5fa1843595beed04533a442e206b494adac6cb9a6070c2f1fd7914e15873b64"
+port        = 8080
+memory_mb   = 512
+usage       = "Host \"tomcat-10\", port 8080, from inside your account or on a domain."

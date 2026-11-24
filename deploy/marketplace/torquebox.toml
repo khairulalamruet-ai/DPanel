@@ -1,0 +1,8 @@
+slug        = "torquebox"
+name        = "TorqueBox"
+category    = "java_tools"
+kind        = "unavailable"
+description = "TorqueBox."
+license     = "LGPL-2.1-only"
+covers      = ["TorqueBox"]
+reason      = "the project is discontinued and no longer gets security fixes"

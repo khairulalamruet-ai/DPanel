@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
+import { ToastProvider } from "@builtpanel/ui";
 import { FtpAccountsPage } from "./FtpAccountsPage";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -18,10 +18,10 @@ describe("FtpAccountsPage (T08.13)", () => {
 
     // Check connection settings card
     expect(screen.getByTestId("ftp-connection-card")).toBeInTheDocument();
-    expect(screen.getByTestId("ftp-info-host")).toHaveTextContent("ftp.demo.dhpanel.test");
+    expect(screen.getByTestId("ftp-info-host")).toHaveTextContent("ftp.demo.builtpanel.test");
     expect(screen.getByTestId("ftp-info-port")).toHaveTextContent("21");
-    expect(screen.getByTestId("ftp-info-protocol")).toHaveTextContent("FTPS (FTP over TLS/SSL)");
-    expect(screen.getByTestId("ftp-info-encryption")).toHaveTextContent("Explicit TLS");
+    expect(screen.getByTestId("ftp-info-protocol")).toHaveTextContent("FTP");
+    expect(screen.getByTestId("ftp-info-encryption")).toHaveTextContent("FTPS (explicit TLS)");
 
     // Check seed accounts
     await waitFor(() => {

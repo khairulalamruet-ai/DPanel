@@ -8,11 +8,11 @@ import {
   DialogFooter,
   Button,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { chmod } from "./api";
 import { Shield } from "lucide-react";
 import { FileItem, ChmodPayload } from "./types";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 interface PermissionsDialogProps {
   open: boolean;
@@ -77,15 +77,8 @@ export function PermissionsDialog({
 
     try {
       setIsSubmitting(true);
-      const payload: ChmodPayload = {
-        path: file.path,
-        mode: octalMode,
-      };
-
-      const res = await apiFetch<FileItem>("/api/v1/client/files/chmod", {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
+      await chmod(file.path, octalMode);
+      const res: FileItem = { ...file, permissions: octalMode };
 
       toast({
         title: t("common.success"),

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
+import { ToastProvider } from "@builtpanel/ui";
 import { UserDetailPage } from "./UserDetailPage";
 
 function renderWithToast(ui: React.ReactElement) {
@@ -14,14 +14,14 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: any) => <a href={to}>{children}</a>,
 }));
 
-// Mock @dhpanel/i18n
-vi.mock("@dhpanel/i18n", () => ({
+// Mock @builtpanel/i18n
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: any) => {
       const dict: Record<string, string> = {
         "common.error": "Error",
         "common.loading": "Loading...",
-        "common.appName": "DHPanel",
+        "common.appName": "Built Panel",
         "userDetail.title": "Tenant Details",
         "userDetail.backToUsers": "Back to Users",
         "userDetail.status.active": "Active",
@@ -98,9 +98,9 @@ const mockUser = {
   },
   container: {
     id: "cnt_alpha_01",
-    name: "dh-tenant-alpha",
+    name: "bp-tenant-alpha",
     status: "running",
-    image: "dhpanel/stack-php83-nginx:latest",
+    image: "builtpanel/stack-php83-nginx:latest",
     ip_address: "172.28.0.5",
     started_at: "2026-10-01T00:00:00Z",
     uptime: "Up 14 days",
@@ -146,8 +146,12 @@ const mockUser = {
 };
 
 const mockApiFetch = vi.fn();
-vi.mock("@dhpanel/api", () => ({
+vi.mock("@builtpanel/api", () => ({
   apiFetch: (...args: any[]) => mockApiFetch(...args),
+}));
+// The page is made of several calls (see ./api); here it is given what they add up to.
+vi.mock("./api", () => ({
+  loadUserDetail: async () => mockUser,
 }));
 
 describe("UserDetailPage", () => {

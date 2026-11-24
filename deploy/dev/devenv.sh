@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# DHPanel native development environment (no Docker required).
+# Built Panel native development environment (no Docker required).
 #
 # Builds PostgreSQL 18 and Redis 8 from official sources into a per-user
 # prefix, runs them on 127.0.0.1 only with random passwords, and keeps every
 # secret in 0600 files. Nothing is installed system-wide; no sudo.
 #
 #   devenv.sh install   download, verify and build PostgreSQL + Redis (once)
-#   devenv.sh init      create data dirs, passwords, dhpanel role + database
+#   devenv.sh init      create data dirs, passwords, builtpanel role + database
 #   devenv.sh up        start PostgreSQL and Redis (runs init if needed)
 #   devenv.sh down      stop both
 #   devenv.sh status    show what is running
 #   devenv.sh env       print `export` lines for the app (file paths only, no secrets)
 #   devenv.sh test-env  print `export` lines for integration tests (reads secrets into env)
 #
-# Location: $DHPANEL_DEV_HOME (default ~/.local/dhpanel-dev).
+# Location: $BUILTPANEL_DEV_HOME (default ~/.local/builtpanel-dev).
 set -euo pipefail
 
 PG_VERSION="${PG_VERSION:-18.6}"
 REDIS_VERSION="${REDIS_VERSION:-8.10.3}"
 PG_PORT="${PG_PORT:-5432}"
 REDIS_PORT="${REDIS_PORT:-6379}"
-HOME_DIR="${DHPANEL_DEV_HOME:-$HOME/.local/dhpanel-dev}"
+HOME_DIR="${BUILTPANEL_DEV_HOME:-$HOME/.local/builtpanel-dev}"
 
 PG_BIN="$HOME_DIR/pgsql/bin"
 REDIS_BIN="$HOME_DIR/redis/bin"
@@ -73,7 +73,7 @@ cmd_install() {
       tar xzf "redis-$REDIS_VERSION.tar.gz"
       cd "redis-$REDIS_VERSION"
       # Optional Redis 8 modules (search/json/bloom/timeseries) are not used by
-      # DHPanel and need newer build tools; their failure must not stop the core build.
+      # Built Panel and need newer build tools; their failure must not stop the core build.
       make -j"$(ncpu)" BUILD_WITH_MODULES=no >"$LOGS/redis-make.log" 2>&1 || true
       [ -x src/redis-server ] || exit 1
       make PREFIX="$HOME_DIR/redis" BUILD_WITH_MODULES=no install >"$LOGS/redis-install.log" 2>&1
@@ -87,7 +87,7 @@ cmd_init() {
   [ -x "$REDIS_BIN/redis-server" ] || die "Redis not installed; run: devenv.sh install"
   ( umask 077; mkdir -p "$SECRETS" "$LOGS" "$HOME_DIR/redis-data" )
   chmod 700 "$SECRETS"
-  for name in pg_superuser_password pg_dhpanel_password redis_password; do
+  for name in pg_superuser_password pg_builtpanel_password redis_password; do
     [ -s "$SECRETS/$name" ] || ( umask 077; random_secret >"$SECRETS/$name" )
   done
   ensure_master_key
@@ -124,15 +124,15 @@ psql_super() { # psql as postgres over TCP, password from file (never on the com
 ensure_role_and_db() {
   ( umask 077; printf '127.0.0.1:%s:*:postgres:%s\n' "$PG_PORT" "$(cat "$SECRETS/pg_superuser_password")" >"$SECRETS/pgpass" )
   # Password goes through the environment, not argv, so it never shows in `ps`.
-  DHPANEL_PW="$(cat "$SECRETS/pg_dhpanel_password")" psql_super -d postgres <<'SQL'
-\getenv pw DHPANEL_PW
-SELECT 'CREATE ROLE dhpanel LOGIN PASSWORD ' || quote_literal(:'pw')
-WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dhpanel') \gexec
-SELECT 'CREATE DATABASE dhpanel_dev OWNER dhpanel'
-WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'dhpanel_dev') \gexec
+  BUILTPANEL_PW="$(cat "$SECRETS/pg_builtpanel_password")" psql_super -d postgres <<'SQL'
+\getenv pw BUILTPANEL_PW
+SELECT 'CREATE ROLE builtpanel LOGIN PASSWORD ' || quote_literal(:'pw')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'builtpanel') \gexec
+SELECT 'CREATE DATABASE builtpanel_dev OWNER builtpanel'
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'builtpanel_dev') \gexec
 SQL
   ( umask 077
-    printf 'postgres://dhpanel:%s@127.0.0.1:%s/dhpanel_dev\n' "$(cat "$SECRETS/pg_dhpanel_password")" "$PG_PORT" >"$SECRETS/database_url"
+    printf 'postgres://builtpanel:%s@127.0.0.1:%s/builtpanel_dev\n' "$(cat "$SECRETS/pg_builtpanel_password")" "$PG_PORT" >"$SECRETS/database_url"
     printf 'redis://:%s@127.0.0.1:%s/0\n' "$(cat "$SECRETS/redis_password")" "$REDIS_PORT" >"$SECRETS/redis_url"
   )
 }
@@ -183,11 +183,11 @@ cmd_env() { # file paths only; secrets stay in their 0600 files
   local repo
   repo="$(cd "$(dirname "$0")/../.." && pwd)"
   cat <<EOF
-export DHPANEL_CONFIG='$repo/deploy/dev/control.dev.toml'
-export DHPANEL_DATABASE__URL_FILE='$SECRETS/database_url'
-export DHPANEL_REDIS__URL_FILE='$SECRETS/redis_url'
-export DHPANEL_SECRETS__MASTER_KEY_FILE='$SECRETS/master_key'
-export DHPANEL_PKI__CA_DIR='$SECRETS'
+export BUILTPANEL_CONFIG='$repo/deploy/dev/control.dev.toml'
+export BUILTPANEL_DATABASE__URL_FILE='$SECRETS/database_url'
+export BUILTPANEL_REDIS__URL_FILE='$SECRETS/redis_url'
+export BUILTPANEL_SECRETS__MASTER_KEY_FILE='$SECRETS/master_key'
+export BUILTPANEL_PKI__CA_DIR='$SECRETS'
 export SQLX_OFFLINE=true
 EOF
 }

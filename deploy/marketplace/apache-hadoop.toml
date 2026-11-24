@@ -1,0 +1,8 @@
+slug        = "apache-hadoop"
+name        = "Apache Hadoop"
+category    = "databases"
+kind        = "unavailable"
+description = "Apache Hadoop."
+license     = "Apache-2.0"
+covers      = ["Apache Hadoop"]
+reason      = "not packaged for the panel yet"

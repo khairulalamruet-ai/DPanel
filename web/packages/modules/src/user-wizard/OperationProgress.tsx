@@ -1,6 +1,6 @@
 import React from "react";
-import { Badge, Button, Card, CardContent } from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+import { Badge, Button, Card, CardContent } from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   CheckCircle2,
   Loader2,

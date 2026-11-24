@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("DHPanel Admin Application", () => {
+test.describe("Built Panel Admin Application", () => {
   test("loads the admin dashboard with branding and language toggle", async ({ page }) => {
     await page.goto("/");
     // Check page title and header
-    await expect(page).toHaveTitle(/DHPanel Admin/);
+    await expect(page).toHaveTitle(/Built Panel Admin/);
 
     // Verify System Health card is displayed
     await expect(page.getByText(/0.1.0/)).toBeVisible();

@@ -1,0 +1,9 @@
+slug        = "python-3-14"
+name        = "Python 3.14"
+category    = "server_side_scripting"
+kind        = "builtin"
+description = "The Python language; applications run on it from Applications."
+license     = "PSF-2.0"
+homepage    = "https://www.python.org"
+covers      = ["Python 3"]
+provided_by = "Applications > Python (version 3.14)"

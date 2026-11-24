@@ -13,7 +13,7 @@
 //!   and fields are checked first; then token, node row, certificate record and
 //!   audit entry are written in one transaction. A bad request or a name clash
 //!   leaves the token usable.
-//! * **Only the public key from the CSR is used** (see `dhpanel-pki`): the node
+//! * **Only the public key from the CSR is used** (see `builtpanel-pki`): the node
 //!   cannot choose its identity, roles or lifetime.
 //! * Input sizes are bounded; the token is never logged or audited.
 
@@ -23,18 +23,18 @@ use axum::{
     http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     node_enrollments::{attach_node, consume_token},
     nodes::{InsertNodeError, NewNode, NewNodeCertificate, insert_node, insert_node_certificate},
 };
-use dhpanel_http_kit::{
+use builtpanel_http_kit::{
     AppError, FieldError, ProblemDetails,
     client_ip::{self, rate_limit_key},
 };
-use dhpanel_node_protocol::PROTOCOL_VERSION;
-pub use dhpanel_node_protocol::{EnrollRequest, EnrollResponse};
-use dhpanel_pki::{DEFAULT_NODE_VALIDITY, PkiError, format_rfc3339};
+use builtpanel_node_protocol::PROTOCOL_VERSION;
+pub use builtpanel_node_protocol::{EnrollRequest, EnrollResponse};
+use builtpanel_pki::{DEFAULT_NODE_VALIDITY, PkiError, format_rfc3339};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -142,7 +142,7 @@ async fn audit_failure(state: &NodesState, reason: &'static str) {
         (status = 422, description = "Invalid certificate request or fields; the token is not used up", body = ProblemDetails, content_type = "application/problem+json"),
         (status = 429, description = "Too many failed attempts from this address", body = ProblemDetails, content_type = "application/problem+json",
          headers(("retry-after" = u64, description = "Seconds until the lock expires"))),
-        (status = 503, description = "`enrollment_unavailable`: this control plane has no node CA yet (run `dhctl ca init`)", body = ProblemDetails, content_type = "application/problem+json")
+        (status = 503, description = "`enrollment_unavailable`: this control plane has no node CA yet (run `bpctl ca init`)", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
 pub async fn enroll_node(
@@ -268,7 +268,7 @@ pub async fn enroll_node(
     if let Some(ip) = ip {
         entry = entry.actor_ip(ip);
     }
-    dhpanel_audit::insert(&mut *tx, &entry)
+    builtpanel_audit::insert(&mut *tx, &entry)
         .await
         .map_err(AppError::internal)?;
     tx.commit().await.map_err(AppError::internal)?;

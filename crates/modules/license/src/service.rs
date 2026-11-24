@@ -2,20 +2,20 @@
 //!
 //! One [`LicenseService`] holds the client of the authority, the trusted keys and the policy.
 //! It writes everything down in the `license_state` row: what the client keeps (the signed
-//! entitlement, when it was last confirmed) and the verdict ([`dhpanel_license_client::evaluate`]),
+//! entitlement, when it was last confirmed) and the verdict ([`builtpanel_license_client::evaluate`]),
 //! which the restricted-mode middleware and the limits read. [`LicenseService::run`] is the
 //! loop that asks the authority: a heartbeat every few hours, an entitlement refresh twice a
 //! day, and a new verdict every minute (so the end of the offline grace is noticed on time).
 
 use std::{sync::Arc, time::Duration};
 
-use dhpanel_config::LicenseConfig;
-use dhpanel_database::{
+use builtpanel_config::LicenseConfig;
+use builtpanel_database::{
     license::{self as store, Kept, Verdict},
     sqlx::PgPool,
 };
-use dhpanel_license::Expect;
-use dhpanel_license_client::{
+use builtpanel_license::Expect;
+use builtpanel_license_client::{
     ClientError, Evaluation, Identity, LicenseClient, Mode, Policy, Received, Stored, evaluate,
 };
 use uuid::Uuid;
@@ -37,7 +37,7 @@ pub enum ServiceError {
     Cancelled,
 }
 
-fn db(e: &dhpanel_database::sqlx::Error) -> ServiceError {
+fn db(e: &builtpanel_database::sqlx::Error) -> ServiceError {
     ServiceError::Database(e.to_string())
 }
 
@@ -61,7 +61,7 @@ fn unix_now() -> i64 {
 pub struct LicenseService {
     db: PgPool,
     client: Option<Arc<LicenseClient>>,
-    keys: dhpanel_license::PublicKeys,
+    keys: builtpanel_license::PublicKeys,
     issuer: String,
     audience: String,
     installation_id: Option<Uuid>,
@@ -91,7 +91,7 @@ impl LicenseService {
         };
         let hostname = machine_hostname();
         let domain = config.domain.clone().unwrap_or_default();
-        let keys = dhpanel_license_client::trusted_keys(config.public_keys_file.as_deref())
+        let keys = builtpanel_license_client::trusted_keys(config.public_keys_file.as_deref())
             .map_err(|e| format!("the authority's public keys: {e}"))?;
         let (client, installation_id) = match &config.authority_url {
             None => (None, None),
@@ -131,7 +131,7 @@ impl LicenseService {
     /// This installation's answer to the authority's domain check, or `None` when licensing is
     /// off or the panel has no domain configured.
     #[must_use]
-    pub fn domain_proof(&self, nonce: &str) -> Option<dhpanel_license_client::DomainProof> {
+    pub fn domain_proof(&self, nonce: &str) -> Option<builtpanel_license_client::DomainProof> {
         self.client.as_ref()?.domain_proof(nonce).ok()
     }
 
@@ -185,7 +185,7 @@ impl LicenseService {
             audience: &self.audience,
             installation_id: id,
             clock_skew: 300,
-            host: dhpanel_license::HostFacts {
+            host: builtpanel_license::HostFacts {
                 hostname: &self.hostname,
                 domain: &self.domain,
             },
@@ -221,7 +221,7 @@ impl LicenseService {
     async fn keep(
         &self,
         stored: &Stored,
-        summary: Option<&dhpanel_license_client::LicenseSummary>,
+        summary: Option<&builtpanel_license_client::LicenseSummary>,
     ) -> Result<(), ServiceError> {
         let value = serde_json::to_value(stored).unwrap_or_default();
         store::save_stored(
@@ -397,7 +397,9 @@ impl LicenseService {
     ///
     /// # Errors
     /// [`ServiceError`].
-    pub async fn integrity_scan(&self) -> Result<dhpanel_license_client::ScanResult, ServiceError> {
+    pub async fn integrity_scan(
+        &self,
+    ) -> Result<builtpanel_license_client::ScanResult, ServiceError> {
         let client = self.client()?;
         let dir = self.binaries_dir.clone();
         let result = tokio::task::spawn_blocking(move || {
@@ -409,7 +411,7 @@ impl LicenseService {
                     continue;
                 }
                 if let Ok(bytes) = std::fs::read(dir.join(name)) {
-                    files.insert(name.clone(), dhpanel_license::sha256_hex(&bytes));
+                    files.insert(name.clone(), builtpanel_license::sha256_hex(&bytes));
                 }
             }
             client.integrity_report(&scan, &files)
@@ -528,10 +530,10 @@ impl LicenseService {
 
 async fn count(db: &PgPool, table: &str) -> i64 {
     let query = match table {
-        "nodes" => dhpanel_database::sqlx::query_scalar::<_, i64>(
+        "nodes" => builtpanel_database::sqlx::query_scalar::<_, i64>(
             "SELECT count(*) FROM nodes WHERE status <> 'revoked'",
         ),
-        _ => dhpanel_database::sqlx::query_scalar::<_, i64>(
+        _ => builtpanel_database::sqlx::query_scalar::<_, i64>(
             "SELECT count(*) FROM tenants WHERE status <> 'deleting'",
         ),
     };

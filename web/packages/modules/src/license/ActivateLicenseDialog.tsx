@@ -8,8 +8,8 @@ import {
   DialogFooter,
   Button,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { KeyRound, ShieldCheck, AlertCircle } from "lucide-react";
 
 interface ActivateLicenseDialogProps {
@@ -67,7 +67,7 @@ export function ActivateLicenseDialog({ open, onClose, onActivate }: ActivateLic
               <DialogDescription className="text-xs">
                 {t(
                   "license.activateModalSubtitle",
-                  "Enter your issued DHPanel commercial license key to unlock features and node capacity."
+                  "Enter your issued Built Panel commercial license key to unlock features and node capacity."
                 )}
               </DialogDescription>
             </div>

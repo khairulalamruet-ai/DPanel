@@ -6,13 +6,17 @@
 
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name};
-use dhpanel_node_agent::ops::{metrics::collect_metrics, tenant::TenantContext};
-use dhpanel_node_protocol::{ContainerMetrics, NodeMetrics, Operation, Output};
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name};
+use builtpanel_node_agent::ops::{metrics::collect_metrics, tenant::TenantContext};
+use builtpanel_node_protocol::{ContainerMetrics, NodeMetrics, Operation, Output};
 
 const CONTAINERS: usize = 30;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -53,7 +57,7 @@ async fn the_node_and_its_containers_are_measured_cheaply() {
     .unwrap();
     docker.pull_image(&image).await.unwrap();
     let names: Vec<Name> = (0..CONTAINERS)
-        .map(|i| Name::parse(&format!("dh-mt{}x-m{i}", std::process::id())).unwrap())
+        .map(|i| Name::parse(&format!("bp-mt{}x-m{i}", std::process::id())).unwrap())
         .collect();
     for (i, name) in names.iter().enumerate() {
         let mut spec = ContainerSpec::new(name.clone(), image.clone());
@@ -67,14 +71,14 @@ async fn the_node_and_its_containers_are_measured_cheaply() {
             ],
             _ => vec!["sleep".into(), "600".into()],
         };
-        spec.tmpfs.push(dhpanel_docker_manager::Tmpfs {
+        spec.tmpfs.push(builtpanel_docker_manager::Tmpfs {
             target: "/tmp".into(),
             size_bytes: 64 << 20,
         });
         docker.create_container(&spec).await.unwrap();
         docker.start(name).await.unwrap();
     }
-    let base = std::env::temp_dir().join(format!("dh-metrics-live-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("bp-metrics-live-{}", std::process::id()));
     std::fs::create_dir_all(&base).unwrap();
     let context = Arc::new(TenantContext {
         helper_socket: base.join("none.sock"),
@@ -97,7 +101,7 @@ async fn the_node_and_its_containers_are_measured_cheaply() {
         .iter()
         .filter(|c| {
             c.name
-                .starts_with(&format!("dh-mt{}x-", std::process::id()))
+                .starts_with(&format!("bp-mt{}x-", std::process::id()))
         })
         .collect();
     assert_eq!(mine.len(), CONTAINERS);

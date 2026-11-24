@@ -1,0 +1,8 @@
+slug        = "infinispan"
+name        = "Infinispan"
+category    = "databases"
+kind        = "unavailable"
+description = "Infinispan."
+license     = "Apache-2.0"
+covers      = ["Infinispan"]
+reason      = "not packaged for the panel yet"

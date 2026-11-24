@@ -4,12 +4,16 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef};
-use dhpanel_node_agent::ops::{logs::read_log, tenant::TenantContext};
-use dhpanel_node_protocol::{ErrorCode, LogLine, LogSource, Operation, Output};
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef};
+use builtpanel_node_agent::ops::{logs::read_log, tenant::TenantContext};
+use builtpanel_node_protocol::{ErrorCode, LogLine, LogSource, Operation, Output};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -26,7 +30,7 @@ async fn read(
     since_ms: i64,
     tail: u32,
     contains: Option<&str>,
-) -> Result<(Vec<LogLine>, bool), dhpanel_node_protocol::AgentError> {
+) -> Result<(Vec<LogLine>, bool), builtpanel_node_protocol::AgentError> {
     let out = read_log(
         context.clone(),
         Operation::ReadLog {
@@ -55,9 +59,9 @@ async fn an_accounts_logs_are_read_by_source_time_and_search_and_only_its_own() 
     .unwrap();
     docker.pull_image(&image).await.unwrap();
     let username = format!("lg{}x", std::process::id());
-    let tenant = dhpanel_domain::TenantUsername::parse(&username).unwrap();
-    let web = dhpanel_tenant_stack::web_container_name(&tenant).unwrap();
-    let php = dhpanel_tenant_stack::php_container_name(&tenant).unwrap();
+    let tenant = builtpanel_domain::TenantUsername::parse(&username).unwrap();
+    let web = builtpanel_tenant_stack::web_container_name(&tenant).unwrap();
+    let php = builtpanel_tenant_stack::php_container_name(&tenant).unwrap();
     for (name, script) in [
         (
             &web,
@@ -75,7 +79,7 @@ async fn an_accounts_logs_are_read_by_source_time_and_search_and_only_its_own() 
         docker.start(name).await.unwrap();
     }
     tokio::time::sleep(Duration::from_secs(2)).await;
-    let base = std::env::temp_dir().join(format!("dh-logs-live-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("bp-logs-live-{}", std::process::id()));
     let context = Arc::new(TenantContext {
         helper_socket: base.join("none.sock"),
         tenants_root: base.join("tenants"),

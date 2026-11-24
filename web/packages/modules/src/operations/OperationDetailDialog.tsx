@@ -8,8 +8,8 @@ import {
   DialogFooter,
   Button,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation, useFormatters } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation, useFormatters } from "@builtpanel/i18n";
 import {
   Activity,
   RotateCcw,

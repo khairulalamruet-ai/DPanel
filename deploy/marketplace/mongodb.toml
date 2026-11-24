@@ -1,0 +1,9 @@
+slug        = "mongodb"
+name        = "MongoDB"
+category    = "databases"
+kind        = "unavailable"
+description = "A document database."
+license     = "SSPL-1.0"
+homepage    = "https://www.mongodb.com"
+covers      = ["MongoDB"]
+reason      = "its image starts as root and then switches to its own user (and the SSPL license is not an open-source license by the OSI)"

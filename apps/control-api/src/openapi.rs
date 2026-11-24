@@ -4,18 +4,18 @@
 //! * Committed as `openapi.json` at the repository root; the frontend generates
 //!   its types from that file. The `openapi_json_is_up_to_date` test fails when
 //!   the committed file drifts; regenerate with
-//!   `DHPANEL_UPDATE_OPENAPI=1 cargo test -p dhpanel-control-api openapi_json`.
+//!   `BUILTPANEL_UPDATE_OPENAPI=1 cargo test -p builtpanel-control-api openapi_json`.
 //! * Debug builds also serve an interactive viewer at `/api/docs`.
 
-use dhpanel_http_kit::{FieldError, ProblemDetails, health::PublicHealthApi};
+use builtpanel_http_kit::{FieldError, ProblemDetails, health::PublicHealthApi};
 use utoipa::OpenApi;
 
 /// Root OpenAPI document. Each module nests its own fragment here.
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "DHPanel API",
-        description = "Control plane API for the DHPanel hosting panel. \
+        title = "Built Panel API",
+        description = "Control plane API for the Built Panel hosting panel. \
                        Errors use RFC 9457 Problem Details (`application/problem+json`).",
         license(name = "Proprietary")
     ),
@@ -29,28 +29,28 @@ pub struct ApiDoc;
 #[must_use]
 pub fn document() -> utoipa::openapi::OpenApi {
     let mut doc = ApiDoc::openapi();
-    doc.merge(dhpanel_mod_auth::AuthApi::openapi());
-    doc.merge(dhpanel_audit::AuditApi::openapi());
-    doc.merge(dhpanel_mod_admin::AdminApi::openapi());
-    doc.merge(dhpanel_mod_nodes::NodesApi::openapi());
-    doc.merge(dhpanel_mod_system::SystemApi::openapi());
-    doc.merge(dhpanel_mod_plans::PlansApi::openapi());
-    doc.merge(dhpanel_mod_users::UsersApi::openapi());
-    doc.merge(dhpanel_mod_users::ResellersApi::openapi());
-    doc.merge(dhpanel_mod_domains::DomainsApi::openapi());
-    doc.merge(dhpanel_mod_databases::DatabasesApi::openapi());
-    doc.merge(dhpanel_mod_files::FilesApi::openapi());
-    doc.merge(dhpanel_mod_backups::BackupsApi::openapi());
-    doc.merge(dhpanel_mod_apps::AppsApi::openapi());
-    doc.merge(dhpanel_mod_license::LicenseApi::openapi());
-    doc.merge(dhpanel_mod_cron::CronApi::openapi());
-    doc.merge(dhpanel_mod_mail::MailApi::openapi());
-    doc.merge(dhpanel_mod_migration::MigrationApi::openapi());
-    doc.merge(dhpanel_mod_logs::LogsApi::openapi());
-    doc.merge(dhpanel_mod_notifications::NotificationsApi::openapi());
-    doc.merge(dhpanel_mod_usage::UsageApi::openapi());
-    doc.merge(dhpanel_mod_services::ServicesApi::openapi());
-    doc.merge(dhpanel_mod_security::SecurityApi::openapi());
+    doc.merge(builtpanel_mod_auth::AuthApi::openapi());
+    doc.merge(builtpanel_audit::AuditApi::openapi());
+    doc.merge(builtpanel_mod_admin::AdminApi::openapi());
+    doc.merge(builtpanel_mod_nodes::NodesApi::openapi());
+    doc.merge(builtpanel_mod_system::SystemApi::openapi());
+    doc.merge(builtpanel_mod_plans::PlansApi::openapi());
+    doc.merge(builtpanel_mod_users::UsersApi::openapi());
+    doc.merge(builtpanel_mod_users::ResellersApi::openapi());
+    doc.merge(builtpanel_mod_domains::DomainsApi::openapi());
+    doc.merge(builtpanel_mod_databases::DatabasesApi::openapi());
+    doc.merge(builtpanel_mod_files::FilesApi::openapi());
+    doc.merge(builtpanel_mod_backups::BackupsApi::openapi());
+    doc.merge(builtpanel_mod_apps::AppsApi::openapi());
+    doc.merge(builtpanel_mod_license::LicenseApi::openapi());
+    doc.merge(builtpanel_mod_cron::CronApi::openapi());
+    doc.merge(builtpanel_mod_mail::MailApi::openapi());
+    doc.merge(builtpanel_mod_migration::MigrationApi::openapi());
+    doc.merge(builtpanel_mod_logs::LogsApi::openapi());
+    doc.merge(builtpanel_mod_notifications::NotificationsApi::openapi());
+    doc.merge(builtpanel_mod_usage::UsageApi::openapi());
+    doc.merge(builtpanel_mod_services::ServicesApi::openapi());
+    doc.merge(builtpanel_mod_security::SecurityApi::openapi());
     doc
 }
 
@@ -79,14 +79,14 @@ mod tests {
     fn openapi_json_is_up_to_date() {
         let generated = json();
         let path = committed_path();
-        if std::env::var_os("DHPANEL_UPDATE_OPENAPI").is_some() {
+        if std::env::var_os("BUILTPANEL_UPDATE_OPENAPI").is_some() {
             std::fs::write(&path, &generated).expect("write openapi.json");
             return;
         }
         let committed = std::fs::read_to_string(&path).unwrap_or_default();
         assert!(
             committed == generated,
-            "openapi.json is stale; run: DHPANEL_UPDATE_OPENAPI=1 cargo test -p dhpanel-control-api openapi_json"
+            "openapi.json is stale; run: BUILTPANEL_UPDATE_OPENAPI=1 cargo test -p builtpanel-control-api openapi_json"
         );
     }
 

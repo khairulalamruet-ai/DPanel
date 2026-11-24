@@ -15,7 +15,7 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_node_protocol::{ENROLL_PATH, EnrollRequest, EnrollResponse};
+use builtpanel_node_protocol::{ENROLL_PATH, EnrollRequest, EnrollResponse};
 use rcgen::{CertificateParams, DnType, KeyPair};
 use secrecy::{ExposeSecret as _, SecretString};
 use time::OffsetDateTime;
@@ -154,7 +154,7 @@ fn build_agent(url: &str, tls_ca_pem: Option<&[u8]>) -> Result<ureq::Agent, Enro
         // A redirect would re-send the token to wherever it points.
         .max_redirects(0)
         .https_only(url.starts_with("https://"))
-        .user_agent(format!("dhpanel-agent/{AGENT_VERSION}"))
+        .user_agent(format!("builtpanel-agent/{AGENT_VERSION}"))
         .tls_config(tls.build())
         .build()
         .into())
@@ -231,7 +231,7 @@ pub fn enroll(options: &Options) -> Result<Enrolled, EnrollError> {
         .map_err(|e| EnrollError::Crypto(e.to_string()))?;
     params
         .distinguished_name
-        .push(DnType::CommonName, "dhpanel-agent-enrolling");
+        .push(DnType::CommonName, "builtpanel-agent-enrolling");
     let csr_pem = params
         .serialize_request(&key)
         .and_then(|csr| csr.pem())

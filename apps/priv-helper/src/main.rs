@@ -1,7 +1,7 @@
-//! `dhpanel-priv-helper`: the small root helper of the node agent.
+//! `builtpanel-priv-helper`: the small root helper of the node agent.
 //!
 //! ```text
-//! dhpanel-priv-helper [--socket PATH] [--agent-user NAME | --agent-uid UID --agent-gid GID]
+//! builtpanel-priv-helper [--socket PATH] [--agent-user NAME | --agent-uid UID --agent-gid GID]
 //! ```
 //!
 //! Started by systemd as root. See the library documentation for what it will
@@ -10,12 +10,12 @@
 
 use std::{path::PathBuf, process::ExitCode, sync::atomic::AtomicBool};
 
-use dhpanel_priv_helper::{
+use builtpanel_priv_helper::{
     server::{Config, DEFAULT_SOCKET, Log as _, StderrLog, bind, lookup_system_user, serve},
     tenant::TenantEnv,
 };
 
-const USAGE: &str = "usage: dhpanel-priv-helper [--socket PATH] [--tenants-root DIR] [--db-port PORT] [--pg-port PORT] [--transfers-dir DIR] [--agent-user NAME | --agent-uid UID --agent-gid GID]";
+const USAGE: &str = "usage: builtpanel-priv-helper [--socket PATH] [--tenants-root DIR] [--db-port PORT] [--pg-port PORT] [--transfers-dir DIR] [--uid-map subuid|identity] [--agent-user NAME | --agent-uid UID --agent-gid GID]";
 
 #[allow(clippy::print_stdout)]
 fn main() -> ExitCode {
@@ -27,7 +27,7 @@ fn main() -> ExitCode {
     if std::env::args().nth(1).as_deref() == Some("filebackup") {
         let root = std::env::args().nth(3).map(PathBuf::from);
         return match root {
-            Some(root) => match dhpanel_priv_helper::files::backup_worker(
+            Some(root) => match builtpanel_priv_helper::files::backup_worker(
                 &root,
                 std::io::stdin(),
                 &mut std::io::stdout(),
@@ -48,7 +48,7 @@ fn main() -> ExitCode {
             .then(|| args.get(5).cloned())
             .flatten();
         return match root {
-            Some(root) => match dhpanel_priv_helper::files::restore_worker(
+            Some(root) => match builtpanel_priv_helper::files::restore_worker(
                 &root,
                 std::io::BufReader::new(std::io::stdin()),
                 folder.as_deref(),
@@ -67,8 +67,11 @@ fn main() -> ExitCode {
         let root = std::env::args().nth(3).map(PathBuf::from);
         return match (std::env::args().nth(2).as_deref(), root) {
             (Some("--root"), Some(root)) => {
-                match dhpanel_priv_helper::files::worker(&root, std::io::stdin(), std::io::stdout())
-                {
+                match builtpanel_priv_helper::files::worker(
+                    &root,
+                    std::io::stdin(),
+                    std::io::stdout(),
+                ) {
                     Ok(()) => ExitCode::SUCCESS,
                     Err(_) => ExitCode::FAILURE,
                 }
@@ -77,13 +80,16 @@ fn main() -> ExitCode {
         };
     }
     let mut socket = PathBuf::from(DEFAULT_SOCKET);
-    let mut user = String::from("dhpanel-agent");
+    let mut user = String::from("builtpanel-agent");
     let mut tenants_root = PathBuf::from("/srv/tenants");
     let mut db_port: u16 = 13306;
     let mut pg_port: u16 = 15432;
-    let mut transfers = PathBuf::from("/var/lib/dhpanel-transfers");
-    let mut server = dhpanel_priv_helper::servertools::Env::default();
+    let mut transfers = PathBuf::from("/var/lib/builtpanel-transfers");
+    let mut server = builtpanel_priv_helper::servertools::Env::default();
     let mut ssh_port: u16 = 22;
+    // How the containers' ids reach the host: through the agent's subordinate range (a rootless engine,
+    // the default), or as they are (a root engine such as Kiri). The unit can say it with the variable.
+    let mut identity = std::env::var("BUILTPANEL_HELPER_UID_MAP").is_ok_and(|v| v == "identity");
     let (mut uid, mut gid) = (None::<u32>, None::<u32>);
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -92,6 +98,13 @@ fn main() -> ExitCode {
             "--socket" => value().map(|v| socket = v.into()),
             "--agent-user" => value().map(|v| user = v),
             "--tenants-root" => value().map(|v| tenants_root = v.into()),
+            "--uid-map" => value()
+                .and_then(|v| match v.as_str() {
+                    "identity" => Some(true),
+                    "subuid" => Some(false),
+                    _ => None,
+                })
+                .map(|v| identity = v),
             "--transfers-dir" => value().map(|v| transfers = v.into()),
             // For tests: where the server tools find their commands and files.
             "--ssh-port" => value()
@@ -116,7 +129,7 @@ fn main() -> ExitCode {
             "--agent-uid" => value().and_then(|v| v.parse().ok()).map(|v| uid = Some(v)),
             "--agent-gid" => value().and_then(|v| v.parse().ok()).map(|v| gid = Some(v)),
             "--version" => {
-                println!("{}", dhpanel_common::build_banner("priv-helper"));
+                println!("{}", builtpanel_common::build_banner("priv-helper"));
                 return ExitCode::SUCCESS;
             }
             "--help" | "-h" => {
@@ -157,6 +170,7 @@ fn main() -> ExitCode {
             subuid_file: "/etc/subuid".into(),
             agent_gid,
             mountinfo: "/proc/self/mountinfo".into(),
+            identity,
         },
         db_port,
         pg_port,
@@ -206,7 +220,7 @@ fn transfer_worker(mode: &str) -> ExitCode {
             return ExitCode::from(64);
         };
         let overwrite = args.iter().any(|a| a == "--overwrite");
-        dhpanel_priv_helper::files::put_worker(
+        builtpanel_priv_helper::files::put_worker(
             &root,
             &dest,
             overwrite,
@@ -219,7 +233,7 @@ fn transfer_worker(mode: &str) -> ExitCode {
     let Some(path) = value("--path") else {
         return ExitCode::from(64);
     };
-    match dhpanel_priv_helper::files::get_worker(&root, &path, max, &mut std::io::stdout()) {
+    match builtpanel_priv_helper::files::get_worker(&root, &path, max, &mut std::io::stdout()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(answer) => {
             eprintln!("{}", serde_json::to_string(&answer).unwrap_or_default());

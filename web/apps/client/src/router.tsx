@@ -5,16 +5,32 @@ import {
   createRootRoute,
   Outlet,
 } from "@tanstack/react-router";
-import { ThemeProvider, ToastProvider } from "@dhpanel/ui";
-import { SessionProvider, useSession, LoginPage, AccountSecurityPage } from "@dhpanel/auth";
-import { queryClient, QueryClientProvider } from "@dhpanel/api";
-import { AppShell, NotFoundPage, RouteErrorFallback } from "@dhpanel/shell";
-import { ClientDashboardPage, ClientDomainsPage, DnsEditorPage, SslPage, PhpManagementPage, ServicesPage, ClientDatabasesPage, FileManagerPage, DiskUsagePage, FtpAccountsPage, ClientBackupsPage, CronJobsPage, LogViewerPage, ClientUsagePage, ClientProcessesPage, ClientWafPage, ClientFirewallPage, AppsPage, ClientEmailPage, ResellerPortalPage, MigrationPage, NotificationBell, NotificationPreferencesPage, CommandPalette, CommandPaletteTrigger } from "@dhpanel/modules";
-import { useTranslation } from "@dhpanel/i18n";
-import { LayoutDashboard, ShieldCheck, ShieldAlert, Globe, Lock, Database, Folder, Server, Archive, Clock, FileText, Activity, Terminal, Flame, Boxes, Mail, Briefcase, ArrowRightLeft } from "lucide-react";
+import { ThemeProvider, ToastProvider } from "@builtpanel/ui";
+import { SessionProvider, useSession, LoginPage, AccountSecurityPage } from "@builtpanel/auth";
+import { queryClient, QueryClientProvider } from "@builtpanel/api";
+import { AppShell, NotFoundPage, RouteErrorFallback } from "@builtpanel/shell";
+import { ClientDashboardPage, ClientDomainsPage, DnsEditorPage, SslPage, PhpManagementPage, ServicesPage, ClientDatabasesPage, FileManagerPage, DiskUsagePage, FtpAccountsPage, ClientBackupsPage, CronJobsPage, LogViewerPage, ClientUsagePage, ClientProcessesPage, ClientWafPage, ClientFirewallPage, AppsPage, ClientEmailPage, ResellerPortalPage, MigrationPage, NotificationBell, NotificationPreferencesPage, ClientToolsPage, CommandPalette, CommandPaletteTrigger } from "@builtpanel/modules";
+import { useTranslation } from "@builtpanel/i18n";
+import { LayoutDashboard, ShieldCheck, ShieldAlert, Globe, Lock, Database, Folder, Server, Archive, Clock, FileText, Activity, Terminal, Flame, Boxes, Mail, Briefcase, ArrowRightLeft, Wrench } from "lucide-react";
+
+/** The plan feature a menu entry needs; entries that are not listed are always shown. */
+const NAV_FEATURE: Record<string, string> = {
+  domains: "domains",
+  dns: "dns",
+  ssl: "ssl",
+  databases: "databases",
+  files: "files",
+  ftp: "ftp",
+  backups: "backups",
+  cron: "cron",
+  logs: "logs",
+};
+
+/** Pages whose backend does not exist yet: they stay out of the menu until it does. */
+const NOT_YET = new Set(["migration"]);
 
 function AuthenticatedContent() {
-  const { data: session, isLoading } = useSession();
+  const { data: session, isLoading, hasFeature } = useSession();
   const { t } = useTranslation();
   const [commandPaletteOpen, setCommandPaletteOpen] = React.useState(false);
 
@@ -128,6 +144,12 @@ function AuthenticatedContent() {
       href: "/migration",
     },
     {
+      id: "tools",
+      labelKey: "tools.nav",
+      icon: <Wrench className="h-4 w-4" />,
+      href: "/tools",
+    },
+    {
       id: "security",
       labelKey: "security.nav",
       icon: <ShieldCheck className="h-4 w-4" />,
@@ -156,7 +178,9 @@ function AuthenticatedContent() {
     <>
       <AppShell
         title={t("common.clientTitle")}
-        navItems={navItems}
+        navItems={navItems.filter(
+          (item) => !NOT_YET.has(item.id) && (!NAV_FEATURE[item.id] || hasFeature(NAV_FEATURE[item.id])),
+        )}
         headerActions={
           <div className="flex items-center gap-2">
             <CommandPaletteTrigger onClick={() => setCommandPaletteOpen(true)} />
@@ -177,10 +201,10 @@ function AuthenticatedContent() {
 
 function RootLayout() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="dhpanel-client-theme">
+    <ThemeProvider defaultTheme="system" storageKey="builtpanel-client-theme">
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <SessionProvider bootstrapPath="/api/v1/auth/me">
+          <SessionProvider bootstrapPath="/api/v1/client/bootstrap">
             <AuthenticatedContent />
           </SessionProvider>
         </ToastProvider>
@@ -259,6 +283,12 @@ const backupsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/backups",
   component: ClientBackupsPage,
+});
+
+const toolsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/tools",
+  component: ClientToolsPage,
 });
 
 const cronRoute = createRoute({
@@ -353,7 +383,7 @@ const loginRoute = createRoute({
   },
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, domainsRoute, dnsRoute, sslRoute, phpRoute, servicesRoute, databasesRoute, filesRoute, diskUsageRoute, ftpRoute, backupsRoute, cronRoute, logsRoute, usageRoute, processesRoute, wafRoute, firewallRoute, appsRoute, emailRoute, resellerRoute, migrationRoute, securityRoute, notificationsRoute, settingsNotificationsRoute, loginRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, domainsRoute, dnsRoute, sslRoute, phpRoute, servicesRoute, databasesRoute, filesRoute, diskUsageRoute, ftpRoute, backupsRoute, cronRoute, toolsRoute, logsRoute, usageRoute, processesRoute, wafRoute, firewallRoute, appsRoute, emailRoute, resellerRoute, migrationRoute, securityRoute, notificationsRoute, settingsNotificationsRoute, loginRoute]);
 
 export const router = createRouter({
   routeTree,

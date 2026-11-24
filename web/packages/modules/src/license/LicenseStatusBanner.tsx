@@ -1,6 +1,6 @@
 import React from "react";
-import { useTranslation } from "@dhpanel/i18n";
-import { Badge, Button } from "@dhpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { Badge, Button } from "@builtpanel/ui";
 import {
   CheckCircle2,
   AlertTriangle,

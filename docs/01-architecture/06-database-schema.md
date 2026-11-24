@@ -1,7 +1,7 @@
 # ০৬ — Database Schema (PostgreSQL)
 
 এখানে শুধু টেবিল, মূল field আর সম্পর্ক আছে। আসল SQL migration লেখার সময় তৈরি হবে।
-**নিয়ম (PDF):** UUID (v7) primary key, foreign key, unique, index, transaction। Audit append-only। Tenant-scoped query। Least-privilege DB role (`dhpanel_app`, `dhpanel_migrate`, `dhpanel_readonly`)।
+**নিয়ম (PDF):** UUID (v7) primary key, foreign key, unique, index, transaction। Audit append-only। Tenant-scoped query। Least-privilege DB role (`builtpanel_app`, `builtpanel_migrate`, `builtpanel_readonly`)।
 
 ## Core
 | টেবিল | মূল field | মন্তব্য |
@@ -58,7 +58,7 @@
 | `usage_samples` | tenant_id, at, cpu_pct, mem_bytes, io_r, io_w, net_rx, net_tx | TimescaleDB বা partition (মাস অনুযায়ী) |
 | `disk_usage` | tenant_id, at, bytes, inodes |
 
-## License (DHPanel installation-এর দিকে)
+## License (Built Panel installation-এর দিকে)
 | টেবিল | মূল field |
 |---|---|
 | `license_state` | installation_id, license_id, entitlement_jws, key_id, expires_at, last_refresh_at, mode(`active`/`grace`/`restricted`) |

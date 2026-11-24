@@ -16,13 +16,13 @@
 
 use std::time::Duration;
 
-pub use dhpanel_database::operations::{Enqueued, Operation as Row, Status};
-use dhpanel_database::{
+pub use builtpanel_database::operations::{Enqueued, Operation as Row, Status};
+use builtpanel_database::{
     nodes,
     operations::{self as db, EnqueueError},
     sqlx::PgPool,
 };
-use dhpanel_node_protocol::{
+use builtpanel_node_protocol::{
     MAX_ENVELOPE_LIFETIME_SECS, Operation, OperationEnvelope, PROTOCOL_VERSION,
 };
 use uuid::Uuid;
@@ -96,7 +96,7 @@ pub enum OperationsError {
     Serialize(String),
     /// Database error.
     #[error(transparent)]
-    Database(#[from] dhpanel_database::sqlx::Error),
+    Database(#[from] builtpanel_database::sqlx::Error),
 }
 
 fn valid_key(key: &str) -> bool {

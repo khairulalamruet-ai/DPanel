@@ -12,14 +12,14 @@ use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::Operation;
-use dhpanel_operations::{OperationsError, Request, Row, Status};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::Operation;
+use builtpanel_operations::{OperationsError, Request, Row, Status};
+use builtpanel_rbac::{
     Require, RequireRecent,
     permissions::{NodesManage, NodesRead},
 };
-use dhpanel_session::rfc3339;
+use builtpanel_session::rfc3339;
 use serde::{Deserialize, Serialize};
 use sha2::Digest as _;
 use utoipa::{IntoParams, ToSchema};

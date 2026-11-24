@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-import"
+name = "builtpanel-import"
 description = "Reads the backup of another hosting panel into one common model (T15.01-T15.03)."
 version.workspace = true
 edition.workspace = true
@@ -11,7 +11,7 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-domain.workspace = true
+builtpanel-domain.workspace = true
 serde = { version = "1", features = ["derive"] }
 thiserror = "2.0.21"
 tar = { version = "0.4.46", default-features = false }

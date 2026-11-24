@@ -53,13 +53,13 @@ CREATE TRIGGER audit_logs_no_truncate
 -- Production uses separate roles (docs/01-architecture/06-database-schema.md):
 -- the migration role owns the table and the application role may only read and
 -- insert. Applied when the role already exists; otherwise grant it by hand:
---   REVOKE ALL ON audit_logs FROM dhpanel_app;
---   GRANT SELECT, INSERT ON audit_logs TO dhpanel_app;
+--   REVOKE ALL ON audit_logs FROM builtpanel_app;
+--   GRANT SELECT, INSERT ON audit_logs TO builtpanel_app;
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dhpanel_app') THEN
-        REVOKE ALL ON audit_logs FROM dhpanel_app;
-        GRANT SELECT, INSERT ON audit_logs TO dhpanel_app;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'builtpanel_app') THEN
+        REVOKE ALL ON audit_logs FROM builtpanel_app;
+        GRANT SELECT, INSERT ON audit_logs TO builtpanel_app;
     END IF;
 END
 $$;

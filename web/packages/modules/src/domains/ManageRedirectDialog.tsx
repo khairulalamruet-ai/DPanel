@@ -7,8 +7,8 @@ import {
   DialogTitle,
   DialogFooter,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { ArrowRightLeft } from "lucide-react";
 import { ClientDomainItem, UpdateRedirectPayload } from "./types";
 

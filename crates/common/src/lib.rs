@@ -1,14 +1,14 @@
-//! Shared primitives used across DHPanel crates and apps.
+//! Shared primitives used across Built Panel crates and apps.
 //!
 //! Later tasks add ID types, time helpers, pagination and result types here.
 
 /// Product name shown in logs and `--version` output.
-pub const PRODUCT_NAME: &str = "DHPanel";
+pub const PRODUCT_NAME: &str = "Built Panel";
 
 /// Workspace version, taken from `Cargo.toml` at build time.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Returns a one-line identity string such as `DHPanel control-api 0.1.0`.
+/// Returns a one-line identity string such as `Built Panel control-api 0.1.0`.
 #[must_use]
 pub fn build_banner(component: &str) -> String {
     format!("{PRODUCT_NAME} {component} {VERSION}")
@@ -21,7 +21,7 @@ mod tests {
     #[test]
     fn banner_contains_product_component_and_version() {
         let banner = build_banner("worker");
-        assert_eq!(banner, format!("DHPanel worker {VERSION}"));
+        assert_eq!(banner, format!("Built Panel worker {VERSION}"));
     }
 
     #[test]

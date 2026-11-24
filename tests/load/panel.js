@@ -108,7 +108,7 @@ export function person(sessions) {
 export function operation(sessions) {
   const session = sessions[100 + (__VU % 50)];
   const res = http.post(
-    `${BASE}/api/v1/client/containers/dh-load${session.n}-web/restart`,
+    `${BASE}/api/v1/client/containers/bp-load${session.n}-web/restart`,
     '{}',
     {
       headers: {

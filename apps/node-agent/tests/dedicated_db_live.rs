@@ -6,17 +6,21 @@
 
 use std::{path::PathBuf, process::Command, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name, Network};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name, Network};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_agent::ops::{
     db, dbmigrate, dbroute,
     pg::{self},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{DbEngine, DbPassword, MigrateGrant, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role, network_name};
+use builtpanel_node_protocol::{DbEngine, DbPassword, MigrateGrant, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role, network_name};
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -50,7 +54,7 @@ async fn sql_as(
         .as_str()
         .to_owned();
     let mut spec = ContainerSpec::new(
-        Name::parse(&format!("dh-dedprobe-{}-{n}", std::process::id())).unwrap(),
+        Name::parse(&format!("bp-dedprobe-{}-{n}", std::process::id())).unwrap(),
         ImageRef::parse(&image).unwrap(),
     );
     match engine {
@@ -148,8 +152,8 @@ async fn round_trip(engine: DbEngine, context: &Arc<TenantContext>, docker: &Doc
     let (database, user) = (format!("{tenant}_shop"), format!("{tenant}_web"));
     let password = "Dedicated-Pass-1234!";
     let (container, shared_container) = match engine {
-        DbEngine::Mysql => (format!("dh-{tenant}-db"), db::CONTAINER.to_owned()),
-        DbEngine::Postgres => (format!("dh-{tenant}-pg"), pg::CONTAINER.to_owned()),
+        DbEngine::Mysql => (format!("bp-{tenant}-db"), db::CONTAINER.to_owned()),
+        DbEngine::Postgres => (format!("bp-{tenant}-pg"), pg::CONTAINER.to_owned()),
     };
 
     // On the shared server: a database, a user with access, some data.
@@ -383,7 +387,7 @@ async fn a_tenants_databases_move_to_its_own_server_and_back_with_data_and_passw
         return;
     }
     let docker = DockerManager::connect(&socket).unwrap();
-    let root = std::env::temp_dir().join(format!("dh-ded-live-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bp-ded-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root).unwrap();
     let context = Arc::new(TenantContext {
@@ -397,7 +401,7 @@ async fn a_tenants_databases_move_to_its_own_server_and_back_with_data_and_passw
             .args(["rm", "-f", container])
             .output();
     }
-    for volume in ["dh-db-data", "dh-pg-data", "dh-pg-conf"] {
+    for volume in ["bp-db-data", "bp-pg-data", "bp-pg-conf"] {
         let _ = Command::new("docker")
             .args(["volume", "rm", "-f", volume])
             .output();
@@ -410,12 +414,12 @@ async fn a_tenants_databases_move_to_its_own_server_and_back_with_data_and_passw
             .args(["rm", "-f", container])
             .output();
     }
-    for volume in ["dh-db-data", "dh-pg-data", "dh-pg-conf"] {
+    for volume in ["bp-db-data", "bp-pg-data", "bp-pg-conf"] {
         let _ = Command::new("docker")
             .args(["volume", "rm", "-f", volume])
             .output();
     }
-    for net in ["dh-db-net", "dh-pg-net"] {
+    for net in ["bp-db-net", "bp-pg-net"] {
         let _ = Command::new("docker").args(["network", "rm", net]).output();
     }
     let _ = std::fs::remove_dir_all(&root);

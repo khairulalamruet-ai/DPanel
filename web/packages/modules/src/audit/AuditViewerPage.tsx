@@ -20,10 +20,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@dhpanel/ui";
-import { useTranslation, useFormatters } from "@dhpanel/i18n";
-import { api } from "@dhpanel/api";
-import { useSession } from "@dhpanel/auth";
+} from "@builtpanel/ui";
+import { useTranslation, useFormatters } from "@builtpanel/i18n";
+import { api } from "@builtpanel/api";
+import { useSession } from "@builtpanel/auth";
 import {
   FileText,
   Filter,

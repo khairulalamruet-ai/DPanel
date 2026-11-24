@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "DHPanel",
+    "appName": "Built Panel",
     "dashboard": "Dashboard",
     "domains": "Domains",
     "users": "Users",
@@ -12,8 +12,8 @@
     "language": "Language",
     "english": "English",
     "bangla": "বাংলা",
-    "adminTitle": "DHPanel Admin",
-    "clientTitle": "DHPanel Client Portal",
+    "adminTitle": "Built Panel Admin",
+    "clientTitle": "Built Panel Client Portal",
     "welcome": "Welcome back",
     "healthStatus": "System Health",
     "status": "Status",
@@ -37,11 +37,46 @@
     "saving": "Saving...",
     "processing": "Processing...",
     "next": "Next Step",
-    "back": "Back"
+    "back": "Back",
+    "delete": "Delete",
+    "generate": "Generate",
+    "creating": "Creating...",
+    "actions": "Actions",
+    "deleting": "Deleting...",
+    "refresh": "Refresh",
+    "active": "Active",
+    "suspended": "Suspended",
+    "suspend": "Suspend",
+    "unsuspend": "Activate",
+    "allowed": "Allowed",
+    "restricted": "Restricted",
+    "completed": "Completed",
+    "saveChanges": "Save Settings",
+    "success": "Success",
+    "all": "All",
+    "copied": "Copied to clipboard",
+    "copy": "Copy URL",
+    "generating": "Generating...",
+    "close": "Close",
+    "done": "Done & Close",
+    "enabled": "Active",
+    "locked": "Locked",
+    "submitting": "Submitting...",
+    "activating": "Activating...",
+    "action": "Action",
+    "reset": "Reset Default",
+    "edit": "Edit Record",
+    "initiating": "Connecting...",
+    "viewDetails": "View",
+    "unknownError": "Something went wrong",
+    "name": "Name",
+    "add": "Add",
+    "inactive": "Inactive",
+    "prev": "Previous"
   },
   "auth": {
     "login": "Sign In",
-    "signInTitle": "Sign in to DHPanel",
+    "signInTitle": "Sign in to Built Panel",
     "signInDesc": "Enter your credentials to access your control panel",
     "username": "Username or Email",
     "usernamePlaceholder": "admin or your email",
@@ -81,7 +116,7 @@
       "updating": "Updating...",
       "success": "Password updated successfully",
       "mismatch": "New passwords do not match",
-      "tooShort": "Password must be at least 8 characters"
+      "tooShort": "Password must be at least 12 characters"
     },
     "mfa": {
       "title": "Two-Factor Authentication (TOTP)",
@@ -579,7 +614,8 @@
         "latency": "Latency",
         "output": "Output / Diagnostic"
       }
-    }
+    },
+    "idempotencyKey": "Operation ID"
   },
   "settings": {
     "nav": "Settings",
@@ -750,7 +786,10 @@
       "allStatuses": "All Statuses",
       "allPlans": "All Plans",
       "allNodes": "All Nodes",
-      "reset": "Clear Filters"
+      "reset": "Clear Filters",
+      "status": "Status",
+      "package": "Package",
+      "node": "Node"
     },
     "status": {
       "active": "Active",
@@ -773,7 +812,15 @@
       "status": "Status",
       "diskUsage": "Disk Usage",
       "actions": "Actions",
-      "noUsersFound": "No user accounts match the selected criteria."
+      "noUsersFound": "No user accounts match the selected criteria.",
+      "username": "Username",
+      "package": "Package",
+      "memory": "Memory %",
+      "cpu": "CPU %",
+      "disk": "Disk %",
+      "inodes": "Inodes %",
+      "created": "Created",
+      "login": "Log in"
     },
     "actions": {
       "impersonate": "Log in as user",
@@ -821,7 +868,12 @@
       "impersonateError": "Failed to initiate impersonation",
       "deleteSuccess": "User '{{username}}' has been deleted",
       "deleteError": "Failed to delete user"
-    }
+    },
+    "accountsTitle": "User accounts",
+    "accountsCount": "{{count}} user accounts on this server.",
+    "createNew": "Create new",
+    "showColumns": "Show columns",
+    "loginAsUser": "Log in as user"
   },
   "userWizard": {
     "nav": "New User",
@@ -1138,7 +1190,7 @@
       "extend": "Extend Validity",
       "expiredTitle": "Preview Link Expired",
       "expiredDesc": "The temporary link has elapsed its validity period and requests are now rejected (HTTP 410 Gone). Generate a new link below to continue previewing.",
-      "intro": "Preview your site immediately before DNS nameservers or records propagate worldwide. A temporary URL (<hash>.preview.dhpanel.net) will be created with an automated expiration.",
+      "intro": "Preview your site immediately before DNS nameservers or records propagate worldwide. A temporary URL (<hash>.preview.builtpanel.net) will be created with an automated expiration.",
       "selectValidity": "Select Link Validity Period",
       "generateBtn": "Generate Temporary Preview Link",
       "toastGenerated": "Temporary preview link generated successfully",
@@ -1268,7 +1320,9 @@
       "recordAdded": "Record added successfully",
       "recordUpdated": "DNS record updated successfully",
       "recordDeleted": "DNS record deleted successfully",
-      "nsVerifiedTitle": "Nameservers Verified"
+      "nsVerifiedTitle": "Nameservers Verified",
+      "nsNotVerifiedTitle": "Nameservers not set yet",
+      "nsMissing": "Point the domain at: {{servers}}"
     },
     "errors": {
       "nameRequired": "Record name is required (use @ for root)",
@@ -1413,7 +1467,8 @@
       "securitySettings": "HTTPS & HSTS Settings",
       "revoke": "Revoke Certificate",
       "revokeConfirm": "Revoke Certificate",
-      "installCert": "Install Certificate"
+      "installCert": "Install Certificate",
+      "refresh": "Read the certificate state again"
     },
     "customDialog": {
       "title": "Install Custom SSL Certificate",
@@ -1435,14 +1490,17 @@
     },
     "revokeDialog": {
       "title": "Revoke SSL Certificate",
-      "description": "Are you sure you want to revoke the SSL certificate for {{domain}}? Insecure HTTP traffic will no longer be encrypted until a new certificate is issued."
+      "description": "Are you sure you want to revoke the SSL certificate for {{domain}}? Insecure HTTP traffic will no longer be encrypted until a new certificate is issued.",
+      "warning": "Are you sure you want to remove the SSL certificate for {{domain}}? Visitors will see browser security warnings over HTTPS."
     },
     "toast": {
       "reissuedTitle": "SSL Re-issued",
       "reissuedDesc": "New 90-day Let's Encrypt certificate generated and installed for {{domain}}.",
       "customInstalled": "Custom SSL certificate installed successfully",
       "settingsUpdated": "Security settings saved successfully",
-      "revoked": "Certificate removed and reverted to unencrypted state"
+      "revoked": "Certificate removed and reverted to unencrypted state",
+      "refreshedTitle": "Certificate state refreshed",
+      "refreshed": "Certificates are renewed by the web server on its own; the state was read again."
     },
     "errors": {
       "fetchFailed": "Failed to load SSL certificates",
@@ -1454,7 +1512,8 @@
       "invalidKeyPem": "Invalid private key format. Expected PEM format starting with -----BEGIN (RSA|EC)? PRIVATE KEY-----",
       "uploadFailed": "Failed to install custom SSL certificate",
       "updateSettingsFailed": "Failed to update security settings"
-    }
+    },
+    "nav": "SSL / TLS Certificates"
   },
   "vhost": {
     "title": "VHost Templates & Directives",
@@ -1495,7 +1554,8 @@
       "defaultVersion": "Default Runtime",
       "domainsConfigured": "Configured Domains",
       "memoryLimit": "Memory Limit",
-      "opcache": "OPcache Bytecode"
+      "opcache": "OPcache Bytecode",
+      "uploadLimit": "Upload Limit"
     },
     "tabs": {
       "versions": "PHP Versions",
@@ -1606,7 +1666,8 @@
       "export": "Export SQL (.sql.gz)",
       "manageGrants": "Manage Privileges",
       "generatePassword": "Generate",
-      "savePrivileges": "Save Privileges"
+      "savePrivileges": "Save Privileges",
+      "studio": "Open the database studio"
     },
     "fields": {
       "name": "Database Name",
@@ -1617,7 +1678,8 @@
       "collation": "Collation",
       "connectionHost": "Allowed Connection Host",
       "targetDatabase": "Target Database",
-      "assignDatabases": "Assign to Databases"
+      "assignDatabases": "Assign to Databases",
+      "engine": "Database engine"
     },
     "table": {
       "title": "All Databases",
@@ -1627,7 +1689,8 @@
       "charset": "Collation",
       "assignedUsers": "Assigned Users",
       "assignedDatabases": "Database Grants",
-      "noDatabases": "No databases created yet."
+      "noDatabases": "No databases created yet.",
+      "engine": "Engine"
     },
     "usersTable": {
       "title": "Database Users & Privileges",
@@ -1665,7 +1728,8 @@
       "currentAllowlist": "Current Allowed Remote Hosts",
       "empty": "No external IPs configured. Database is accessible only within the internal tenant container network.",
       "invalidIp": "Enter a valid IPv4 address or CIDR (e.g. 192.168.1.100 or 10.5.0.0/16)",
-      "duplicateIp": "This IP address or CIDR is already in the allowlist"
+      "duplicateIp": "This IP address or CIDR is already in the allowlist",
+      "user": "Database user"
     },
     "deleteDb": {
       "title": "Delete Database",
@@ -1779,7 +1843,13 @@
     "deletedSuccess": "Moved to trash successfully",
     "uploadSuccess": "File uploaded successfully",
     "folderEmpty": "This folder is empty",
-    "dragDropToUpload": "Drag and drop files here to upload"
+    "dragDropToUpload": "Drag and drop files here to upload",
+    "editor": {
+      "loadFailed": "Failed to load file content",
+      "saved": "File {{name}} saved successfully",
+      "saveFailed": "Failed to save file",
+      "unsaved": "Unsaved Changes"
+    }
   },
   "diskUsage": {
     "title": "Disk & Inode Usage",
@@ -1803,6 +1873,7 @@
     "noDirectoriesFound": "No directory usage metrics available"
   },
   "ftp": {
+    "access": "Access",
     "nav": "FTP Accounts",
     "title": "FTP Accounts",
     "description": "Manage secure FTPS/SFTP accounts, home directories, and quota limits",
@@ -1878,7 +1949,18 @@
     "confirmDelete": "Are you sure you want to delete backup \"{{name}}\"?",
     "deletedSuccess": "Backup {{name}} deleted successfully",
     "downloadStarted": "Download started for {{name}}",
-    "noBackupsFound": "No backups found"
+    "noBackupsFound": "No backups found",
+    "scheduleSaved": "Backup schedule saved",
+    "scheduleRemoved": "Backup schedule removed; the backups already made stay",
+    "scheduleTitle": "Automatic backups",
+    "scheduleWhen": "When (cron, UTC)",
+    "keepDaily": "Keep daily",
+    "keepWeekly": "Keep weekly",
+    "wholeAccount": "The backup holds everything of this account. It is made in the background; it shows as ready in the list when it is done.",
+    "dnsRecords": "DNS records",
+    "exportPassphrase": "Choose a passphrase for the export file (keep it: it is needed to open the file)",
+    "exportPreparing": "Preparing the export",
+    "exportReady": "The export is ready: {{file}}"
   },
   "adminBackups": {
     "nav": "Backup Management",
@@ -1965,7 +2047,9 @@
     "retentionWeekly": "Keep Weekly Backups",
     "retentionMonthly": "Keep Monthly Backups",
     "scheduleCreated": "Schedule created successfully",
-    "saveSchedule": "Save Schedule"
+    "saveSchedule": "Save Schedule",
+    "destinationDefault": "{{name}} is the default destination now",
+    "makeDefault": "Make default"
   },
   "cron": {
     "nav": "Cron Jobs",
@@ -2005,6 +2089,7 @@
     "viewOutput": "Output",
     "jobEnabledSuccess": "Cron job enabled",
     "jobDisabledSuccess": "Cron job disabled",
+    "jobRunQueued": "Cron job queued; its result shows as the last run within a minute",
     "jobRunSuccess": "Cron job executed successfully in {{duration}} ms",
     "jobRunFailed": "Cron job failed with exit code {{code}}",
     "confirmDelete": "Are you sure you want to delete cron job \"{{name}}\"?",
@@ -2051,7 +2136,8 @@
     "errorsDetected": "errors detected",
     "streamLive": "Live Stream Active",
     "streamPaused": "Live Stream Paused",
-    "virtualized100MbMode": "Virtualized 100MB Stress Test"
+    "virtualized100MbMode": "Virtualized 100MB Stress Test",
+    "onlyNewest": "Only the newest lines are shown"
   },
   "adminSystemLogs": {
     "nav": "System Logs",
@@ -2232,7 +2318,8 @@
     "auditAction": "Action",
     "auditActor": "Operator",
     "auditDetails": "Details",
-    "auditTimestamp": "Timestamp"
+    "auditTimestamp": "Timestamp",
+    "dropCachesDone": "The page cache was dropped"
   },
   "waf": {
     "nav": "WAF",
@@ -2297,7 +2384,28 @@
     "noDisabledRulesDescription": "No rules are currently disabled on this domain. The full OWASP CRS rule set is actively enforced.",
     "disableReason": "Exclusion Reason",
     "disabledAt": "Disabled At",
-    "reEnableRule": "Re-enable"
+    "reEnableRule": "Re-enable",
+    "modeFrom": "Decided by {{from}}.",
+    "disabledRules": "Rules switched off",
+    "noneDisabled": "None",
+    "useInherited": "Use the inherited policy",
+    "title": "Web Application Firewall",
+    "subtitle": "Detect or block attacks on each of your domains, and switch off rules that stop something that is fine.",
+    "saved": "Firewall policy saved",
+    "noDomains": "There are no domains yet.",
+    "adminTitle": "Web Application Firewall policy",
+    "adminSubtitle": "A domain's policy wins over its account's, which wins over the panel's.",
+    "levelGlobal": "The whole panel",
+    "levelTenant": "One account",
+    "levelDomain": "One domain",
+    "pickTarget": "Pick an account or a domain.",
+    "events": "Refused requests",
+    "range": "Time range",
+    "eventsUnavailable": "This server keeps no record of refused requests (yet): the firewall's log is not there.",
+    "noEvents": "Nothing was refused in this time.",
+    "refused": "refused",
+    "noticed": "noticed",
+    "eventsPartial": "Only the newest are shown."
   },
   "firewall": {
     "nav": "Firewall",
@@ -2385,64 +2493,24 @@
     "enableRateLimiting": "Enable Inbound Rate Limiting",
     "enableRateLimitingSubtext": "Drops incoming packets from any single source exceeding the maximum RPS limit",
     "maxRpsPerIp": "Max Requests / Second per IP",
-    "rateLimitSavedSuccess": "Rate limiting parameters successfully saved"
+    "rateLimitSavedSuccess": "Rate limiting parameters successfully saved",
+    "limit": "Most per domain"
   },
   "securityCenter": {
-    "nav": "Security Center",
-    "title": "Security Center",
-    "subtitle": "Centralized posture analysis: failed logins, WAF blocks, malware events, 2FA enforcement, SSL expiration, and container CVEs.",
-    "scoreTitle": "System Security Health Score",
-    "scoreSubtitle": "Real-time posture assessment across auth, WAF, SSL, malware, and container CVEs.",
-    "scoreGood": "Strong Protection",
-    "scoreWarning": "Attention Needed",
-    "scoreCritical": "Action Required",
-    "rescan": "Run Security Audit",
-    "scanning": "Scanning...",
-    "criticalIssues": "Critical Issues",
-    "warningIssues": "Warnings",
-    "infoIssues": "Advisories",
-    "resolvedIssues": "Resolved",
-    "kpiLoginFailures": "Login Failures (24h)",
-    "kpiWafBlocks": "WAF Blocks (24h)",
-    "kpiMalware": "Malware Detections",
-    "kpiAdminsWithout2fa": "Admins without 2FA",
-    "kpiExpiringSsl": "Expiring / Expired SSL",
-    "kpiOutdatedImages": "Outdated Images / CVEs",
-    "fixIssueTitle": "Remediate Security Issue",
-    "remediationAction": "Recommended Action",
-    "fixSuccess": "Issue resolved and security rule applied successfully!",
-    "issuesTitle": "Detected Security Issues & Hardening Recommendations",
-    "issuesSubtitle": "Each issue provides an immediate one-click fix or link to configuration.",
-    "filterOpen": "Open Issues",
-    "filterResolved": "Resolved",
-    "searchPlaceholder": "Search issues by keyword, resource, or IP...",
-    "catAuth": "Auth & 2FA",
-    "catWaf": "WAF Protection",
-    "catMalware": "Malware & Files",
-    "catSsl": "SSL Certificates",
-    "catContainer": "Containers & CVEs",
-    "catFirewall": "Firewall & Ports",
-    "severityCritical": "Critical",
-    "severityWarning": "Warning",
-    "severityInfo": "Advisory",
-    "resolvedBadge": "Resolved",
-    "fixLinkPrefix": "Fix:",
-    "alreadyFixed": "Remediated",
-    "noIssuesFound": "No security issues found matching your filter",
-    "systemHardened": "All evaluated security checks are within operational standards.",
-    "scanCompleteTitle": "Security Audit Completed",
-    "scanCompleteDesc": "System posture re-evaluated across all security domains.",
-    "scanFailed": "Failed to trigger security audit.",
-    "fixSuccessTitle": "Remediation Applied",
-    "fixSuccessDesc": "Security issue was successfully mitigated.",
-    "fixFailed": "Could not apply remediation action.",
-    "loadError": "Failed to load security center data.",
-    "fixBanIp": "Ban IP in Firewall",
-    "fixQuarantineFile": "Quarantine Malware File",
-    "fixReviewWaf": "Review WAF Events",
-    "fixEnforce2fa": "Enforce 2FA on Admins",
-    "fixRenewSsl": "Renew SSL Certificate",
-    "fixPullImage": "Update Container Image"
+    "title": "Security center",
+    "images": "Container images",
+    "newer": "newer version",
+    "scan": "Scan",
+    "asked": "Scan asked for",
+    "findings": "Findings",
+    "noFindings": "No findings.",
+    "userAgents": "Refused User-Agents",
+    "removed": "Removed",
+    "added": "Added",
+    "note": "note",
+    "add": "Add",
+    "advisories": "WordPress advisories",
+    "nav": "Security center"
   },
   "apps": {
     "nav": "Applications",
@@ -2502,7 +2570,8 @@
     "installSuccessToastDesc": "{{name}} is now active on {{domain}}",
     "uninstallSuccessTitle": "Application Removed",
     "uninstallSuccessDesc": "The application was completely uninstalled.",
-    "loadError": "Failed to load applications."
+    "loadError": "Failed to load applications.",
+    "removed": "Application removed from the list; its files stay in your account"
   },
   "wpManager": {
     "autoLogin": "Auto-Login",
@@ -2544,7 +2613,17 @@
     "maintenanceEnabled": "Maintenance Mode Active",
     "maintenanceDisabled": "Maintenance Mode Disabled",
     "stagingCreatedTitle": "Staging Environment Ready",
-    "stagingCreatedDesc": "Clone was created at {{url}}"
+    "stagingCreatedDesc": "Clone was created at {{url}}",
+    "scanning": "Scanning...",
+    "scan": "Scan",
+    "harden": "Fix the settings",
+    "scanFirst": "Scan the site to see how it is set up.",
+    "coreFiles": "Core files match WordPress's checksums",
+    "fileEditOff": "The file editor is off",
+    "noWritable": "No world-writable files",
+    "ok": "OK",
+    "needsFix": "Needs fixing",
+    "hardened": "The safety settings were put right"
   },
   "email": {
     "nav": "Email",
@@ -2661,7 +2740,34 @@
     "rblBlacklisted": "Listed on RBL Blacklists",
     "recommendationsTitle": "Deliverability Recommendations",
     "noDeliverabilityData": "No deliverability reports available.",
-    "failedToLoadQueue": "Failed to load mail queue data"
+    "failedToLoadQueue": "Failed to load mail queue data",
+    "holdReason": "Why is this domain held?",
+    "mailDomains": "Mail domains",
+    "held": "held",
+    "release": "Release",
+    "hold": "Hold",
+    "mailServers": "Mail servers",
+    "createAccountBtn": "Create Account",
+    "secureConfigTitle": "Secure SSL/TLS Settings (Recommended)",
+    "secureConfigSubtitle": "Use these encrypted parameters to configure Outlook, Apple Mail, Thunderbird, or Mobile devices.",
+    "serverHost": "Host",
+    "encryption": "Encryption",
+    "smtpSslPort": "SMTP SSL Port",
+    "submissionPort": "Submission Port",
+    "smtpAuth": "Authentication",
+    "usernameNotice": "Username Format",
+    "usernameNoticeDesc": "Always use your full email address (e.g., info@{{domain}}) as the username for incoming and outgoing mail.",
+    "searchMailbox": "Search accounts...",
+    "createAccount": "Create Email Account",
+    "noAccountsFound": "No email accounts found for {{domain}}",
+    "createFirstAccountPrompt": "Click Create Email Account above to set up your primary mailbox.",
+    "accountHeader": "Account",
+    "storageQuota": "Storage / Quota",
+    "webmailHeader": "Webmail Access",
+    "openWebmail": "Open Webmail",
+    "password": "Password",
+    "deleteMailboxTitle": "Delete Email Account",
+    "deleteMailboxWarning": "Are you sure you want to permanently delete {{email}}? All messages and mail stored in this mailbox will be destroyed."
   },
   "reseller": {
     "nav": "Reseller Portal",
@@ -2777,7 +2883,7 @@
     "nav": "Migration",
     "adminNav": "Migration & Transfers",
     "pageTitle": "Server Migration & Account Import",
-    "pageSubtitle": "Automate remote tenant migration from cPanel, CyberPanel, and OpenPanel directly into DHPanel.",
+    "pageSubtitle": "Automate remote tenant migration from cPanel, CyberPanel, and OpenPanel directly into Built Panel.",
     "startMigrationBtn": "New Migration Transfer",
     "loadError": "Failed to load migration transfer status.",
     "activeTransfers": "Active Transfers",
@@ -2829,7 +2935,7 @@
   "license": {
     "nav": "License Authority",
     "pageTitle": "License & Authority Verification",
-    "pageSubtitle": "Manage DHPanel commercial subscription, cryptographic entitlement, and anti-tamper recovery.",
+    "pageSubtitle": "Manage Built Panel commercial subscription, cryptographic entitlement, and anti-tamper recovery.",
     "enterKeyBtn": "Enter License Key",
     "activeTitle": "License Verified & Cryptographically Signed",
     "statusActive": "ACTIVE",
@@ -2875,7 +2981,7 @@
     "featApi": "REST API & Automation Webhooks",
     "featApiDesc": "WHMCS / Blesta billing integration and API tokens.",
     "activateModalTitle": "Activate License Key",
-    "activateModalSubtitle": "Enter your issued DHPanel commercial license key to unlock features and node capacity.",
+    "activateModalSubtitle": "Enter your issued Built Panel commercial license key to unlock features and node capacity.",
     "keyRequired": "Please enter a valid license key.",
     "keyInvalidFormat": "License keys must start with 'DHP-' prefix.",
     "activationFailed": "Failed to activate license key.",
@@ -3063,7 +3169,20 @@
     "triggerNodeOffline": "Worker Node Disconnection / Offline",
     "triggerNodeOfflineDesc": "Trigger alert within 60 seconds if a cluster agent drops connection.",
     "triggerSecurity": "Security & Brute-Force Alerts",
-    "triggerSecurityDesc": "Coraza WAF anomalies, SSH jail triggers, and repeated login failures."
+    "triggerSecurityDesc": "Coraza WAF anomalies, SSH jail triggers, and repeated login failures.",
+    "channelAdded": "Channel added",
+    "channelsDesc": "Every notification also lands in the bell; a channel sends the chosen events elsewhere.",
+    "noChannels": "No channels yet.",
+    "allEvents": "all events",
+    "secretOnce": "The webhook's signing secret is shown only now:",
+    "kind": "Kind",
+    "address": "Address",
+    "eventsPick": "Events for the new channel (none picked: all)",
+    "quietTitle": "Quiet hours",
+    "pausedNow": "Notifications are paused.",
+    "activeNow": "Notifications are on.",
+    "resume": "Resume",
+    "pause": "Pause"
   },
   "branding": {
     "nav": "Branding",
@@ -3098,11 +3217,11 @@
     "savedTitle": "Branding Updated",
     "savedDesc": "New branding applied immediately without page reload.",
     "resetTitle": "Branding Reset",
-    "resetDesc": "Restored default DHPanel branding."
+    "resetDesc": "Restored default Built Panel branding."
   },
   "onboarding": {
     "admin": {
-      "title": "Getting Started with DHPanel",
+      "title": "Getting Started with Built Panel",
       "stepsDone": "completed",
       "description": "Complete these initial configuration steps to prepare your cluster for tenants and domains.",
       "dismiss": "Dismiss Quickstart Checklist",
@@ -3131,7 +3250,7 @@
     },
     "client": {
       "tour": {
-        "title": "Welcome to Your DHPanel Account",
+        "title": "Welcome to Your Built Panel Account",
         "subtitle": "Take a quick 1-minute walkthrough of the key features of your hosting account.",
         "dismiss": "Dismiss Tour",
         "finish": "Finish Tour",
@@ -3170,11 +3289,11 @@
     "triggerPlaceholder": "Search..."
   },
   "update": {
-    "nav": "Panel Update",
-    "title": "DHPanel Release & Update Manager",
+    "nav": "Updates",
+    "title": "Built Panel updates",
     "pageTitle": "Panel Update & Releases",
-    "pageSubtitle": "Manage control plane versions, switch update channels, and execute verified releases.",
-    "description": "Automated self-updating control plane backed by Ed25519 signed manifests and atomic rollbacks.",
+    "pageSubtitle": "See which version runs, install a newer release with one click, or let the panel update itself.",
+    "description": "A new release is downloaded, checked against its signed manifest and installed; if it does not start, the old version is put back.",
     "checkNow": "Check for Updates",
     "installedVersion": "Installed Version",
     "lastChecked": "Last checked",
@@ -3187,30 +3306,57 @@
     "updateNow": "Update Now",
     "changelog": "Release Notes & Changelog",
     "requiredMigrations": "Database Schema Migrations",
-    "upToDate": "DHPanel is up to date.",
+    "upToDate": "Built Panel is up to date.",
     "upToDateDesc": "You are currently running the latest certified build on the active channel.",
     "channelUpdated": "Update Channel Changed",
     "channelUpdatedDesc": "Switched update channel.",
     "checkSuccess": "Update Check Complete",
     "checkSuccessDesc": "Repository and signatures checked against release manifest.",
     "steps": {
-      "downloading": "Downloading signed package bundle...",
-      "verifying": "Verifying Ed25519 cryptographic signature...",
+      "downloading": "Downloading the release...",
+      "verifying": "Checking the release signature and installing...",
       "snapshot": "Creating pre-update backup snapshot...",
       "migrations": "Applying database schema migrations...",
       "rollbackSuccess": "Update failed. Automatic rollback completed: safely returned to previous version.",
-      "completed": "Update successfully applied! DHPanel is running the newest release.",
-      "manualRollback": "Reverting schema and binary to previous version..."
+      "completed": "Update successfully applied! Built Panel is running the newest release.",
+      "manualRollback": "Reverting schema and binary to previous version...",
+      "waiting": "Waiting for the update service to start..."
     },
-    "rollbackNotice": "Automatic Rollback Triggered",
+    "rollbackNotice": "The old version was put back",
     "rollbackNoticeDesc": "Safety invariant activated: system rolled back to initial version.",
-    "updateSuccess": "Update Applied Successfully",
+    "updateSuccess": "Update applied",
     "rollbackSuccessTitle": "Rollback Successful",
     "rollbackSuccessDesc": "Panel safely returned to previous version.",
     "history": {
       "title": "Release History & Rollback Ledger",
       "desc": "Audit trail of all package upgrades, schema migrations, and emergency rollback events.",
       "empty": "No update history recorded yet."
+    },
+    "loadError": "The update status could not be loaded.",
+    "updateFailed": "The update failed",
+    "checkFailed": "The release site could not be reached.",
+    "applyFailed": "The update could not be started.",
+    "service": "Update service",
+    "serviceReady": "Ready: Update now installs a release from here.",
+    "serviceMissing": "Not installed on this server. Run the installer once more (it keeps your data) to get one-click updates.",
+    "neverChecked": "not yet",
+    "signedBy": "Signed by",
+    "checkedAgain": "The signature is checked again before anything is installed.",
+    "confirmPassword": "Your password, to confirm",
+    "restartNotice": "The panel restarts for a moment; sign-ins in progress stay open.",
+    "confirmUpdate": "Update to",
+    "reload": "Reload the page",
+    "auto": {
+      "on": "Automatic updates are on",
+      "off": "Automatic updates are off",
+      "onDesc": "A new release is installed by itself {{days}} day(s) after it appears, at about {{hour}}:00 UTC. You are told when it appears.",
+      "offDesc": "New releases are only announced; you install them with Update Now.",
+      "scheduled": "Version {{version}} will be installed on {{when}}.",
+      "switchOn": "Switch on",
+      "switchOff": "Switch off",
+      "switchedOn": "Automatic updates are on",
+      "switchedOff": "Automatic updates are off",
+      "saveFailed": "The setting could not be saved."
     }
   },
   "apiTokens": {
@@ -3218,7 +3364,7 @@
     "pageTitle": "API Tokens & Public Developer API",
     "pageSubtitle": "Generate scoped Bearer tokens for billing integration (WHMCS), CLI clients, and public REST endpoints.",
     "tableTitle": "Active API Access Tokens",
-    "tableDesc": "Manage Bearer credentials authorized to invoke DHPanel REST endpoints.",
+    "tableDesc": "Manage Bearer credentials authorized to invoke Built Panel REST endpoints.",
     "noTokens": "No API tokens created yet. Generate one above to get started.",
     "generateButton": "Generate New Token",
     "createTitle": "Generate New API Token",
@@ -3264,5 +3410,144 @@
     "copiedTitle": "Copied to Clipboard",
     "copiedDesc": "Sanitized diagnostic bundle copied.",
     "downloadStarted": "Download Started"
+  },
+  "tools": {
+    "nav": "Developer tools",
+    "title": "Developer tools",
+    "cache": "Cache servers",
+    "deploys": "Git deploys",
+    "scans": "Security scans",
+    "traffic": "Website traffic",
+    "malware": "Malware scan",
+    "vuln": "WordPress vulnerabilities",
+    "scan": "Scan",
+    "scanQuarantine": "Scan and quarantine",
+    "deployNow": "Deploy now",
+    "newSecret": "New secret",
+    "addDeploy": "Add deploy",
+    "queued": "Queued",
+    "removed": "Removed",
+    "noCache": "No cache server yet.",
+    "limit": "Plan limit",
+    "password": "password",
+    "token": "access token (private repo)",
+    "secretNew": "New webhook secret made",
+    "market": "Marketplace",
+    "apps": "Node.js / Python apps",
+    "activity": "Account activity",
+    "install": "Install",
+    "update": "Update",
+    "redeploy": "Redeploy",
+    "noApps": "No application yet.",
+    "containers": "Containers",
+    "pickImage": "choose an image",
+    "run": "Run"
+  },
+  "adminTools": {
+    "nav": "System tools",
+    "title": "System tools",
+    "saved": "Saved",
+    "images": "Container images clients may run",
+    "on": "offered",
+    "off": "not offered",
+    "stopOffering": "Stop offering",
+    "offer": "Offer",
+    "note": "note",
+    "approve": "Approve image",
+    "smtp": "Mail server of the panel (SMTP)",
+    "enabled": "Send the panel's mail through this server",
+    "username": "username",
+    "password": "password",
+    "passwordKept": "password (leave empty to keep)",
+    "fromName": "sender name",
+    "sendTest": "Send a test mail",
+    "testSent": "Test mail sent"
+  },
+  "accounts": {
+    "title": "Accounts",
+    "tabs": {
+      "users": "Users",
+      "resellers": "Resellers",
+      "administrators": "Administrators"
+    },
+    "administrators": {
+      "title": "Administrators",
+      "desc": "The people who can sign in to the admin area of this panel.",
+      "username": "Username",
+      "email": "Email",
+      "status": "Status",
+      "roles": "Roles",
+      "mfa": "Two-factor",
+      "mfaOn": "On",
+      "mfaOff": "Off",
+      "mfaRequired": "Required, not set up",
+      "lastLogin": "Last sign-in",
+      "none": "No administrators.",
+      "loadError": "The administrators could not be loaded"
+    }
+  },
+  "appInstaller": {
+    "nav": "Install an App",
+    "title": "Install an App",
+    "subtitle": "Choose which software customers can install in their own isolated container. Removing one stops new installs; what customers already run keeps running.",
+    "search": "Search apps",
+    "categories": "Categories",
+    "all": "All",
+    "none": "No app matches.",
+    "offered": "Offered",
+    "install": "Install",
+    "remove": "Remove",
+    "homepage": "Project page",
+    "installed": "{{name}} is now offered to customers.",
+    "removed": "{{name}} is no longer offered.",
+    "failed": "The change failed.",
+    "loadError": "The app list could not be loaded.",
+    "builtin": "Part of the panel: {{where}}",
+    "unavailable": "Not available: {{why}}"
+  },
+  "studio": {
+    "back": "Databases",
+    "tabData": "Data",
+    "tabStructure": "Structure",
+    "searchTables": "Search tables",
+    "refresh": "Refresh",
+    "noTables": "No tables yet. Make one in the SQL tab.",
+    "noMatch": "No match.",
+    "pickTable": "Pick a table on the left.",
+    "noRows": "No rows.",
+    "truncated": "Only part of the result is shown (too many rows or a very long value).",
+    "filterColumn": "Filter column",
+    "filterOp": "Filter operator",
+    "filterValue": "Filter value",
+    "value": "value",
+    "addFilter": "Add filter",
+    "removeFilter": "Remove filter",
+    "addRow": "Add row",
+    "editRow": "Edit row",
+    "addRowHelp": "Columns left on “default” take their default value.",
+    "editRowHelp": "Change the values and save. Only what you changed is sent.",
+    "modeValue": "Value",
+    "modeDefault": "Default",
+    "rowAdded": "Row added",
+    "rowSaved": "Row saved",
+    "rowDeleted": "Row deleted",
+    "deleteRow": "Delete this row?",
+    "deleteRowHelp": "The row is removed from the table for good.",
+    "noPrimaryKey": "This table has no primary key, so single rows cannot be changed here; use the SQL tab.",
+    "columns": "Columns",
+    "indexes": "Indexes",
+    "noIndexes": "No indexes.",
+    "name": "Name",
+    "type": "Type",
+    "nullable": "Null",
+    "default": "Default",
+    "auto": "auto",
+    "unique": "unique",
+    "run": "Run",
+    "running": "Running…",
+    "runHint": "Ctrl/Cmd + Enter",
+    "rowsIn": "{{count}} rows in {{ms}} ms",
+    "affected": "{{count}} rows affected in {{ms}} ms",
+    "history": "This session’s statements"
   }
 }

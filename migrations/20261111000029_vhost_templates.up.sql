@@ -1,5 +1,5 @@
 -- T06.03: web server configuration templates. An administrator keeps them; the
--- control plane renders one for each domain (see dhpanel_domain::vhost). The
+-- control plane renders one for each domain (see builtpanel_domain::vhost). The
 -- template marked as the default is the one new sites use.
 CREATE TABLE vhost_templates (
     id         uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -18,9 +18,9 @@ CREATE TRIGGER vhost_templates_updated_at
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- The template new installations start with. A test keeps it equal to
--- dhpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE.
+-- builtpanel_domain::vhost::DEFAULT_NGINX_TEMPLATE.
 INSERT INTO vhost_templates (name, body, is_default)
-VALUES ('Default', $tpl$# Managed by DHPanel for {{domain}}. Changes made here are overwritten.
+VALUES ('Default', $tpl$# Managed by Built Panel for {{domain}}. Changes made here are overwritten.
 server {
     listen 8080;
     server_name {{server_names}};

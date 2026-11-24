@@ -1,8 +1,8 @@
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
-import { resetMockDns } from "@dhpanel/api";
+import { ToastProvider } from "@builtpanel/ui";
+import { resetMockDns } from "@builtpanel/api";
 import { AdminDnsClusterPage } from "./AdminDnsClusterPage";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -27,8 +27,8 @@ describe("AdminDnsClusterPage (T16.04)", () => {
     expect(screen.getByText("Edge Replica PowerDNS AP-South")).toBeInTheDocument();
 
     // Verify hostnames
-    expect(screen.getByText("ns1.dhpanel.internal")).toBeInTheDocument();
-    expect(screen.getByText("ns2.dhpanel.internal")).toBeInTheDocument();
+    expect(screen.getByText("ns1.builtpanel.internal")).toBeInTheDocument();
+    expect(screen.getByText("ns2.builtpanel.internal")).toBeInTheDocument();
 
     // Verify metrics
     expect(screen.getByTestId("metric-total-dns-servers")).toHaveTextContent("3");
@@ -53,7 +53,7 @@ describe("AdminDnsClusterPage (T16.04)", () => {
     fireEvent.change(nameInput, { target: { value: "Frankfurt Secondary DNS" } });
 
     const hostInput = within(dialog).getByTestId("input-dns-hostname");
-    fireEvent.change(hostInput, { target: { value: "ns4.dhpanel.net" } });
+    fireEvent.change(hostInput, { target: { value: "ns4.builtpanel.net" } });
 
     const ipInput = within(dialog).getByTestId("input-dns-ip");
     fireEvent.change(ipInput, { target: { value: "198.51.100.55" } });
@@ -69,7 +69,7 @@ describe("AdminDnsClusterPage (T16.04)", () => {
     await waitFor(() => {
       expect(screen.getByText("Frankfurt Secondary DNS")).toBeInTheDocument();
     });
-    expect(screen.getByText("ns4.dhpanel.net")).toBeInTheDocument();
+    expect(screen.getByText("ns4.builtpanel.net")).toBeInTheDocument();
   });
 
   it("toggles server offline and verifies resolution succeeds from surviving nodes (DoD T16.04)", async () => {

@@ -1,13 +1,13 @@
 //! The file manager's work on a tenant's files (T08.01-T08.06).
 //!
 //! The helper itself never touches a tenant's files. For each request it starts a
-//! copy of its own program (`dhpanel-priv-helper fileop --root DIR`, through
+//! copy of its own program (`builtpanel-priv-helper fileop --root DIR`, through
 //! `setpriv`) **as the tenant's host user id and group**, with no supplementary groups
 //! and none of the helper's capabilities, so the worker can do exactly what the tenant could do with
 //! its own files and nothing else: another tenant's files, the agent's state and the
 //! system are as closed to it as they are to the tenant. The worker reads one request
-//! from its input, opens the tenant's directory with `dhpanel-safe-fs`, does it with
-//! `dhpanel-fileops` and prints one answer. It is given a time limit and killed after.
+//! from its input, opens the tenant's directory with `builtpanel-safe-fs`, does it with
+//! `builtpanel-fileops` and prints one answer. It is given a time limit and killed after.
 
 use std::{
     io::{BufRead as _, Read, Write as _},
@@ -16,11 +16,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-use dhpanel_node_protocol::files::{FileErrorCode, FileRequest, FileResult};
+use builtpanel_node_protocol::files::{FileErrorCode, FileRequest, FileResult};
 
 use crate::{
     protocol::ErrorCode,
-    tenant::{Failure, TenantEnv, host_uid, subuid_range, valid_tenant_id},
+    tenant::{Failure, TenantEnv, host_uid, valid_tenant_id},
 };
 
 /// Longest a worker may run (a big archive takes a while).
@@ -42,10 +42,7 @@ pub fn run(
     if !valid_tenant_id(tenant_id) {
         return Err((ErrorCode::InvalidArguments, "bad tenant id"));
     }
-    let text = std::fs::read_to_string(&env.subuid_file)
-        .map_err(|_| (ErrorCode::Failed, "cannot read the subordinate ids"))?;
-    let range = subuid_range(&text, &env.agent_name)
-        .ok_or((ErrorCode::Failed, "the agent has no subordinate ids"))?;
+    let range = env.id_range()?;
     let host = host_uid(range, uid)?;
     let root = env.root.join(tenant_id);
     work(&root, host, host, request)
@@ -140,7 +137,7 @@ pub fn work(root: &Path, uid: u32, gid: u32, request: &FileRequest) -> Result<Fi
     });
     if finished != Some(true) && !said.is_empty() {
         eprintln!(
-            "dhpanel-priv-helper: file worker said: {}",
+            "builtpanel-priv-helper: file worker said: {}",
             said.escape_debug()
         );
     }
@@ -170,8 +167,8 @@ pub fn worker(
         .read_to_end(&mut bytes)
         .map_err(|e| e.to_string())?;
     let request: FileRequest = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    let result = match dhpanel_safe_fs::Root::open(root) {
-        Ok(root) => dhpanel_fileops::handle(&root, request),
+    let result = match builtpanel_safe_fs::Root::open(root) {
+        Ok(root) => builtpanel_fileops::handle(&root, request),
         Err(_) => FileResult::error(FileErrorCode::NotFound, "the files are not there"),
     };
     let json = serde_json::to_vec(&result).map_err(|e| e.to_string())?;
@@ -182,7 +179,7 @@ pub fn worker(
 
 use std::{fs::File, os::fd::OwnedFd};
 
-use dhpanel_safe_fs::Root;
+use builtpanel_safe_fs::Root;
 
 /// Opens the transfer folder (the agent's, handed to us by the unit).
 fn staged_root(dir: &Path) -> Result<Root, Failure> {
@@ -197,10 +194,7 @@ fn host_ids(
     if !valid_tenant_id(tenant_id) {
         return Err((ErrorCode::InvalidArguments, "bad tenant id"));
     }
-    let text = std::fs::read_to_string(&env.subuid_file)
-        .map_err(|_| (ErrorCode::Failed, "cannot read the subordinate ids"))?;
-    let range = subuid_range(&text, &env.agent_name)
-        .ok_or((ErrorCode::Failed, "the agent has no subordinate ids"))?;
+    let range = env.id_range()?;
     Ok((host_uid(range, uid)?, env.root.join(tenant_id)))
 }
 
@@ -345,7 +339,7 @@ pub fn place_file(
     max_bytes: u64,
 ) -> Result<(), Failure> {
     let (host, root) = host_ids(env, tenant_id, uid)?;
-    dhpanel_safe_fs::check_name(staged)
+    builtpanel_safe_fs::check_name(staged)
         .map_err(|_| (ErrorCode::InvalidArguments, "bad staged name"))?;
     let fd = staged_root(transfers)?
         .open_at(
@@ -390,7 +384,7 @@ pub fn take_file(
     max_bytes: u64,
 ) -> Result<(), Failure> {
     let (host, root) = host_ids(env, tenant_id, uid)?;
-    dhpanel_safe_fs::check_name(staged)
+    builtpanel_safe_fs::check_name(staged)
         .map_err(|_| (ErrorCode::InvalidArguments, "bad staged name"))?;
     let folder = staged_root(transfers)?;
     let out: OwnedFd = rustix::fs::openat(
@@ -427,7 +421,7 @@ pub fn take_file(
     )
     .and_then(|(ok, out, err)| said(ok, &out, &err));
     if result.is_err() {
-        let _ = dhpanel_safe_fs::remove(folder.fd(), staged, false);
+        let _ = builtpanel_safe_fs::remove(folder.fd(), staged, false);
     }
     result
 }
@@ -451,7 +445,7 @@ pub fn backup_files(
         return Err((ErrorCode::InvalidArguments, "the key is 64 hex digits"));
     }
     let (host, root) = host_ids(env, tenant_id, uid)?;
-    dhpanel_safe_fs::check_name(staged)
+    builtpanel_safe_fs::check_name(staged)
         .map_err(|_| (ErrorCode::InvalidArguments, "bad staged name"))?;
     let folder = staged_root(transfers)?;
     let out: OwnedFd = rustix::fs::openat(
@@ -487,7 +481,7 @@ pub fn backup_files(
     )
     .and_then(|(ok, out, err)| said(ok, &out, &err));
     if result.is_err() {
-        let _ = dhpanel_safe_fs::remove(folder.fd(), staged, false);
+        let _ = builtpanel_safe_fs::remove(folder.fd(), staged, false);
     }
     result
 }
@@ -511,7 +505,7 @@ pub fn backup_worker(
     let mut lines = text.lines();
     let hex = lines.next().unwrap_or_default().trim();
     let since: Option<i64> = lines.next().and_then(|l| l.trim().parse().ok());
-    let mut key = [0u8; dhpanel_backup::KEY_LEN];
+    let mut key = [0u8; builtpanel_backup::KEY_LEN];
     if hex.len() != key.len() * 2 {
         return Err(FileResult::error(
             FileErrorCode::InvalidArguments,
@@ -525,7 +519,7 @@ pub fn backup_worker(
     }
     let root = Root::open(root)
         .map_err(|_| FileResult::error(FileErrorCode::NotFound, "the files are not there"))?;
-    dhpanel_fileops::backup::pack_files(&root, &key, since, out)
+    builtpanel_fileops::backup::pack_files(&root, &key, since, out)
         .map(|_| ())
         .map_err(|(code, message)| FileResult::error(code, message))
 }
@@ -543,10 +537,12 @@ pub fn put_worker(
     mut out: impl std::io::Write,
 ) {
     let result = match Root::open(root) {
-        Ok(root) => match dhpanel_fileops::place(&root, dest, overwrite, max_bytes, &mut input) {
-            Ok(_) => FileResult::Done { count: 1 },
-            Err((code, message)) => FileResult::error(code, message),
-        },
+        Ok(root) => {
+            match builtpanel_fileops::place(&root, dest, overwrite, max_bytes, &mut input) {
+                Ok(_) => FileResult::Done { count: 1 },
+                Err((code, message)) => FileResult::error(code, message),
+            }
+        }
         Err(_) => FileResult::error(FileErrorCode::NotFound, "the files are not there"),
     };
     let _ = out.write_all(&serde_json::to_vec(&result).unwrap_or_default());
@@ -564,7 +560,7 @@ pub fn get_worker(
 ) -> Result<(), FileResult> {
     let root = Root::open(root)
         .map_err(|_| FileResult::error(FileErrorCode::NotFound, "the files are not there"))?;
-    dhpanel_fileops::take(&root, path, max_bytes, out)
+    builtpanel_fileops::take(&root, path, max_bytes, out)
         .map(|_| ())
         .map_err(|(code, message)| FileResult::error(code, message))
 }
@@ -588,10 +584,12 @@ pub fn restore_files(
         return Err((ErrorCode::InvalidArguments, "the key is 64 hex digits"));
     }
     let (host, root) = host_ids(env, tenant_id, uid)?;
-    dhpanel_safe_fs::check_name(staged)
+    builtpanel_safe_fs::check_name(staged)
         .map_err(|_| (ErrorCode::InvalidArguments, "bad staged name"))?;
     if let Some(folder) = only
-        && (folder.len() > 1024 || folder.contains('\0') || dhpanel_safe_fs::parts(folder).is_err())
+        && (folder.len() > 1024
+            || folder.contains('\0')
+            || builtpanel_safe_fs::parts(folder).is_err())
     {
         return Err((ErrorCode::InvalidArguments, "bad folder"));
     }
@@ -637,7 +635,7 @@ pub fn restore_worker(
         .read_line(&mut text)
         .map_err(|_| FileResult::error(FileErrorCode::InvalidArguments, "no key"))?;
     let hex = text.trim();
-    let mut key = [0u8; dhpanel_backup::KEY_LEN];
+    let mut key = [0u8; builtpanel_backup::KEY_LEN];
     if hex.len() != key.len() * 2 {
         return Err(FileResult::error(
             FileErrorCode::InvalidArguments,
@@ -651,7 +649,7 @@ pub fn restore_worker(
     }
     let root = Root::open(root)
         .map_err(|_| FileResult::error(FileErrorCode::NotFound, "the files are not there"))?;
-    dhpanel_fileops::backup::unpack_files(&root, &key, input, only)
+    builtpanel_fileops::backup::unpack_files(&root, &key, input, only)
         .map(|_| ())
         .map_err(|(code, message)| FileResult::error(code, message))
 }
@@ -697,10 +695,11 @@ mod tests {
     fn bad_ids_never_start_a_worker() {
         let env = TenantEnv {
             root: "/nonexistent".into(),
-            agent_name: "dhpanel-agent".into(),
+            agent_name: "builtpanel-agent".into(),
             subuid_file: "/nonexistent".into(),
             agent_gid: 1,
             mountinfo: "/nonexistent".into(),
+            identity: false,
         };
         let request = FileRequest::TrashList;
         assert_eq!(

@@ -2,8 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import "@dhpanel/i18n";
-import { initMocks } from "@dhpanel/api";
+import "@builtpanel/i18n";
+import { initMocks } from "@builtpanel/api";
 
 async function bootstrap() {
   // If backend endpoints do not exist yet, mock via MSW in dev

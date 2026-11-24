@@ -27,7 +27,7 @@ test.describe("Log Viewer UI (T10.06)", () => {
 
   test("DoD E2E: filters domain, switches error tab, toggles live mode, and tests 100MB virtualized stress load", async ({ page }) => {
     // 1. Select specific domain
-    await page.getByTestId("select-log-domain").selectOption("store.dhpanel.test");
+    await page.getByTestId("select-log-domain").selectOption("store.builtpanel.test");
     await expect(page.getByTestId("virtualized-log-container")).toBeVisible();
 
     // 2. Switch to Error Log tab

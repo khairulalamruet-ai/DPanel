@@ -1,8 +1,8 @@
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
-import { resetMockFeatureSets } from "@dhpanel/api";
+import { ToastProvider } from "@builtpanel/ui";
+import { resetMockFeatureSets } from "@builtpanel/api";
 import { FeatureSetsPage } from "./FeatureSetsPage";
 
 function renderWithProviders(ui: React.ReactElement) {

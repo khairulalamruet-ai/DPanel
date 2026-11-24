@@ -1,0 +1,9 @@
+slug        = "elasticsearch-8"
+name        = "Elasticsearch 8"
+category    = "java_tools"
+kind        = "unavailable"
+description = "The previous major line of Elasticsearch."
+license     = "AGPL-3.0-only"
+homepage    = "https://www.elastic.co/elasticsearch"
+covers      = ["Elasticsearch 8"]
+reason      = "it runs as its own user and needs a data folder that user owns, but an account's /data folder belongs to root and its temporary folder does not allow programs to run; it can be offered once administrator-approved images may run as their own user (the same decision as MongoDB)"

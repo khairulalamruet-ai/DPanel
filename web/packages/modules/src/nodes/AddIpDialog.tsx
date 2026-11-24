@@ -8,8 +8,8 @@ import {
   DialogDescription,
   Button,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Globe, Plus, Network } from "lucide-react";
 import { AddNodeIpPayload, IpAddressType, NodeItem } from "./types";
 

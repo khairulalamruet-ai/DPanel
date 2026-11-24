@@ -35,6 +35,9 @@ export interface DnsZone {
   is_custom_ns: boolean;
   dnssec_enabled: boolean;
   updated_at: string;
+  /** `pending` (changes not on the DNS server yet), `active` or `error`. */
+  status?: string;
+  last_error?: string | null;
 }
 
 export interface DnsZoneDetailResponse {

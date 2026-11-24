@@ -1,6 +1,6 @@
 //! SQL import for real (T07.07): a real MariaDB, a real download from a small
 //! HTTP server standing in for the control plane, real dumps. Ignored by default;
-//! needs the login user's rootless Docker. DHPANEL_TEST_DUMP_MB sets the size of the
+//! needs the login user's rootless Docker. BUILTPANEL_TEST_DUMP_MB sets the size of the
 //! big dump (default 30).
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
@@ -15,13 +15,13 @@ use std::{
     time::{Duration, Instant},
 };
 
-use dhpanel_docker_manager::{DockerManager, Name};
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{DockerManager, Name};
+use builtpanel_node_agent::ops::{
     db::{CONTAINER, create_database, ensure_db_server, port},
     sqlimport::{import_sql, report_import_progress},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{DbPassword, ErrorCode, Operation, Output};
+use builtpanel_node_protocol::{DbPassword, ErrorCode, Operation, Output};
 use mysql_async::prelude::Queryable as _;
 use sha2::{Digest as _, Sha256};
 use uuid::Uuid;
@@ -29,6 +29,10 @@ use uuid::Uuid;
 const TOKEN: &str = "test-token-for-the-download";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -221,7 +225,7 @@ impl Args {
             sha256: self.sha.clone(),
             gzip: self.gzip,
             token: self.token.clone().map(DbPassword),
-            engine: dhpanel_node_protocol::DbEngine::Mysql,
+            engine: builtpanel_node_protocol::DbEngine::Mysql,
             dedicated: None,
         }
     }
@@ -239,9 +243,9 @@ async fn dumps_are_downloaded_checked_and_run_with_the_rights_of_one_database() 
     // Another live test may have left the server behind with its own root password.
     let _ = docker.remove(&Name::parse(CONTAINER).unwrap(), true).await;
     let _ = docker
-        .remove_volume(&Name::parse("dh-db-data").unwrap())
+        .remove_volume(&Name::parse("bp-db-data").unwrap())
         .await;
-    let root_dir = std::env::temp_dir().join(format!("dh-import-live-{}", std::process::id()));
+    let root_dir = std::env::temp_dir().join(format!("bp-import-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root_dir);
     std::fs::create_dir_all(&root_dir).unwrap();
     let context = Arc::new(TenantContext {
@@ -264,7 +268,7 @@ async fn dumps_are_downloaded_checked_and_run_with_the_rights_of_one_database() 
             context.clone(),
             Operation::CreateDatabase {
                 name: name.into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         )
@@ -537,7 +541,7 @@ async fn dumps_are_downloaded_checked_and_run_with_the_rights_of_one_database() 
     cutting.stop.store(true, Ordering::SeqCst);
 
     // 6. A big one, compressed and not, with the progress moving while it runs.
-    let mb: usize = std::env::var("DHPANEL_TEST_DUMP_MB")
+    let mb: usize = std::env::var("BUILTPANEL_TEST_DUMP_MB")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(30);
@@ -642,10 +646,10 @@ async fn dumps_are_downloaded_checked_and_run_with_the_rights_of_one_database() 
     let _ = admin.disconnect().await;
     let _ = docker.remove(&Name::parse(CONTAINER).unwrap(), true).await;
     let _ = docker
-        .remove_volume(&Name::parse("dh-db-data").unwrap())
+        .remove_volume(&Name::parse("bp-db-data").unwrap())
         .await;
     let _ = docker
-        .remove_network(&Name::parse("dh-db-net").unwrap())
+        .remove_network(&Name::parse("bp-db-net").unwrap())
         .await;
     let _ = std::fs::remove_dir_all(&root_dir);
 }

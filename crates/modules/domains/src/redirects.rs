@@ -25,18 +25,18 @@ use axum::{
     http::StatusCode,
     routing::{get, patch},
 };
-use dhpanel_database::{
+use builtpanel_database::{
     plans,
     redirects::{self, AddError, Redirect},
     sqlx::PgConnection,
 };
-use dhpanel_domain::{Place, RedirectCode, SourcePath, Target};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_domain::{Place, RedirectCode, SourcePath, Target};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
-use dhpanel_session::rfc3339;
+use builtpanel_session::rfc3339;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use utoipa::ToSchema;
@@ -241,7 +241,7 @@ async fn add_redirect(
 
     let mut tx = state.db.begin().await.map_err(internal)?;
     // One redirect at a time per account, so two requests cannot together close a circle.
-    dhpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
         .await
         .map_err(internal)?;
     if redirects::count(&mut tx, domain_id)
@@ -271,7 +271,7 @@ async fn add_redirect(
         AddError::UnknownDomain => AppError::not_found("domain"),
         AddError::Database(db) => internal(db),
     })?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("redirect.added", who, hosting, domain_id).metadata(serde_json::json!({
             "domain": domain.domain.fqdn,
@@ -311,7 +311,7 @@ async fn update_redirect(
     let code = req.code.map(|c| code_of(Some(c))).transpose()?;
 
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
         .await
         .map_err(internal)?;
     if let Some(target) = &target {
@@ -331,7 +331,7 @@ async fn update_redirect(
     {
         return Err(AppError::not_found("redirect"));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("redirect.changed", who, hosting, domain_id).metadata(serde_json::json!({
             "domain": domain.domain.fqdn,
@@ -370,7 +370,7 @@ async fn delete_redirect(
     {
         return Err(AppError::not_found("redirect"));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("redirect.deleted", who, hosting, domain_id).metadata(serde_json::json!({
             "domain": domain.domain.fqdn,

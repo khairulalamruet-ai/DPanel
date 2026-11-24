@@ -5,17 +5,21 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, Name, Network, VolumeMount};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, Name, Network, VolumeMount};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_agent::ops::{
     cacheaddon::{remove_cache_instance, set_cache_instance},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{DbPassword, ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
+use builtpanel_node_protocol::{DbPassword, ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -28,7 +32,7 @@ fn docker_socket() -> PathBuf {
 #[tokio::test]
 #[ignore = "needs rootless Docker and the network"]
 async fn a_tenants_cache_runs_on_its_network_with_a_password_and_wordpress_uses_it() {
-    let base = std::env::temp_dir().join("dh-cache-live");
+    let base = std::env::temp_dir().join("bp-cache-live");
     let _ = std::fs::remove_dir_all(&base);
     let tenants = base.join("tenants");
     let state = base.join("state");
@@ -36,15 +40,20 @@ async fn a_tenants_cache_runs_on_its_network_with_a_password_and_wordpress_uses_
     let tenant = Uuid::now_v7();
     let www = tenants.join(tenant.to_string()).join("www");
     std::fs::create_dir_all(&www).unwrap();
+    // A root engine (Kiri) has no user-id shift: the tenant's id must be allowed into the folder.
+    if std::env::var_os("BUILTPANEL_TEST_UID_IDENTITY").is_some() {
+        use std::os::unix::fs::PermissionsExt as _;
+        std::fs::set_permissions(&www, std::fs::Permissions::from_mode(0o777)).unwrap();
+    }
     let username = TenantUsername::parse("alice").unwrap();
     let docker = DockerManager::connect(&docker_socket()).unwrap();
     let network = network_name(&username).unwrap();
     let files = files_volume_name(&username).unwrap();
     for n in [
-        "dh-alice-redis",
-        "dh-alice-memcached",
-        "dh-cachit-db",
-        "dh-cachit-wp",
+        "bp-alice-redis",
+        "bp-alice-memcached",
+        "bp-cachit-db",
+        "bp-cachit-wp",
     ] {
         let _ = docker.remove(&Name::parse(n).unwrap(), true).await;
     }
@@ -86,19 +95,19 @@ async fn a_tenants_cache_runs_on_its_network_with_a_password_and_wordpress_uses_
         .await
         .unwrap();
     assert!(
-        matches!(out, Output::CacheInstanceSet { ref host, port: 6379 } if host == "dh-alice-redis"),
+        matches!(out, Output::CacheInstanceSet { ref host, port: 6379 } if host == "bp-alice-redis"),
         "{out:?}"
     );
     let out = set_cache_instance(context.clone(), set("memcached", 16, None))
         .await
         .unwrap();
     assert!(
-        matches!(out, Output::CacheInstanceSet { ref host, port: 11211 } if host == "dh-alice-memcached"),
+        matches!(out, Output::CacheInstanceSet { ref host, port: 11211 } if host == "bp-alice-memcached"),
         "{out:?}"
     );
     // The password is not in the container's command line or environment.
     let info = docker
-        .inspect(&Name::parse("dh-alice-redis").unwrap())
+        .inspect(&Name::parse("bp-alice-redis").unwrap())
         .await
         .unwrap();
     assert!(
@@ -114,7 +123,7 @@ async fn a_tenants_cache_runs_on_its_network_with_a_password_and_wordpress_uses_
     docker.pull_image(&wpcli).await.unwrap();
     let db_image = allowlist.current(Role::Db).unwrap().clone();
     docker.pull_image(&db_image).await.unwrap();
-    let mut dbs = ContainerSpec::new(Name::parse("dh-cachit-db").unwrap(), db_image);
+    let mut dbs = ContainerSpec::new(Name::parse("bp-cachit-db").unwrap(), db_image);
     dbs.env
         .insert("MARIADB_ROOT_PASSWORD".into(), "rootpw-for-the-test".into());
     dbs.env.insert("MARIADB_DATABASE".into(), "wp".into());
@@ -124,13 +133,13 @@ async fn a_tenants_cache_runs_on_its_network_with_a_password_and_wordpress_uses_
     dbs.writable_root = true;
     dbs.memory_bytes = 512 * 1024 * 1024;
     dbs.cap_add = vec![
-        dhpanel_docker_manager::Capability::Chown,
-        dhpanel_docker_manager::Capability::DacOverride,
-        dhpanel_docker_manager::Capability::Fowner,
-        dhpanel_docker_manager::Capability::Setgid,
-        dhpanel_docker_manager::Capability::Setuid,
+        builtpanel_docker_manager::Capability::Chown,
+        builtpanel_docker_manager::Capability::DacOverride,
+        builtpanel_docker_manager::Capability::Fowner,
+        builtpanel_docker_manager::Capability::Setgid,
+        builtpanel_docker_manager::Capability::Setuid,
     ];
-    let aux = Name::parse("dh-cachit-aux").unwrap();
+    let aux = Name::parse("bp-cachit-aux").unwrap();
     docker.ensure_network(&aux, false).await.unwrap();
     dbs.network = Network::Named(aux);
     docker.create_container(&dbs).await.unwrap();
@@ -159,10 +168,10 @@ async fn a_tenants_cache_runs_on_its_network_with_a_password_and_wordpress_uses_
          $W core download >/dev/null; \
          $W config create --dbname=wp --dbuser=wp --dbpass=wp-pass-for-the-test-1 --dbhost=db --skip-salts >/dev/null; \
          $W core install --url=http://x.example --title=T --admin_user=boss --admin_password=Sup3r-Secret-Admin-Pass! --admin_email=a@example.com --skip-email >/dev/null; \
-         $W config set WP_REDIS_HOST dh-alice-redis >/dev/null; $W config set WP_REDIS_PASSWORD '{redis_pw}' >/dev/null; \
+         $W config set WP_REDIS_HOST bp-alice-redis >/dev/null; $W config set WP_REDIS_PASSWORD '{redis_pw}' >/dev/null; \
          $W plugin install redis-cache --activate >/dev/null; $W redis enable 2>&1; $W redis status 2>&1"
     );
-    let mut wp = ContainerSpec::new(Name::parse("dh-cachit-wp").unwrap(), wpcli);
+    let mut wp = ContainerSpec::new(Name::parse("bp-cachit-wp").unwrap(), wpcli);
     wp.entrypoint = vec!["sh".into(), "-c".into(), script];
     wp.user = Some((0, 0));
     wp.memory_bytes = 1024 * 1024 * 1024;
@@ -198,11 +207,11 @@ async fn a_tenants_cache_runs_on_its_network_with_a_password_and_wordpress_uses_
     ));
     assert!(
         docker
-            .inspect(&Name::parse("dh-alice-redis").unwrap())
+            .inspect(&Name::parse("bp-alice-redis").unwrap())
             .await
             .is_err()
     );
-    for n in ["dh-alice-memcached", "dh-cachit-db"] {
+    for n in ["bp-alice-memcached", "bp-cachit-db"] {
         let _ = docker.remove(&Name::parse(n).unwrap(), true).await;
     }
     let _ = docker.remove_volume(&files).await;

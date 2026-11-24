@@ -1,0 +1,8 @@
+slug        = "jailshell"
+name        = "JailShell"
+category    = "utilities"
+kind        = "unavailable"
+description = "JailShell."
+license     = "GPL-3.0-only"
+covers      = ["JailShell"]
+reason      = "it works on the whole server and needs root, which an account never has"

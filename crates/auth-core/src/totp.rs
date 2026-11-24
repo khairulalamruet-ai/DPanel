@@ -245,10 +245,13 @@ mod tests {
     #[test]
     fn otpauth_uri_carries_issuer_account_and_secret() {
         let s = rfc_secret();
-        let uri = s.otpauth_uri("DHPanel", "khairul").unwrap();
-        assert!(uri.starts_with("otpauth://totp/DHPanel:khairul?"), "{uri}");
+        let uri = s.otpauth_uri("Built Panel", "khairul").unwrap();
+        assert!(
+            uri.starts_with("otpauth://totp/Built%20Panel:khairul?"),
+            "{uri}"
+        );
         assert!(uri.contains(&format!("secret={}", s.to_base32())), "{uri}");
-        assert!(uri.contains("issuer=DHPanel"), "{uri}");
+        assert!(uri.contains("issuer=Built%20Panel"), "{uri}");
         // Colons would break the label; they are replaced.
         assert!(s.otpauth_uri("My:Panel", "a:b").is_ok());
     }

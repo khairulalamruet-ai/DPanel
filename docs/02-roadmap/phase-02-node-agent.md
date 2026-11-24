@@ -12,7 +12,7 @@
 - **DoD:** serde round-trip test আছে।
 
 ### T02.03 — Internal CA
-- **কী করতে হবে:** `rcgen` দিয়ে CA বানানো (`dhctl ca init`)। CA key `/etc/dhpanel/secrets`-এ (0600)। Cert issue করার function।
+- **কী করতে হবে:** `rcgen` দিয়ে CA বানানো (`bpctl ca init`)। CA key `/etc/builtpanel/secrets`-এ (0600)। Cert issue করার function।
 - **DoD:** CA দিয়ে সই করা cert `openssl verify` pass করে।
 
 ### T02.04 — nodes ও node_certificates migration
@@ -27,7 +27,7 @@
 - **DoD:** ভুল বা মেয়াদোত্তীর্ণ token দিলে 401 আসে। Audit লেখা হয়।
 
 ### T02.07 — Agent কঙ্কাল
-- **কী করতে হবে:** `apps/node-agent`। Config, enroll কমান্ড, cert রাখা (0600), systemd unit, `dhpanel-agent` user।
+- **কী করতে হবে:** `apps/node-agent`। Config, enroll কমান্ড, cert রাখা (0600), systemd unit, `builtpanel-agent` user।
 - **DoD:** `node-agent enroll --token …` সফল হয়।
 
 ### T02.08 — Agent stream সংযোগ

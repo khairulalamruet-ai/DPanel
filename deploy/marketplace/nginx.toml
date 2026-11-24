@@ -1,0 +1,16 @@
+slug        = "nginx"
+name        = "Nginx"
+category    = "web_servers"
+kind        = "container"
+description = "The Nginx web server, the unprivileged build, for a site or a proxy of your own."
+license     = "BSD-2-Clause"
+homepage    = "https://nginx.org"
+covers      = ["Nginx (service)"]
+version     = "1.30.6"
+image       = "docker.io/nginxinc/nginx-unprivileged"
+track       = "1.30"
+tag         = "1.30.6"
+digest      = "sha256:ec0f7ecb1fbd84959ac114e65fb36074ffc97d4d51db0f18ee925162d889dcef"
+port        = 8080
+memory_mb   = 128
+usage       = "It listens on port 8080 inside your account. Show it on a domain from Containers, or reach it from your other applications at host \"nginx\"."

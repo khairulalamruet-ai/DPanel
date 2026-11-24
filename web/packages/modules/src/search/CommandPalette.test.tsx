@@ -23,7 +23,7 @@ const mockRemoteResults = [
   },
 ];
 
-vi.mock("@dhpanel/api", () => ({
+vi.mock("@builtpanel/api", () => ({
   apiFetch: vi.fn(async (url: string) => {
     if (url.includes("/api/v1/search?q=apex")) {
       return mockRemoteResults;

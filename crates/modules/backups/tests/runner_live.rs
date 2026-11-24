@@ -2,9 +2,9 @@
 //! DATABASE_URL (superuser) and `--include-ignored`.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_mod_backups::runner::{self, tick};
-use dhpanel_node_protocol::Operation;
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_mod_backups::runner::{self, tick};
+use builtpanel_node_protocol::Operation;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -67,7 +67,7 @@ async fn schedules_make_backups_and_retention_removes_the_old_ones(pool: PgPool)
     .unwrap();
     for t in [t1, t2, t3] {
         // Due a minute ago; keep the newest of 2 days.
-        dhpanel_database::backups::upsert_schedule(
+        builtpanel_database::backups::upsert_schedule(
             &pool,
             t,
             "30 2 * * *",
@@ -326,7 +326,7 @@ async fn the_panels_own_schedule_queues_system_backups_and_retention_removes_old
     .fetch_one(&pool)
     .await
     .unwrap();
-    dhpanel_database::backups::upsert_system_schedule(
+    builtpanel_database::backups::upsert_system_schedule(
         &pool,
         "0 3 * * *",
         2,
@@ -345,12 +345,12 @@ async fn the_panels_own_schedule_queues_system_backups_and_retention_removes_old
             .unwrap();
     assert_eq!(rows, [("system".to_owned(), "queued".to_owned(), None)]);
     // The executor takes it, and nobody else gets it.
-    let claimed = dhpanel_database::backups::claim_system_backups(&pool)
+    let claimed = builtpanel_database::backups::claim_system_backups(&pool)
         .await
         .unwrap();
     assert_eq!(claimed.len(), 1);
     assert!(
-        dhpanel_database::backups::claim_system_backups(&pool)
+        builtpanel_database::backups::claim_system_backups(&pool)
             .await
             .unwrap()
             .is_empty()
@@ -366,7 +366,7 @@ async fn the_panels_own_schedule_queues_system_backups_and_retention_removes_old
         count(&pool, "SELECT count(*) FROM backups WHERE kind = 'system'").await,
         1
     );
-    dhpanel_database::backups::finish_system_backup(
+    builtpanel_database::backups::finish_system_backup(
         &pool,
         claimed[0].id,
         10,
@@ -402,16 +402,20 @@ async fn the_panels_own_schedule_queues_system_backups_and_retention_removes_old
     );
     // No node operation is made for a system backup: the control plane does it itself.
     assert_eq!(count(&pool, "SELECT count(*) FROM operations").await, 0);
-    let gone = dhpanel_database::backups::deleting_system(&pool)
+    let gone = builtpanel_database::backups::deleting_system(&pool)
         .await
         .unwrap();
     assert_eq!(gone.len(), 3);
-    dhpanel_database::backups::finish_system_removal(&pool, gone[0].id, None)
+    builtpanel_database::backups::finish_system_removal(&pool, gone[0].id, None)
         .await
         .unwrap();
-    dhpanel_database::backups::finish_system_removal(&pool, gone[1].id, Some("destination down"))
-        .await
-        .unwrap();
+    builtpanel_database::backups::finish_system_removal(
+        &pool,
+        gone[1].id,
+        Some("destination down"),
+    )
+    .await
+    .unwrap();
     assert_eq!(
         count(
             &pool,

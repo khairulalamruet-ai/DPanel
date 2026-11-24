@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-auth-core"
+name = "builtpanel-auth-core"
 description = "Password hashing (argon2id), password policy, sessions, TOTP and CSRF primitives."
 version.workspace = true
 edition.workspace = true
@@ -13,7 +13,7 @@ workspace = true
 [dependencies]
 argon2 = "0.6.0"
 # Master key text encoding; OS CSPRNG for nonces, TOTP secrets and backup codes;
-# SHA-256 for backup-code hashes. All already used by dhpanel-session.
+# SHA-256 for backup-code hashes. All already used by builtpanel-session.
 base64 = "0.23"
 getrandom = "0.4"
 sha2 = "0.11"

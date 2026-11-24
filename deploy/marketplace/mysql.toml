@@ -1,0 +1,9 @@
+slug        = "mysql"
+name        = "MySQL"
+category    = "databases"
+kind        = "unavailable"
+description = "The MySQL database server."
+license     = "GPL-2.0-only"
+homepage    = "https://www.mysql.com"
+covers      = ["MySQL", "MySQL 5.6", "MySQL 5.7", "MySQL 8.0", "MySQL 8.4 (service)", "MySQL 9.4 (service)", "MySQL 9.7 (service)", "MySQL Common (library)"]
+reason      = "the MySQL image  starts as root and then switches to its own user; use the panel's MariaDB, which speaks the same protocol"

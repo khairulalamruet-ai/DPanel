@@ -21,5 +21,5 @@ losing it logs people out and nothing else. The tenants' own databases are separ
 
 ## Consequences
 - The operations ledger is a table, not a broker: one fewer moving part to install.
-- Upgrades run migrations before the new binaries start (`dhctl migrate`), and a migration that
+- Upgrades run migrations before the new binaries start (`bpctl migrate`), and a migration that
   fails leaves the old version running.

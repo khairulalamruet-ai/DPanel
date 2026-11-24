@@ -11,12 +11,12 @@
 
 use std::{path::Path, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{Network, Tmpfs, VolumeMount};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{
+use builtpanel_docker_manager::{Network, Tmpfs, VolumeMount};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{
     AgentError, ErrorCode, Operation, Output, WpCommand, WpItem, WpOverview, WpScan,
 };
-use dhpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
+use builtpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
 
 use super::{
     db,
@@ -47,7 +47,7 @@ $W core install --url="$SITE_URL" --title="$SITE_TITLE" --admin_user="$ADMIN_USE
 for plugin in $PLUGINS; do
   $W plugin install "$plugin" --activate
 done
-echo "DH_VERSION=$($W core version)"
+echo "BP_VERSION=$($W core version)"
 "#;
 
 fn invalid(what: &str) -> AgentError {
@@ -234,7 +234,7 @@ pub async fn install_as(
     cleanup(&secrets);
     let _ = context
         .docker
-        .remove_volume(&db::name(&format!("dh-wpi-{short}"))?)
+        .remove_volume(&db::name(&format!("bp-wpi-{short}"))?)
         .await;
     let done = outcome?;
     let scrub = |text: &str| {
@@ -272,7 +272,7 @@ pub async fn install_as(
         .output
         .lines()
         .rev()
-        .find_map(|l| l.strip_prefix("DH_VERSION="))
+        .find_map(|l| l.strip_prefix("BP_VERSION="))
         .unwrap_or("")
         .trim()
         .to_owned();
@@ -285,15 +285,15 @@ pub(super) async fn run(
     username: &TenantUsername,
     secrets: &Path,
     short: &str,
-    image: dhpanel_docker_manager::ImageRef,
+    image: builtpanel_docker_manager::ImageRef,
     run_as: (u32, u32),
     path: &str,
     script: &str,
     env: Vec<(String, String)>,
     limit: Duration,
-) -> Result<dhpanel_docker_manager::CommandResult, AgentError> {
+) -> Result<builtpanel_docker_manager::CommandResult, AgentError> {
     let state_dir = state(context)?;
-    let secrets_volume = db::name(&format!("dh-wpi-{short}"))?;
+    let secrets_volume = db::name(&format!("bp-wpi-{short}"))?;
     context
         .docker
         .create_bind_volume(&secrets_volume, secrets, &state_dir)
@@ -302,7 +302,7 @@ pub(super) async fn run(
     let files = files_volume_name(username).map_err(|e| invalid(&e.to_string()))?;
     let network = network_name(username).map_err(|e| invalid(&e.to_string()))?;
     let mut spec = base_spec(
-        db::name(&format!("dh-wpi-{short}"))?,
+        db::name(&format!("bp-wpi-{short}"))?,
         image,
         &["sh", "-c", script],
     );
@@ -361,26 +361,26 @@ fi
 "#;
 
 const OVERVIEW: &str = r#"
-echo "DH_CORE=$($W core version)"
-echo "DH_UPDATE=$($W core check-update --field=version 2>/dev/null | head -1 || true)"
-echo "DH_MAINT=$($W maintenance-mode status 2>&1 | head -1 || true)"
-echo "DH_PLUGINS"
+echo "BP_CORE=$($W core version)"
+echo "BP_UPDATE=$($W core check-update --field=version 2>/dev/null | head -1 || true)"
+echo "BP_MAINT=$($W maintenance-mode status 2>&1 | head -1 || true)"
+echo "BP_PLUGINS"
 $W plugin list --fields=name,status,version,update,update_version --format=json
 echo
-echo "DH_THEMES"
+echo "BP_THEMES"
 $W theme list --fields=name,status,version,update,update_version --format=json
 echo
 "#;
 
 const SCAN: &str = r#"
-echo "DH_SUM_START"
+echo "BP_SUM_START"
 $W core verify-checksums 2>&1 || true
-echo "DH_SUM_END"
-echo "DH_DEBUG=$($W config get WP_DEBUG 2>/dev/null | head -1 || true)"
-echo "DH_FILEEDIT=$($W config get DISALLOW_FILE_EDIT 2>/dev/null | head -1 || true)"
-if [ -f "$WP_PATH/wp-content/mu-plugins/dhpanel-hardening.php" ]; then echo "DH_XMLRPC=off"; else echo "DH_XMLRPC=on"; fi
-echo "DH_MODE=$(stat -c %a "$WP_PATH/wp-config.php" 2>/dev/null || echo '')"
-echo "DH_WRITABLE=$(find "$WP_PATH" -not -type l -perm -o+w 2>/dev/null | wc -l)"
+echo "BP_SUM_END"
+echo "BP_DEBUG=$($W config get WP_DEBUG 2>/dev/null | head -1 || true)"
+echo "BP_FILEEDIT=$($W config get DISALLOW_FILE_EDIT 2>/dev/null | head -1 || true)"
+if [ -f "$WP_PATH/wp-content/mu-plugins/builtpanel-hardening.php" ]; then echo "BP_XMLRPC=off"; else echo "BP_XMLRPC=on"; fi
+echo "BP_MODE=$(stat -c %a "$WP_PATH/wp-config.php" 2>/dev/null || echo '')"
+echo "BP_WRITABLE=$(find "$WP_PATH" -not -type l -perm -o+w 2>/dev/null | wc -l)"
 "#;
 
 const HARDEN: &str = r#"
@@ -396,7 +396,7 @@ fi
 if [ "$H_XMLRPC" = 1 ]; then
   mkdir -p "$WP_PATH/wp-content/mu-plugins"
   printf '%s
-' '<?php' '/* Switched on and off by the hosting panel. */' "add_filter( 'xmlrpc_enabled', '__return_false' );" > "$WP_PATH/wp-content/mu-plugins/dhpanel-hardening.php"
+' '<?php' '/* Switched on and off by the hosting panel. */' "add_filter( 'xmlrpc_enabled', '__return_false' );" > "$WP_PATH/wp-content/mu-plugins/builtpanel-hardening.php"
   echo "xmlrpc off"
 fi
 if [ "$H_PERMS" = 1 ]; then
@@ -441,9 +441,9 @@ pub fn parse_scan(output: &str) -> Result<WpScan, String> {
     let mut checksums_ok = true;
     let clean = |p: &str| -> String { p.chars().filter(|c| !c.is_control()).take(300).collect() };
     for line in output.lines() {
-        if line == "DH_SUM_START" {
+        if line == "BP_SUM_START" {
             in_sum = true;
-        } else if line == "DH_SUM_END" {
+        } else if line == "BP_SUM_END" {
             in_sum = false;
             saw_end = true;
         } else if in_sum {
@@ -465,20 +465,20 @@ pub fn parse_scan(output: &str) -> Result<WpScan, String> {
             } else if line.starts_with("Error:") {
                 checksums_ok = false;
             }
-        } else if let Some(v) = line.strip_prefix("DH_DEBUG=") {
+        } else if let Some(v) = line.strip_prefix("BP_DEBUG=") {
             debug = v.trim().to_owned();
-        } else if let Some(v) = line.strip_prefix("DH_FILEEDIT=") {
+        } else if let Some(v) = line.strip_prefix("BP_FILEEDIT=") {
             file_edit = v.trim().to_owned();
-        } else if let Some(v) = line.strip_prefix("DH_XMLRPC=") {
+        } else if let Some(v) = line.strip_prefix("BP_XMLRPC=") {
             xmlrpc_off = v.trim() == "off";
-        } else if let Some(v) = line.strip_prefix("DH_MODE=") {
+        } else if let Some(v) = line.strip_prefix("BP_MODE=") {
             mode = v
                 .trim()
                 .chars()
                 .filter(char::is_ascii_digit)
                 .take(4)
                 .collect();
-        } else if let Some(v) = line.strip_prefix("DH_WRITABLE=") {
+        } else if let Some(v) = line.strip_prefix("BP_WRITABLE=") {
             writable = v.trim().parse().unwrap_or(0);
         }
     }
@@ -514,15 +514,15 @@ pub fn parse_overview(output: &str) -> Result<WpOverview, String> {
     let mut section = "";
     let (mut plugins, mut themes) = (String::new(), String::new());
     for line in output.lines() {
-        if let Some(v) = line.strip_prefix("DH_CORE=") {
+        if let Some(v) = line.strip_prefix("BP_CORE=") {
             core = v.trim().to_owned();
-        } else if let Some(v) = line.strip_prefix("DH_UPDATE=") {
+        } else if let Some(v) = line.strip_prefix("BP_UPDATE=") {
             update = v.trim().to_owned();
-        } else if let Some(v) = line.strip_prefix("DH_MAINT=") {
+        } else if let Some(v) = line.strip_prefix("BP_MAINT=") {
             maintenance = v.to_ascii_lowercase().contains("is active");
-        } else if line == "DH_PLUGINS" {
+        } else if line == "BP_PLUGINS" {
             section = "plugins";
-        } else if line == "DH_THEMES" {
+        } else if line == "BP_THEMES" {
             section = "themes";
         } else if section == "plugins" && is_list(line) {
             // (Warnings and notices WP-CLI or PHP print around the list are not part of it.)
@@ -712,7 +712,7 @@ pub async fn manage_as(
     let _ = std::fs::remove_dir_all(&secrets);
     let _ = context
         .docker
-        .remove_volume(&db::name(&format!("dh-wpi-{short}"))?)
+        .remove_volume(&db::name(&format!("bp-wpi-{short}"))?)
         .await;
     let done = outcome?;
     let scrub = |text: &str| match &secret {
@@ -772,7 +772,7 @@ mod tests {
 
     #[test]
     fn the_overview_is_read() {
-        let text = "DH_CORE=6.4.3\nDH_UPDATE=6.8.1\nDH_MAINT=Maintenance mode is not active.\nDH_PLUGINS\n[{\"name\":\"akismet\",\"status\":\"active\",\"version\":\"5.0\",\"update\":\"available\",\"update_version\":\"5.3\"}]\nDH_THEMES\n[{\"name\":\"twentytwentyfour\",\"status\":\"inactive\",\"version\":\"1.1\",\"update\":\"none\",\"update_version\":\"\"}]\n";
+        let text = "BP_CORE=6.4.3\nBP_UPDATE=6.8.1\nBP_MAINT=Maintenance mode is not active.\nBP_PLUGINS\n[{\"name\":\"akismet\",\"status\":\"active\",\"version\":\"5.0\",\"update\":\"available\",\"update_version\":\"5.3\"}]\nBP_THEMES\n[{\"name\":\"twentytwentyfour\",\"status\":\"inactive\",\"version\":\"1.1\",\"update\":\"none\",\"update_version\":\"\"}]\n";
         let o = parse_overview(text).unwrap();
         assert_eq!(
             (o.core.as_str(), o.core_update.as_deref(), o.maintenance),
@@ -781,13 +781,13 @@ mod tests {
         assert!(o.plugins[0].update_available && o.plugins[0].update_version == "5.3");
         assert!(!o.themes[0].update_available);
         assert!(parse_overview("nothing").is_err());
-        let on = parse_overview("DH_CORE=6.8\nDH_UPDATE=\nDH_MAINT=Maintenance mode is active.\nDH_PLUGINS\n[]\nDH_THEMES\n[]\n").unwrap();
+        let on = parse_overview("BP_CORE=6.8\nBP_UPDATE=\nBP_MAINT=Maintenance mode is active.\nBP_PLUGINS\n[]\nBP_THEMES\n[]\n").unwrap();
         assert!(on.maintenance && on.core_update.is_none());
     }
 
     #[test]
     fn the_scan_is_read() {
-        let text = "DH_SUM_START\nWarning: File doesn't verify against checksum: wp-includes/version.php\nWarning: File should not exist: shell.php\nError: WordPress installation doesn't verify against checksums.\nDH_SUM_END\nDH_DEBUG=true\nDH_FILEEDIT=\nDH_XMLRPC=on\nDH_MODE=644\nDH_WRITABLE=3\n";
+        let text = "BP_SUM_START\nWarning: File doesn't verify against checksum: wp-includes/version.php\nWarning: File should not exist: shell.php\nError: WordPress installation doesn't verify against checksums.\nBP_SUM_END\nBP_DEBUG=true\nBP_FILEEDIT=\nBP_XMLRPC=on\nBP_MODE=644\nBP_WRITABLE=3\n";
         let s = parse_scan(text).unwrap();
         assert!(!s.checksums_ok && s.debug && s.file_edit_allowed && !s.xmlrpc_disabled);
         assert_eq!(
@@ -798,7 +798,7 @@ mod tests {
             )
         );
         assert_eq!((s.config_mode.as_str(), s.world_writable), ("644", 3));
-        let clean = parse_scan("DH_SUM_START\nSuccess: WordPress installation verifies against checksums.\nDH_SUM_END\nDH_DEBUG=\nDH_FILEEDIT=1\nDH_XMLRPC=off\nDH_MODE=640\nDH_WRITABLE=0\n").unwrap();
+        let clean = parse_scan("BP_SUM_START\nSuccess: WordPress installation verifies against checksums.\nBP_SUM_END\nBP_DEBUG=\nBP_FILEEDIT=1\nBP_XMLRPC=off\nBP_MODE=640\nBP_WRITABLE=0\n").unwrap();
         assert!(
             clean.checksums_ok && !clean.debug && !clean.file_edit_allowed && clean.xmlrpc_disabled
         );

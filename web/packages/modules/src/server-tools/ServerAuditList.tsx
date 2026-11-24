@@ -12,9 +12,9 @@ import {
   TableBody,
   TableCell,
   Badge,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { ShieldCheck, History, ExternalLink } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { ServerAuditEvent } from "./types";
 
 interface ServerAuditListProps {

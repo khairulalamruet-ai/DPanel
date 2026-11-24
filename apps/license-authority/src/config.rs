@@ -1,6 +1,6 @@
 //! The authority's configuration (T17.01): its own database and its own file, separate from
-//! the control plane's. Defaults, then `/etc/dhpanel/license-authority.toml` (or the file named
-//! by `DHPANEL_LA_CONFIG`), then `DHPANEL_LA_*` environment variables (`__` between nested
+//! the control plane's. Defaults, then `/etc/builtpanel/license-authority.toml` (or the file named
+//! by `BUILTPANEL_LA_CONFIG`), then `BUILTPANEL_LA_*` environment variables (`__` between nested
 //! keys).
 
 use std::{net::SocketAddr, path::PathBuf};
@@ -13,7 +13,7 @@ use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 
 /// The default place of the configuration file.
-pub const DEFAULT_PATH: &str = "/etc/dhpanel/license-authority.toml";
+pub const DEFAULT_PATH: &str = "/etc/builtpanel/license-authority.toml";
 
 /// Everything the authority reads at start.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -85,11 +85,11 @@ impl Default for LaConfig {
     fn default() -> Self {
         Self {
             bind: SocketAddr::from(([127, 0, 0, 1], 9440)),
-            database_url: SecretString::from("postgres://dhpanel_la@127.0.0.1/dhpanel_la"),
-            signing_key_file: PathBuf::from("/etc/dhpanel/la-signing.key"),
+            database_url: SecretString::from("postgres://builtpanel_la@127.0.0.1/builtpanel_la"),
+            signing_key_file: PathBuf::from("/etc/builtpanel/la-signing.key"),
             signing_kid: "license-1".to_owned(),
-            issuer: "dhpanel-la".to_owned(),
-            audience: "dhpanel".to_owned(),
+            issuer: "builtpanel-la".to_owned(),
+            audience: "builtpanel".to_owned(),
             entitlement_hours: 96,
             session_hours: 8,
             trusted_proxies: vec![
@@ -126,7 +126,7 @@ impl LaConfig {
     /// # Errors
     /// [`ConfigError`].
     pub fn load() -> Result<Self, ConfigError> {
-        let path = std::env::var_os("DHPANEL_LA_CONFIG")
+        let path = std::env::var_os("BUILTPANEL_LA_CONFIG")
             .map_or_else(|| PathBuf::from(DEFAULT_PATH), PathBuf::from);
         Self::load_from(&path)
     }
@@ -141,7 +141,11 @@ impl LaConfig {
             figment = figment.merge(Toml::file(path));
         }
         let config: Self = figment
-            .merge(Env::prefixed("DHPANEL_LA_").ignore(&["CONFIG"]).split("__"))
+            .merge(
+                Env::prefixed("BUILTPANEL_LA_")
+                    .ignore(&["CONFIG"])
+                    .split("__"),
+            )
             .extract()
             .map_err(|e| ConfigError::Read(e.to_string()))?;
         config.check()?;
@@ -203,11 +207,11 @@ mod tests {
         figment::Jail::expect_with(|jail| {
             let c = LaConfig::load_from(std::path::Path::new("/nonexistent")).unwrap();
             assert_eq!(c.entitlement_hours, 96);
-            jail.set_env("DHPANEL_LA_ENTITLEMENT_HOURS", "48");
-            jail.set_env("DHPANEL_LA_DATABASE_URL", "postgres://x@db/la");
+            jail.set_env("BUILTPANEL_LA_ENTITLEMENT_HOURS", "48");
+            jail.set_env("BUILTPANEL_LA_DATABASE_URL", "postgres://x@db/la");
             let c = LaConfig::load_from(std::path::Path::new("/nonexistent")).unwrap();
             assert_eq!(c.entitlement_hours, 48);
-            jail.set_env("DHPANEL_LA_ENTITLEMENT_HOURS", "0");
+            jail.set_env("BUILTPANEL_LA_ENTITLEMENT_HOURS", "0");
             assert!(LaConfig::load_from(std::path::Path::new("/nonexistent")).is_err());
             Ok(())
         });

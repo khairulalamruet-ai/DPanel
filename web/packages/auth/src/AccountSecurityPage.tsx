@@ -21,9 +21,9 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@dhpanel/ui";
-import { useTranslation, useFormatters } from "@dhpanel/i18n";
-import { api, getCsrfToken, apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation, useFormatters } from "@builtpanel/i18n";
+import { api, getCsrfToken, apiFetch } from "@builtpanel/api";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -66,7 +66,7 @@ export function AccountSecurityPage() {
       setPasswordError(t("security.password.currentPlaceholder"));
       return;
     }
-    if (newPassword.length < 8) {
+    if (newPassword.length < 12) {
       setPasswordError(t("security.password.tooShort"));
       return;
     }
@@ -77,8 +77,8 @@ export function AccountSecurityPage() {
 
     try {
       setPasswordLoading(true);
-      await apiFetch("/api/v1/account/password", {
-        method: "POST",
+      await apiFetch("/api/v1/auth/password", {
+        method: "PUT",
         body: JSON.stringify({
           current_password: currentPassword,
           new_password: newPassword,
@@ -90,7 +90,9 @@ export function AccountSecurityPage() {
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: any) {
-      setPasswordError(err.message || t("common.error"));
+      // A refused new password comes with what is wrong with it, field by field.
+      const fields: { message: string }[] = err?.errors ?? [];
+      setPasswordError(fields.length ? fields.map((f) => f.message).join(" ") : err.message || t("common.error"));
     } finally {
       setPasswordLoading(false);
     }
@@ -316,10 +318,28 @@ export function AccountSecurityPage() {
   const fetchHistory = async () => {
     try {
       setHistoryLoading(true);
-      const res = await apiFetch<any>("/api/v1/account/login-history");
-      if (res?.events) {
-        setLoginHistory(res.events);
-      }
+      // The sign-ins of this account, from what the panel wrote down: a customer's own activity
+      // feed, or the audit log for an administrator.
+      const me = await apiFetch<{ id: string; kind: string }>("/api/v1/auth/me");
+      const events =
+        me.kind === "admin"
+          ? (await apiFetch<{ items: { id: string; action: string; at: string; actor_ip?: string | null; outcome: string }[] }>(
+              `/api/v1/admin/audit-logs?actor_id=${encodeURIComponent(me.id)}&limit=100`,
+            )).items.map((e) => ({ id: e.id, action: e.action, at: e.at, ip: e.actor_ip, outcome: e.outcome }))
+          : (await apiFetch<{ items: { id: string; action: string; at: string; ip?: string | null; outcome: string }[] }>(
+              "/api/v1/client/activity?limit=100",
+            )).items;
+      setLoginHistory(
+        events
+          .filter((e) => e.action.startsWith("auth.login"))
+          .map((e) => ({
+            id: e.id,
+            ip_address: e.ip ?? "",
+            user_agent: "",
+            status: e.outcome === "success" ? ("success" as const) : ("failed" as const),
+            created_at: e.at,
+          })),
+      );
     } catch {
       // Ignore
     } finally {

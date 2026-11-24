@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-kernel"
+name = "builtpanel-kernel"
 description = "Module trait, module registry, event bus and core error types."
 version.workspace = true
 edition.workspace = true

@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-mod-domains"
+name = "builtpanel-mod-domains"
 description = "Domains module: the names a hosting account serves."
 version.workspace = true
 edition.workspace = true
@@ -11,22 +11,22 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-audit.workspace = true
-dhpanel-auth-core.workspace = true
-dhpanel-cache.workspace = true
-dhpanel-database.workspace = true
-dhpanel-dns.workspace = true
-dhpanel-domain.workspace = true
-dhpanel-events.workspace = true
-dhpanel-kernel.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-node-protocol.workspace = true
-dhpanel-pki.workspace = true
-dhpanel-rbac.workspace = true
-dhpanel-session.workspace = true
-dhpanel-settings.workspace = true
-dhpanel-tenant-stack.workspace = true
-dhpanel-web-config.workspace = true
+builtpanel-audit.workspace = true
+builtpanel-auth-core.workspace = true
+builtpanel-cache.workspace = true
+builtpanel-database.workspace = true
+builtpanel-dns.workspace = true
+builtpanel-domain.workspace = true
+builtpanel-events.workspace = true
+builtpanel-kernel.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-node-protocol.workspace = true
+builtpanel-pki.workspace = true
+builtpanel-rbac.workspace = true
+builtpanel-session.workspace = true
+builtpanel-settings.workspace = true
+builtpanel-tenant-stack.workspace = true
+builtpanel-web-config.workspace = true
 axum = "0.8"
 serde = { version = "1", features = ["derive"] }
 secrecy = "0.10"

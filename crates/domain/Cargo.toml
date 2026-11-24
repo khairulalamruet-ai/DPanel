@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-domain"
+name = "builtpanel-domain"
 description = "Shared domain entities and value objects (no web or database dependencies)."
 version.workspace = true
 edition.workspace = true

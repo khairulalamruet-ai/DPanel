@@ -12,7 +12,7 @@
 //!
 //! # The archive
 //!
-//! A tar, compressed with zstd, cut into authenticated chunks (`dhpanel_backup`):
+//! A tar, compressed with zstd, cut into authenticated chunks (`builtpanel_backup`):
 //!
 //! | Entry | What |
 //! |---|---|
@@ -33,7 +33,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use dhpanel_backup::{KEY_LEN, StreamReader, StreamWriter};
+use builtpanel_backup::{KEY_LEN, StreamReader, StreamWriter};
 use sha2::{Digest, Sha256};
 
 /// Why the system backup failed.
@@ -62,7 +62,7 @@ fn io(what: &str, e: &std::io::Error) -> Error {
 #[must_use]
 pub fn derive_key(master_key_text: &str) -> [u8; KEY_LEN] {
     let mut h = Sha256::new();
-    h.update(b"dhpanel/system-backup/v1\0");
+    h.update(b"builtpanel/system-backup/v1\0");
     h.update(master_key_text.trim().as_bytes());
     h.finalize().into()
 }
@@ -450,7 +450,7 @@ impl<R: Read> Read for HashRead<R> {
 /// # Errors
 /// A message (never a secret) for the row of the backup.
 pub fn run_job(job: &Job) -> Result<Done, String> {
-    use dhpanel_backup::{
+    use builtpanel_backup::{
         Manifest, Part, PartKind,
         manifest::{Counting, hex},
     };
@@ -483,7 +483,7 @@ pub fn run_job(job: &Job) -> Result<Done, String> {
         pack(&inputs, &job.key, &mut out).map_err(|e| e.to_string())?;
         out.flush().map_err(|e| e.kind().to_string())?;
         let _ = std::fs::remove_file(&dump);
-        let dest = dhpanel_backup_dest::open::open(&job.kind, &job.settings, &job.secrets)
+        let dest = builtpanel_backup_dest::open::open(&job.kind, &job.settings, &job.secrets)
             .map_err(|e| e.to_string())?;
         let object = format!("{}/{PART}", job.id);
         let mut counted = HashRead {
@@ -549,7 +549,7 @@ mod tests {
 
     #[test]
     fn a_database_url_is_read_with_its_escapes() {
-        let c = Connection::parse("postgres://dh:p%40ss%2Fw@db.example:6543/panel?sslmode=require")
+        let c = Connection::parse("postgres://bp:p%40ss%2Fw@db.example:6543/panel?sslmode=require")
             .unwrap();
         assert_eq!(
             (
@@ -559,7 +559,7 @@ mod tests {
                 c.password.as_str(),
                 c.database.as_str()
             ),
-            ("db.example", "6543", "dh", "p@ss/w", "panel")
+            ("db.example", "6543", "bp", "p@ss/w", "panel")
         );
         assert_eq!(c.sslmode.as_deref(), Some("require"));
         let c = Connection::parse("postgresql://u:p@localhost/db").unwrap();
@@ -579,7 +579,7 @@ mod tests {
 
     #[test]
     fn an_archive_unpacks_the_same_and_only_with_its_key() {
-        let dir = std::env::temp_dir().join(format!("dh-sysbk-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bp-sysbk-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("ca")).unwrap();
         std::fs::write(dir.join("dump"), b"PGDMP-pretend").unwrap();

@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-mod-migration"
+name = "builtpanel-mod-migration"
 description = "Migration module: bring an account over from another hosting panel (T15.04, T15.06)."
 version.workspace = true
 edition.workspace = true
@@ -11,14 +11,14 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-audit.workspace = true
-dhpanel-database.workspace = true
-dhpanel-domain.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-import.workspace = true
-dhpanel-kernel.workspace = true
-dhpanel-rbac.workspace = true
-dhpanel-session.workspace = true
+builtpanel-audit.workspace = true
+builtpanel-database.workspace = true
+builtpanel-domain.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-import.workspace = true
+builtpanel-kernel.workspace = true
+builtpanel-rbac.workspace = true
+builtpanel-session.workspace = true
 axum = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -33,8 +33,8 @@ utoipa = { version = "6", features = ["uuid"] }
 uuid = { version = "1", features = ["serde", "v4"] }
 
 [dev-dependencies]
-dhpanel-cache.workspace = true
-dhpanel-mod-auth.workspace = true
+builtpanel-cache.workspace = true
+builtpanel-mod-auth.workspace = true
 tar = { version = "0.4.46", default-features = false }
 rand = "0.10"
 anyhow = "1"

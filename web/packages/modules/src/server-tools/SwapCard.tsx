@@ -9,9 +9,9 @@ import {
   Button,
   Input,
   Badge,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { HardDrive, Lock, Settings2 } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { ServerSwapInfo } from "./types";
 
 interface SwapCardProps {
@@ -32,7 +32,7 @@ export function SwapCard({ swap, onUpdateSwap }: SwapCardProps) {
   }, [swap.total_mb, swap.swappiness]);
 
   const usedPercent = swap.total_mb > 0 ? Math.round((swap.used_mb / swap.total_mb) * 100) : 0;
-  const hasChanged = totalMb !== swap.total_mb || swappiness !== swap.swappiness;
+  const hasChanged = totalMb !== swap.total_mb;
   const canSubmit = hasChanged && sudoPassword.trim().length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,20 +115,6 @@ export function SwapCard({ swap, onUpdateSwap }: SwapCardProps) {
                 step={512}
                 value={totalMb}
                 onChange={(e) => setTotalMb(Number(e.target.value))}
-                className="mt-1 text-xs font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-foreground">
-                {t("serverTools.swappinessLabel")} (0-100)
-              </label>
-              <Input
-                data-testid="input-swappiness"
-                type="number"
-                min={0}
-                max={100}
-                value={swappiness}
-                onChange={(e) => setSwappiness(Number(e.target.value))}
                 className="mt-1 text-xs font-mono"
               />
             </div>

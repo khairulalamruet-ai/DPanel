@@ -6,7 +6,7 @@
 
 use std::time::Duration;
 
-use dhpanel_cache::{
+use builtpanel_cache::{
     RedisHandle,
     lockout::{FailureLimiter, LockoutPolicy},
 };

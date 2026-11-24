@@ -19,7 +19,7 @@ PY
 }
 count() { # image -> "CRITICAL HIGH" counts of fixable findings
     local target=("$1")
-    case "$1" in dhpanel-*) # a local image is handed over as a file (Trivy does not reach the daemon)
+    case "$1" in builtpanel-*) # a local image is handed over as a file (Trivy does not reach the daemon)
         docker save "$1" -o "$WORK/image.tar"; target=(--input /work/image.tar) ;; esac
     $TRIVY image --quiet --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed --format json "${target[@]}" 2>/dev/null |
         python3 -c 'import json,sys; d=json.load(sys.stdin); v=[x for r in d.get("Results",[]) for x in (r.get("Vulnerabilities") or [])]; print(sum(x["Severity"]=="CRITICAL" for x in v), sum(x["Severity"]=="HIGH" for x in v))'
@@ -27,8 +27,8 @@ count() { # image -> "CRITICAL HIGH" counts of fixable findings
 for role in "${roles[@]}"; do
     base=$(base_of "$role")
     docker pull -q "$base" > /dev/null
-    docker build -q --build-arg BASE="$base" -t "dhpanel-$role:test" "deploy/images/$role" > /dev/null
+    docker build -q --build-arg BASE="$base" -t "builtpanel-$role:test" "deploy/images/$role" > /dev/null
     read -r c0 h0 <<< "$(count "$base")"
-    read -r c1 h1 <<< "$(count "dhpanel-$role:test")"
+    read -r c1 h1 <<< "$(count "builtpanel-$role:test")"
     printf '%-5s official: %s critical, %s high   ours: %s critical, %s high   (%s)\n' "$role" "$c0" "$h0" "$c1" "$h1" "${base%%@*}"
 done

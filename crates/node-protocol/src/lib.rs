@@ -19,6 +19,7 @@
 //! redacting `Debug` and is left out of logs.
 
 pub mod files;
+pub mod studio;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -132,7 +133,7 @@ pub struct SiteRoute {
     /// The names (lower-case ASCII), at least one.
     pub hosts: Vec<String>,
     /// Where the site's web container listens, `host:port` (for example
-    /// `dh-alice-web:8080`), or `None` for a suspended site: visitors then get
+    /// `bp-alice-web:8080`), or `None` for a suspended site: visitors then get
     /// the "suspended" page and nothing is served from the tenant's files.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub upstream: Option<String>,
@@ -151,9 +152,13 @@ pub struct SiteRoute {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub suspended_by: Option<String>,
     /// The web application firewall for this site: `None` is off. Only a node whose web
-    /// server has the firewall (`DHPANEL_AGENT_WAF_DIR`) applies it.
+    /// server has the firewall (`BUILTPANEL_AGENT_WAF_DIR`) applies it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub waf: Option<WafSetting>,
+    /// Addresses and networks (canonical, see [`normalize_ip_block`]) the web server answers
+    /// `403` before anything else looks at the request; at most [`MAX_BLOCKED_IPS`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub blocked_ips: Vec<String>,
 }
 
 /// How the firewall acts for one site.
@@ -815,6 +820,103 @@ pub const MAX_USER_AGENT_PATTERNS: usize = 500;
 /// Most rules one site may switch off.
 pub const MAX_WAF_RULES: usize = 200;
 
+/// Most refused requests one read of the firewall's log names.
+pub const MAX_WAF_EVENTS: u32 = 200;
+
+/// Most names one read of the firewall's log may be limited to.
+pub const MAX_WAF_HOSTS: usize = 500;
+
+/// One request the web application firewall stopped (or, for a site that only watches, saw).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WafEvent {
+    /// When (Unix milliseconds, UTC).
+    pub at_ms: i64,
+    /// The request method.
+    pub method: String,
+    /// The name asked for.
+    pub host: String,
+    /// The path and query asked for (cut at 200 characters).
+    pub uri: String,
+    /// The rule that named the attack (0 when the log does not say).
+    pub rule_id: u32,
+    /// What the rule says (cut at 200 characters).
+    pub message: String,
+    /// The request was refused.
+    pub blocked: bool,
+}
+
+/// Most addresses or networks one site may turn away.
+pub const MAX_BLOCKED_IPS: usize = 100;
+
+/// An address or a network the web server may be told to turn away, in its canonical text:
+/// an IPv4 or IPv6 address (`203.0.113.9`, `2001:db8::1`), or a network (`203.0.113.0/24`) whose
+/// host bits are cleared. Networks larger than a /8 (IPv4) or a /16 (IPv6) are refused: such a
+/// list is a mistake far more often than a wish, and the loopback, unspecified and multicast
+/// addresses cannot be visitors.
+///
+/// # Errors
+/// A short reason, fit to show to a person.
+pub fn normalize_ip_block(text: &str) -> Result<String, &'static str> {
+    use std::net::IpAddr;
+    let text = text.trim();
+    let (addr, prefix) = match text.split_once('/') {
+        Some((a, p)) => (a, Some(p)),
+        None => (text, None),
+    };
+    if addr.is_empty() || addr.len() > 39 {
+        return Err("Not an IP address or network.");
+    }
+    let ip: IpAddr = addr.parse().map_err(|_| "Not an IP address or network.")?;
+    if ip.is_loopback() || ip.is_unspecified() || ip.is_multicast() {
+        return Err("That address cannot be a visitor.");
+    }
+    let (bits, shortest) = match ip {
+        IpAddr::V4(_) => (32u8, 8u8),
+        IpAddr::V6(_) => (128u8, 16u8),
+    };
+    let prefix = match prefix {
+        None => bits,
+        Some(p) => {
+            if p.is_empty() || p.len() > 3 || !p.bytes().all(|b| b.is_ascii_digit()) {
+                return Err("The network size after the / is not a number.");
+            }
+            p.parse::<u8>()
+                .map_err(|_| "The network size is too large.")?
+        }
+    };
+    if prefix > bits {
+        return Err("The network size is too large.");
+    }
+    if prefix < shortest {
+        return Err("That network is too large to block.");
+    }
+    Ok(match ip {
+        IpAddr::V4(v4) => {
+            let mask = if prefix == 0 {
+                0
+            } else {
+                u32::MAX << (32 - u32::from(prefix))
+            };
+            let net = std::net::Ipv4Addr::from(u32::from(v4) & mask);
+            if prefix == 32 {
+                net.to_string()
+            } else {
+                format!("{net}/{prefix}")
+            }
+        }
+        IpAddr::V6(v6) => {
+            let mask = u128::MAX << (128 - u32::from(prefix));
+            let net = std::net::Ipv6Addr::from(u128::from(v6) & mask);
+            if prefix == 128 {
+                net.to_string()
+            } else {
+                format!("{net}/{prefix}")
+            }
+        }
+    })
+}
+
 /// One page for the web server to show when a site cannot answer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -832,7 +934,7 @@ pub const MAX_ERROR_PAGE_BYTES: usize = 16 * 1024;
 ///
 /// The private key is not part of what the control plane records in its ledger:
 /// there it is `None`, and the dispatcher fills it in at the moment the message is
-/// sent (see `dhpanel_dispatcher::SecretFiller`). `Debug` never shows it.
+/// sent (see `builtpanel_dispatcher::SecretFiller`). `Debug` never shows it.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CustomCertificate {
@@ -1098,6 +1200,31 @@ pub struct LogLine {
 /// Most lines one log read returns.
 pub const MAX_LOG_LINES: u32 = 2000;
 
+/// Most pages one traffic count names.
+pub const MAX_TRAFFIC_PATHS: u32 = 50;
+
+/// One hour of an account's web traffic.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TrafficHour {
+    /// The start of the hour (Unix milliseconds, UTC).
+    pub at_ms: i64,
+    /// Requests in it.
+    pub requests: u64,
+    /// Bytes sent in it.
+    pub bytes: u64,
+}
+
+/// A page and how often it was asked for.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TrafficPath {
+    /// The path without the query string.
+    pub path: String,
+    /// Requests for it.
+    pub requests: u64,
+}
+
 /// The node as a whole, as counters and levels (rates are made from two readings).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -1130,7 +1257,7 @@ pub struct NodeMetrics {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerMetrics {
-    /// The container's name (`dh-<account>-<role>`).
+    /// The container's name (`bp-<account>-<role>`).
     pub name: String,
     /// Memory in use, in bytes.
     pub memory_bytes: u64,
@@ -1157,7 +1284,7 @@ pub const MAX_METRIC_CONTAINERS: usize = 5000;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerItem {
-    /// Its name (`dh-<account>-<role>`).
+    /// Its name (`bp-<account>-<role>`).
     pub name: String,
     /// What it is for (`web`, `php`).
     pub role: String,
@@ -1190,7 +1317,7 @@ pub const NODE_SERVICES: [&str; 3] = ["database", "phpmyadmin", "sftp"];
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProcessItem {
-    /// The container it runs in (`dh-<account>-<role>`).
+    /// The container it runs in (`bp-<account>-<role>`).
     pub container: String,
     /// Its id inside the container.
     pub pid: u32,
@@ -2037,6 +2164,31 @@ pub enum Operation {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         contains: Option<String>,
     },
+    /// Counts an account's web requests since a time, from the web container's access log:
+    /// how many, how many bytes, by kind of answer, per hour, and the most asked pages.
+    /// Answered with [`Output::Traffic`].
+    ReadTraffic {
+        /// The tenant.
+        tenant_id: Uuid,
+        /// The tenant's system name.
+        username: String,
+        /// Requests before this time (Unix milliseconds) are not counted.
+        since_ms: i64,
+        /// How many of the most asked pages to name (1 to [`MAX_TRAFFIC_PATHS`]).
+        top: u32,
+    },
+    /// The requests the web application firewall stopped for these names since a time, the
+    /// newest first, from the web server's firewall log. Answered with [`Output::WafEvents`].
+    ReadWafEvents {
+        /// The tenant.
+        tenant_id: Uuid,
+        /// The names (lower-case) of the tenant's sites; at most [`MAX_WAF_HOSTS`].
+        hosts: Vec<String>,
+        /// Events before this time (Unix milliseconds) are left out.
+        since_ms: i64,
+        /// At most this many (1 to [`MAX_WAF_EVENTS`]).
+        limit: u32,
+    },
     /// The state of the node's core services that run as containers (database server,
     /// phpMyAdmin, file server) and of the agent itself. Answered with [`Output::Services`].
     ReportServices,
@@ -2122,7 +2274,7 @@ pub enum Operation {
     SyncCronJobs {
         /// The tenant.
         tenant_id: Uuid,
-        /// The tenant's system name (its PHP container is `dh-<name>-php`).
+        /// The tenant's system name (its PHP container is `bp-<name>-php`).
         username: String,
         /// All of the account's jobs (at most [`MAX_CRON_JOBS`]).
         jobs: Vec<CronJobSpec>,
@@ -2152,6 +2304,18 @@ pub enum Operation {
         uid: u32,
         /// What to do.
         request: files::FileRequest,
+    },
+    /// One database studio request on a tenant's own database on the node's shared
+    /// server, done with a temporary account that has rights on that one database.
+    /// Answered with [`Output::Studio`].
+    StudioOp {
+        /// The database's whole name.
+        database: String,
+        /// Which server (the node's shared one).
+        #[serde(default, skip_serializing_if = "DbEngine::is_mysql")]
+        engine: DbEngine,
+        /// What to do.
+        request: studio::StudioRequest,
     },
     /// Makes (or changes) an SFTP/FTPS account of a tenant on the node's file transfer
     /// server: a virtual user whose home is a folder of the tenant's files, working as
@@ -2337,7 +2501,7 @@ pub enum Operation {
         plugins: Vec<String>,
     },
     /// Makes (or changes) a tenant's own cache server: a Redis or Memcached container on the
-    /// tenant's network only, reachable by its container name (`dh-<account>-redis`), with a memory limit; Redis
+    /// tenant's network only, reachable by its container name (`bp-<account>-redis`), with a memory limit; Redis
     /// also has a password. Safe to repeat. Answered with [`Output::CacheInstanceSet`].
     SetCacheInstance {
         /// The instance's id (the control plane finds the password by it).
@@ -2367,7 +2531,7 @@ pub enum Operation {
         kind: String,
     },
     /// Makes (or changes) one of a tenant's own applications: a Node.js or Python container on
-    /// the tenant's network only, reachable by its container name (`dh-<account>-app-<name>`),
+    /// the tenant's network only, reachable by its container name (`bp-<account>-app-<name>`),
     /// that runs the account's files from `dir` as the account's user. With `install` the
     /// dependencies are installed first, in a one-off container. The command is a list of
     /// words; nothing is run through a shell. Safe to repeat. Answered with
@@ -2406,7 +2570,7 @@ pub enum Operation {
         image: Option<String>,
     },
     /// Deploys a site or an application from a git repository: fetches `branch` of the
-    /// repository over http(s) into a new release folder (`.dh-releases/<name>/<time>` below the
+    /// repository over http(s) into a new release folder (`.bp-releases/<name>/<time>` below the
     /// web directory), runs the build steps in a sandbox (each a list of words, no shell), then
     /// switches `dest` to the new release with one rename and keeps the last few releases. When
     /// `restart_app` names one of the tenant's applications it is restarted. Everything runs in
@@ -2664,6 +2828,7 @@ impl Operation {
         "import_sql",
         "export_sql",
         "file_op",
+        "studio_op",
         "create_backup",
         "restore_backup",
         "delete_backup",
@@ -2699,6 +2864,8 @@ impl Operation {
         "restart_container",
         "collect_metrics",
         "read_log",
+        "read_traffic",
+        "read_waf_events",
         "run_cron_job",
         "report_cron_runs",
         "export_backup",
@@ -2777,9 +2944,9 @@ impl Operation {
             | Self::ExportSql {
                 engine, dedicated, ..
             } => Some((*engine, dedicated.as_deref())),
-            Self::SetDbRemoteAccess { engine, .. } | Self::AllowTenantDatabases { engine, .. } => {
-                Some((*engine, None))
-            }
+            Self::SetDbRemoteAccess { engine, .. }
+            | Self::AllowTenantDatabases { engine, .. }
+            | Self::StudioOp { engine, .. } => Some((*engine, None)),
             _ => None,
         }
     }
@@ -2804,6 +2971,7 @@ impl Operation {
             Self::ImportSql { .. } => "import_sql",
             Self::ExportSql { .. } => "export_sql",
             Self::FileOp { .. } => "file_op",
+            Self::StudioOp { .. } => "studio_op",
             Self::CreateBackup { .. } => "create_backup",
             Self::RestoreBackup { .. } => "restore_backup",
             Self::DeleteBackup { .. } => "delete_backup",
@@ -2839,6 +3007,8 @@ impl Operation {
             Self::RestartContainer { .. } => "restart_container",
             Self::CollectMetrics => "collect_metrics",
             Self::ReadLog { .. } => "read_log",
+            Self::ReadTraffic { .. } => "read_traffic",
+            Self::ReadWafEvents { .. } => "read_waf_events",
             Self::RunCronJob { .. } => "run_cron_job",
             Self::ReportCronRuns { .. } => "report_cron_runs",
             Self::ExportBackup { .. } => "export_backup",
@@ -3290,6 +3460,38 @@ pub enum Output {
         /// Everything put in place, in bytes.
         size_bytes: u64,
     },
+    /// Answer to [`Operation::ReadTraffic`].
+    Traffic {
+        /// Requests counted.
+        requests: u64,
+        /// Bytes sent (the body, as the web server logs it).
+        bytes: u64,
+        /// Answers 200-299.
+        status_2xx: u64,
+        /// Answers 300-399.
+        status_3xx: u64,
+        /// Answers 400-499.
+        status_4xx: u64,
+        /// Answers 500-599.
+        status_5xx: u64,
+        /// Requests whose User-Agent names a robot (bot, crawler, spider ...).
+        bots: u64,
+        /// Per hour, oldest first (hours without a request are left out).
+        hours: Vec<TrafficHour>,
+        /// The most asked pages, most first.
+        top_paths: Vec<TrafficPath>,
+        /// The log held less than the time asked for (it is a lower bound).
+        partial: bool,
+    },
+    /// Answer to [`Operation::ReadWafEvents`].
+    WafEvents {
+        /// The web server of this node has the firewall and its log is there to read.
+        available: bool,
+        /// The newest first.
+        events: Vec<WafEvent>,
+        /// More was there than were asked for, or the log was cut at its start.
+        partial: bool,
+    },
     /// Answer to [`Operation::ReadLog`].
     LogLines {
         /// Oldest first.
@@ -3370,6 +3572,11 @@ pub enum Output {
     File {
         /// What came of it.
         result: files::FileResult,
+    },
+    /// Answer to [`Operation::StudioOp`].
+    Studio {
+        /// What came of it.
+        result: studio::StudioResult,
     },
     /// Answer to [`Operation::ExportSql`].
     SqlExported {
@@ -4246,8 +4453,9 @@ mod tests {
                 username: "alice".into(),
                 routes: vec![SiteRoute {
                     waf: None,
+                    blocked_ips: Vec::new(),
                     hosts: vec!["example.com".into()],
-                    upstream: Some("dh-alice-web:8080".into()),
+                    upstream: Some("bp-alice-web:8080".into()),
                     redirects: vec![],
                     force_https: false,
                     hsts: false,
@@ -4386,6 +4594,11 @@ mod tests {
                 uid: 10_000,
                 request: files::FileRequest::TrashList,
             },
+            Operation::StudioOp {
+                database: "alice_shop".into(),
+                engine: DbEngine::Mysql,
+                request: studio::StudioRequest::Tables,
+            },
             Operation::CreateBackup {
                 tenant_id: id(),
                 uid: 10_000,
@@ -4393,7 +4606,7 @@ mod tests {
                 account: "alice".into(),
                 target: BackupTarget {
                     kind: "local".into(),
-                    settings: serde_json::json!({"path": "/var/backups/dhpanel"}),
+                    settings: serde_json::json!({"path": "/var/backups/builtpanel"}),
                 },
                 credentials: None,
                 key: None,
@@ -4550,6 +4763,18 @@ mod tests {
                 username: "alice".into(),
                 name: "site".into(),
             },
+            Operation::ReadTraffic {
+                tenant_id: id(),
+                username: "alice".into(),
+                since_ms: 0,
+                top: 10,
+            },
+            Operation::ReadWafEvents {
+                tenant_id: id(),
+                hosts: vec!["a.example".into()],
+                since_ms: 0,
+                limit: 50,
+            },
         ] {
             let wire = serde_json::to_value(&op).unwrap();
             assert_eq!(wire["type"], op.type_name());
@@ -4557,9 +4782,51 @@ mod tests {
         }
         assert_eq!(
             Operation::TYPE_NAMES.len(),
-            95,
+            98,
             "update TYPE_NAMES and type_name() together with the enum"
         );
+    }
+
+    #[test]
+    fn blocked_addresses_are_made_canonical_or_refused() {
+        for (given, want) in [
+            ("203.0.113.9", "203.0.113.9"),
+            (" 203.0.113.9/32 ", "203.0.113.9"),
+            ("203.0.113.77/24", "203.0.113.0/24"),
+            ("10.1.2.3/8", "10.0.0.0/8"),
+            ("2001:DB8::1", "2001:db8::1"),
+            ("2001:db8:1:2::5/64", "2001:db8:1:2::/64"),
+        ] {
+            assert_eq!(normalize_ip_block(given).as_deref(), Ok(want), "{given}");
+        }
+        for bad in [
+            "",
+            "x",
+            "1.2.3",
+            "1.2.3.4/",
+            "1.2.3.4/33",
+            "1.2.3.4/-1",
+            "1.2.3.4/ 8",
+            "1.2.3.4/x",
+            "0.0.0.0",
+            "127.0.0.1",
+            "::1",
+            "224.0.0.1",
+            "ff02::1",
+            "0.0.0.0/0",
+            "10.0.0.0/7",
+            "2001:db8::/15",
+            "1.2.3.4/8/8",
+            "1.2.3.4 ",
+        ] {
+            let r = normalize_ip_block(bad);
+            // A trailing blank is trimmed, so `1.2.3.4 ` is fine; everything else is refused.
+            if bad == "1.2.3.4 " {
+                assert_eq!(r.as_deref(), Ok("1.2.3.4"));
+            } else {
+                assert!(r.is_err(), "{bad:?} -> {r:?}");
+            }
+        }
     }
 
     #[test]

@@ -1,6 +1,6 @@
 //! The `tenants` table.
 
-use dhpanel_domain::{TenantStatus, UidRange};
+use builtpanel_domain::{TenantStatus, UidRange};
 use sqlx::{PgConnection, PgPool, types::Uuid};
 
 /// A tenant row.
@@ -33,7 +33,7 @@ pub struct NewTenant<'a> {
     pub node_id: Uuid,
     /// The plan.
     pub plan_id: Uuid,
-    /// System user name (validated by `dhpanel_domain::TenantUsername`).
+    /// System user name (validated by `builtpanel_domain::TenantUsername`).
     pub username: &'a str,
 }
 

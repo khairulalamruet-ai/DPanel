@@ -2,7 +2,7 @@
 //!
 //! * **Webhook** (`POST /api/v1/webhooks/payments`): the payment provider tells the
 //!   authority that a payment arrived, failed, or that a subscription was cancelled. The
-//!   body is signed with a shared secret (`X-DHPanel-Signature: t=<unix>,v1=<hex>`, the HMAC-SHA256
+//!   body is signed with a shared secret (`X-BuiltPanel-Signature: t=<unix>,v1=<hex>`, the HMAC-SHA256
 //!   of `<t>.<body>`), the time must be within five minutes, and every event id is applied
 //!   once: a repeat is answered `duplicate` and changes nothing.
 //! * **State machine** ([`on_event`], [`on_time`]): `pending -> active -> past_due -> grace ->
@@ -24,7 +24,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
-use dhpanel_http_kit::{AppError, FieldError};
+use builtpanel_http_kit::{AppError, FieldError};
 use secrecy::ExposeSecret as _;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
@@ -521,7 +521,7 @@ async fn webhook(
     };
     let now = unix_now();
     let signed = headers
-        .get("x-dhpanel-signature")
+        .get("x-builtpanel-signature")
         .and_then(|v| v.to_str().ok())
         .is_some_and(|h| verify(secret.expose_secret().as_bytes(), h, &body, now));
     if !signed {

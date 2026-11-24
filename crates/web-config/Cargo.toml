@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-web-config"
+name = "builtpanel-web-config"
 description = "A tenant's web server configuration, made from the panel's tables."
 version.workspace = true
 edition.workspace = true
@@ -11,8 +11,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-database.workspace = true
-dhpanel-domain.workspace = true
-dhpanel-node-protocol.workspace = true
-dhpanel-tenant-stack.workspace = true
+builtpanel-database.workspace = true
+builtpanel-domain.workspace = true
+builtpanel-node-protocol.workspace = true
+builtpanel-tenant-stack.workspace = true
 uuid = "1"

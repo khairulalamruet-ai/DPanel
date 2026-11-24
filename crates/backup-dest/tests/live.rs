@@ -5,7 +5,7 @@
 
 use std::{io::Read, process::Command};
 
-use dhpanel_backup_dest::{
+use builtpanel_backup_dest::{
     DestError, Destination,
     s3::{S3, S3Config},
     sftp::{Login, Sftp, SftpConfig},
@@ -88,7 +88,7 @@ fn exercise(d: &dyn Destination, label: &str) {
         !d.list("")
             .unwrap()
             .iter()
-            .any(|n| n.ends_with(".part") || n.starts_with(".dhpanel-test")),
+            .any(|n| n.ends_with(".part") || n.starts_with(".builtpanel-test")),
         "{label}: nothing half done or left over"
     );
     // Replacing.
@@ -138,7 +138,7 @@ fn exercise(d: &dyn Destination, label: &str) {
 #[test]
 #[ignore = "needs Docker (see the file header)"]
 fn an_s3_bucket_stores_big_objects_in_parts_and_refuses_wrong_keys() {
-    let name = format!("dh-s3-test-{}", std::process::id());
+    let name = format!("bp-s3-test-{}", std::process::id());
     let _ = docker(&["rm", "-f", &name]);
     let (ok, out) = docker(&[
         "run",
@@ -215,7 +215,7 @@ fn an_s3_bucket_stores_big_objects_in_parts_and_refuses_wrong_keys() {
 #[test]
 #[ignore = "needs Docker (see the file header)"]
 fn an_sftp_folder_needs_the_pinned_key_and_stores_big_objects() {
-    let name = format!("dh-sftp-dest-test-{}", std::process::id());
+    let name = format!("bp-sftp-dest-test-{}", std::process::id());
     let _ = docker(&["rm", "-f", &name]);
     let (ok, out) = docker(&[
         "run",

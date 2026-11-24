@@ -7,8 +7,8 @@ import {
   DialogTitle,
   DialogDescription,
   Button,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Package, Check } from "lucide-react";
 import { UserItem } from "./types";
 

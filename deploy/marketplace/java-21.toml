@@ -1,0 +1,8 @@
+slug        = "java-21"
+name        = "Java 21"
+category    = "utilities"
+kind        = "unavailable"
+description = "Java 21."
+license     = "GPL-2.0-only"
+covers      = ["Java 21"]
+reason      = "a language runtime or build tool, not a service; put it in your own container image (Containers)"

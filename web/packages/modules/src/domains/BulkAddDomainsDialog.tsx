@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Button,
   Dialog,
@@ -7,9 +7,10 @@ import {
   DialogTitle,
   DialogFooter,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
+import { bulkCreateDomains } from "./adminApi";
 import {
   Layers,
   CheckCircle2,
@@ -19,8 +20,7 @@ import {
   ExternalLink,
   ShieldCheck,
 } from "lucide-react";
-import { useOperation } from "../operations/useOperation";
-import { BulkCreateDomainsPayload, BulkCreateDomainsResponse } from "./types";
+import { BulkCreateDomainsResponse } from "./types";
 
 export interface BulkAddDomainsDialogProps {
   open: boolean;
@@ -35,9 +35,18 @@ export function BulkAddDomainsDialog({
 }: BulkAddDomainsDialogProps) {
   const { t } = useTranslation();
 
-  const [tenantId, setTenantId] = useState("usr_0001");
-  const [nodeId, setNodeId] = useState("node-sgp-01");
-  const [domainText, setDomainText] = useState("");
+  const [tenantId, setTenantId] = useState("");
+  const [owners, setOwners] = useState<{ id: string; username: string }[]>([]);
+  useEffect(() => {
+    apiFetch<{ items: { id: string; username: string; tenant?: unknown }[] }>("/api/v1/admin/users?limit=200")
+      .then((res) => {
+        const list = res.items.filter((u) => u.tenant).map((u) => ({ id: u.id, username: u.username }));
+        setOwners(list);
+        setTenantId((current) => current || list[0]?.id || "");
+      })
+      .catch(() => undefined);
+  }, []);
+    const [domainText, setDomainText] = useState("");
   const [enableSsl, setEnableSsl] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,13 +56,6 @@ export function BulkAddDomainsDialog({
   const [activeOpId, setActiveOpId] = useState<string | null>(null);
   const [enqueuedResult, setEnqueuedResult] = useState<BulkCreateDomainsResponse | null>(null);
 
-  const { operation, isPolling } = useOperation(activeOpId, {
-    enabled: !!activeOpId,
-    pollInterval: 1000,
-    onSuccess: () => {
-      onSuccess();
-    },
-  });
 
   // FQDN regex
   const fqdnRegex =
@@ -112,24 +114,17 @@ export function BulkAddDomainsDialog({
 
     try {
       setIsSubmitting(true);
-      const payload: BulkCreateDomainsPayload = {
-        tenant_id: tenantId,
-        node_id: nodeId,
-        domains: validDomains,
-        enable_ssl: enableSsl,
-      };
-
-      const res = await apiFetch<BulkCreateDomainsResponse>(
-        "/api/v1/admin/domains/bulk-create",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      setEnqueuedResult(res);
-      setActiveOpId(res.operation_id);
+      const res = await bulkCreateDomains(tenantId, validDomains);
+      setEnqueuedResult({
+        operation_id: "",
+        total_requested: validDomains.length,
+        enqueued_count: res.created.length,
+        skipped_count: res.failed.length,
+        skipped_domains: res.failed.map((f) => f.domain),
+        status: "completed",
+      });
+      setActiveOpId("done");
+      if (res.created.length > 0) onSuccess();
     } catch (err: any) {
       setError(err?.message || t("adminDomains.bulk.enqueueError", "Failed to enqueue bulk domain creation operation"));
     } finally {
@@ -145,7 +140,9 @@ export function BulkAddDomainsDialog({
     onOpenChange(false);
   };
 
-  const isOpFinished = operation?.status === "succeeded" || operation?.status === "failed";
+  const isOpFinished = enqueuedResult !== null;
+  const operation = enqueuedResult ? { status: enqueuedResult.enqueued_count > 0 ? "succeeded" : "failed" } : null;
+  const isPolling = false;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -237,7 +234,7 @@ export function BulkAddDomainsDialog({
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
               {/* Target Tenant */}
               <div className="space-y-1.5">
                 <label htmlFor="bulk-tenant" className="text-xs font-semibold uppercase text-muted-foreground">
@@ -249,27 +246,11 @@ export function BulkAddDomainsDialog({
                   onChange={(e) => setTenantId(e.target.value)}
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
-                  <option value="usr_0001">alpha (usr_0001)</option>
-                  <option value="usr_0002">beta (usr_0002)</option>
-                  <option value="usr_0003">gamma (usr_0003)</option>
-                  <option value="usr_0004">delta (usr_0004)</option>
-                </select>
-              </div>
-
-              {/* Target Node */}
-              <div className="space-y-1.5">
-                <label htmlFor="bulk-node" className="text-xs font-semibold uppercase text-muted-foreground">
-                  {t("adminDomains.node", "Cluster Node")}
-                </label>
-                <select
-                  id="bulk-node"
-                  value={nodeId}
-                  onChange={(e) => setNodeId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="node-sgp-01">node-sgp-01 (Singapore)</option>
-                  <option value="node-master-01">node-master-01 (US-East)</option>
-                  <option value="node-worker-02">node-worker-02 (EU-Frankfurt)</option>
+                  {owners.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.username}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

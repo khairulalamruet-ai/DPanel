@@ -67,7 +67,7 @@ pub enum Action {
         /// The tenant's numeric id (10000..59999).
         uid: u32,
         /// What to do.
-        request: dhpanel_node_protocol::files::FileRequest,
+        request: builtpanel_node_protocol::files::FileRequest,
     },
     /// Puts a staged file into a tenant's files as the tenant's own user: written
     /// beside its place and moved in, never over something unless `overwrite`.
@@ -100,7 +100,7 @@ pub enum Action {
         max_bytes: u64,
     },
     /// Packs a tenant's files, as the tenant's own user, into an encrypted stream in a new
-    /// staged file of the agent's transfer folder (see `dhpanel_fileops::backup`). The key
+    /// staged file of the agent's transfer folder (see `builtpanel_fileops::backup`). The key
     /// (64 hex digits) goes to the worker through its input, never through a command line.
     BackupFiles {
         /// The tenant's id (a lower-case UUID).
@@ -131,11 +131,11 @@ pub enum Action {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         folder: Option<String>,
     },
-    /// Replaces the node's firewall table `dhpanel_fw` with the one the policy describes (see
+    /// Replaces the node's firewall table `builtpanel_fw` with the one the policy describes (see
     /// [`crate::nodefw`]): checked with the packet filter first, applied in one transaction.
     SetNodeFirewall {
         /// The policy (checked again here).
-        policy: dhpanel_node_protocol::FirewallPolicy,
+        policy: builtpanel_node_protocol::FirewallPolicy,
     },
     /// Sets the machine's time zone (a zone file of this machine; see [`crate::servertools`]).
     SetTimezone {

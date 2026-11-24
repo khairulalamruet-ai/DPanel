@@ -34,23 +34,23 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{delete, get},
 };
-use dhpanel_audit::{AuditEntry, AuditWriter, Outcome};
-use dhpanel_cache::{
+use builtpanel_audit::{AuditEntry, AuditWriter, Outcome};
+use builtpanel_cache::{
     RedisHandle,
     lockout::{FailureLimiter, LockoutPolicy},
 };
-use dhpanel_database::{
+use builtpanel_database::{
     node_enrollments::{self, EnrollmentToken, RevokeOutcome},
     nodes::{self, NodeSummary, RevokeNodeOutcome},
     sqlx::PgPool,
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_pki::CertificateAuthority;
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_pki::CertificateAuthority;
+use builtpanel_rbac::{
     Require, RequireRecent,
     permissions::{NodesManage, NodesRead},
 };
-use dhpanel_session::{SessionStore, rfc3339};
+use builtpanel_session::{SessionStore, rfc3339};
 use secrecy::ExposeSecret as _;
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
@@ -80,9 +80,9 @@ pub struct NodesState {
     pub limiter: FailureLimiter,
     /// The agent port, to close the connection of a node that is revoked.
     /// `None` while the agent port is off.
-    pub gateway: Option<dhpanel_node_gateway::Gateway>,
+    pub gateway: Option<builtpanel_node_gateway::Gateway>,
     /// The operations ledger.
-    pub operations: dhpanel_operations::Operations,
+    pub operations: builtpanel_operations::Operations,
     /// Audit log for outcomes that have no transaction of their own.
     pub audit: AuditWriter,
 }
@@ -339,7 +339,7 @@ pub async fn create_enrollment(
 
     let mut tx = state.db.begin().await.map_err(internal)?;
     // The license's node limit: the nodes there are, and the tokens waiting to become nodes.
-    let counted = dhpanel_database::sqlx::query_scalar::<_, i64>(
+    let counted = builtpanel_database::sqlx::query_scalar::<_, i64>(
         "SELECT (SELECT count(*) FROM nodes WHERE status <> 'revoked')
               + (SELECT count(*) FROM node_enrollment_tokens
                  WHERE consumed_at IS NULL AND revoked_at IS NULL AND expires_at > now())",
@@ -347,9 +347,10 @@ pub async fn create_enrollment(
     .fetch_one(&mut *tx)
     .await
     .map_err(internal)?;
-    if let Some(reached) = dhpanel_database::license::check_limit(&mut tx, "max_nodes", counted + 1)
-        .await
-        .map_err(internal)?
+    if let Some(reached) =
+        builtpanel_database::license::check_limit(&mut tx, "max_nodes", counted + 1)
+            .await
+            .map_err(internal)?
     {
         return Err(AppError::conflict(
             "license_limit",
@@ -371,7 +372,7 @@ pub async fn create_enrollment(
     let created = node_enrollments::insert_token(&mut tx, &name, &hash, who.account_id(), ttl_secs)
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("admin.node_enrollment_created", Outcome::Success)
             .actor(who.account_id())
@@ -393,7 +394,7 @@ pub async fn create_enrollment(
     let enroll_command = state
         .public_url
         .as_deref()
-        .map(|url| format!("dhpanel-agent enroll --server {url}{pin} --token {token_text}"));
+        .map(|url| format!("builtpanel-agent enroll --server {url}{pin} --token {token_text}"));
     let body = CreatedEnrollment {
         id: created.id,
         name: created.name.clone(),
@@ -425,7 +426,7 @@ pub async fn list_nodes(
     State(state): State<NodesState>,
     _who: Require<NodesRead>,
 ) -> Result<Json<NodeList>, AppError> {
-    let liveness = i32::try_from(dhpanel_node_protocol::LIVENESS_TIMEOUT_SECS).unwrap_or(45);
+    let liveness = i32::try_from(builtpanel_node_protocol::LIVENESS_TIMEOUT_SECS).unwrap_or(45);
     let items = nodes::list_nodes(&state.db, LIST_LIMIT, liveness)
         .await
         .map_err(internal)?
@@ -500,7 +501,7 @@ pub async fn revoke_enrollment(
         }
         RevokeOutcome::Revoked => {}
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("admin.node_enrollment_revoked", Outcome::Success)
             .actor(who.account_id())
@@ -559,7 +560,7 @@ pub async fn revoke_node(
         }
         RevokeNodeOutcome::Revoked { certificates } => certificates,
     };
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("admin.node_revoked", Outcome::Success)
             .actor(who.account_id())
@@ -628,7 +629,7 @@ mod tests {
             token: "dhn_secret-token-value".into(),
             expires_at: String::new(),
             expires_in: 900,
-            enroll_command: Some("dhpanel-agent enroll --token dhn_secret-token-value".into()),
+            enroll_command: Some("builtpanel-agent enroll --token dhn_secret-token-value".into()),
         };
         let dbg = format!("{created:?}");
         assert!(

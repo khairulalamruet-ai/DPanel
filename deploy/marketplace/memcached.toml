@@ -1,0 +1,16 @@
+slug        = "memcached"
+name        = "Memcached"
+category    = "databases"
+kind        = "container"
+description = "A memory cache for objects, sessions and query results."
+license     = "BSD-3-Clause"
+homepage    = "https://memcached.org"
+covers      = ["Memcached (library)"]
+version     = "1.6.45"
+image       = "docker.io/library/memcached"
+track       = "1"
+tag         = "1.6.45"
+digest      = "sha256:a395a1bcf5e0e2b0fa4a0142e12b4e24a2320ba4b7c6ffa8655a1a86e8f29dee"
+port        = 11211
+memory_mb   = 128
+usage       = "Connect from your other applications to host \"memcached\", port 11211. No password; reachable only from inside your account."

@@ -1,4 +1,4 @@
-//! DHPanel's side of licensing (T17.07, T17.09): the installation's identity ([`identity`]),
+//! Built Panel's side of licensing (T17.07, T17.09): the installation's identity ([`identity`]),
 //! the client of the license authority ([`client`]) and what a stored license allows
 //! ([`state`]).
 
@@ -13,7 +13,7 @@ pub use client::{
 pub use identity::{Identity, IdentityError};
 pub use state::{Evaluation, Limit, Mode, Policy, Stored, evaluate};
 
-use dhpanel_license::{KeyError, PublicKeys};
+use builtpanel_license::{KeyError, PublicKeys};
 
 /// The authority's public keys that ship with this build.
 pub const BUNDLED_KEYS: &str = include_str!("../keys/license-public-keys.txt");

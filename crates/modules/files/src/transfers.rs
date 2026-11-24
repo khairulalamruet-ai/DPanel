@@ -29,12 +29,12 @@ use axum::{
     response::Response,
     routing::{get, post, put},
 };
-use dhpanel_database::file_transfers::{self as store, Transfer};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::Operation;
-use dhpanel_rbac::Principal;
-use dhpanel_session::rfc3339;
-use dhpanel_settings::Scope;
+use builtpanel_database::file_transfers::{self as store, Transfer};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::Operation;
+use builtpanel_rbac::Principal;
+use builtpanel_session::rfc3339;
+use builtpanel_settings::Scope;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::io::AsyncWriteExt;
@@ -155,7 +155,7 @@ async fn owned(state: &FilesState, tenant: Uuid, id: Uuid) -> Result<Transfer, A
 
 async fn max_mb(state: &FilesState, key: &str, default: i64) -> Result<i64, AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "files", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "files", Scope::Global)
         .await
         .map_err(internal)?;
     Ok(values
@@ -219,16 +219,16 @@ fn token_matches(given: &str, wanted: &[u8]) -> bool {
 /// Queues a node operation for a transfer.
 async fn queue(
     state: &FilesState,
-    tenant: &dhpanel_database::tenants::Tenant,
+    tenant: &builtpanel_database::tenants::Tenant,
     op: &Operation,
     id: Uuid,
     by: Uuid,
 ) -> Result<(), AppError> {
     let payload = serde_json::to_value(op).map_err(internal)?;
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    dhpanel_database::operations::enqueue_in(
+    builtpanel_database::operations::enqueue_in(
         &mut conn,
-        &dhpanel_database::operations::NewOperation {
+        &builtpanel_database::operations::NewOperation {
             node_id: tenant.node_id,
             kind: op.type_name(),
             tenant_id: Some(tenant.id),
@@ -327,7 +327,7 @@ pub async fn start_upload(
     .await
     .map_err(internal)?;
     if let Some(sha) = sha {
-        dhpanel_database::sqlx::query("UPDATE file_transfers SET sha256 = $2 WHERE id = $1")
+        builtpanel_database::sqlx::query("UPDATE file_transfers SET sha256 = $2 WHERE id = $1")
             .bind(id)
             .bind(sha)
             .execute(&state.db)
@@ -497,7 +497,7 @@ pub async fn complete_upload(
     }
     let path = spool_path(&state.spool_dir, id, "upload");
     let wanted: Option<String> =
-        dhpanel_database::sqlx::query_scalar("SELECT sha256 FROM file_transfers WHERE id = $1")
+        builtpanel_database::sqlx::query_scalar("SELECT sha256 FROM file_transfers WHERE id = $1")
             .bind(id)
             .fetch_one(&state.db)
             .await
@@ -544,7 +544,7 @@ pub async fn complete_upload(
         token: None,
     };
     queue(&state, &h.tenant, &op, id, who.account_id()).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &crate::audit(
             "files.uploaded",
@@ -634,7 +634,7 @@ pub async fn start_download(
 
 /// A download link.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct DownloadLink {
+pub struct FileDownloadLink {
     /// Where to download from (a path on this panel).
     pub url: String,
     /// Until when the link works (RFC 3339, UTC).
@@ -654,7 +654,7 @@ pub struct DownloadLink {
         ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")
     ),
     responses(
-        (status = 200, description = "The link (a new one replaces the last)", body = DownloadLink),
+        (status = 200, description = "The link (a new one replaces the last)", body = FileDownloadLink),
         (status = 409, description = "`not_ready`", body = ProblemDetails, content_type = "application/problem+json")
     )
 )]
@@ -662,7 +662,7 @@ pub async fn make_link(
     State(state): State<FilesState>,
     who: Principal,
     Path(id): Path<Uuid>,
-) -> Result<Json<DownloadLink>, AppError> {
+) -> Result<Json<FileDownloadLink>, AppError> {
     let h = client_hosting(&state, &who).await?;
     let t = owned(&state, h.tenant.id, id).await?;
     if t.kind != "download" || t.status != "ready" {
@@ -676,7 +676,7 @@ pub async fn make_link(
         .await
         .map_err(internal)?
         .ok_or_else(|| AppError::conflict("not_ready", "This download is not ready."))?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &crate::audit(
             "files.download_link",
@@ -687,7 +687,7 @@ pub async fn make_link(
     )
     .await
     .map_err(internal)?;
-    Ok(Json(DownloadLink {
+    Ok(Json(FileDownloadLink {
         url: format!("/api/v1/public/files/transfers/{id}/download?token={token}"),
         expires_at: rfc3339(at),
     }))
@@ -990,7 +990,7 @@ pub async fn download(
 /// # Errors
 /// Database or file errors.
 pub async fn sweep(
-    db: &dhpanel_database::sqlx::PgPool,
+    db: &builtpanel_database::sqlx::PgPool,
     spool_dir: &FsPath,
 ) -> Result<usize, AppError> {
     store::tidy(db, 24).await.map_err(internal)?;

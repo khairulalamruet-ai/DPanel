@@ -1,0 +1,9 @@
+slug        = "git"
+name        = "Git"
+category    = "version_control"
+kind        = "builtin"
+description = "Version control; a site can be deployed from a Git repository."
+license     = "GPL-2.0-only"
+homepage    = "https://git-scm.com"
+covers      = ["Git"]
+provided_by = "Applications > Git deploy"

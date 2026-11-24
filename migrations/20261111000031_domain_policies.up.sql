@@ -27,8 +27,8 @@ CREATE TRIGGER domain_policies_routes_changed
     FOR EACH ROW EXECUTE FUNCTION domain_policies_routes_changed();
 
 -- The default template gets the two places the policy goes (only when nobody
--- has edited it; a test keeps this equal to dhpanel_domain::vhost).
-UPDATE vhost_templates SET body = $new$# Managed by DHPanel for {{domain}}. Changes made here are overwritten.
+-- has edited it; a test keeps this equal to builtpanel_domain::vhost).
+UPDATE vhost_templates SET body = $new$# Managed by Built Panel for {{domain}}. Changes made here are overwritten.
 {{policy_http}}
 server {
     listen 8080;
@@ -53,7 +53,7 @@ server {
     }
 }
 $new$
- WHERE server = 'nginx' AND name = 'Default' AND body = $old$# Managed by DHPanel for {{domain}}. Changes made here are overwritten.
+ WHERE server = 'nginx' AND name = 'Default' AND body = $old$# Managed by Built Panel for {{domain}}. Changes made here are overwritten.
 server {
     listen 8080;
     server_name {{server_names}};

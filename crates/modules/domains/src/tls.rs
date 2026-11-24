@@ -22,9 +22,9 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use dhpanel_database::domains;
-use dhpanel_domain::{DomainError, Fqdn};
-use dhpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_database::domains;
+use builtpanel_domain::{DomainError, Fqdn};
+use builtpanel_http_kit::{AppError, ProblemDetails};
 use serde::Deserialize;
 use utoipa::IntoParams;
 
@@ -66,9 +66,9 @@ pub async fn ask(
 ) -> Result<StatusCode, AppError> {
     // Counted before anything else costs a query. Without a known address the
     // calls share one bucket.
-    let subject = dhpanel_http_kit::client_ip::current().map_or_else(
+    let subject = builtpanel_http_kit::client_ip::current().map_or_else(
         || "unknown".to_owned(),
-        dhpanel_http_kit::client_ip::rate_limit_key,
+        builtpanel_http_kit::client_ip::rate_limit_key,
     );
     if !state.ask_limiter.hit(&subject).await.map_err(internal)? {
         return Err(AppError::too_many_requests(

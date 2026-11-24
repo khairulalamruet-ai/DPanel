@@ -4,8 +4,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AdminQuickstartChecklist } from "./AdminQuickstartChecklist";
 import { ClientWelcomeTour } from "./ClientWelcomeTour";
 
-// Mock @dhpanel/api
-vi.mock("@dhpanel/api", () => ({
+// Mock @builtpanel/api
+vi.mock("@builtpanel/api", () => ({
   apiFetch: vi.fn(async (url: string) => {
     if (url === "/api/v1/onboarding/admin") {
       return { dismissed: false, completed_steps: ["add_node"] };
@@ -67,7 +67,7 @@ describe("Onboarding & Tour (T18.07)", () => {
 
       await waitFor(() => {
         expect(localStorage.setItem).toHaveBeenCalledWith(
-          "dhpanel-admin-onboarding-completed-steps",
+          "builtpanel-admin-onboarding-completed-steps",
           expect.stringContaining('"create_plan":true')
         );
       });
@@ -83,7 +83,7 @@ describe("Onboarding & Tour (T18.07)", () => {
       await waitFor(() => {
         expect(screen.queryByTestId("admin-quickstart-card")).not.toBeInTheDocument();
         expect(localStorage.setItem).toHaveBeenCalledWith(
-          "dhpanel-admin-onboarding-dismissed",
+          "builtpanel-admin-onboarding-dismissed",
           "true"
         );
         expect(onDismiss).toHaveBeenCalled();
@@ -91,7 +91,7 @@ describe("Onboarding & Tour (T18.07)", () => {
     });
 
     it("does not render when storage indicates already dismissed", () => {
-      mockStorage["dhpanel-admin-onboarding-dismissed"] = "true";
+      mockStorage["builtpanel-admin-onboarding-dismissed"] = "true";
       render(<AdminQuickstartChecklist />);
       expect(screen.queryByTestId("admin-quickstart-card")).not.toBeInTheDocument();
     });
@@ -133,7 +133,7 @@ describe("Onboarding & Tour (T18.07)", () => {
       await waitFor(() => {
         expect(screen.queryByTestId("client-welcome-tour-card")).not.toBeInTheDocument();
         expect(localStorage.setItem).toHaveBeenCalledWith(
-          "dhpanel-client-tour-dismissed",
+          "builtpanel-client-tour-dismissed",
           "true"
         );
         expect(onDismiss).toHaveBeenCalled();
@@ -141,7 +141,7 @@ describe("Onboarding & Tour (T18.07)", () => {
     });
 
     it("does not render when storage indicates already dismissed", () => {
-      mockStorage["dhpanel-client-tour-dismissed"] = "true";
+      mockStorage["builtpanel-client-tour-dismissed"] = "true";
       render(<ClientWelcomeTour />);
       expect(screen.queryByTestId("client-welcome-tour-card")).not.toBeInTheDocument();
     });

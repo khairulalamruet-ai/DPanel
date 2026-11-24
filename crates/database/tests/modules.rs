@@ -2,7 +2,7 @@
 //! Ignored by default; see tests/migrations.rs for how to run.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use dhpanel_database::modules::{ModuleRecord, SyncReport, enabled_names, list, sync};
+use builtpanel_database::modules::{ModuleRecord, SyncReport, enabled_names, list, sync};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
@@ -181,7 +181,7 @@ async fn the_table_refuses_nonsense_and_concurrent_syncs_agree(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 #[ignore = "needs PostgreSQL"]
 async fn permission_keys_follow_the_manifests_and_super_admin_gets_them_all(pool: PgPool) {
-    use dhpanel_database::{permissions, rbac::load_access};
+    use builtpanel_database::{permissions, rbac::load_access};
     let m = json!({"module": {"title": {"en": "Domains"}}});
     sync(&pool, &[record("domains", "1.0.0", false, &m)])
         .await
@@ -220,7 +220,7 @@ async fn permission_keys_follow_the_manifests_and_super_admin_gets_them_all(pool
     .fetch_one(&pool)
     .await
     .unwrap();
-    dhpanel_database::rbac::assign_role(&pool, account, "super_admin", None)
+    builtpanel_database::rbac::assign_role(&pool, account, "super_admin", None)
         .await
         .unwrap();
     let report = permissions::sync(
@@ -235,7 +235,7 @@ async fn permission_keys_follow_the_manifests_and_super_admin_gets_them_all(pool
     .unwrap();
     assert_eq!(report.added, ["ssl.issue"]);
     let access = load_access(&pool, account).await.unwrap().unwrap();
-    let grants = dhpanel_rbac::PermissionSet::new(access.permissions);
+    let grants = builtpanel_rbac::PermissionSet::new(access.permissions);
     assert!(grants.allows("ssl.issue") && grants.allows("domains.read"));
     // An ordinary administrator does not get it.
     let plain: sqlx::types::Uuid = sqlx::query_scalar(
@@ -244,11 +244,11 @@ async fn permission_keys_follow_the_manifests_and_super_admin_gets_them_all(pool
     .fetch_one(&pool)
     .await
     .unwrap();
-    dhpanel_database::rbac::assign_role(&pool, plain, "admin", None)
+    builtpanel_database::rbac::assign_role(&pool, plain, "admin", None)
         .await
         .unwrap();
     let access = load_access(&pool, plain).await.unwrap().unwrap();
-    assert!(!dhpanel_rbac::PermissionSet::new(access.permissions).allows("ssl.issue"));
+    assert!(!builtpanel_rbac::PermissionSet::new(access.permissions).allows("ssl.issue"));
 
     // A key leaves the build: kept and marked, then restored, or moved to another module.
     let report = permissions::sync(&pool, &[("domains.read", "domains"), ("ssl.issue", "ssl")])

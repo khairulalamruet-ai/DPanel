@@ -1,0 +1,9 @@
+slug        = "nodejs-26"
+name        = "Node.js 26"
+category    = "web_servers"
+kind        = "builtin"
+description = "The JavaScript runtime for servers; applications run on it from Applications."
+license     = "MIT"
+homepage    = "https://nodejs.org"
+covers      = ["Node.js"]
+provided_by = "Applications > Node.js (version 26)"

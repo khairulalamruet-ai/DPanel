@@ -1,0 +1,8 @@
+slug        = "mercurial"
+name        = "Mercurial"
+category    = "version_control"
+kind        = "unavailable"
+description = "Mercurial."
+license     = "GPL-2.0-or-later"
+covers      = ["Mercurial"]
+reason      = "an account has no shell on the server to run command-line tools; Git is offered"

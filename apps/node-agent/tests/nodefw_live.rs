@@ -11,12 +11,16 @@ use std::{
     sync::Arc,
 };
 
-use dhpanel_docker_manager::DockerManager;
-use dhpanel_node_agent::ops::{server::set_firewall_rules, tenant::TenantContext};
-use dhpanel_node_protocol::{ErrorCode, FirewallPolicy, Operation, Output, PortRule, RateLimit};
-use dhpanel_priv_helper::nodefw;
+use builtpanel_docker_manager::DockerManager;
+use builtpanel_node_agent::ops::{server::set_firewall_rules, tenant::TenantContext};
+use builtpanel_node_protocol::{ErrorCode, FirewallPolicy, Operation, Output, PortRule, RateLimit};
+use builtpanel_priv_helper::nodefw;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -30,7 +34,7 @@ fn listing() -> String {
     // Readable by the root part only; the helper part reads it through the script.
     String::from_utf8_lossy(
         &Command::new("/usr/sbin/nft")
-            .args(["list", "table", "inet", "dhpanel_fw"])
+            .args(["list", "table", "inet", "builtpanel_fw"])
             .output()
             .map(|o| o.stdout)
             .unwrap_or_default(),
@@ -41,7 +45,7 @@ fn listing() -> String {
 #[tokio::test]
 #[ignore = "needs the privileged helper running as root"]
 async fn a_policy_reaches_the_packet_filter_and_a_bad_one_changes_nothing() {
-    let Some(socket) = std::env::var_os("DHPANEL_TEST_HELPER_SOCKET") else {
+    let Some(socket) = std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET") else {
         eprintln!("skipped: no helper (see the live script)");
         return;
     };
@@ -110,7 +114,7 @@ async fn a_policy_reaches_the_packet_filter_and_a_bad_one_changes_nothing() {
 #[test]
 #[ignore = "needs root and nft"]
 fn the_packet_filter_accepts_every_shape_of_policy_and_keeps_the_old_table_when_it_refuses() {
-    if std::env::var_os("DHPANEL_TEST_NFT_ROOT").is_none() {
+    if std::env::var_os("BUILTPANEL_TEST_NFT_ROOT").is_none() {
         eprintln!("skipped: not the root part");
         return;
     }
@@ -184,7 +188,7 @@ fn the_packet_filter_accepts_every_shape_of_policy_and_keeps_the_old_table_when_
     // (a rule the filter does not know) leaves it exactly as it was.
     let before = listing();
     assert!(before.contains("192.0.2.99"), "{before}");
-    let broken = "table inet dhpanel_fw\\ndelete table inet dhpanel_fw\\ntable inet dhpanel_fw {\\n chain input { type filter hook input priority -5; policy accept; this is not a rule }\\n}\\n";
+    let broken = "table inet builtpanel_fw\\ndelete table inet builtpanel_fw\\ntable inet builtpanel_fw {\\n chain input { type filter hook input priority -5; policy accept; this is not a rule }\\n}\\n";
     assert!(nodefw::apply(&broken.replace("\\\\n", "\\n")).is_err());
     assert_eq!(listing(), before, "the old table stays");
 }

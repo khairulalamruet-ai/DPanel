@@ -14,10 +14,10 @@ use axum::{
     http::StatusCode,
     routing::post,
 };
-use dhpanel_database::operations::{self, EnqueueError, NewOperation};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::Operation;
-use dhpanel_rbac::Principal;
+use builtpanel_database::operations::{self, EnqueueError, NewOperation};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::Operation;
+use builtpanel_rbac::Principal;
 use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -116,7 +116,7 @@ pub async fn restart(
         }
         other => internal(other),
     })?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("service.restarted", &who, &hosting, hosting.tenant.id)
             .metadata(serde_json::json!({ "service": service })),

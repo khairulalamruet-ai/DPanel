@@ -5,14 +5,14 @@
 
 use std::{path::PathBuf, process::Command, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{DockerManager, PublishedPort};
-use dhpanel_domain::{TenantUsername, UidRange};
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{DockerManager, PublishedPort};
+use builtpanel_domain::{TenantUsername, UidRange};
+use builtpanel_node_agent::ops::{
     tenant::TenantContext,
     vhost::{attach_domain, conf_dir, detach_domain},
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{
     Allowlist, PlanResources, Tenant, conf_volume_name, files_volume_name, network_name, render,
 };
 use uuid::Uuid;
@@ -20,6 +20,10 @@ use uuid::Uuid;
 const PORT: u16 = 18_091;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -69,7 +73,7 @@ async fn a_refused_configuration_is_rolled_back_and_the_site_keeps_running() {
         return;
     }
     let docker = DockerManager::connect(&socket).unwrap();
-    let root = std::env::temp_dir().join(format!("dh-vhost-live-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bp-vhost-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let context = Arc::new(TenantContext {
         helper_socket: "/nonexistent".into(),
@@ -234,7 +238,7 @@ async fn a_refused_configuration_is_rolled_back_and_the_site_keeps_running() {
     .await
     .unwrap();
     assert!(dir.join("gone.example.com.conf").exists());
-    let kept = dhpanel_node_agent::ops::vhost::keep_domains(
+    let kept = builtpanel_node_agent::ops::vhost::keep_domains(
         context.clone(),
         Operation::KeepDomains {
             username: username.clone(),
@@ -256,22 +260,22 @@ async fn a_refused_configuration_is_rolled_back_and_the_site_keeps_running() {
     // A domain's policy, rendered from a template, works in the real web server:
     // the header is on every answer and a visitor over the limit gets 429.
     let template = "{{policy_http}}\nserver {\n    listen 8080;\n    server_name {{server_names}};\n    root {{docroot}};\n    {{policy}}\n    {{custom}}\n    location / { try_files $uri @answer; }\n    location @answer { return 200 \"policy\\n\"; }\n}\n";
-    let policy = dhpanel_domain::vhost::Policy::parse(
+    let policy = builtpanel_domain::vhost::Policy::parse(
         Some(2),
-        vec![dhpanel_domain::vhost::Header {
+        vec![builtpanel_domain::vhost::Header {
             name: "X-Policy-Test".into(),
             value: "applied".into(),
         }],
     )
     .unwrap();
-    let domain = dhpanel_domain::Fqdn::parse("example.com").unwrap();
-    let rendered = dhpanel_domain::vhost::render(
+    let domain = builtpanel_domain::Fqdn::parse("example.com").unwrap();
+    let rendered = builtpanel_domain::vhost::render(
         template,
-        &dhpanel_domain::vhost::Site {
+        &builtpanel_domain::vhost::Site {
             domain: &domain,
             aliases: &[],
-            docroot: &dhpanel_domain::Docroot::default(),
-            php_upstream: "dh-x-php:9000",
+            docroot: &builtpanel_domain::Docroot::default(),
+            php_upstream: "bp-x-php:9000",
             policy: &policy,
             custom: "location /moved { return 301 /elsewhere; }",
             proxy: None,

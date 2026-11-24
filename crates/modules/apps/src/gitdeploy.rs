@@ -21,17 +21,17 @@ use axum::{
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     git_deploys as store,
     operations::{self, EnqueueError, NewOperation},
     plans,
     sqlx::PgConnection,
     tenants,
 };
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_node_protocol::{DbPassword, Operation};
-use dhpanel_rbac::Principal;
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_node_protocol::{DbPassword, Operation};
+use builtpanel_rbac::Principal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -229,7 +229,7 @@ fn valid_dest(d: &str) -> bool {
         && !d.starts_with('/')
         && !d
             .split('/')
-            .any(|p| p.is_empty() || p == ".." || p == "." || p.starts_with(".dh-"))
+            .any(|p| p.is_empty() || p == ".." || p == "." || p.starts_with(".bp-"))
         && d.bytes()
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-' | b'/'))
 }
@@ -266,7 +266,7 @@ async fn app_name(
     app_id: Uuid,
 ) -> Result<Option<String>, AppError> {
     Ok(
-        dhpanel_database::runtime_apps::get_in(conn, tenant_id, app_id)
+        builtpanel_database::runtime_apps::get_in(conn, tenant_id, app_id)
             .await
             .map_err(internal)?
             .map(|a| a.name),
@@ -385,11 +385,11 @@ pub async fn create(
     } else {
         let kind = req.build_kind.clone().unwrap_or_default();
         let role = match kind.as_str() {
-            "node" => dhpanel_tenant_stack::Role::Node,
-            "python" => dhpanel_tenant_stack::Role::Python,
+            "node" => builtpanel_tenant_stack::Role::Node,
+            "python" => builtpanel_tenant_stack::Role::Python,
             _ => return Err(bad("build_kind", "node or python.")),
         };
-        let list = dhpanel_tenant_stack::Allowlist::embedded().map_err(internal)?;
+        let list = builtpanel_tenant_stack::Allowlist::embedded().map_err(internal)?;
         let versions = list.runtime_versions(role);
         let version = match &req.build_version {
             Some(v) if versions.contains(&v.as_str()) => v.clone(),
@@ -409,7 +409,7 @@ pub async fn create(
         return Err(bad("token", "No spaces, at most 300 characters."));
     }
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, tenant.id)
         .await
         .map_err(internal)?;
     if let Some(limit) = limit_of(&plan)
@@ -467,7 +467,7 @@ pub async fn create(
     if req.deploy_now.unwrap_or(true) {
         queue_deploy(&mut tx, Some(who.account_id()), &tenant, &row).await?;
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("git_deploy.created", Outcome::Success)
             .actor(who.account_id())
@@ -522,7 +522,7 @@ pub async fn deploy_now(
         ));
     }
     queue_deploy(&mut tx, Some(who.account_id()), &tenant, &row).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("git_deploy.run", Outcome::Success)
             .actor(who.account_id())
@@ -559,13 +559,13 @@ pub async fn rotate_secret(
         .master_key
         .seal(&store::webhook_context(id), secret.as_bytes())
         .map_err(internal)?;
-    dhpanel_database::sqlx::query("UPDATE git_deploys SET sealed_webhook = $2 WHERE id = $1")
+    builtpanel_database::sqlx::query("UPDATE git_deploys SET sealed_webhook = $2 WHERE id = $1")
         .bind(id)
         .bind(&sealed)
         .execute(&mut *tx)
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("git_deploy.secret_rotated", Outcome::Success)
             .actor(who.account_id())
@@ -626,7 +626,7 @@ pub async fn remove(
     store::waiting_for(&mut tx, id, queued.operation().id, "removing")
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("git_deploy.removed", Outcome::Success)
             .actor(who.account_id())
@@ -750,7 +750,7 @@ pub async fn webhook(
         return Ok((StatusCode::OK, answer(false, "the account is not running")));
     }
     queue_deploy(&mut tx, None, &tenant, &row).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("git_deploy.webhook", Outcome::Success)
             .tenant(tenant.id)
@@ -815,7 +815,7 @@ mod tests {
         assert!(
             valid_dest("site")
                 && valid_dest("apps/site")
-                && !valid_dest(".dh-releases/x")
+                && !valid_dest(".bp-releases/x")
                 && !valid_dest("../x")
         );
         assert!(valid_branch("main") && valid_branch("release/1.0") && !valid_branch("--x"));

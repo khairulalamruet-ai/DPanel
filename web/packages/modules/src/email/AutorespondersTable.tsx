@@ -14,8 +14,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Autoresponder } from "./types";
 import { CreateAutoresponderDialog } from "./CreateAutoresponderDialog";
 import { Clock, Plus, Trash2 } from "lucide-react";

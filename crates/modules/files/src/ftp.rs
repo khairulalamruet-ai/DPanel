@@ -19,14 +19,14 @@ use axum::{
     http::StatusCode,
     routing::{get, put},
 };
-use dhpanel_database::{
+use builtpanel_database::{
     ftp_accounts::{self as store, AddError, FtpAccount},
     operations::{self, EnqueueError, NewOperation},
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_node_protocol::{DbPassword, Operation};
-use dhpanel_rbac::Principal;
-use dhpanel_settings::Scope;
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_node_protocol::{DbPassword, Operation};
+use builtpanel_rbac::Principal;
+use builtpanel_settings::Scope;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -123,7 +123,7 @@ pub struct FtpAccountCreated {
 
 async fn setting(state: &FilesState, key: &str) -> Result<Option<serde_json::Value>, AppError> {
     let mut conn = state.db.acquire().await.map_err(internal)?;
-    let values = dhpanel_settings::get(&state.settings, &mut conn, "files", Scope::Global)
+    let values = builtpanel_settings::get(&state.settings, &mut conn, "files", Scope::Global)
         .await
         .map_err(internal)?;
     Ok(values.get(key).cloned())
@@ -255,7 +255,7 @@ fn check_home(home: &str) -> Result<String, AppError> {
 fn password_for(given: Option<String>) -> Result<(String, bool), AppError> {
     match given {
         Some(p) => {
-            dhpanel_domain::databases::check_password(&p).map_err(|e| {
+            builtpanel_domain::databases::check_password(&p).map_err(|e| {
                 AppError::validation(vec![FieldError::new("password", e.code(), e.to_string())])
             })?;
             Ok((p, false))
@@ -264,7 +264,7 @@ fn password_for(given: Option<String>) -> Result<(String, bool), AppError> {
             let a = Uuid::new_v4().simple().to_string();
             let b = Uuid::new_v4().simple().to_string();
             let candidate = format!("{}-{}", a[..10].to_uppercase(), &b[..14]);
-            if dhpanel_domain::databases::check_password(&candidate).is_ok() {
+            if builtpanel_domain::databases::check_password(&candidate).is_ok() {
                 return Ok((candidate, true));
             }
         },
@@ -290,7 +290,7 @@ async fn check_plain(state: &FilesState, ftp_plain: bool) -> Result<(), AppError
 /// Queues the node's work (and keeps the sealed password), inside the caller's transaction.
 async fn queue(
     state: &FilesState,
-    tx: &mut dhpanel_database::sqlx::PgConnection,
+    tx: &mut builtpanel_database::sqlx::PgConnection,
     h: &Hosting,
     who: &Principal,
     a: &FtpAccount,
@@ -330,7 +330,7 @@ async fn queue(
 }
 
 async fn enqueue(
-    tx: &mut dhpanel_database::sqlx::PgConnection,
+    tx: &mut builtpanel_database::sqlx::PgConnection,
     h: &Hosting,
     who: &Principal,
     op: &Operation,
@@ -362,16 +362,16 @@ async fn enqueue(
 }
 
 async fn audit(
-    tx: &mut dhpanel_database::sqlx::PgConnection,
+    tx: &mut builtpanel_database::sqlx::PgConnection,
     action: &'static str,
     who: &Principal,
     h: &Hosting,
     id: Uuid,
     name: &str,
 ) -> Result<(), AppError> {
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
-        &dhpanel_audit::AuditEntry::new(action, dhpanel_audit::Outcome::Success)
+        &builtpanel_audit::AuditEntry::new(action, builtpanel_audit::Outcome::Success)
             .actor(who.account_id())
             .tenant(h.tenant.id)
             .target("ftp_account", id)
@@ -427,7 +427,7 @@ pub async fn create_account(
     }
     let (password, generated) = password_for(req.password)?;
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, h.tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, h.tenant.id)
         .await
         .map_err(internal)?;
     if let Some(max) = limit(&h)

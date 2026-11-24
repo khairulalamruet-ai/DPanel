@@ -1,6 +1,6 @@
 import React from "react";
-import { Card, CardContent, Badge } from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+import { Card, CardContent, Badge } from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Users, HardDrive, Activity, ShieldCheck, AlertCircle } from "lucide-react";
 import { ResellerAccount, ResellerPackage } from "./types";
 

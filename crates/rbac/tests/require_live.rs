@@ -9,10 +9,10 @@ use axum::{
     http::{Request, StatusCode, header},
     routing::get,
 };
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::rbac::{AssignRole, assign_role, revoke_role};
-use dhpanel_rbac::{Principal, Require, permission, permissions};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::rbac::{AssignRole, assign_role, revoke_role};
+use builtpanel_rbac::{Principal, Require, permission, permissions};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use sqlx::PgPool;
 use tower::ServiceExt as _;

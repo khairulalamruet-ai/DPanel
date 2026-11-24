@@ -17,6 +17,8 @@
 //! | GET, POST, DELETE | `/api/v1/admin/security/wp-advisories[/{id}]` | `admin.security.read`, `.manage` |
 //! | GET | `/api/v1/client/waf/domains` | a client |
 //! | PUT, DELETE | `/api/v1/client/waf/domains/{id}` | the domain's owner |
+//! | GET, POST | `/api/v1/client/waf/domains/{id}/ip-blocks` | the domain's owner |
+//! | DELETE | `/api/v1/client/waf/domains/{id}/ip-blocks/{block_id}` | the domain's owner |
 //!
 //! A policy is a mode (`off`, `detect`, `block`) and a list of rule ids that do not apply (the
 //! way out of a false positive). The most specific policy that exists decides the mode (domain,
@@ -31,20 +33,20 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     accounts::DbAccountKind,
-    domains,
+    domains, ip_blocks,
     sqlx::PgPool,
     tenants, users,
     waf::{self, Mode, Policy, Scope},
 };
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require,
     permissions::{SecurityManage, SecurityRead},
 };
-use dhpanel_session::SessionStore;
+use builtpanel_session::SessionStore;
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
 use uuid::Uuid;
@@ -151,6 +153,18 @@ pub fn client_router() -> Router<SecurityState> {
             "/api/v1/client/waf/domains/{id}",
             axum::routing::put(client_put).delete(client_delete),
         )
+        .route(
+            "/api/v1/client/waf/domains/{id}/ip-blocks",
+            get(client_list_ip_blocks).post(client_add_ip_block),
+        )
+        .route(
+            "/api/v1/client/waf/domains/{id}/ip-blocks/{block_id}",
+            axum::routing::delete(client_remove_ip_block),
+        )
+}
+
+fn field_error(field: &str, code: &str, message: &str) -> AppError {
+    AppError::validation(vec![FieldError::new(field, code, message)])
 }
 
 fn internal(err: impl Into<Box<dyn std::error::Error + Send + Sync + 'static>>) -> AppError {
@@ -170,7 +184,7 @@ pub struct PolicyRequest {
 
 /// A policy as stored.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct PolicyView {
+pub struct WafPolicyView {
     /// `off`, `detect` or `block`.
     pub mode: String,
     /// Rule ids that do not apply.
@@ -192,13 +206,13 @@ pub struct EffectiveView {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PolicyState {
     /// The policy set exactly here (`null`: none).
-    pub policy: Option<PolicyView>,
+    pub policy: Option<WafPolicyView>,
     /// What really applies (for a domain; for the others the policy or the default).
     pub effective: EffectiveView,
 }
 
-fn view(p: &Policy) -> PolicyView {
-    PolicyView {
+fn view(p: &Policy) -> WafPolicyView {
+    WafPolicyView {
         mode: p.mode.as_str().to_owned(),
         disabled_rules: p.disabled_rules.clone(),
     }
@@ -251,7 +265,7 @@ fn check(req: &PolicyRequest, client: bool) -> Result<(Mode, Vec<i32>), AppError
 async fn resend(pool: &PgPool, tenant: Option<Uuid>) -> Result<(), AppError> {
     match tenant {
         Some(t) => {
-            dhpanel_database::sqlx::query(
+            builtpanel_database::sqlx::query(
                 "UPDATE tenants SET routes_synced_version = 0 WHERE id = $1",
             )
             .bind(t)
@@ -259,7 +273,7 @@ async fn resend(pool: &PgPool, tenant: Option<Uuid>) -> Result<(), AppError> {
             .await
         }
         None => {
-            dhpanel_database::sqlx::query("UPDATE tenants SET routes_synced_version = 0")
+            builtpanel_database::sqlx::query("UPDATE tenants SET routes_synced_version = 0")
                 .execute(pool)
                 .await
         }
@@ -283,7 +297,7 @@ async fn record(
     if let Some(t) = tenant {
         entry = entry.tenant(t);
     }
-    dhpanel_audit::insert(&state.db, &entry)
+    builtpanel_audit::insert(&state.db, &entry)
         .await
         .map_err(internal)
 }
@@ -608,7 +622,7 @@ pub struct DomainWaf {
     /// Its name.
     pub fqdn: String,
     /// The domain's own policy (`null`: none).
-    pub policy: Option<PolicyView>,
+    pub policy: Option<WafPolicyView>,
     /// What really applies.
     pub effective: EffectiveView,
 }
@@ -630,7 +644,7 @@ pub async fn client_list(
     who: Principal,
 ) -> Result<Json<DomainWafList>, AppError> {
     let tenant = client_tenant(&state, &who).await?;
-    let rows = dhpanel_database::sqlx::query_as::<_, (Uuid, String)>(
+    let rows = builtpanel_database::sqlx::query_as::<_, (Uuid, String)>(
         "SELECT id, fqdn FROM domains WHERE tenant_id = $1 ORDER BY fqdn",
     )
     .bind(tenant.id)
@@ -694,6 +708,161 @@ pub async fn client_delete(
     delete_policy(&state, &who, &target).await
 }
 
+/// An address or a network a domain turns away.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct IpBlockView {
+    /// Id.
+    pub id: Uuid,
+    /// The address (`203.0.113.9`) or the network (`203.0.113.0/24`).
+    pub cidr: String,
+    /// Why, if said.
+    pub note: Option<String>,
+    /// When it was added (Unix seconds).
+    pub created_at: i64,
+}
+
+/// A domain's turned-away addresses.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct IpBlockList {
+    /// Oldest first.
+    pub items: Vec<IpBlockView>,
+    /// Most one domain may list.
+    pub limit: i64,
+}
+
+/// An address or a network to turn away.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AddIpBlock {
+    /// An IPv4 or IPv6 address, or a network in CIDR form (`203.0.113.0/24`). Networks larger
+    /// than a /8 (IPv4) or a /16 (IPv6) are refused.
+    #[schema(example = "203.0.113.0/24")]
+    pub cidr: String,
+    /// Why (at most 200 characters).
+    pub note: Option<String>,
+}
+
+fn ip_block_view(b: ip_blocks::IpBlock) -> IpBlockView {
+    IpBlockView {
+        id: b.id,
+        cidr: b.cidr,
+        note: b.note,
+        created_at: b.created_at,
+    }
+}
+
+/// The addresses one of the account's domains turns away.
+#[utoipa::path(get, path = "/api/v1/client/waf/domains/{id}/ip-blocks", tag = "security", operation_id = "clientListIpBlocks",
+    security(("session" = [])), params(("id" = Uuid, Path, description = "Domain id")),
+    responses((status = 200, description = "The list", body = IpBlockList),
+              (status = 404, description = "Not one of the account's domains", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn client_list_ip_blocks(
+    State(state): State<SecurityState>,
+    who: Principal,
+    Path(id): Path<Uuid>,
+) -> Result<Json<IpBlockList>, AppError> {
+    let tenant = client_tenant(&state, &who).await?;
+    own_domain(&state, &tenant, id).await?;
+    let items = ip_blocks::list(&state.db, tenant.id, id)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .map(ip_block_view)
+        .collect();
+    Ok(Json(IpBlockList {
+        items,
+        limit: ip_blocks::MAX_PER_DOMAIN,
+    }))
+}
+
+/// Turn an address or a network away from one of the account's domains: the web server answers
+/// it `403` within seconds, before the firewall or the site sees the request.
+#[utoipa::path(post, path = "/api/v1/client/waf/domains/{id}/ip-blocks", tag = "security", operation_id = "clientAddIpBlock",
+    security(("session" = [])), params(("id" = Uuid, Path, description = "Domain id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    request_body = AddIpBlock,
+    responses((status = 201, description = "Added", body = IpBlockView),
+              (status = 404, description = "Not one of the account's domains", body = ProblemDetails, content_type = "application/problem+json"),
+              (status = 409, description = "`ip_block_exists` or `ip_block_limit`", body = ProblemDetails, content_type = "application/problem+json"),
+              (status = 422, description = "Not an address or network that can be turned away", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn client_add_ip_block(
+    State(state): State<SecurityState>,
+    who: Principal,
+    Path(id): Path<Uuid>,
+    Json(req): Json<AddIpBlock>,
+) -> Result<(StatusCode, Json<IpBlockView>), AppError> {
+    let tenant = client_tenant(&state, &who).await?;
+    own_domain(&state, &tenant, id).await?;
+    let cidr = builtpanel_node_protocol::normalize_ip_block(&req.cidr)
+        .map_err(|reason| field_error("cidr", "invalid", reason))?;
+    let note = req.note.as_deref().map(str::trim).filter(|n| !n.is_empty());
+    if note.is_some_and(|n| n.chars().count() > 200 || n.chars().any(char::is_control)) {
+        return Err(field_error(
+            "note",
+            "invalid",
+            "At most 200 characters, no control characters.",
+        ));
+    }
+    let added = ip_blocks::add(&state.db, tenant.id, id, &cidr, note, who.account_id())
+        .await
+        .map_err(|e| match e {
+            ip_blocks::AddError::Taken => {
+                AppError::conflict("ip_block_exists", "That address is already turned away.")
+            }
+            ip_blocks::AddError::Full => AppError::conflict(
+                "ip_block_limit",
+                "This domain already turns away as many addresses as it may.",
+            ),
+            ip_blocks::AddError::Database(e) => internal(e),
+        })?;
+    resend(&state.db, Some(tenant.id)).await?;
+    audit_ip_block(&state, &who, tenant.id, id, "ip_block.added", &cidr).await?;
+    Ok((StatusCode::CREATED, Json(ip_block_view(added))))
+}
+
+/// Stop turning an address away.
+#[utoipa::path(delete, path = "/api/v1/client/waf/domains/{id}/ip-blocks/{block_id}", tag = "security", operation_id = "clientRemoveIpBlock",
+    security(("session" = [])), params(("id" = Uuid, Path, description = "Domain id"), ("block_id" = Uuid, Path, description = "Entry id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
+    responses((status = 204, description = "Removed"),
+              (status = 404, description = "Not one of the account's", body = ProblemDetails, content_type = "application/problem+json")))]
+pub async fn client_remove_ip_block(
+    State(state): State<SecurityState>,
+    who: Principal,
+    Path((id, block_id)): Path<(Uuid, Uuid)>,
+) -> Result<StatusCode, AppError> {
+    let tenant = client_tenant(&state, &who).await?;
+    own_domain(&state, &tenant, id).await?;
+    if !ip_blocks::remove(&state.db, tenant.id, id, block_id)
+        .await
+        .map_err(internal)?
+    {
+        return Err(AppError::not_found("ip_block"));
+    }
+    resend(&state.db, Some(tenant.id)).await?;
+    audit_ip_block(&state, &who, tenant.id, id, "ip_block.removed", "").await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn audit_ip_block(
+    state: &SecurityState,
+    who: &Principal,
+    tenant: Uuid,
+    domain: Uuid,
+    action: &'static str,
+    cidr: &str,
+) -> Result<(), AppError> {
+    builtpanel_audit::insert(
+        &state.db,
+        &AuditEntry::new(action, Outcome::Success)
+            .actor(who.account_id())
+            .tenant(tenant)
+            .target("domain", domain)
+            .metadata(serde_json::json!({ "cidr": cidr })),
+    )
+    .await
+    .map_err(internal)?;
+    Ok(())
+}
+
 /// A User-Agent text that is refused.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct UserAgentView {
@@ -735,7 +904,7 @@ pub async fn list_user_agents(
     State(state): State<SecurityState>,
     _who: Require<SecurityRead>,
 ) -> Result<Json<UserAgentList>, AppError> {
-    let items = dhpanel_database::user_agents::list(&state.db)
+    let items = builtpanel_database::user_agents::list(&state.db)
         .await
         .map_err(internal)?
         .into_iter()
@@ -776,16 +945,16 @@ pub async fn add_user_agent(
     if note.is_some_and(|n| n.chars().count() > 200) {
         return Err(bad("note", "At most 200 characters."));
     }
-    let id = dhpanel_database::user_agents::add(&state.db, &pattern, note, who.0.account_id())
+    let id = builtpanel_database::user_agents::add(&state.db, &pattern, note, who.0.account_id())
         .await
         .map_err(|e| match e {
-            dhpanel_database::user_agents::AddError::Exists => {
+            builtpanel_database::user_agents::AddError::Exists => {
                 AppError::conflict("already_listed", "This text is listed already.")
             }
-            dhpanel_database::user_agents::AddError::Full => {
+            builtpanel_database::user_agents::AddError::Full => {
                 AppError::conflict("list_full", "The list holds at most 500 texts.")
             }
-            dhpanel_database::user_agents::AddError::Database(db) => internal(db),
+            builtpanel_database::user_agents::AddError::Database(db) => internal(db),
         })?;
     record(
         &state,
@@ -796,7 +965,7 @@ pub async fn add_user_agent(
         serde_json::json!({ "pattern": pattern }),
     )
     .await?;
-    let made = dhpanel_database::user_agents::list(&state.db)
+    let made = builtpanel_database::user_agents::list(&state.db)
         .await
         .map_err(internal)?
         .into_iter()
@@ -823,7 +992,7 @@ pub async fn remove_user_agent(
     who: Require<SecurityManage>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
-    if !dhpanel_database::user_agents::remove(&state.db, id)
+    if !builtpanel_database::user_agents::remove(&state.db, id)
         .await
         .map_err(internal)?
     {
@@ -873,7 +1042,7 @@ pub struct ScanView {
     /// Files looked at.
     pub scanned: Option<i64>,
     /// What was found.
-    pub findings: Vec<dhpanel_node_protocol::Infection>,
+    pub findings: Vec<builtpanel_node_protocol::Infection>,
     /// More was found than listed.
     pub more: bool,
     /// Why it failed.
@@ -887,7 +1056,7 @@ pub struct ScanList {
     pub items: Vec<ScanView>,
 }
 
-fn scan_view(s: dhpanel_database::malware::Scan) -> ScanView {
+fn scan_view(s: builtpanel_database::malware::Scan) -> ScanView {
     ScanView {
         id: s.id,
         folder: s.folder,
@@ -904,7 +1073,7 @@ fn scan_view(s: dhpanel_database::malware::Scan) -> ScanView {
 }
 
 async fn list_scans(state: &SecurityState, tenant: Uuid) -> Result<Json<ScanList>, AppError> {
-    let items = dhpanel_database::malware::list(&state.db, tenant, "malware", 50)
+    let items = builtpanel_database::malware::list(&state.db, tenant, "malware", 50)
         .await
         .map_err(internal)?
         .into_iter()
@@ -937,7 +1106,7 @@ async fn start_scan(
             "A folder inside your files, such as wp-content/uploads.",
         )]));
     }
-    let Some(id) = dhpanel_database::malware::request(
+    let Some(id) = builtpanel_database::malware::request(
         &state.db,
         tenant,
         "malware",
@@ -959,10 +1128,10 @@ async fn start_scan(
         .tenant(tenant)
         .target("malware_scan", id)
         .metadata(serde_json::json!({ "folder": folder, "quarantine": req.quarantine }));
-    dhpanel_audit::insert(&state.db, &entry)
+    builtpanel_audit::insert(&state.db, &entry)
         .await
         .map_err(internal)?;
-    let made = dhpanel_database::malware::list(&state.db, tenant, "malware", 1)
+    let made = builtpanel_database::malware::list(&state.db, tenant, "malware", 1)
         .await
         .map_err(internal)?
         .into_iter()
@@ -1084,7 +1253,7 @@ pub struct AddAdvisory {
     pub reference: Option<String>,
 }
 
-fn advisory_view(a: dhpanel_database::wp_advisories::Advisory) -> AdvisoryView {
+fn advisory_view(a: builtpanel_database::wp_advisories::Advisory) -> AdvisoryView {
     AdvisoryView {
         id: a.id,
         component: a.component,
@@ -1104,7 +1273,7 @@ pub async fn list_advisories(
     State(state): State<SecurityState>,
     _who: Require<SecurityRead>,
 ) -> Result<Json<AdvisoryList>, AppError> {
-    let items = dhpanel_database::wp_advisories::list(&state.db)
+    let items = builtpanel_database::wp_advisories::list(&state.db)
         .await
         .map_err(internal)?
         .into_iter()
@@ -1171,7 +1340,7 @@ pub async fn add_advisory(
             "An http(s) address of at most 300 characters.",
         ));
     }
-    let a = dhpanel_database::wp_advisories::Advisory {
+    let a = builtpanel_database::wp_advisories::Advisory {
         id: Uuid::nil(),
         component: req.component,
         slug,
@@ -1180,16 +1349,16 @@ pub async fn add_advisory(
         title,
         reference: reference.map(str::to_owned),
     };
-    let id = dhpanel_database::wp_advisories::add(&state.db, &a, who.0.account_id())
+    let id = builtpanel_database::wp_advisories::add(&state.db, &a, who.0.account_id())
         .await
         .map_err(|e| match e {
-            dhpanel_database::wp_advisories::AddError::Exists => {
+            builtpanel_database::wp_advisories::AddError::Exists => {
                 AppError::conflict("already_listed", "This advisory is listed already.")
             }
-            dhpanel_database::wp_advisories::AddError::Full => {
+            builtpanel_database::wp_advisories::AddError::Full => {
                 AppError::conflict("list_full", "The list is full.")
             }
-            dhpanel_database::wp_advisories::AddError::Database(db) => internal(db),
+            builtpanel_database::wp_advisories::AddError::Database(db) => internal(db),
         })?;
     let entry = AuditEntry::new("wp_advisory.added", Outcome::Success)
         .actor(who.0.account_id())
@@ -1197,15 +1366,14 @@ pub async fn add_advisory(
         .metadata(
             serde_json::json!({ "component": a.component, "slug": a.slug, "fixed_in": a.fixed_in }),
         );
-    dhpanel_audit::insert(&state.db, &entry)
+    builtpanel_audit::insert(&state.db, &entry)
         .await
         .map_err(internal)?;
     Ok((
         StatusCode::CREATED,
-        Json(advisory_view(dhpanel_database::wp_advisories::Advisory {
-            id,
-            ..a
-        })),
+        Json(advisory_view(
+            builtpanel_database::wp_advisories::Advisory { id, ..a },
+        )),
     ))
 }
 
@@ -1219,7 +1387,7 @@ pub async fn remove_advisory(
     who: Require<SecurityManage>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
-    if !dhpanel_database::wp_advisories::remove(&state.db, id)
+    if !builtpanel_database::wp_advisories::remove(&state.db, id)
         .await
         .map_err(internal)?
     {
@@ -1228,7 +1396,7 @@ pub async fn remove_advisory(
     let entry = AuditEntry::new("wp_advisory.removed", Outcome::Success)
         .actor(who.0.account_id())
         .target("wp_advisory", id);
-    dhpanel_audit::insert(&state.db, &entry)
+    builtpanel_audit::insert(&state.db, &entry)
         .await
         .map_err(internal)?;
     Ok(StatusCode::NO_CONTENT)
@@ -1269,7 +1437,7 @@ pub struct VulnScanView {
     /// When it ended (Unix seconds).
     pub finished_at: Option<i64>,
     /// The installations found, with their versions.
-    pub installs: Vec<dhpanel_node_protocol::WpInstall>,
+    pub installs: Vec<builtpanel_node_protocol::WpInstall>,
     /// What is out of date or known vulnerable, worst first (judged by the advisories now in
     /// force, not those of the day of the scan).
     pub issues: Vec<VulnIssue>,
@@ -1328,8 +1496,8 @@ fn severity_rank(s: &str) -> u8 {
 }
 
 fn issues_of(
-    installs: &[dhpanel_node_protocol::WpInstall],
-    advisories: &[dhpanel_database::wp_advisories::Advisory],
+    installs: &[builtpanel_node_protocol::WpInstall],
+    advisories: &[builtpanel_database::wp_advisories::Advisory],
 ) -> Vec<VulnIssue> {
     let mut out = Vec::new();
     for install in installs {
@@ -1373,10 +1541,10 @@ fn issues_of(
 }
 
 async fn list_vuln(state: &SecurityState, tenant: Uuid) -> Result<Json<VulnScanList>, AppError> {
-    let advisories = dhpanel_database::wp_advisories::list(&state.db)
+    let advisories = builtpanel_database::wp_advisories::list(&state.db)
         .await
         .map_err(internal)?;
-    let items = dhpanel_database::malware::list(&state.db, tenant, "wordpress", 20)
+    let items = builtpanel_database::malware::list(&state.db, tenant, "wordpress", 20)
         .await
         .map_err(internal)?
         .into_iter()
@@ -1386,10 +1554,10 @@ async fn list_vuln(state: &SecurityState, tenant: Uuid) -> Result<Json<VulnScanL
 }
 
 fn vuln_view(
-    s: dhpanel_database::malware::Scan,
-    advisories: &[dhpanel_database::wp_advisories::Advisory],
+    s: builtpanel_database::malware::Scan,
+    advisories: &[builtpanel_database::wp_advisories::Advisory],
 ) -> VulnScanView {
-    let installs: Vec<dhpanel_node_protocol::WpInstall> =
+    let installs: Vec<builtpanel_node_protocol::WpInstall> =
         serde_json::from_value(s.findings).unwrap_or_default();
     let issues = issues_of(&installs, advisories);
     VulnScanView {
@@ -1410,7 +1578,7 @@ async fn start_vuln(
     tenant: Uuid,
     source: &str,
 ) -> Result<(StatusCode, Json<VulnScanView>), AppError> {
-    let Some(id) = dhpanel_database::malware::request(
+    let Some(id) = builtpanel_database::malware::request(
         &state.db,
         tenant,
         "wordpress",
@@ -1431,10 +1599,10 @@ async fn start_vuln(
         .actor(who.account_id())
         .tenant(tenant)
         .target("malware_scan", id);
-    dhpanel_audit::insert(&state.db, &entry)
+    builtpanel_audit::insert(&state.db, &entry)
         .await
         .map_err(internal)?;
-    let made = dhpanel_database::malware::list(&state.db, tenant, "wordpress", 1)
+    let made = builtpanel_database::malware::list(&state.db, tenant, "wordpress", 1)
         .await
         .map_err(internal)?
         .into_iter()
@@ -1507,7 +1675,7 @@ pub async fn client_start_vuln(
 
 /// An image of the allow-list and what is known about it.
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ImageView {
+pub struct SecurityImageView {
     /// The pinned reference (`name@sha256:…`).
     pub reference: String,
     /// The role it plays (`web`, `php`, `db`, …).
@@ -1538,7 +1706,7 @@ pub struct ImageView {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ImageList {
     /// By role.
-    pub items: Vec<ImageView>,
+    pub items: Vec<SecurityImageView>,
 }
 
 /// The worst findings of one image.
@@ -1547,7 +1715,7 @@ pub struct ImageVulns {
     /// The image.
     pub reference: String,
     /// Worst first.
-    pub items: Vec<dhpanel_node_protocol::ImageVulnerability>,
+    pub items: Vec<builtpanel_node_protocol::ImageVulnerability>,
 }
 
 /// Which image to scan.
@@ -1558,13 +1726,13 @@ pub struct ScanImageRequest {
     pub reference: String,
 }
 
-fn image_view(i: dhpanel_database::images::Image) -> ImageView {
+fn image_view(i: builtpanel_database::images::Image) -> SecurityImageView {
     let pinned = i.reference.split_once('@').map(|(_, d)| d.to_owned());
     let update_available = match (&i.latest_digest, &pinned) {
         (Some(latest), Some(pinned)) => latest != pinned,
         _ => false,
     };
-    ImageView {
+    SecurityImageView {
         reference: i.reference,
         role: i.role,
         tag: i.tag,
@@ -1588,7 +1756,7 @@ pub async fn list_images(
     State(state): State<SecurityState>,
     _who: Require<SecurityRead>,
 ) -> Result<Json<ImageList>, AppError> {
-    let items = dhpanel_database::images::list(&state.db)
+    let items = builtpanel_database::images::list(&state.db)
         .await
         .map_err(internal)?
         .into_iter()
@@ -1607,7 +1775,7 @@ pub async fn image_vulnerabilities(
     _who: Require<SecurityRead>,
     axum::extract::Query(q): axum::extract::Query<ScanImageRequest>,
 ) -> Result<Json<ImageVulns>, AppError> {
-    let image = dhpanel_database::images::get(&state.db, &q.reference)
+    let image = builtpanel_database::images::get(&state.db, &q.reference)
         .await
         .map_err(internal)?
         .ok_or_else(|| AppError::not_found("image"))?;
@@ -1629,7 +1797,7 @@ pub async fn scan_image_now(
     who: Require<SecurityManage>,
     Json(req): Json<ScanImageRequest>,
 ) -> Result<StatusCode, AppError> {
-    if !dhpanel_database::images::request_scan(&state.db, &req.reference)
+    if !builtpanel_database::images::request_scan(&state.db, &req.reference)
         .await
         .map_err(internal)?
     {
@@ -1638,7 +1806,7 @@ pub async fn scan_image_now(
     let entry = AuditEntry::new("image_scan.requested", Outcome::Success)
         .actor(who.0.account_id())
         .metadata(serde_json::json!({ "reference": req.reference }));
-    dhpanel_audit::insert(&state.db, &entry)
+    builtpanel_audit::insert(&state.db, &entry)
         .await
         .map_err(internal)?;
     Ok(StatusCode::ACCEPTED)
@@ -1648,12 +1816,12 @@ pub async fn scan_image_now(
 #[derive(Debug, Serialize, ToSchema)]
 pub struct NodeFirewall {
     /// The policy (`null`: the panel manages no firewall on this node).
-    pub policy: Option<dhpanel_node_protocol::FirewallPolicy>,
+    pub policy: Option<builtpanel_node_protocol::FirewallPolicy>,
 }
 
 fn firewall_of(
     value: serde_json::Value,
-) -> Result<dhpanel_node_protocol::FirewallPolicy, AppError> {
+) -> Result<builtpanel_node_protocol::FirewallPolicy, AppError> {
     serde_json::from_value(value).map_err(internal)
 }
 
@@ -1667,13 +1835,13 @@ pub async fn get_node_firewall(
     _who: Require<SecurityRead>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<NodeFirewall>, AppError> {
-    if !dhpanel_database::node_firewalls::node_exists(&state.db, id)
+    if !builtpanel_database::node_firewalls::node_exists(&state.db, id)
         .await
         .map_err(internal)?
     {
         return Err(AppError::not_found("node"));
     }
-    let policy = dhpanel_database::node_firewalls::get(&state.db, id)
+    let policy = builtpanel_database::node_firewalls::get(&state.db, id)
         .await
         .map_err(internal)?
         .map(firewall_of)
@@ -1685,7 +1853,7 @@ pub async fn get_node_firewall(
 /// policy that denies by default needs an `always_allow` address, so the panel stays reachable.
 #[utoipa::path(put, path = "/api/v1/admin/nodes/{id}/firewall", tag = "security", operation_id = "adminSetNodeFirewall",
     security(("session" = [])), params(("id" = Uuid, Path, description = "Node id"), ("X-CSRF-Token" = String, Header, description = "The session's csrf_token")),
-    request_body = dhpanel_node_protocol::FirewallPolicy,
+    request_body = builtpanel_node_protocol::FirewallPolicy,
     responses((status = 200, description = "Stored (the checked form: addresses written plainly)", body = NodeFirewall),
               (status = 404, description = "No such node", body = ProblemDetails, content_type = "application/problem+json"),
               (status = 422, description = "A policy that is not valid", body = ProblemDetails, content_type = "application/problem+json")))]
@@ -1693,7 +1861,7 @@ pub async fn put_node_firewall(
     State(state): State<SecurityState>,
     who: Require<SecurityManage>,
     Path(id): Path<Uuid>,
-    Json(req): Json<dhpanel_node_protocol::FirewallPolicy>,
+    Json(req): Json<builtpanel_node_protocol::FirewallPolicy>,
 ) -> Result<Json<NodeFirewall>, AppError> {
     let policy = req.checked().map_err(|message| {
         AppError::validation(vec![FieldError::new("policy", "invalid", &message)])
@@ -1715,7 +1883,7 @@ pub async fn reset_node_firewall(
         &state,
         &who.0,
         id,
-        dhpanel_node_protocol::FirewallPolicy::default(),
+        builtpanel_node_protocol::FirewallPolicy::default(),
     )
     .await
 }
@@ -1724,10 +1892,10 @@ async fn store_firewall(
     state: &SecurityState,
     who: &Principal,
     id: Uuid,
-    policy: dhpanel_node_protocol::FirewallPolicy,
+    policy: builtpanel_node_protocol::FirewallPolicy,
 ) -> Result<Json<NodeFirewall>, AppError> {
     let value = serde_json::to_value(&policy).map_err(internal)?;
-    if !dhpanel_database::node_firewalls::set(&state.db, id, &value, who.account_id())
+    if !builtpanel_database::node_firewalls::set(&state.db, id, &value, who.account_id())
         .await
         .map_err(internal)?
     {
@@ -1744,7 +1912,7 @@ async fn store_firewall(
             "open_ports": policy.open_ports.len(),
             "rate_limits": policy.rate_limits.len(),
         }));
-    dhpanel_audit::insert(&state.db, &entry)
+    builtpanel_audit::insert(&state.db, &entry)
         .await
         .map_err(internal)?;
     Ok(Json(NodeFirewall {
@@ -1758,14 +1926,14 @@ async fn store_firewall(
     paths(
         admin_get_global, admin_put_global, admin_delete_global, admin_get_tenant, admin_put_tenant,
         admin_delete_tenant, admin_get_domain, admin_put_domain, admin_delete_domain, client_list,
-        client_put, client_delete, list_user_agents, add_user_agent, remove_user_agent,
+        client_put, client_delete, client_list_ip_blocks, client_add_ip_block, client_remove_ip_block, list_user_agents, add_user_agent, remove_user_agent,
         get_node_firewall, put_node_firewall, reset_node_firewall,
         admin_list_scans, admin_start_scan, client_list_scans, client_start_scan,
         admin_list_vuln, admin_start_vuln, client_list_vuln, client_start_vuln,
         list_advisories, add_advisory, remove_advisory,
         list_images, image_vulnerabilities, scan_image_now
     ),
-    components(schemas(ImageView, ImageList, ImageVulns, ScanImageRequest, dhpanel_node_protocol::ImageVulnerability, VulnScanView, VulnScanList, VulnIssue, AdvisoryView, AdvisoryList, AddAdvisory, dhpanel_node_protocol::WpInstall, dhpanel_node_protocol::WpComponent, ScanRequest, ScanView, ScanList, dhpanel_node_protocol::Infection, NodeFirewall, dhpanel_node_protocol::FirewallPolicy, dhpanel_node_protocol::PortRule, dhpanel_node_protocol::RateLimit, UserAgentView, UserAgentList, AddUserAgent, PolicyRequest, PolicyView, EffectiveView, PolicyState, DomainWaf, DomainWafList)),
+    components(schemas(SecurityImageView, ImageList, ImageVulns, ScanImageRequest, builtpanel_node_protocol::ImageVulnerability, VulnScanView, VulnScanList, VulnIssue, AdvisoryView, AdvisoryList, AddAdvisory, builtpanel_node_protocol::WpInstall, builtpanel_node_protocol::WpComponent, ScanRequest, ScanView, ScanList, builtpanel_node_protocol::Infection, NodeFirewall, builtpanel_node_protocol::FirewallPolicy, builtpanel_node_protocol::PortRule, builtpanel_node_protocol::RateLimit, UserAgentView, UserAgentList, AddUserAgent, PolicyRequest, WafPolicyView, EffectiveView, PolicyState, DomainWaf, DomainWafList, IpBlockView, IpBlockList, AddIpBlock)),
     tags((name = "security", description = "The web application firewall"))
 )]
 pub struct SecurityApi;

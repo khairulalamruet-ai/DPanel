@@ -19,8 +19,8 @@ use base64::{
     Engine as _,
     engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
 };
-use dhpanel_http_kit::{AppError, FieldError};
-use dhpanel_license::{Claims, Document, SCHEMA_VERSION, verify_with};
+use builtpanel_http_kit::{AppError, FieldError};
+use builtpanel_license::{Claims, Document, SCHEMA_VERSION, verify_with};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Postgres, Transaction};
 use uuid::Uuid;
@@ -143,8 +143,8 @@ fn host_proof(hostname: Option<&str>, domain: Option<&str>) -> Option<String> {
     match (hostname, domain) {
         (Some(h), Some(d)) => Some(format!(
             "{}\n{}",
-            dhpanel_license::normalize_name(h),
-            dhpanel_license::normalize_name(d)
+            builtpanel_license::normalize_name(h),
+            builtpanel_license::normalize_name(d)
         )),
         _ => None,
     }
@@ -159,7 +159,7 @@ pub fn proof_message(
     installation_id: Uuid,
     extra: Option<&str>,
 ) -> Vec<u8> {
-    let mut m = format!("dhpanel-{purpose}-v1\n{nonce}\n{installation_id}");
+    let mut m = format!("builtpanel-{purpose}-v1\n{nonce}\n{installation_id}");
     if let Some(extra) = extra {
         m.push('\n');
         m.push_str(extra);
@@ -843,7 +843,7 @@ async fn status(
     }))
 }
 
-/// The public keys that licenses were signed with, as the bundle DHPanel builds ship
+/// The public keys that licenses were signed with, as the bundle Built Panel builds ship
 /// (`kid base64-key` per line); retired keys stay so old documents can still be checked.
 async fn public_keys(State(state): State<LaState>) -> Result<String, AppError> {
     let rows: Vec<(String, String)> = sqlx::query_as(

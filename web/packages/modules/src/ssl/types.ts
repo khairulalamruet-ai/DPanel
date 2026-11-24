@@ -15,31 +15,7 @@ export interface SslCertificateItem {
   auto_renew: boolean;
   force_https: boolean;
   hsts_enabled: boolean;
-  hsts_subdomains: boolean;
-  hsts_preload: boolean;
   created_at: string;
   updated_at: string;
   cert_fingerprint?: string | null;
-}
-
-export interface CustomCertPayload {
-  cert_pem: string;
-  key_pem: string;
-  chain_pem?: string | null;
-}
-
-export interface SslSettingsPayload {
-  auto_renew?: boolean;
-  force_https?: boolean;
-  hsts_enabled?: boolean;
-  hsts_subdomains?: boolean;
-  hsts_preload?: boolean;
-}
-
-export interface ReissueResponse {
-  success: boolean;
-  operation_id: string;
-  status: "pending" | "dispatched" | "succeeded";
-  message: string;
-  certificate?: SslCertificateItem;
 }

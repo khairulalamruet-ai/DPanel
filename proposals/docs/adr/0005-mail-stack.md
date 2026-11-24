@@ -38,7 +38,7 @@ If accepted: T13.02 provisions one Stalwart container (SMTP 25/465/587, IMAP 993
 certificate from the panel's Caddy; T13.03 and later call its management API.
 
 ## As built (T13.02 - T13.12)
-- **One Stalwart container per node** (`dh-mail`, image pinned by digest in `deploy/stack/images.toml`),
+- **One Stalwart container per node** (`bp-mail`, image pinned by digest in `deploy/stack/images.toml`),
   set up and managed by the node agent through Stalwart's JMAP management API with typed operations
   (`EnsureMailServer`, `SetMailDomain`, `UpsertMailbox`, `SetMailForwarders`, `SetMailAutoresponder`,
   `ReportMail`, `MailQueueAction`). The mail administrator's secret is made on first use and stays
@@ -53,7 +53,7 @@ certificate from the panel's Caddy; T13.03 and later call its management API.
   day), its queued messages are removed, and the owner and the administrators are told. An
   administrator releases it.
 - **Spam** (T13.08): Stalwart's built-in filter plus a GTUBE rule; the test spam is filed as junk.
-- **Webmail** (T13.09): Roundcube (`dh-webmail`), reached under the name set in the mail settings
+- **Webmail** (T13.09): Roundcube (`bp-webmail`), reached under the name set in the mail settings
   (`webmail_host`). A one-time link (5 minutes, used once) signs the client in through a small plugin;
   the node signs in as the mailbox with the mail administrator's login (`address%administrator`), so
   the mailbox's password is never needed.

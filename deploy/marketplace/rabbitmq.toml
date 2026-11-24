@@ -1,0 +1,9 @@
+slug        = "rabbitmq"
+name        = "RabbitMQ"
+category    = "message_queue"
+kind        = "unavailable"
+description = "A message broker."
+license     = "MPL-2.0"
+homepage    = "https://www.rabbitmq.com"
+covers      = ["RabbitMQ"]
+reason      = "its image starts as root and then switches to its own user"

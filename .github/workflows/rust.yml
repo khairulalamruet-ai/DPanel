@@ -47,7 +47,7 @@ jobs:
       - name: clippy (default features)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: clippy (otel feature)
-        run: cargo clippy --workspace --all-targets --locked --features dhpanel-control-api/otel -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked --features builtpanel-control-api/otel -- -D warnings
 
   test:
     name: tests (PostgreSQL 18 + Redis 8)
@@ -89,26 +89,26 @@ jobs:
       - name: Create application role and database, apply migrations
         env:
           PGPASSWORD: ci-postgres-password
-          DHPANEL_DATABASE__URL: postgres://dhpanel:ci-dhpanel-password@127.0.0.1:5432/dhpanel_dev
-          DHPANEL_REDIS__URL: redis://:ci-redis-password@127.0.0.1:6379/0
-          DHPANEL_CONFIG: deploy/dev/control.dev.toml
+          BUILTPANEL_DATABASE__URL: postgres://builtpanel:ci-builtpanel-password@127.0.0.1:5432/builtpanel_dev
+          BUILTPANEL_REDIS__URL: redis://:ci-redis-password@127.0.0.1:6379/0
+          BUILTPANEL_CONFIG: deploy/dev/control.dev.toml
         run: |
           psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
-            -c "CREATE ROLE dhpanel LOGIN PASSWORD 'ci-dhpanel-password'" \
-            -c "CREATE DATABASE dhpanel_dev OWNER dhpanel"
-          cargo run --locked -q -p dhpanel-dhctl -- migrate
+            -c "CREATE ROLE builtpanel LOGIN PASSWORD 'ci-builtpanel-password'" \
+            -c "CREATE DATABASE builtpanel_dev OWNER builtpanel"
+          cargo run --locked -q -p builtpanel-bpctl -- migrate
 
       - name: Verify .sqlx cache matches the migrated schema (online compile)
         env:
           SQLX_OFFLINE: "false"
-          DATABASE_URL: postgres://dhpanel:ci-dhpanel-password@127.0.0.1:5432/dhpanel_dev
+          DATABASE_URL: postgres://builtpanel:ci-builtpanel-password@127.0.0.1:5432/builtpanel_dev
         run: cargo check --workspace --all-targets --locked
 
       - name: Tests (unit + integration)
         run: cargo test --workspace --locked --no-fail-fast -- --include-ignored
 
       - name: openapi.json is up to date
-        run: cargo test --locked -p dhpanel-control-api openapi_json_is_up_to_date
+        run: cargo test --locked -p builtpanel-control-api openapi_json_is_up_to_date
 
   supply-chain:
     name: cargo-deny + cargo-audit

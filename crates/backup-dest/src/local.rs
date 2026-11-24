@@ -1,4 +1,4 @@
-//! A folder on the machine (the node), reached through `dhpanel-safe-fs`, so no name and
+//! A folder on the machine (the node), reached through `builtpanel-safe-fs`, so no name and
 //! no link inside it can lead out of the folder.
 
 use std::{
@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use dhpanel_safe_fs::{FsError, Root};
+use builtpanel_safe_fs::{FsError, Root};
 use rustix::fs::{Mode, OFlags};
 
 use crate::{DestError, Destination, check};
@@ -82,7 +82,7 @@ impl Destination for Local {
                 Ok(n)
             }
             Err(e) => {
-                let _ = dhpanel_safe_fs::remove(&dir, &tmp, false);
+                let _ = builtpanel_safe_fs::remove(&dir, &tmp, false);
                 Err(DestError::Other(format!("cannot write: {}", e.kind())))
             }
         }
@@ -104,7 +104,7 @@ impl Destination for Local {
             Err(FsError::NotFound) => return Ok(()),
             Err(e) => return Err(fs(e)),
         };
-        match dhpanel_safe_fs::remove(&dir, &leaf, false) {
+        match builtpanel_safe_fs::remove(&dir, &leaf, false) {
             Ok(()) | Err(FsError::NotFound) => Ok(()),
             Err(e) => Err(fs(e)),
         }
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn a_folder_stores_lists_reads_and_removes() {
-        let dir = std::env::temp_dir().join(format!("dh-dest-local-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bp-dest-local-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let d = Local::open(&dir).unwrap();

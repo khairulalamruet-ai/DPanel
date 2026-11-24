@@ -7,9 +7,9 @@ import {
   DialogFooter,
   Button,
   Input,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { Ban, Plus } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 interface AddGlobalBanDialogProps {
   open: boolean;
@@ -20,15 +20,11 @@ interface AddGlobalBanDialogProps {
 export function AddGlobalBanDialog({ open, onOpenChange, onConfirm }: AddGlobalBanDialogProps) {
   const { t } = useTranslation();
   const [ip, setIp] = useState("");
-  const [reason, setReason] = useState("");
-  const [durationHours, setDurationHours] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   React.useEffect(() => {
     if (open) {
       setIp("");
-      setReason("");
-      setDurationHours(1);
     }
   }, [open]);
 
@@ -39,7 +35,7 @@ export function AddGlobalBanDialog({ open, onOpenChange, onConfirm }: AddGlobalB
     if (!isValid) return;
     try {
       setIsSubmitting(true);
-      await onConfirm(ip.trim(), reason.trim(), durationHours);
+      await onConfirm(ip.trim(), "", 0);
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -72,35 +68,6 @@ export function AddGlobalBanDialog({ open, onOpenChange, onConfirm }: AddGlobalB
               />
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-foreground">
-                {t("firewall.banDurationLabel")}
-              </label>
-              <select
-                data-testid="select-ban-duration"
-                value={durationHours}
-                onChange={(e) => setDurationHours(Number(e.target.value))}
-                className="mt-1 w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs font-mono h-9 shadow-sm focus:outline-none"
-              >
-                <option value={1}>1 Hour (Standard Brute-force window)</option>
-                <option value={24}>24 Hours</option>
-                <option value={168}>7 Days</option>
-                <option value={0}>Permanent Ban</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-foreground">
-                {t("firewall.banReasonLabel")}
-              </label>
-              <Input
-                data-testid="input-global-ban-reason"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g. Repeated SSH / SFTP authentication failures"
-                className="mt-1 text-xs"
-              />
-            </div>
           </div>
 
           <DialogFooter className="flex justify-end gap-2 pt-2">

@@ -4,17 +4,21 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use dhpanel_docker_manager::DockerManager;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::DockerManager;
+use builtpanel_node_agent::ops::{
     scan::{scan_tenant, update_malware_signatures},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
 use uuid::Uuid;
 
 const EICAR: &str = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -29,7 +33,7 @@ fn docker_socket() -> PathBuf {
 async fn a_planted_test_file_is_found_and_clean_files_and_folders_are_not() {
     // A fixed place: the signatures (owned by the scanner's user, so not ours to remove) are
     // kept between runs, which saves fetching them again.
-    let base = std::env::temp_dir().join("dh-scan-live");
+    let base = std::env::temp_dir().join("bp-scan-live");
     let tenants = base.join("tenants");
     let _ = std::fs::remove_dir_all(&tenants);
     let state = base.join("state");
@@ -43,7 +47,7 @@ async fn a_planted_test_file_is_found_and_clean_files_and_folders_are_not() {
     std::fs::write(www.join("clean").join("a.txt"), "fine").unwrap();
     let docker = DockerManager::connect(&docker_socket()).unwrap();
     let _ = docker
-        .remove_volume(&dhpanel_docker_manager::Name::parse("dh-clamav-db").unwrap())
+        .remove_volume(&builtpanel_docker_manager::Name::parse("bp-clamav-db").unwrap())
         .await;
     let context = Arc::new(TenantContext {
         helper_socket: base.join("no-helper.sock"),
@@ -94,7 +98,7 @@ async fn a_planted_test_file_is_found_and_clean_files_and_folders_are_not() {
     let left = context.docker.list().await.unwrap();
     assert!(
         left.iter()
-            .all(|n| !n.starts_with("dh-scan-") && n != "dh-clamav-update"),
+            .all(|n| !n.starts_with("bp-scan-") && n != "bp-clamav-update"),
         "{left:?}"
     );
     let _ = std::fs::remove_dir_all(&tenants);
@@ -103,7 +107,7 @@ async fn a_planted_test_file_is_found_and_clean_files_and_folders_are_not() {
 #[tokio::test]
 #[ignore = "needs rootless Docker and the network"]
 async fn a_wordpress_install_is_listed_with_its_plugins_and_themes() {
-    let base = std::env::temp_dir().join("dh-scan-live-wp");
+    let base = std::env::temp_dir().join("bp-scan-live-wp");
     let tenants = base.join("tenants");
     let _ = std::fs::remove_dir_all(&base);
     std::fs::create_dir_all(base.join("state").join("vhosts")).unwrap();
@@ -136,7 +140,7 @@ async fn a_wordpress_install_is_listed_with_its_plugins_and_themes() {
         docker: DockerManager::connect(&docker_socket()).unwrap(),
         vhosts_root: base.join("state").join("vhosts"),
     });
-    let out = dhpanel_node_agent::ops::scan::inventory_wordpress(
+    let out = builtpanel_node_agent::ops::scan::inventory_wordpress(
         context.clone(),
         Operation::InventoryWordPress {
             tenant_id: id,
@@ -161,14 +165,14 @@ async fn a_wordpress_install_is_listed_with_its_plugins_and_themes() {
     );
     assert_eq!(installs[0].themes[0].version, "2.0");
     let left = context.docker.list().await.unwrap();
-    assert!(left.iter().all(|n| !n.starts_with("dh-wpinv-")), "{left:?}");
+    assert!(left.iter().all(|n| !n.starts_with("bp-wpinv-")), "{left:?}");
     let _ = std::fs::remove_dir_all(&base);
 }
 
 #[tokio::test]
 #[ignore = "needs rootless Docker and the network"]
 async fn an_old_image_has_findings_a_registry_answers_and_unlisted_images_are_refused() {
-    let base = std::env::temp_dir().join("dh-scan-live-img");
+    let base = std::env::temp_dir().join("bp-scan-live-img");
     std::fs::create_dir_all(base.join("state").join("vhosts")).unwrap();
     let context = Arc::new(TenantContext {
         helper_socket: base.join("no-helper.sock"),
@@ -177,7 +181,7 @@ async fn an_old_image_has_findings_a_registry_answers_and_unlisted_images_are_re
         vhosts_root: base.join("state").join("vhosts"),
     });
     // An image that is not on the allow-list is refused before anything runs.
-    let e = dhpanel_node_agent::ops::imagescan::scan_image(
+    let e = builtpanel_node_agent::ops::imagescan::scan_image(
         context.clone(),
         Operation::ScanImage {
             reference: format!("alpine@sha256:{}", "c".repeat(64)),
@@ -187,7 +191,7 @@ async fn an_old_image_has_findings_a_registry_answers_and_unlisted_images_are_re
     .unwrap_err();
     assert_eq!(e.code, ErrorCode::InvalidArguments);
     // A registry answers for a tag (the digest of the index, as a pull would fetch it).
-    let out = dhpanel_node_agent::ops::imagescan::check_image_updates(
+    let out = builtpanel_node_agent::ops::imagescan::check_image_updates(
         context.clone(),
         Operation::CheckImageUpdates {
             images: vec![
@@ -204,7 +208,7 @@ async fn an_old_image_has_findings_a_registry_answers_and_unlisted_images_are_re
     assert_eq!(items.len(), 1, "{items:?}");
     assert!(items[0].digest.starts_with("sha256:") && items[0].digest.len() == 71);
     // An older image of the list is scanned for real (the first run fetches Trivy's database).
-    let out = dhpanel_node_agent::ops::imagescan::scan_image(
+    let out = builtpanel_node_agent::ops::imagescan::scan_image(
         context.clone(),
         Operation::ScanImage {
             reference: "nginxinc/nginx-unprivileged@sha256:7377697a821c131a924a7105fafbe7414db4e9fcc77a6f08f776f33f141ec3f8".into(),
@@ -233,6 +237,6 @@ async fn an_old_image_has_findings_a_registry_answers_and_unlisted_images_are_re
     assert!(!top.is_empty() && top.len() <= 50);
     assert!(top[0].id.contains('-'), "{:?}", top[0]);
     let left = context.docker.list().await.unwrap();
-    assert!(left.iter().all(|n| n != "dh-trivy-scan"), "{left:?}");
+    assert!(left.iter().all(|n| n != "bp-trivy-scan"), "{left:?}");
     let _ = std::fs::remove_dir_all(&base);
 }

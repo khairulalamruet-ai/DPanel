@@ -1,0 +1,9 @@
+slug        = "mariadb"
+name        = "MariaDB"
+category    = "databases"
+kind        = "builtin"
+description = "The MySQL-compatible database server; every account has databases on it."
+license     = "GPL-2.0-only"
+homepage    = "https://mariadb.org"
+covers      = ["MariaDB", "MariaDB 11.8 (service)"]
+provided_by = "Databases (MariaDB 12.3 LTS)"

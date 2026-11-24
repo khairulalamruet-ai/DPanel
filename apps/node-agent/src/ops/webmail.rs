@@ -1,6 +1,6 @@
 //! Webmail for clients (T13.09), signed in without a password.
 //!
-//! One container, `dh-webmail`, runs Roundcube. Its sign-in form is left alone for anyone who
+//! One container, `bp-webmail`, runs Roundcube. Its sign-in form is left alone for anyone who
 //! has a password, but a plugin of our own (`dhsignon`) takes a one-time link as well: the
 //! control plane makes a token, keeps it to itself and tells the node only its SHA-256; the
 //! node writes the credentials of a sign-in as the mailbox (the mail server's administrator
@@ -10,11 +10,11 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{
+use builtpanel_docker_manager::{
     Capability, ContainerSpec, DockerError, Network, PublishedPort, Restart, Tmpfs, VolumeMount,
 };
-use dhpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role};
+use builtpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role};
 
 use super::{
     db, mail,
@@ -24,15 +24,15 @@ use super::{
 };
 
 /// The container's name.
-pub const CONTAINER: &str = "dh-webmail";
+pub const CONTAINER: &str = "bp-webmail";
 const MIB: u64 = 1024 * 1024;
 /// How long a link works after it was made.
 const LINK_SECS: i64 = 300;
 
-/// Loopback port of the container (`DHPANEL_AGENT_WEBMAIL_PORT`).
+/// Loopback port of the container (`BUILTPANEL_AGENT_WEBMAIL_PORT`).
 #[must_use]
 pub fn port() -> u16 {
-    std::env::var("DHPANEL_AGENT_WEBMAIL_PORT")
+    std::env::var("BUILTPANEL_AGENT_WEBMAIL_PORT")
         .ok()
         .and_then(|p| p.parse().ok())
         .filter(|p| *p >= 1024)
@@ -172,14 +172,14 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
                 .to_path_buf();
             let mut mounts = Vec::new();
             for (name, path, target, read_only) in [
-                ("dh-webmail-sessions", &sessions, "/dhsessions", false),
+                ("bp-webmail-sessions", &sessions, "/dhsessions", false),
                 (
-                    "dh-webmail-tasks",
+                    "bp-webmail-tasks",
                     &tasks,
                     "/entrypoint-tasks/post-setup",
                     true,
                 ),
-                ("dh-webmail-config", &config, "/var/roundcube/config", true),
+                ("bp-webmail-config", &config, "/var/roundcube/config", true),
             ] {
                 let volume = db::name(name)?;
                 docker
@@ -192,7 +192,7 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
                     read_only,
                 });
             }
-            let data = db::name("dh-webmail-data")?;
+            let data = db::name("bp-webmail-data")?;
             docker
                 .create_volume(&data)
                 .await
@@ -210,9 +210,9 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
             let image = super::tenant::pull_with_fallback(docker, &allowlist, &image).await?;
             let mut spec = ContainerSpec::new(container.clone(), image);
             for (key, value) in [
-                ("ROUNDCUBEMAIL_DEFAULT_HOST", "ssl://dh-mail"),
+                ("ROUNDCUBEMAIL_DEFAULT_HOST", "ssl://bp-mail"),
                 ("ROUNDCUBEMAIL_DEFAULT_PORT", "993"),
-                ("ROUNDCUBEMAIL_SMTP_SERVER", "ssl://dh-mail"),
+                ("ROUNDCUBEMAIL_SMTP_SERVER", "ssl://bp-mail"),
                 ("ROUNDCUBEMAIL_SMTP_PORT", "465"),
                 ("ROUNDCUBEMAIL_PLUGINS", "dhsignon,archive,zipdownload"),
                 ("ROUNDCUBEMAIL_SKIN", "elastic"),

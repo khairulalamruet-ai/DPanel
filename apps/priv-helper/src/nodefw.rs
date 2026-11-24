@@ -1,4 +1,4 @@
-//! The node's firewall (T11.06): one nftables table of its own, `inet dhpanel_fw`.
+//! The node's firewall (T11.06): one nftables table of its own, `inet builtpanel_fw`.
 //!
 //! The ruleset is written from a fixed template out of a checked [`FirewallPolicy`]
 //! (addresses and ports only; nothing else of the request reaches the text), tested with
@@ -14,13 +14,13 @@ use std::{
     process::{Command, Stdio},
 };
 
-use dhpanel_node_protocol::{FirewallPolicy, PortRule};
+use builtpanel_node_protocol::{FirewallPolicy, PortRule};
 
 use crate::{protocol::ErrorCode, tenant::Failure};
 
 const NFT: &str = "/usr/sbin/nft";
 /// The table the helper owns.
-pub const TABLE: &str = "dhpanel_fw";
+pub const TABLE: &str = "builtpanel_fw";
 
 fn set_text(name: &str, cidrs: &[String]) -> String {
     let elements = if cidrs.is_empty() {
@@ -146,7 +146,7 @@ pub fn set(policy: &FirewallPolicy, ssh_port: u16) -> Result<(), Failure> {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use dhpanel_node_protocol::RateLimit;
+    use builtpanel_node_protocol::RateLimit;
 
     #[test]
     fn the_ruleset_keeps_ssh_the_panel_and_answers_whatever_the_policy_says() {

@@ -8,14 +8,14 @@ backup can be opened, and the sealed secrets in the database (TOTP secrets, tena
 keys, destination credentials, database passwords) cannot be read.
 
 Tested with `crates/system-backup/tests/live.rs` (dump, store, open, `pg_restore` into a new
-database, rows compared) and by the drill `apps/dhctl/tests/restore_drill_live.rs`: a migrated
-panel with an administrator and a CA is backed up, then restored with the real `dhctl` steps
+database, rows compared) and by the drill `apps/bpctl/tests/restore_drill_live.rs`: a migrated
+panel with an administrator and a CA is backed up, then restored with the real `bpctl` steps
 of this runbook into a new database; every table has the same rows, the administrator's
-password hash is identical, the CA is the same file and `dhctl migrate` finds nothing to apply.
+password hash is identical, the CA is the same file and `bpctl migrate` finds nothing to apply.
 
 ## 1. Prepare the new server
 
-1. Install the same DHPanel version (`dhpanel-control-api`, `dhctl`), PostgreSQL and Redis
+1. Install the same Built Panel version (`builtpanel-control-api`, `bpctl`), PostgreSQL and Redis
    (the versions of the old server or newer), and `postgresql-client` (`pg_restore`).
 2. Make an empty database and user for the panel; note the URL.
 
@@ -31,7 +31,7 @@ named by its id with `system.tar.zst.enc` and `manifest.json.enc`). Download
 Put the master key in a file (mode 0600) and open the backup into a **new** folder:
 
 ```sh
-dhctl system-backup open \
+bpctl system-backup open \
   --master-key-file /root/master.key \
   --input system.tar.zst.enc \
   --output /root/restore
@@ -47,12 +47,12 @@ A wrong key or a damaged file stops here with an error and writes nothing useful
 pg_restore --no-owner --dbname "postgres://USER:PASSWORD@HOST/panel" /root/restore/database.dump
 
 # configuration, secrets and the CA, where the old server had them
-install -d -m 0755 /etc/dhpanel && install -d -m 0700 /etc/dhpanel/secrets
-install -m 0640 /root/restore/config/control.toml /etc/dhpanel/control.toml
-install -m 0600 /root/restore/secrets/* /etc/dhpanel/secrets/     # then fix the names the config uses
-install -m 0644 /root/restore/pki/node_ca.crt /etc/dhpanel/secrets/node_ca.crt
-install -m 0600 /root/restore/pki/node_ca.key /etc/dhpanel/secrets/node_ca.key
-install -m 0600 /root/master.key /etc/dhpanel/secrets/master.key  # the path in secrets.master_key_file
+install -d -m 0755 /etc/builtpanel && install -d -m 0700 /etc/builtpanel/secrets
+install -m 0640 /root/restore/config/control.toml /etc/builtpanel/control.toml
+install -m 0600 /root/restore/secrets/* /etc/builtpanel/secrets/     # then fix the names the config uses
+install -m 0644 /root/restore/pki/node_ca.crt /etc/builtpanel/secrets/node_ca.crt
+install -m 0600 /root/restore/pki/node_ca.key /etc/builtpanel/secrets/node_ca.key
+install -m 0600 /root/master.key /etc/builtpanel/secrets/master.key  # the path in secrets.master_key_file
 ```
 
 Edit `control.toml` where the new server differs (database URL, Redis URL, `agent.public_url`,
@@ -62,14 +62,14 @@ Edit `control.toml` where the new server differs (database URL, Redis URL, `agen
 ## 5. Start and check
 
 ```sh
-dhctl migrate           # applies migrations newer than the backup, if the version is newer
-systemctl start dhpanel-control-api
+bpctl migrate           # applies migrations newer than the backup, if the version is newer
+systemctl start builtpanel-control-api
 ```
 
 - Sign in as an administrator; the audit log has the history up to the backup.
 - Nodes connect again with their existing certificates (the CA is the same). If the new
   server has another name or address, issue a new server certificate for the agent port
-  (`dhctl ca issue-server --dns NAME --out-dir ...`); the nodes' trust is the CA, not the
+  (`bpctl ca issue-server --dns NAME --out-dir ...`); the nodes' trust is the CA, not the
   server certificate.
 - Everything done after the backup is not in it: operations queued since then are lost, and
   the nodes may hold newer state than the database. The node reports (`report_*` operations)

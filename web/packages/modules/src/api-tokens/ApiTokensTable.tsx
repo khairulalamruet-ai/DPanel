@@ -7,8 +7,8 @@ import {
   CardContent,
   Button,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Key, Trash2, ShieldCheck, Clock } from "lucide-react";
 import { ApiTokenItem } from "./types";
 
@@ -37,7 +37,7 @@ export function ApiTokensTable({
         <CardDescription className="text-xs">
           {t(
             "apiTokens.tableDesc",
-            "Manage Bearer credentials authorized to invoke DHPanel REST endpoints."
+            "Manage Bearer credentials authorized to invoke Built Panel REST endpoints."
           )}
         </CardDescription>
       </CardHeader>

@@ -1,0 +1,8 @@
+slug        = "subversion"
+name        = "Subversion"
+category    = "version_control"
+kind        = "unavailable"
+description = "Subversion."
+license     = "GPL-2.0-or-later"
+covers      = ["Subversion"]
+reason      = "an account has no shell on the server to run command-line tools; Git is offered"

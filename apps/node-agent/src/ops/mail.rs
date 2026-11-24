@@ -1,7 +1,7 @@
 //! The node's mail server (T13.02-T13.08): Stalwart in a container, managed through its JMAP
 //! management API (`/jmap/`, the `urn:stalwart:jmap` capability).
 //!
-//! One server per node, `dh-mail`, with its configuration and data in two volumes. The first
+//! One server per node, `bp-mail`, with its configuration and data in two volumes. The first
 //! start is Stalwart's *bootstrap mode*: the agent starts it with a recovery administrator of its
 //! own (a random password kept in `<state>/secrets/stalwart-recovery`, 0600), completes the
 //! bootstrap through the API, keeps the permanent administrator the server makes
@@ -21,15 +21,15 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_docker_manager::{
+use builtpanel_docker_manager::{
     Capability, ContainerSpec, DockerError, Network, PublishedPort, Restart, Tmpfs, VolumeMount,
 };
-use dhpanel_domain::Fqdn;
-use dhpanel_node_protocol::{
+use builtpanel_domain::Fqdn;
+use builtpanel_node_protocol::{
     AgentError, ErrorCode, MAX_MAIL_QUEUE_ITEMS, MailDnsRecord, MailForwarder, MailQueueItem,
     MailUsage, Operation, Output,
 };
-use dhpanel_tenant_stack::{Allowlist, Role};
+use builtpanel_tenant_stack::{Allowlist, Role};
 use serde_json::{Value, json};
 
 use super::{
@@ -38,11 +38,11 @@ use super::{
 };
 
 /// The mail server's container.
-pub const CONTAINER: &str = "dh-mail";
-pub(super) const NETWORK: &str = "dh-mail-net";
-const ETC_VOLUME: &str = "dh-mail-etc";
-const DATA_VOLUME: &str = "dh-mail-data";
-/// The loopback port of the management API unless `DHPANEL_AGENT_MAIL_API_PORT` says another.
+pub const CONTAINER: &str = "bp-mail";
+pub(super) const NETWORK: &str = "bp-mail-net";
+const ETC_VOLUME: &str = "bp-mail-etc";
+const DATA_VOLUME: &str = "bp-mail-data";
+/// The loopback port of the management API unless `BUILTPANEL_AGENT_MAIL_API_PORT` says another.
 pub const DEFAULT_API_PORT: u16 = 8089;
 const READY_TIMEOUT: Duration = Duration::from_secs(180);
 const JMAP: [&str; 2] = ["urn:ietf:params:jmap:core", "urn:stalwart:jmap"];
@@ -68,18 +68,18 @@ fn env_port(var: &str, default: u16) -> u16 {
 /// The loopback port of the management API.
 #[must_use]
 pub fn api_port() -> u16 {
-    env_port("DHPANEL_AGENT_MAIL_API_PORT", DEFAULT_API_PORT)
+    env_port("BUILTPANEL_AGENT_MAIL_API_PORT", DEFAULT_API_PORT)
 }
 
 /// The ports the mail server is published on for the world: SMTP (25), submission over TLS (465)
-/// and IMAP over TLS (993), or what `DHPANEL_AGENT_MAIL_SMTP_PORT`, `..._SUBMISSION_PORT` and
+/// and IMAP over TLS (993), or what `BUILTPANEL_AGENT_MAIL_SMTP_PORT`, `..._SUBMISSION_PORT` and
 /// `..._IMAP_PORT` say (a node whose Docker cannot bind the low ports, and tests).
 #[must_use]
 pub fn public_ports() -> [(u16, u16); 3] {
     [
-        (25, env_port("DHPANEL_AGENT_MAIL_SMTP_PORT", 25)),
-        (465, env_port("DHPANEL_AGENT_MAIL_SUBMISSION_PORT", 465)),
-        (993, env_port("DHPANEL_AGENT_MAIL_IMAP_PORT", 993)),
+        (25, env_port("BUILTPANEL_AGENT_MAIL_SMTP_PORT", 25)),
+        (465, env_port("BUILTPANEL_AGENT_MAIL_SUBMISSION_PORT", 465)),
+        (993, env_port("BUILTPANEL_AGENT_MAIL_IMAP_PORT", 993)),
     ]
 }
 
@@ -400,7 +400,7 @@ async fn install_certificate(jmap: &Jmap, cert: &str, key: &str) -> Result<(), A
 
 /// The standard test of a spam filter: a message with this line in it must be called spam.
 const GTUBE: &str = "XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X";
-const GTUBE_RULE: &str = "DHPANEL_GTUBE";
+const GTUBE_RULE: &str = "BUILTPANEL_GTUBE";
 
 /// The spam filter knows the GTUBE test message (the server's own rule set does not have it): a
 /// rule that gives it the tag, and a score for the tag that settles it.
@@ -481,7 +481,7 @@ pub async fn ensure_server(
             let image = pull_with_fallback(docker, &allowlist, &image).await?;
             // The server runs as its own user (2000), and a new volume belongs to root: made
             // over once, by a short job of the same image.
-            let mut prepare = ContainerSpec::new(name("dh-mail-prepare")?, image.clone());
+            let mut prepare = ContainerSpec::new(name("bp-mail-prepare")?, image.clone());
             prepare.entrypoint = vec![
                 "chown".into(),
                 "-R".into(),
@@ -507,7 +507,7 @@ pub async fn ensure_server(
                     read_only: false,
                 },
             ];
-            let _ = docker.remove(&name("dh-mail-prepare")?, true).await;
+            let _ = docker.remove(&name("bp-mail-prepare")?, true).await;
             let done = docker
                 .run_to_end(&prepare, Duration::from_secs(60))
                 .await
@@ -739,7 +739,7 @@ fn dns_records(zone: &str, domain: &str) -> Vec<MailDnsRecord> {
 }
 
 fn throttle_description(domain: &str) -> String {
-    format!("dhpanel:{domain}")
+    format!("builtpanel:{domain}")
 }
 
 /// Sets, changes or removes the domain's outgoing limit.
@@ -948,7 +948,7 @@ pub async fn upsert_mailbox(
         alias_map.insert(i.to_string(), json!({ "name": local_of(alias)? }));
     }
     if let Some(p) = &password {
-        dhpanel_domain::databases::check_password(&p.0).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_domain::databases::check_password(&p.0).map_err(|e| invalid(&e.to_string()))?;
     }
     let jmap = login(&context)?;
     let domain_id = jmap

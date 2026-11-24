@@ -1,0 +1,9 @@
+slug        = "neo4j"
+name        = "Neo4j"
+category    = "databases"
+kind        = "unavailable"
+description = "A graph database."
+license     = "GPL-3.0-only"
+homepage    = "https://neo4j.com"
+covers      = ["Neo4j"]
+reason      = "its image starts as root and then switches to its own user"

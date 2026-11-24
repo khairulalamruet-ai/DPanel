@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-cache"
+name = "builtpanel-cache"
 description = "Redis client: lazily connected, auto-reconnecting connection manager and health ping."
 version.workspace = true
 edition.workspace = true

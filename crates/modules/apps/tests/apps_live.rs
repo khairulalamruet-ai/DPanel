@@ -9,11 +9,11 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::modules as db;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_apps::{AppsState, admin_router, client_router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::modules as db;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_apps::{AppsState, admin_router, client_router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -63,23 +63,23 @@ async fn env(pool: &PgPool) -> Env {
                 admin: Some(admin_router().with_state(AppsState {
                     db: pool.clone(),
                     sessions: sessions.clone(),
-                    master_key: dhpanel_auth_core::secretbox::MasterKey::from_bytes(&[42; 32]),
+                    master_key: builtpanel_auth_core::secretbox::MasterKey::from_bytes(&[42; 32]),
                     wait: std::time::Duration::from_millis(300),
-                    catalog: std::sync::Arc::new(dhpanel_catalog::Catalog::embedded().unwrap()),
+                    catalog: std::sync::Arc::new(builtpanel_catalog::Catalog::embedded().unwrap()),
                 })),
                 client: Some(client_router().with_state(AppsState {
                     db: pool.clone(),
                     sessions: sessions.clone(),
-                    master_key: dhpanel_auth_core::secretbox::MasterKey::from_bytes(&[42; 32]),
+                    master_key: builtpanel_auth_core::secretbox::MasterKey::from_bytes(&[42; 32]),
                     wait: std::time::Duration::from_millis(300),
-                    catalog: std::sync::Arc::new(dhpanel_catalog::Catalog::embedded().unwrap()),
+                    catalog: std::sync::Arc::new(builtpanel_catalog::Catalog::embedded().unwrap()),
                 })),
-                public: Some(dhpanel_mod_apps::public_router().with_state(AppsState {
+                public: Some(builtpanel_mod_apps::public_router().with_state(AppsState {
                     db: pool.clone(),
                     sessions: sessions.clone(),
-                    master_key: dhpanel_auth_core::secretbox::MasterKey::from_bytes(&[42; 32]),
+                    master_key: builtpanel_auth_core::secretbox::MasterKey::from_bytes(&[42; 32]),
                     wait: std::time::Duration::from_millis(300),
-                    catalog: std::sync::Arc::new(dhpanel_catalog::Catalog::embedded().unwrap()),
+                    catalog: std::sync::Arc::new(builtpanel_catalog::Catalog::embedded().unwrap()),
                 })),
             }
         }),
@@ -229,7 +229,7 @@ async fn admin(pool: &PgPool) -> Uuid {
     .fetch_one(pool)
     .await
     .unwrap();
-    dhpanel_database::rbac::assign_role(pool, id, "super_admin", None)
+    builtpanel_database::rbac::assign_role(pool, id, "super_admin", None)
         .await
         .unwrap();
     id
@@ -238,7 +238,7 @@ async fn admin(pool: &PgPool) -> Uuid {
 #[sqlx::test(migrations = "../../../migrations")]
 #[ignore = "needs PostgreSQL + Redis"]
 async fn what_runs_where_is_tracked_one_application_per_place(pool: PgPool) {
-    use dhpanel_database::apps::{self, CreateError, NewApp};
+    use builtpanel_database::apps::{self, CreateError, NewApp};
     let e = env(&pool).await;
     let (alice_account, alice) = client(&pool, "alice", 10_000).await;
     let (_, bob) = client(&pool, "bob", 10_001).await;
@@ -335,6 +335,40 @@ async fn what_runs_where_is_tracked_one_application_per_place(pool: PgPool) {
     );
     let (_, theirs) = e.call(&b, "GET", "/api/v1/client/apps", None).await;
     assert_eq!(theirs["items"].as_array().unwrap().len(), 0);
+    // Stopping to track an application: not somebody else's, not while it installs.
+    assert_eq!(
+        e.call(&b, "DELETE", &format!("/api/v1/client/apps/{root}"), None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    let (status, busy) = e
+        .call(&a, "DELETE", &format!("/api/v1/client/apps/{root}"), None)
+        .await;
+    assert_eq!(
+        (status, busy["code"].as_str()),
+        (StatusCode::CONFLICT, Some("app_installing"))
+    );
+    assert_eq!(
+        e.call(&a, "DELETE", &format!("/api/v1/client/apps/{blog}"), None)
+            .await
+            .0,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        e.call(&a, "GET", &format!("/api/v1/client/apps/{blog}"), None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    // The application is gone from the list.
+    assert_eq!(
+        e.call(&a, "GET", "/api/v1/client/apps", None).await.1["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
     // An administrator reads any account's applications; a client may not.
     let root_admin = e.sign_in(admin(&pool).await).await;
     let path = format!("/api/v1/admin/tenants/{alice}/apps");
@@ -345,7 +379,7 @@ async fn what_runs_where_is_tracked_one_application_per_place(pool: PgPool) {
     let (status, all) = e.call(&root_admin, "GET", &path, None).await;
     assert_eq!(
         (status, all["items"].as_array().unwrap().len()),
-        (StatusCode::OK, 4)
+        (StatusCode::OK, 3)
     );
     assert_eq!(
         e.call(
@@ -465,7 +499,7 @@ async fn wordpress_is_asked_for_with_a_database_of_its_own_and_sealed_passwords(
 #[sqlx::test(migrations = "../../../migrations")]
 #[ignore = "needs PostgreSQL + Redis"]
 async fn wordpress_actions_are_sent_to_the_node_and_answered(pool: PgPool) {
-    use dhpanel_database::apps::{self, NewApp};
+    use builtpanel_database::apps::{self, NewApp};
     let e = env(&pool).await;
     let (alice_account, alice) = client(&pool, "alice", 10_000).await;
     let a = e.sign_in(alice_account).await;
@@ -775,7 +809,7 @@ async fn the_catalog_is_listed_and_any_of_its_applications_can_be_asked_for(pool
 async fn a_cache_server_is_asked_for_with_a_sealed_password_and_within_the_plans_memory(
     pool: PgPool,
 ) {
-    use dhpanel_database::cache_instances as store;
+    use builtpanel_database::cache_instances as store;
     let e = env(&pool).await;
     let (alice_account, alice) = client(&pool, "alice", 10_000).await;
     let a = e.sign_in(alice_account).await;
@@ -859,7 +893,7 @@ async fn a_cache_server_is_asked_for_with_a_sealed_password_and_within_the_plans
     }
     // The node answers; the owner sees how to reach it. A second change keeps the password.
     let row = store::get(&pool, alice, "redis").await.unwrap().unwrap();
-    store::ready(&pool, row.id, "dh-alice-redis", 6379)
+    store::ready(&pool, row.id, "bp-alice-redis", 6379)
         .await
         .unwrap();
     let (_, list) = e.call(&a, "GET", path, None).await;
@@ -875,7 +909,7 @@ async fn a_cache_server_is_asked_for_with_a_sealed_password_and_within_the_plans
             redis["host"].as_str(),
             redis["port"].as_i64()
         ),
-        (Some("ready"), Some("dh-alice-redis"), Some(6379))
+        (Some("ready"), Some("bp-alice-redis"), Some(6379))
     );
     assert_eq!(redis["password"].as_str(), Some(password.as_str()));
     let (status, again) = e
@@ -1150,7 +1184,7 @@ async fn a_client_runs_its_own_applications_within_its_plan_and_only_sees_its_ow
         .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     let routed = |pool: PgPool| async move {
-        dhpanel_database::routes::domains(&pool, alice)
+        builtpanel_database::routes::domains(&pool, alice)
             .await
             .unwrap()
             .into_iter()
@@ -1164,10 +1198,10 @@ async fn a_client_runs_its_own_applications_within_its_plan_and_only_sees_its_ow
         .fetch_one(&pool)
         .await
         .unwrap();
-    sqlx::query("UPDATE runtime_apps SET status = 'ready', host = 'dh-alice-app-api:4000' WHERE name = 'api'").execute(&pool).await.unwrap();
+    sqlx::query("UPDATE runtime_apps SET status = 'ready', host = 'bp-alice-app-api:4000' WHERE name = 'api'").execute(&pool).await.unwrap();
     assert_eq!(
         routed(pool.clone()).await,
-        Some("dh-alice-app-api:4000".into())
+        Some("bp-alice-app-api:4000".into())
     );
     let after: i64 = sqlx::query_scalar("SELECT routes_version FROM tenants WHERE id = $1")
         .bind(alice)
@@ -1241,7 +1275,7 @@ async fn a_deploy_from_git_is_asked_for_by_the_owner_and_started_by_a_signed_pus
         ("ssh", json!({"repo_url": "git@github.com:alice/site.git"})),
         ("branch", json!({"branch": "--upload-pack=x"})),
         ("dest", json!({"dest": "../etc"})),
-        ("release folder", json!({"dest": ".dh-releases/x"})),
+        ("release folder", json!({"dest": ".bp-releases/x"})),
         (
             "steps",
             json!({"build_steps": ["a", "b", "c", "d", "e", "f"]}),

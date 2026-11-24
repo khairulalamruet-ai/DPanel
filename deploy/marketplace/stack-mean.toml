@@ -1,0 +1,8 @@
+slug        = "stack-mean"
+name        = "MEAN"
+category    = "stacks"
+kind        = "builtin"
+description = "A web server, a database and a language together; every account has this combination ready."
+license     = "MIT"
+covers      = ["MEAN"]
+provided_by = "Websites (nginx, PHP, MariaDB) and Applications (Node.js)"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
 import {
   Table,
   TableBody,
@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import {
   Send,
   Trash2,
@@ -28,6 +28,7 @@ import {
   XCircle,
   Inbox,
 } from "lucide-react";
+import { AdminMailControl } from "./AdminMailControl";
 import { MailQueueItem, DeliverabilityCheck } from "./types";
 
 export function AdminMailQueuePage() {
@@ -395,6 +396,7 @@ export function AdminMailQueuePage() {
           </DialogContent>
         </Dialog>
       )}
+      <AdminMailControl />
     </div>
   );
 }

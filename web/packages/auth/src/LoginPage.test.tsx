@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { LoginPage } from "./LoginPage";
 import { SessionProvider } from "./context";
-import { QueryClient, QueryClientProvider } from "@dhpanel/api";
+import { QueryClient, QueryClientProvider } from "@builtpanel/api";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -25,9 +25,9 @@ describe("LoginPage component", () => {
   });
 
   it("renders username, password inputs and submit button", () => {
-    renderWithProviders(<LoginPage title="DHPanel Admin" />);
+    renderWithProviders(<LoginPage title="Built Panel Admin" />);
 
-    expect(screen.getByText("DHPanel Admin")).toBeInTheDocument();
+    expect(screen.getByText("Built Panel Admin")).toBeInTheDocument();
     expect(screen.getByLabelText(/ইউজারনেম অথবা ইমেইল|Username or Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/পাসওয়ার্ড|Password/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /লগইন করুন|Sign In/i })).toBeInTheDocument();

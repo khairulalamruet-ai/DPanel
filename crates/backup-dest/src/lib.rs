@@ -70,8 +70,8 @@ pub trait Destination: Send {
     /// # Errors
     /// [`DestError`] saying which step failed.
     fn test(&self) -> Result<(), DestError> {
-        let name = format!(".dhpanel-test-{}", test_token());
-        let sample = b"dhpanel destination test";
+        let name = format!(".builtpanel-test-{}", test_token());
+        let sample = b"builtpanel destination test";
         self.put(&name, &mut &sample[..])?;
         let mut back = Vec::new();
         self.get(&name)?
@@ -128,7 +128,7 @@ mod tests {
         for good in [
             "a",
             "0190-abc/files.tar.zst.enc",
-            ".dhpanel-test-1",
+            ".builtpanel-test-1",
             "a/b/c.json",
         ] {
             assert!(valid_name(good), "{good}");

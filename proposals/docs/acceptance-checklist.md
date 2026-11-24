@@ -13,7 +13,7 @@ the "How to verify" column to fill in the evidence.
 | 3 | Activation proves possession of the installation key (nonce signed) | LA tests for the activation challenge | | |
 | 4 | Revoking a licence takes effect at the next check; the panel degrades as designed | revoke in the authority; watch the panel's `license` state | | |
 | 5 | Offline grace period works and ends | stop the authority, advance the clock | | |
-| 6 | The release is signed; the server verifies the manifest before it installs anything | `dhctl release verify`; try a tampered archive with `dhpanel-deploy` | | |
+| 6 | The release is signed; the server verifies the manifest before it installs anything | `bpctl release verify`; try a tampered archive with `builtpanel-deploy` | | |
 | 7 | Critical binaries are checked daily against the signed registry; a changed binary is reported and recovery needs an administrator | integrity scan live test | | |
 | 8 | The control plane never runs as root; the agent runs typed operations only; only the agent reaches Docker | `ps`, unit files, `deploy/dev/isolation-live.sh` | | |
 | 9 | No secret in code, logs, commits or plaintext columns | secret scan in CI, `deploy/dev/audit.sh`, a read of the database dump | | |

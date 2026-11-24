@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { useSession } from "@dhpanel/auth";
-import { FeatureRequiredPage } from "@dhpanel/shell";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { useSession } from "@builtpanel/auth";
+import { FeatureRequiredPage } from "@builtpanel/shell";
 import { Puzzle, CheckCircle2, Zap } from "lucide-react";
 
 export function DummyModuleContent() {

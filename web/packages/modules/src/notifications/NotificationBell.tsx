@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
-import { Badge, Button } from "@dhpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { useOptionalSession } from "@builtpanel/auth";
+import { listNotifications, markRead, type Audience } from "./api";
+import { Badge, Button } from "@builtpanel/ui";
 import {
   Bell,
   CheckCheck,
@@ -29,18 +30,19 @@ export function NotificationBell({ settingsHref = "/settings/notifications" }: N
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const who: Audience = useOptionalSession()?.data?.user.kind === "admin" ? "admin" : "client";
 
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiFetch<NotificationItem[]>("/api/v1/notifications");
-      setNotifications(res);
+      const res = await listNotifications(who);
+      setNotifications(res.items);
     } catch {
       // Ignore background fetch failure
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [who]);
 
   useEffect(() => {
     fetchNotifications();
@@ -69,7 +71,7 @@ export function NotificationBell({ settingsHref = "/settings/notifications" }: N
   const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     try {
-      await apiFetch(`/api/v1/notifications/${id}/read`, { method: "POST" });
+      await markRead(who, [id]);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, read: true } : n))
       );
@@ -80,18 +82,8 @@ export function NotificationBell({ settingsHref = "/settings/notifications" }: N
 
   const handleMarkAllRead = async () => {
     try {
-      await apiFetch("/api/v1/notifications/read-all", { method: "POST" });
+      await markRead(who);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch {
-      // Revert if error
-    }
-  };
-
-  const handleDeleteNotification = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await apiFetch(`/api/v1/notifications/${id}`, { method: "DELETE" });
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch {
       // Revert if error
     }
@@ -309,16 +301,6 @@ export function NotificationBell({ settingsHref = "/settings/notifications" }: N
 
                   {/* Actions & Read Indicator */}
                   <div className="flex flex-col items-center gap-2 self-stretch justify-between shrink-0">
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteNotification(notif.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive rounded transition-opacity"
-                      title={t("common.delete", "Dismiss")}
-                      data-testid={`btn-dismiss-notif-${notif.id}`}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-
                     {!notif.read && (
                       <span
                         className="h-2 w-2 rounded-full bg-primary"

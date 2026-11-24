@@ -3,12 +3,12 @@
 //! The logs are what the account's containers write to standard output and error, which
 //! Docker keeps: nginx writes requests to the first and its errors to the second, PHP-FPM
 //! its errors to the second. Nothing else can be named: the source is one of three words and
-//! the container is the account's own (`dh-<name>-web`, `dh-<name>-php`).
+//! the container is the account's own (`bp-<name>-web`, `bp-<name>-php`).
 //! A live view is made by asking again with the time of the last line.
 
 use std::sync::Arc;
 
-use dhpanel_node_protocol::{AgentError, LogLine, LogSource, MAX_LOG_LINES, Operation, Output};
+use builtpanel_node_protocol::{AgentError, LogLine, LogSource, MAX_LOG_LINES, Operation, Output};
 
 use super::{
     sqlimport::{failed, invalid},
@@ -33,7 +33,7 @@ pub async fn read_log(context: Arc<TenantContext>, op: Operation) -> Result<Outp
         return Err(super::wrong_operation());
     };
     let tenant =
-        dhpanel_domain::TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
+        builtpanel_domain::TenantUsername::parse(&username).map_err(|e| invalid(&e.to_string()))?;
     if !(1..=MAX_LOG_LINES).contains(&tail) || since_ms < 0 {
         return Err(invalid("the number of lines or the time is out of range"));
     }
@@ -45,9 +45,9 @@ pub async fn read_log(context: Arc<TenantContext>, op: Operation) -> Result<Outp
         return Err(invalid("the search text is not usable"));
     }
     let (container, stderr) = match source {
-        LogSource::WebAccess => (dhpanel_tenant_stack::web_container_name(&tenant), false),
-        LogSource::WebError => (dhpanel_tenant_stack::web_container_name(&tenant), true),
-        LogSource::PhpError => (dhpanel_tenant_stack::php_container_name(&tenant), true),
+        LogSource::WebAccess => (builtpanel_tenant_stack::web_container_name(&tenant), false),
+        LogSource::WebError => (builtpanel_tenant_stack::web_container_name(&tenant), true),
+        LogSource::PhpError => (builtpanel_tenant_stack::php_container_name(&tenant), true),
     };
     let container = container.map_err(|e| failed(&e.to_string()))?;
     // Docker counts both streams, and a search needs matches: read plenty, then pick.

@@ -13,9 +13,10 @@ import {
   TableBody,
   TableCell,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { listNodeChoices, type NodeChoice } from "../nodes/api";
+import { loadAdminUsage } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   Server,
   Cpu,
@@ -34,18 +35,27 @@ export function AdminUsagePage() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [node, setNode] = useState<string>("node-01");
+  const [nodes, setNodes] = useState<NodeChoice[]>([]);
+  const [node, setNode] = useState<string>("");
   const [range, setRange] = useState<TimeRange>("24h");
   const [data, setData] = useState<AdminUsageOverview | null>(null);
   const [activeTopTab, setActiveTopTab] = useState<"cpu" | "ram" | "disk" | "bandwidth">("cpu");
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    listNodeChoices()
+      .then((list) => {
+        setNodes(list);
+        setNode((current) => current || list[0]?.id || "");
+      })
+      .catch(() => undefined);
+  }, []);
+
   const fetchAdminUsage = useCallback(async () => {
+    if (!node) return;
     try {
       setIsLoading(true);
-      const res = await apiFetch<AdminUsageOverview>(
-        `/api/v1/admin/usage?node=${encodeURIComponent(node)}&range=${encodeURIComponent(range)}`
-      );
+      const res = await loadAdminUsage(node, nodes.find((n) => n.id === node)?.name ?? "", range);
       setData(res);
     } catch (err: any) {
       toast({
@@ -56,7 +66,7 @@ export function AdminUsagePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [node, range, t, toast]);
+  }, [node, nodes, range, t, toast]);
 
   useEffect(() => {
     fetchAdminUsage();
@@ -99,8 +109,11 @@ export function AdminUsagePage() {
             className="h-8 text-xs rounded-md border border-input bg-background px-2.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             data-testid="select-admin-usage-node"
           >
-            <option value="node-01">node-01 (master)</option>
-            <option value="node-02">node-02 (worker)</option>
+            {nodes.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.name}
+              </option>
+            ))}
           </select>
 
           {/* Range Selector */}

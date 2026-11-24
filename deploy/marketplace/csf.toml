@@ -1,0 +1,8 @@
+slug        = "csf"
+name        = "CSF"
+category    = "security"
+kind        = "unavailable"
+description = "CSF."
+license     = "GPL-2.0-only"
+covers      = ["CSF"]
+reason      = "it works on the whole server and needs root, which an account never has; the panel's own firewall and login protection do this for the server"

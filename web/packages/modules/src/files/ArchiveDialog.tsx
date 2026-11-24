@@ -8,11 +8,11 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { archive } from "./api";
 import { Archive } from "lucide-react";
 import { FileItem, ArchivePayload } from "./types";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 interface ArchiveDialogProps {
   open: boolean;
@@ -52,14 +52,12 @@ export function ArchiveDialog({
 
     try {
       setIsSubmitting(true);
-      await apiFetch("/api/v1/client/files/archive", {
-        method: "POST",
-        body: JSON.stringify({
-          paths: items.map((i) => i.path),
-          archive_name: archiveName.trim(),
-          format,
-        } as ArchivePayload),
-      });
+      await archive(
+        items.map((i) => i.path),
+        _currentPath,
+        archiveName.trim(),
+        format,
+      );
 
       toast({
         title: t("common.success"),

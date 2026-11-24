@@ -7,18 +7,18 @@
 //! the ledger (see the migration of T09.07). A crash between two steps is repaired by the
 //! next tick.
 
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_backup::{
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_backup::{
     crypto::{key_hex, new_key},
     schedule::{Cron, expired},
 };
-use dhpanel_database::{
+use builtpanel_database::{
     backups as store,
     operations::{self, NewOperation},
     sqlx::PgPool,
     tenants,
 };
-use dhpanel_node_protocol::{BackupTarget, Operation};
+use builtpanel_node_protocol::{BackupTarget, Operation};
 use uuid::Uuid;
 
 /// Most backups of one node that run at once.
@@ -35,7 +35,7 @@ const BATCH: i64 = 50;
 pub enum TickError {
     /// The database.
     #[error(transparent)]
-    Database(#[from] dhpanel_database::sqlx::Error),
+    Database(#[from] builtpanel_database::sqlx::Error),
     /// The ledger refused an operation.
     #[error("cannot queue an operation: {0}")]
     Queue(String),
@@ -127,7 +127,7 @@ async fn start_due(db: &PgPool, master_key: &MasterKey, now: i64) -> Result<(), 
             None => store::default_destination(db).await?,
         };
         if let Some(destination) = destination
-            && tenant.status == dhpanel_domain::TenantStatus::Active
+            && tenant.status == builtpanel_domain::TenantStatus::Active
         {
             let id = store::new_backup(
                 db,
@@ -164,8 +164,8 @@ async fn send_queued(db: &PgPool) -> Result<(), TickError> {
         // Only databases on the node's shared MariaDB are dumped by the node today: PostgreSQL
         // ones and those on a server of the tenant's own are not.
         let shared_mysql =
-            dhpanel_database::tenant_db::state(db, tenant.id, "mysql").await? == "shared";
-        let databases: Vec<String> = dhpanel_database::databases::list(db, tenant.id)
+            builtpanel_database::tenant_db::state(db, tenant.id, "mysql").await? == "shared";
+        let databases: Vec<String> = builtpanel_database::databases::list(db, tenant.id)
             .await?
             .into_iter()
             .filter(|d| d.status == "ready" && d.engine == "mysql" && shared_mysql)
@@ -173,15 +173,15 @@ async fn send_queued(db: &PgPool) -> Result<(), TickError> {
             .collect();
         // A backup of a transfer is made on the node the account is leaving, which is not
         // always the one it is recorded on, and carries more.
-        let extras = dhpanel_database::transfers::extras(db, backup.id).await?;
+        let extras = builtpanel_database::transfers::extras(db, backup.id).await?;
         let db_users = if extras.is_some_and(|x| x.with_db_users) {
-            dhpanel_database::tenant_db::move_set(db, tenant.id, "mysql")
+            builtpanel_database::tenant_db::move_set(db, tenant.id, "mysql")
                 .await?
                 .users
                 .into_iter()
-                .map(|name| dhpanel_node_protocol::BackupDbUser {
+                .map(|name| builtpanel_node_protocol::BackupDbUser {
                     name,
-                    engine: dhpanel_node_protocol::DbEngine::Mysql,
+                    engine: builtpanel_node_protocol::DbEngine::Mysql,
                 })
                 .collect()
         } else {
@@ -200,7 +200,7 @@ async fn send_queued(db: &PgPool) -> Result<(), TickError> {
             db_users,
             files_since: extras.and_then(|x| x.files_since),
             // The zone records of the account's domains.
-            dns: dhpanel_database::dns::backup_records(db, tenant.id).await?,
+            dns: builtpanel_database::dns::backup_records(db, tenant.id).await?,
             meta: serde_json::json!({
                 "username": tenant.username,
                 "plan_id": tenant.plan_id,
@@ -233,7 +233,7 @@ async fn send_restores(db: &PgPool) -> Result<(), TickError> {
         let Some(destination) = store::destination(db, destination_id).await? else {
             continue;
         };
-        let extras = dhpanel_database::transfers::extras(db, restore.id).await?;
+        let extras = builtpanel_database::transfers::extras(db, restore.id).await?;
         let node_id = extras.map_or(tenant.node_id, |x| x.node_id);
         let op = Operation::RestoreBackup {
             tenant_id: tenant.id,
@@ -271,9 +271,9 @@ async fn send_restores(db: &PgPool) -> Result<(), TickError> {
 async fn apply_dns_restores(db: &PgPool) -> Result<(), TickError> {
     for restore in store::dns_to_restore(db, BATCH).await? {
         let mut tx = db.begin().await?;
-        dhpanel_database::domains::lock_tenant(&mut tx, restore.tenant_id).await?;
+        builtpanel_database::domains::lock_tenant(&mut tx, restore.tenant_id).await?;
         let summary =
-            dhpanel_database::dns::restore_records(&mut tx, restore.tenant_id, &restore.records)
+            builtpanel_database::dns::restore_records(&mut tx, restore.tenant_id, &restore.records)
                 .await?;
         store::dns_restored(&mut tx, restore.id, &summary).await?;
         tx.commit().await?;
@@ -418,7 +418,7 @@ pub async fn fill(db: &PgPool, master_key: &MasterKey, op: Operation) -> Result<
                         String::from_utf8(b)
                             .map_err(|_| "the destination's credentials are not text".to_owned())
                     })
-                    .map(dhpanel_node_protocol::DbPassword)
+                    .map(builtpanel_node_protocol::DbPassword)
             })
             .transpose()
     };
@@ -430,10 +430,10 @@ pub async fn fill(db: &PgPool, master_key: &MasterKey, op: Operation) -> Result<
         let bytes = master_key
             .open(&store::key_context(backup), &sealed)
             .map_err(|_| "a backup key does not open".to_owned())?;
-        let key: [u8; dhpanel_backup::KEY_LEN] = bytes
+        let key: [u8; builtpanel_backup::KEY_LEN] = bytes
             .try_into()
             .map_err(|_| "a backup key is not the right size".to_owned())?;
-        Ok::<_, String>(dhpanel_node_protocol::DbPassword(key_hex(&key)))
+        Ok::<_, String>(builtpanel_node_protocol::DbPassword(key_hex(&key)))
     };
     let destination_of = |backup: Uuid| async move {
         store::destination_of(db, backup)

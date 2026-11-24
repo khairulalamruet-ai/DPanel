@@ -1,12 +1,12 @@
-//! The license authority's program: `dhpanel-license-authority` serves;
-//! `dhpanel-license-authority create-admin <email> [admin|viewer]` makes an administrator
-//! (the password is read from `DHPANEL_LA_ADMIN_PASSWORD`, never from the command line).
+//! The license authority's program: `builtpanel-license-authority` serves;
+//! `builtpanel-license-authority create-admin <email> [admin|viewer]` makes an administrator
+//! (the password is read from `BUILTPANEL_LA_ADMIN_PASSWORD`, never from the command line).
 
 use std::{process::ExitCode, sync::Arc, time::Duration};
 
-use dhpanel_auth_core::password::{Argon2Params, PasswordHasher};
-use dhpanel_license::{FileSigningKey, SigningKey as _};
-use dhpanel_license_authority::{
+use builtpanel_auth_core::password::{Argon2Params, PasswordHasher};
+use builtpanel_license::{FileSigningKey, SigningKey as _};
+use builtpanel_license_authority::{
     LaState, Settings, config::LaConfig, migrate, register_key, router,
 };
 use secrecy::{ExposeSecret as _, SecretString};
@@ -24,14 +24,14 @@ async fn main() -> ExitCode {
             return ExitCode::from(EXIT_CONFIG);
         }
     };
-    let mut telemetry = dhpanel_observability::TelemetryConfig::new(SERVICE);
+    let mut telemetry = builtpanel_observability::TelemetryConfig::new(SERVICE);
     telemetry.log_format = if config.log_format == "pretty" {
-        dhpanel_observability::LogFormat::Pretty
+        builtpanel_observability::LogFormat::Pretty
     } else {
-        dhpanel_observability::LogFormat::Json
+        builtpanel_observability::LogFormat::Json
     };
     telemetry.log_filter.clone_from(&config.log_filter);
-    let _telemetry = match dhpanel_observability::init(&telemetry) {
+    let _telemetry = match builtpanel_observability::init(&telemetry) {
         Ok(t) => t,
         Err(err) => {
             eprintln!("{SERVICE}: telemetry: {err}");
@@ -82,9 +82,9 @@ async fn main() -> ExitCode {
         signer: Arc::new(std::sync::RwLock::new(Arc::new(key))),
         settings: Settings::from_config(&config),
         hasher,
-        prover: dhpanel_license_authority::domain_proof::default_prover(),
+        prover: builtpanel_license_authority::domain_proof::default_prover(),
     };
-    tokio::spawn(dhpanel_license_authority::billing::run_forever(
+    tokio::spawn(builtpanel_license_authority::billing::run_forever(
         state.clone(),
     ));
     let listener = match tokio::net::TcpListener::bind(config.bind).await {
@@ -113,11 +113,11 @@ async fn main() -> ExitCode {
 
 async fn create_admin(db: &sqlx::PgPool, args: &[String]) -> ExitCode {
     let (Some(email), role) = (args.first(), args.get(1).map_or("admin", String::as_str)) else {
-        eprintln!("usage: dhpanel-license-authority create-admin <email> [admin|viewer]");
+        eprintln!("usage: builtpanel-license-authority create-admin <email> [admin|viewer]");
         return ExitCode::from(64);
     };
-    let Ok(password) = std::env::var("DHPANEL_LA_ADMIN_PASSWORD") else {
-        eprintln!("set DHPANEL_LA_ADMIN_PASSWORD (at least 14 characters)");
+    let Ok(password) = std::env::var("BUILTPANEL_LA_ADMIN_PASSWORD") else {
+        eprintln!("set BUILTPANEL_LA_ADMIN_PASSWORD (at least 14 characters)");
         return ExitCode::from(64);
     };
     if password.chars().count() < 14 || !["admin", "viewer"].contains(&role) {

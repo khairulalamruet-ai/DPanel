@@ -11,7 +11,7 @@
 //!   but within the offline grace (72 hours by default): [`Mode::Grace`] (works, warns); past
 //!   the grace: [`Mode::Restricted`].
 
-use dhpanel_license::{Claims, Document, Expect, PublicKeys};
+use builtpanel_license::{Claims, Document, Expect, PublicKeys};
 use serde::{Deserialize, Serialize};
 
 /// What is kept between runs.
@@ -137,11 +137,11 @@ pub fn evaluate(
     };
     let claims = match document.verify(keys, expect, now) {
         Ok(c) => c,
-        Err(dhpanel_license::DocumentError::Expired) => {
+        Err(builtpanel_license::DocumentError::Expired) => {
             return verdict(Mode::Restricted, Some("entitlement_expired"), None, None);
         }
         // Moved to another machine or another domain: the license is bound to where it was.
-        Err(dhpanel_license::DocumentError::Binding(_)) => {
+        Err(builtpanel_license::DocumentError::Binding(_)) => {
             return verdict(Mode::Restricted, Some("binding_mismatch"), None, None);
         }
         Err(_) => return verdict(Mode::Restricted, Some("entitlement_invalid"), None, None),
@@ -182,7 +182,7 @@ pub fn evaluate(
 mod tests {
     use std::collections::BTreeMap;
 
-    use dhpanel_license::{Claims, FileSigningKey, SCHEMA_VERSION, SigningKey as _};
+    use builtpanel_license::{Claims, FileSigningKey, SCHEMA_VERSION, SigningKey as _};
     use uuid::Uuid;
 
     use super::*;
@@ -196,7 +196,7 @@ mod tests {
     }
 
     fn rig() -> Rig {
-        let dir = std::env::temp_dir().join(format!("dh-state-{}", Uuid::new_v4().simple()));
+        let dir = std::env::temp_dir().join(format!("bp-state-{}", Uuid::new_v4().simple()));
         std::fs::create_dir_all(&dir).unwrap();
         let key = FileSigningKey::generate_to_file(&dir.join("k"), "lic-1").unwrap();
         let keys = PublicKeys::new().with("lic-1", key.public_key()).unwrap();
@@ -212,12 +212,12 @@ mod tests {
             &Claims {
                 v: SCHEMA_VERSION,
                 iss: "la".into(),
-                aud: "dhpanel".into(),
+                aud: "builtpanel".into(),
                 license_id: Uuid::from_u128(1),
                 installation_id: r.inst,
                 features: vec!["mail".into()],
                 limits: BTreeMap::from([("max_nodes".into(), 2), ("max_tenants".into(), -1)]),
-                bind: dhpanel_license::Binding {
+                bind: builtpanel_license::Binding {
                     domains: vec!["panel.example.com".into()],
                     hostnames: vec!["web1".into()],
                     ips: vec!["203.0.113.7".into()],
@@ -235,10 +235,10 @@ mod tests {
     fn at(r: &Rig, stored: &Stored, now: i64) -> Evaluation {
         let expect = Expect {
             issuer: "la",
-            audience: "dhpanel",
+            audience: "builtpanel",
             installation_id: r.inst,
             clock_skew: 60,
-            host: dhpanel_license::HostFacts {
+            host: builtpanel_license::HostFacts {
                 hostname: "web1",
                 domain: "panel.example.com",
             },
@@ -259,10 +259,10 @@ mod tests {
         for (hostname, domain) in [("web2", "panel.example.com"), ("web1", "other.example.org")] {
             let expect = Expect {
                 issuer: "la",
-                audience: "dhpanel",
+                audience: "builtpanel",
                 installation_id: r.inst,
                 clock_skew: 60,
-                host: dhpanel_license::HostFacts { hostname, domain },
+                host: builtpanel_license::HostFacts { hostname, domain },
             };
             let got = evaluate(&stored, &r.keys, &expect, &Policy::default(), t0 + HOUR);
             assert_eq!(

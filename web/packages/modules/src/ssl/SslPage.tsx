@@ -12,9 +12,9 @@ import {
   DialogDescription,
   DialogFooter,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { loadCertificates, loadCertificate, removeCustomCertificate } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   Lock,
   Shield,
@@ -28,7 +28,7 @@ import {
   Search,
   ExternalLink,
 } from "lucide-react";
-import type { SslCertificateItem, SslStatus, ReissueResponse } from "./types";
+import type { SslCertificateItem, SslStatus } from "./types";
 import { CustomCertUploadDialog } from "./CustomCertUploadDialog";
 import { SslSettingsDialog } from "./SslSettingsDialog";
 
@@ -52,10 +52,7 @@ export function SslPage() {
   const fetchCertificates = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<{ items: SslCertificateItem[]; total: number }>(
-        "/api/v1/client/ssl"
-      );
-      setCertificates(res.items);
+      setCertificates(await loadCertificates());
     } catch {
       toast({
         title: t("common.error", "Error"),
@@ -110,18 +107,13 @@ export function SslPage() {
   const handleReissue = async (cert: SslCertificateItem) => {
     try {
       setReissuingDomainId(cert.domain_id);
-      const res = await apiFetch<ReissueResponse>(
-        `/api/v1/client/ssl/${cert.domain_id}/reissue`,
-        { method: "POST" }
-      );
-
-      setCertificates((prev) =>
-        prev.map((c) => (c.domain_id === cert.domain_id ? { ...c, ...res.certificate } : c))
-      );
+      // The web server gets and renews certificates on its own; this reads the state again.
+      const fresh = await loadCertificate(cert.domain_id);
+      setCertificates((prev) => prev.map((c) => (c.domain_id === cert.domain_id ? fresh : c)));
 
       toast({
-        title: t("ssl.toast.reissuedTitle", "SSL Re-issued"),
-        description: res.message,
+        title: t("ssl.toast.refreshedTitle", "Certificate state refreshed"),
+        description: t("ssl.toast.refreshed", "Certificates are renewed by the web server on its own; the state was read again."),
       });
     } catch (err: any) {
       toast({
@@ -138,14 +130,9 @@ export function SslPage() {
   const handleRevoke = async () => {
     if (!revokingTarget) return;
     try {
-      const res = await apiFetch<{ success: boolean; certificate: SslCertificateItem }>(
-        `/api/v1/client/ssl/${revokingTarget.domain_id}`,
-        { method: "DELETE" }
-      );
+      const fresh = await removeCustomCertificate(revokingTarget.domain_id);
 
-      setCertificates((prev) =>
-        prev.map((c) => (c.domain_id === revokingTarget.domain_id ? res.certificate : c))
-      );
+      setCertificates((prev) => prev.map((c) => (c.domain_id === revokingTarget.domain_id ? fresh : c)));
 
       toast({
         title: t("common.success", "Success"),
@@ -433,7 +420,7 @@ export function SslPage() {
                     disabled={reissuingDomainId === cert.domain_id}
                     className="h-8 text-xs gap-1.5 text-primary"
                     data-testid={`btn-reissue-ssl-${cert.domain_id}`}
-                    title={t("ssl.actions.reissue", "Re-issue via Let's Encrypt")}
+                    title={t("ssl.actions.refresh", "Read the certificate state again")}
                   >
                     <RefreshCw
                       className={`h-3.5 w-3.5 ${
@@ -441,8 +428,8 @@ export function SslPage() {
                       }`}
                     />
                     {reissuingDomainId === cert.domain_id
-                      ? t("common.processing", "Issuing...")
-                      : t("ssl.actions.reissue", "Renew / Re-issue")}
+                      ? t("common.processing", "Checking...")
+                      : t("ssl.actions.refresh", "Refresh status")}
                   </Button>
 
                   <Button
@@ -469,14 +456,14 @@ export function SslPage() {
                     <span className="hidden xl:inline">{t("ssl.actions.settings", "Settings")}</span>
                   </Button>
 
-                  {cert.status !== "none" && (
+                  {cert.type === "custom" && (
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => setRevokingTarget(cert)}
                       className="h-8 w-8 p-0 text-destructive/80 hover:text-destructive hover:bg-destructive/10"
                       data-testid={`btn-revoke-ssl-${cert.domain_id}`}
-                      title={t("ssl.actions.revoke", "Revoke Certificate")}
+                      title={t("ssl.actions.revoke", "Use the web server's own certificate")}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

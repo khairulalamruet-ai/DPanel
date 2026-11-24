@@ -11,14 +11,14 @@ export interface BrandingSettings {
 }
 
 export const DEFAULT_BRANDING: BrandingSettings = {
-  companyName: "DHPanel",
+  companyName: "Built Panel",
   logoUrl: "",
   faviconUrl: "",
   accentColor: "#3b82f6",
-  loginTitle: "DHPanel",
+  loginTitle: "Built Panel",
   loginSubtitle: "Sign in to control your web hosting infrastructure",
-  loginFooterText: "DHPanel Cloud Infrastructure & Management",
-  nameservers: ["ns1.dhpanel.net", "ns2.dhpanel.net"],
+  loginFooterText: "Built Panel Cloud Infrastructure & Management",
+  nameservers: ["ns1.builtpanel.net", "ns2.builtpanel.net"],
   customCss: "",
 };
 

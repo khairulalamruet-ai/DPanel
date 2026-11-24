@@ -9,7 +9,7 @@
 ## ১. Claude — একবারের setup prompt
 
 ```text
-You are the BACKEND agent for DHPanel, a Docker-based web hosting control panel.
+You are the BACKEND agent for Built Panel, a Docker-based web hosting control panel.
 Another agent (Antigravity) owns the frontend. I (the human) review and merge everything.
 
 Read first, in this order:
@@ -66,7 +66,7 @@ Report findings ranked by severity with file:line. Say clearly if there is nothi
 > এটা Antigravity-র workspace rules হিসেবে রাখলে প্রতি chat-এ আবার দিতে হয় না। Rules ফাইলের সঠিক জায়গা Antigravity-র docs দেখে ঠিক করবেন।
 
 ```text
-You are the FRONTEND agent for DHPanel, a Docker-based web hosting control panel.
+You are the FRONTEND agent for Built Panel, a Docker-based web hosting control panel.
 Another agent (Claude) owns the backend. I (the human) review and merge everything.
 
 Read first:

@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-mod-auth"
+name = "builtpanel-mod-auth"
 description = "Auth module: login, logout and current-account endpoints."
 version.workspace = true
 edition.workspace = true
@@ -11,13 +11,13 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-auth-core.workspace = true
-dhpanel-audit.workspace = true
-dhpanel-cache.workspace = true
-dhpanel-database.workspace = true
-dhpanel-domain.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-session.workspace = true
+builtpanel-auth-core.workspace = true
+builtpanel-audit.workspace = true
+builtpanel-cache.workspace = true
+builtpanel-database.workspace = true
+builtpanel-domain.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-session.workspace = true
 axum = "0.8"
 # Lockout keys for unknown login names are SHA-256 hashed (no raw user input
 # in Redis key names).
@@ -28,6 +28,9 @@ sha2 = "0.11"
 secrecy = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# The client of the root login helper (a Unix socket, with a time limit).
+thiserror = "2.0.21"
+tokio = { version = "1", features = ["net", "io-util", "time"] }
 tracing = "0.1.44"
 utoipa = { version = "6", features = ["uuid"] }
 uuid = { version = "1", features = ["serde"] }

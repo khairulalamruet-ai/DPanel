@@ -1,5 +1,5 @@
 //! The files of an account as one encrypted stream (T09.04): a tar, compressed with zstd,
-//! cut into authenticated chunks (`dhpanel-backup`).
+//! cut into authenticated chunks (`builtpanel-backup`).
 //!
 //! The walk is streaming (nothing is listed first), opens every file from its folder's
 //! descriptor without following links, skips links and special files and the trash, and
@@ -12,9 +12,9 @@ use std::{
     os::fd::OwnedFd,
 };
 
-use dhpanel_backup::{KEY_LEN, StreamReader, StreamWriter};
-use dhpanel_node_protocol::files::{FileErrorCode, TRASH_DIR};
-use dhpanel_safe_fs::Root;
+use builtpanel_backup::{KEY_LEN, StreamReader, StreamWriter};
+use builtpanel_node_protocol::files::{FileErrorCode, TRASH_DIR};
+use builtpanel_safe_fs::Root;
 use rustix::fs::{FileType, Mode, OFlags};
 
 use super::{
@@ -273,7 +273,7 @@ pub fn unpack_files(
                     done.skipped += 1;
                     continue;
                 }
-                let tmp = format!(".dh-rs-{}", random_hex(8)?);
+                let tmp = format!(".bp-rs-{}", random_hex(8)?);
                 let fd = sys(rustix::fs::openat(
                     &dir,
                     tmp.as_str(),
@@ -289,7 +289,7 @@ pub fn unpack_files(
                 let copied = std::io::copy(&mut (&mut entry).take(size), &mut file);
                 let ok = copied.as_ref().is_ok_and(|n| *n == size);
                 if !ok {
-                    let _ = dhpanel_safe_fs::remove(&dir, &tmp, false);
+                    let _ = builtpanel_safe_fs::remove(&dir, &tmp, false);
                     return Err(match copied {
                         Err(e) => io(e),
                         Ok(_) => (
@@ -313,8 +313,8 @@ pub fn unpack_files(
                     },
                 );
                 if let Err(e) = rustix::fs::renameat(&dir, tmp.as_str(), &dir, name.as_str()) {
-                    let _ = dhpanel_safe_fs::remove(&dir, &tmp, false);
-                    return Err(super::from_fs(dhpanel_safe_fs::FsError::from(e)));
+                    let _ = builtpanel_safe_fs::remove(&dir, &tmp, false);
+                    return Err(super::from_fs(builtpanel_safe_fs::FsError::from(e)));
                 }
                 done.entries += 1;
                 done.bytes += size;

@@ -16,7 +16,7 @@ use serde::Serialize;
 /// Media type for problem details responses.
 pub const PROBLEM_JSON: &str = "application/problem+json";
 /// Base URI for problem `type` values (documentation anchor, not fetched).
-pub const PROBLEM_TYPE_BASE: &str = "https://docs.dhpanel.dev/problems/";
+pub const PROBLEM_TYPE_BASE: &str = "https://docs.builtpanel.dev/problems/";
 
 /// One invalid input field (used with 422).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
@@ -254,7 +254,7 @@ impl AppError {
     }
 }
 
-/// Wire format (RFC 9457 + DHPanel extensions `code`, `correlation_id`, `errors`).
+/// Wire format (RFC 9457 + Built Panel extensions `code`, `correlation_id`, `errors`).
 #[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct ProblemDetails {
     /// Problem type URI.

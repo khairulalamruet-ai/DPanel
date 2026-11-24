@@ -1,0 +1,9 @@
+slug        = "django"
+name        = "Django"
+category    = "utilities"
+kind        = "builtin"
+description = "The Python web framework; run it as a Python application."
+license     = "BSD-3-Clause"
+homepage    = "https://www.djangoproject.com"
+covers      = ["Django"]
+provided_by = "Applications > Python"

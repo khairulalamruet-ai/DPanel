@@ -1,13 +1,13 @@
 # ০৪ — opencli ও system service
 
-OpenPanel-এ আসল কাজ (container বানানো, domain যোগ ইত্যাদি) হয় `/usr/local/opencli/`-এর bash script দিয়ে। এখান থেকে বোঝা যায় DHPanel-এর **node agent**-কে কোন কোন **typed operation** দিতে হবে।
+OpenPanel-এ আসল কাজ (container বানানো, domain যোগ ইত্যাদি) হয় `/usr/local/opencli/`-এর bash script দিয়ে। এখান থেকে বোঝা যায় Built Panel-এর **node agent**-কে কোন কোন **typed operation** দিতে হবে।
 
 > PDF-এর নির্দেশ: "Do not make the node agent a generic remote shell. Expose typed operations…"
-> তাই DHPanel-এ bash script থাকবে না। প্রতিটা কাজ হবে Rust-এ লেখা একটা typed operation।
+> তাই Built Panel-এ bash script থাকবে না। প্রতিটা কাজ হবে Rust-এ লেখা একটা typed operation।
 
 ## Script থেকে agent operation
 
-| opencli script | কাজ | DHPanel agent operation (প্রস্তাব) |
+| opencli script | কাজ | Built Panel agent operation (প্রস্তাব) |
 |---|---|---|
 | `user/add.sh` | User আর তার container stack বানানো | `CreateTenant`, `ProvisionTenantStack` |
 | `user/delete.sh` | User মুছে ফেলা | `DeleteTenant` (soft delete + গ্রেস পিরিয়ড) |
@@ -56,7 +56,7 @@ OpenPanel-এ আসল কাজ (container বানানো, domain যো�
 
 ## System service (host-এ বা container-এ)
 
-| Service | OpenPanel-এ | DHPanel-এ প্রস্তাব |
+| Service | OpenPanel-এ | Built Panel-এ প্রস্তাব |
 |---|---|---|
 | Reverse proxy ও SSL | Caddy + Coraza WAF | **Caddy + Coraza** (Caddy admin API agent থেকে নিয়ন্ত্রণ) |
 | Web server (user) | nginx, apache, OpenLiteSpeed, OpenResty | প্রথমে nginx + apache, পরে OLS |

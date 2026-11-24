@@ -8,8 +8,8 @@ import {
   DialogFooter,
   Button,
   Input,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { ArrowRightLeft, Server, Shield, CheckCircle2 } from "lucide-react";
 import { MigrationSourceType, RemoteMigrationPayload } from "./types";
 
@@ -155,16 +155,16 @@ export function NewTransferWizardDialog({
 
               <button
                 type="button"
-                onClick={() => setSourceType("dhpanel_archive")}
+                onClick={() => setSourceType("builtpanel_archive")}
                 className={`p-2.5 rounded-lg border text-left text-xs transition-colors flex items-center justify-between ${
-                  sourceType === "dhpanel_archive"
+                  sourceType === "builtpanel_archive"
                     ? "border-primary bg-primary/5 font-semibold text-primary"
                     : "border-border hover:bg-muted/50"
                 }`}
                 data-testid="source-type-archive"
               >
-                <span>DHPanel Backup</span>
-                {sourceType === "dhpanel_archive" && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+                <span>Built Panel Backup</span>
+                {sourceType === "builtpanel_archive" && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
               </button>
             </div>
           </div>

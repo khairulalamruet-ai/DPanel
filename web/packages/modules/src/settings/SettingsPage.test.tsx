@@ -1,8 +1,8 @@
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
-import { resetMockSettings } from "@dhpanel/api";
+import { ToastProvider } from "@builtpanel/ui";
+import { resetMockSettings } from "@builtpanel/api";
 import { SettingsPage } from "./SettingsPage";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -88,7 +88,7 @@ describe("SettingsPage (T03.13)", () => {
     });
 
     const panelNameInput = screen.getByLabelText(/Panel Name/i);
-    fireEvent.change(panelNameInput, { target: { value: "Updated DHPanel Pro" } });
+    fireEvent.change(panelNameInput, { target: { value: "Updated Built Panel Pro" } });
 
     const submitBtn = screen.getByRole("button", { name: /Save Changes|পরিবর্তন সংরক্ষণ করুন/i });
     fireEvent.click(submitBtn);

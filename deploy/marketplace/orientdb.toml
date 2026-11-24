@@ -1,0 +1,8 @@
+slug        = "orientdb"
+name        = "OrientDB"
+category    = "databases"
+kind        = "unavailable"
+description = "OrientDB."
+license     = "Apache-2.0"
+covers      = ["OrientDB"]
+reason      = "not packaged for the panel yet"

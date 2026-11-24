@@ -1,0 +1,8 @@
+slug        = "java-20"
+name        = "Java 20"
+category    = "utilities"
+kind        = "unavailable"
+description = "Java 20 ()."
+license     = "GPL-2.0-only"
+covers      = ["Java 20 ()"]
+reason      = "a language runtime or build tool, not a service; put it in your own container image (Containers)"

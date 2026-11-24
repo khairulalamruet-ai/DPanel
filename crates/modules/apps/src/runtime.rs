@@ -20,17 +20,17 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{
     operations::{self, EnqueueError, NewOperation},
     plans, runtime_apps as store,
     sqlx::PgConnection,
     tenants,
 };
-use dhpanel_http_kit::{AppError, ProblemDetails};
-use dhpanel_node_protocol::Operation;
-use dhpanel_rbac::Principal;
-use dhpanel_tenant_stack::{Allowlist, Role};
+use builtpanel_http_kit::{AppError, ProblemDetails};
+use builtpanel_node_protocol::Operation;
+use builtpanel_rbac::Principal;
+use builtpanel_tenant_stack::{Allowlist, Role};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -100,7 +100,7 @@ pub(crate) async fn view_all(
     state: &AppsState,
     rows: Vec<store::RuntimeApp>,
 ) -> Result<Vec<RuntimeAppView>, AppError> {
-    let names: BTreeMap<Uuid, String> = dhpanel_database::sqlx::query_as::<_, (Uuid, String)>(
+    let names: BTreeMap<Uuid, String> = builtpanel_database::sqlx::query_as::<_, (Uuid, String)>(
         "SELECT id, fqdn FROM domains WHERE id = ANY($1)",
     )
     .bind(rows.iter().filter_map(|r| r.domain_id).collect::<Vec<_>>())
@@ -358,7 +358,7 @@ pub(crate) async fn queue_set(
     // A container runs an approved image as it is: no command, no install, no files.
     let image = if app.kind == "container" {
         Some(
-            dhpanel_database::container_images::of_app(conn, app.id)
+            builtpanel_database::container_images::of_app(conn, app.id)
                 .await
                 .map_err(internal)?
                 .ok_or_else(|| bad("image_id", "The image of this container is gone."))?
@@ -562,7 +562,7 @@ pub async fn create(
     }
     let c = check(&req, None)?;
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, tenant.id)
         .await
         .map_err(internal)?;
     if let Some(limit) = limit_of(&plan, "max_runtime_apps", DEFAULT_MAX_APPS)
@@ -609,7 +609,7 @@ pub async fn create(
         .map_err(internal)?;
     let row = load_in(&mut tx, tenant.id, id).await?;
     queue_set(&mut tx, &who, &tenant, &row, c.install).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("runtime_app.created", Outcome::Success)
             .actor(who.account_id())
@@ -688,7 +688,7 @@ pub async fn update(
     }
     let c = check(&req, Some(&existing))?;
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, tenant.id)
         .await
         .map_err(internal)?;
     if let Some(limit) = limit_of(&plan, "runtime_memory_mb", DEFAULT_MEMORY_MB)
@@ -734,7 +734,7 @@ pub async fn update(
     }
     let row = load_in(&mut tx, tenant.id, id).await?;
     queue_set(&mut tx, &who, &tenant, &row, c.install).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("runtime_app.updated", Outcome::Success)
             .actor(who.account_id())
@@ -784,7 +784,7 @@ pub async fn redeploy(
         return Err(AppError::not_found("application"));
     }
     queue_set(&mut tx, &who, &tenant, &row, install).await?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("runtime_app.redeployed", Outcome::Success)
             .actor(who.account_id())
@@ -841,7 +841,7 @@ pub async fn remove(
     store::waiting_for(&mut tx, id, queued.operation().id, "removing")
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("runtime_app.removed", Outcome::Success)
             .actor(who.account_id())

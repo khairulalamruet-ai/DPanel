@@ -153,7 +153,7 @@ pub fn verify_with(public_key: &[u8], message: &[u8], signature: &[u8]) -> bool 
         .is_ok()
 }
 
-/// The public keys a verifier trusts, by key id (the bundle that ships with DHPanel, so a
+/// The public keys a verifier trusts, by key id (the bundle that ships with Built Panel, so a
 /// rotated key can be added without a rebuild of anything that signs).
 #[derive(Debug, Clone, Default)]
 pub struct PublicKeys {
@@ -231,7 +231,7 @@ mod tests {
 
     fn dir() -> std::path::PathBuf {
         let d = std::env::temp_dir().join(format!(
-            "dh-license-keys-{}-{}",
+            "bp-license-keys-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4().simple()
         ));

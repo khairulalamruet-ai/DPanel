@@ -1,0 +1,8 @@
+slug        = "hornetq"
+name        = "HornetQ"
+category    = "message_queue"
+kind        = "unavailable"
+description = "A message broker."
+license     = "Apache-2.0"
+covers      = ["HornetQ"]
+reason      = "the project is discontinued and no longer gets security fixes; Apache ActiveMQ is offered"

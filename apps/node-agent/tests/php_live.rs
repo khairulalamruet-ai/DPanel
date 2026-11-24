@@ -6,20 +6,26 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name, Network, VolumeMount};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{
+    ContainerSpec, DockerManager, ImageRef, Name, Network, VolumeMount,
+};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_agent::ops::{
     tenant::{TenantContext, provision_tenant_stack, set_php_versions},
     vhost::attach_domain,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{conf_volume_name, files_volume_name, network_name};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{conf_volume_name, files_volume_name, network_name};
 use uuid::Uuid;
 
 const BUSYBOX: &str =
     "busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -33,7 +39,7 @@ fn docker_socket() -> PathBuf {
 /// the files volume at /data (as root of the user namespace); returns its exit code.
 async fn run(docker: &DockerManager, owner: &TenantUsername, n: u32, script: &str) -> i64 {
     let mut spec = ContainerSpec::new(
-        Name::parse(&format!("dh-{owner}-run{n}")).unwrap(),
+        Name::parse(&format!("bp-{owner}-run{n}")).unwrap(),
         ImageRef::parse(BUSYBOX).unwrap(),
     );
     spec.command = vec!["sh".into(), "-c".into(), script.into()];
@@ -75,7 +81,7 @@ async fn serves(
 ) -> bool {
     for attempt in 0..20 {
         let script = format!(
-            "wget -q -O - --header 'Host: {host}' http://dh-{owner}-web:8080/index.php | grep -q '^{prefix}'"
+            "wget -q -O - --header 'Host: {host}' http://bp-{owner}-web:8080/index.php | grep -q '^{prefix}'"
         );
         if run(docker, owner, n * 100 + attempt, &script).await == 0 {
             return true;
@@ -94,7 +100,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
         return;
     }
     let docker = DockerManager::connect(&socket).unwrap();
-    let root = std::env::temp_dir().join(format!("dh-php-live-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bp-php-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let context = Arc::new(TenantContext {
         helper_socket: "/nonexistent".into(),
@@ -160,7 +166,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
     };
     attach_domain(
         context.clone(),
-        site("one.example.com", &format!("dh-{name}-php:9000")),
+        site("one.example.com", &format!("bp-{name}-php:9000")),
     )
     .await
     .unwrap();
@@ -172,7 +178,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
         async move {
             for attempt in 0..20 {
                 let script = format!(
-                    "wget -q -O - --header 'Host: one.example.com' http://dh-{owner}-web:8080/ini.php | grep -q '^{what}$'"
+                    "wget -q -O - --header 'Host: one.example.com' http://bp-{owner}-web:8080/ini.php | grep -q '^{what}$'"
                 );
                 if run(&docker, &owner, 700 + attempt, &script).await == 0 {
                     return true;
@@ -187,7 +193,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
         username: name.clone(),
         ini: text.into(),
     };
-    let set = dhpanel_node_agent::ops::vhost::set_php_ini(
+    let set = builtpanel_node_agent::ops::vhost::set_php_ini(
         context.clone(),
         ini("memory_limit = 96M\nmax_execution_time = 45\ndate.timezone = Asia/Dhaka\n"),
     )
@@ -199,7 +205,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
         "the running container loaded it"
     );
     // A file with an option that is not on the list is refused and changes nothing.
-    let err = dhpanel_node_agent::ops::vhost::set_php_ini(
+    let err = builtpanel_node_agent::ops::vhost::set_php_ini(
         context.clone(),
         ini("memory_limit = 32M\nauto_prepend_file = /etc/passwd\n"),
     )
@@ -210,7 +216,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
 
     // Restarting the web server or PHP keeps the site up afterwards.
     for service in ["web", "php"] {
-        let done = dhpanel_node_agent::ops::tenant::restart_service(
+        let done = builtpanel_node_agent::ops::tenant::restart_service(
             context.clone(),
             Operation::RestartService {
                 username: name.clone(),
@@ -222,7 +228,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
         assert_eq!(
             done,
             Output::ServiceRestarted {
-                containers: vec![format!("dh-{name}-{service}")]
+                containers: vec![format!("bp-{name}-{service}")]
             }
         );
         assert!(
@@ -230,7 +236,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
             "{service}"
         );
     }
-    let err = dhpanel_node_agent::ops::tenant::restart_service(
+    let err = builtpanel_node_agent::ops::tenant::restart_service(
         context.clone(),
         Operation::RestartService {
             username: name.clone(),
@@ -244,7 +250,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
     // The main container moves to 8.3: its files stay, the site follows. A visitor asks the site
     // ten times a second while it happens: the site may be without PHP for a moment, never for
     // five seconds (T11.12).
-    let visitor = Name::parse(&format!("dh-{owner}-visitor")).unwrap();
+    let visitor = Name::parse(&format!("bp-{owner}-visitor")).unwrap();
     let watching = {
         let (docker, owner, visitor) = (docker.clone(), owner.clone(), visitor.clone());
         tokio::spawn(async move {
@@ -253,7 +259,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
                 "sh".into(),
                 "-c".into(),
                 format!(
-                    "i=0; while [ $i -lt 1500 ]; do if wget -q -T 1 -O /dev/null --header 'Host: one.example.com' http://dh-{owner}-web:8080/index.php; then echo up; else echo down; fi; i=$((i+1)); sleep 0.1; done"
+                    "i=0; while [ $i -lt 1500 ]; do if wget -q -T 1 -O /dev/null --header 'Host: one.example.com' http://bp-{owner}-web:8080/index.php; then echo up; else echo down; fi; i=$((i+1)); sleep 0.1; done"
                 ),
             ];
             spec.network = Network::Named(network_name(&owner).unwrap());
@@ -292,7 +298,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
     assert_eq!(
         moved,
         Output::PhpVersionsSet {
-            containers: vec![format!("dh-{name}-php")],
+            containers: vec![format!("bp-{name}-php")],
             removed: vec![]
         }
     );
@@ -313,7 +319,7 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
     // untouched and the plan's PHP share is divided between the two.
     attach_domain(
         context.clone(),
-        site("two.example.com", &format!("dh-{name}-php-8-2:9000")),
+        site("two.example.com", &format!("bp-{name}-php-8-2:9000")),
     )
     .await
     .err();
@@ -323,24 +329,24 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
     assert_eq!(
         both,
         Output::PhpVersionsSet {
-            containers: vec![format!("dh-{name}-php"), format!("dh-{name}-php-8-2")],
+            containers: vec![format!("bp-{name}-php"), format!("bp-{name}-php-8-2")],
             removed: vec![]
         }
     );
     attach_domain(
         context.clone(),
-        site("two.example.com", &format!("dh-{name}-php-8-2:9000")),
+        site("two.example.com", &format!("bp-{name}-php-8-2:9000")),
     )
     .await
     .unwrap();
     assert!(serves(&docker, &owner, 4, "two.example.com", "8.2.").await);
     assert!(serves(&docker, &owner, 5, "one.example.com", "8.3.").await);
     let main = docker
-        .inspect(&Name::parse(&format!("dh-{name}-php")).unwrap())
+        .inspect(&Name::parse(&format!("bp-{name}-php")).unwrap())
         .await
         .unwrap();
     let extra = docker
-        .inspect(&Name::parse(&format!("dh-{name}-php-8-2")).unwrap())
+        .inspect(&Name::parse(&format!("bp-{name}-php-8-2")).unwrap())
         .await
         .unwrap();
     assert_eq!(main.limits.memory_bytes, extra.limits.memory_bytes);
@@ -375,20 +381,20 @@ async fn the_main_php_changes_version_another_runs_beside_it_and_extras_are_remo
     assert_eq!(
         back,
         Output::PhpVersionsSet {
-            containers: vec![format!("dh-{name}-php")],
-            removed: vec![format!("dh-{name}-php-8-2")]
+            containers: vec![format!("bp-{name}-php")],
+            removed: vec![format!("bp-{name}-php-8-2")]
         }
     );
     assert!(
         docker
-            .inspect(&Name::parse(&format!("dh-{name}-php-8-2")).unwrap())
+            .inspect(&Name::parse(&format!("bp-{name}-php-8-2")).unwrap())
             .await
             .is_err()
     );
     assert!(serves(&docker, &owner, 6, "one.example.com", "8.3.").await);
 
     // Clean up.
-    for container in [format!("dh-{name}-web"), format!("dh-{name}-php")] {
+    for container in [format!("bp-{name}-web"), format!("bp-{name}-php")] {
         let _ = docker.remove(&Name::parse(&container).unwrap(), true).await;
     }
     let _ = docker
@@ -412,22 +418,22 @@ async fn an_image_that_cannot_be_pulled_gives_way_to_the_next() {
     let docker = DockerManager::connect(&socket).unwrap();
     // A made-up registry name (it never resolves) first, a real image second.
     let missing = ImageRef::parse(&format!(
-        "registry.invalid/dhpanel/none@sha256:{}",
+        "registry.invalid/builtpanel/none@sha256:{}",
         "0".repeat(64)
     ))
     .unwrap();
     let real = ImageRef::parse(BUSYBOX).unwrap();
-    let chosen = dhpanel_node_agent::ops::tenant::pull_first(&docker, &[&missing, &real])
+    let chosen = builtpanel_node_agent::ops::tenant::pull_first(&docker, &[&missing, &real])
         .await
         .unwrap();
     assert_eq!(chosen, 1);
     assert_eq!(
-        dhpanel_node_agent::ops::tenant::pull_first(&docker, &[&real, &missing])
+        builtpanel_node_agent::ops::tenant::pull_first(&docker, &[&real, &missing])
             .await
             .unwrap(),
         0
     );
-    let err = dhpanel_node_agent::ops::tenant::pull_first(&docker, &[&missing])
+    let err = builtpanel_node_agent::ops::tenant::pull_first(&docker, &[&missing])
         .await
         .unwrap_err();
     assert_eq!(err.code, ErrorCode::Internal);

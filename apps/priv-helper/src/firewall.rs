@@ -1,7 +1,7 @@
 //! The database port's firewall (T07.05b): the one place the helper touches the
 //! node's packet filter.
 //!
-//! One nftables table of its own, `inet dhpanel_db`, with a set of allowed IPv4
+//! One nftables table of its own, `inet builtpanel_db`, with a set of allowed IPv4
 //! addresses and ranges and a chain that lets those through to the database's
 //! public port and drops everything else aimed at it. Which port is fixed when the
 //! helper starts (`--db-port`): no request can name another one, so it cannot be
@@ -20,9 +20,9 @@ use crate::{protocol::ErrorCode, tenant::Failure};
 /// Where `nft` is.
 const NFT: &str = "/usr/sbin/nft";
 /// The table the helper owns for the MariaDB server's public port.
-pub const TABLE: &str = "dhpanel_db";
+pub const TABLE: &str = "builtpanel_db";
 /// The table the helper owns for the PostgreSQL server's public port.
-pub const TABLE_PG: &str = "dhpanel_pg";
+pub const TABLE_PG: &str = "builtpanel_pg";
 /// Most ranges in one request.
 pub const MAX_CIDRS: usize = 2000;
 
@@ -189,9 +189,9 @@ mod tests {
         let text = ruleset(13306, &["203.0.113.7/32".into(), "198.51.100.0/24".into()]);
         assert_eq!(
             text,
-            "table inet dhpanel_db\n\
-             delete table inet dhpanel_db\n\
-             table inet dhpanel_db {\n\
+            "table inet builtpanel_db\n\
+             delete table inet builtpanel_db\n\
+             table inet builtpanel_db {\n\
              \x20   set allowed {\n\
              \x20       type ipv4_addr\n\
              \x20       flags interval\n\

@@ -1,0 +1,8 @@
+slug        = "jasdb"
+name        = "JasDB"
+category    = "databases"
+kind        = "unavailable"
+description = "JasDB."
+license     = "Apache-2.0"
+covers      = ["JasDB"]
+reason      = "the project is discontinued and no longer gets security fixes"

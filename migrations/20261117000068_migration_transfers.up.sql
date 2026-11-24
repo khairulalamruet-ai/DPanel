@@ -2,7 +2,7 @@
 CREATE TABLE migration_transfers (
     id               uuid        PRIMARY KEY DEFAULT uuidv7(),
     source_type      text        NOT NULL
-        CHECK (source_type IN ('cpanel', 'cyberpanel', 'openpanel', 'dhpanel_archive')),
+        CHECK (source_type IN ('cpanel', 'cyberpanel', 'openpanel', 'builtpanel_archive')),
     -- Where the backup came from, when it was fetched from a server (T15.05).
     source_host      text        CHECK (length(source_host) <= 255),
     -- The backup's file name inside the panel's import folder.

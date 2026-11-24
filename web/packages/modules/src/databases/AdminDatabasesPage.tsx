@@ -13,8 +13,8 @@ import {
   TableBody,
   TableCell,
   Input,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { apiFetch } from "@builtpanel/api";
 import {
   Database,
   Server,
@@ -28,7 +28,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { AdminDbOverviewResponse, AdminDbNodeDistribution, AdminLargestDatabaseItem } from "./types";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 export function AdminDatabasesPage() {
   const { t } = useTranslation();

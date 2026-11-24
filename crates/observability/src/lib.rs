@@ -1,6 +1,6 @@
 //! Tracing, OpenTelemetry and Prometheus metrics initialisation.
 //!
-//! Every DHPanel binary calls [`init`] once at startup and keeps the returned
+//! Every Built Panel binary calls [`init`] once at startup and keeps the returned
 //! [`Telemetry`] alive until shutdown. It installs:
 //!
 //! * a global `tracing` subscriber (JSON or human-readable lines, filtered by
@@ -11,7 +11,7 @@
 //!   exporter.
 //!
 //! This crate has no web-framework dependency; HTTP middleware lives in
-//! `dhpanel-http-kit` and reports through [`record_http_request`].
+//! `builtpanel-http-kit` and reports through [`record_http_request`].
 
 pub mod ring;
 
@@ -42,7 +42,7 @@ pub struct TelemetryConfig {
     pub service_name: String,
     /// Log line format.
     pub log_format: LogFormat,
-    /// `EnvFilter` directives, e.g. `info,dhpanel=debug`.
+    /// `EnvFilter` directives, e.g. `info,builtpanel=debug`.
     pub log_filter: String,
     /// OTLP/HTTP endpoint (e.g. `http://127.0.0.1:4318/v1/traces`).
     /// Ignored unless the crate is built with the `otel` feature.
@@ -248,7 +248,7 @@ mod otel {
                     .build(),
             )
             .build();
-        let tracer = provider.tracer("dhpanel");
+        let tracer = provider.tracer("builtpanel");
         opentelemetry::global::set_tracer_provider(provider.clone());
         Ok((tracing_opentelemetry::layer().with_tracer(tracer), provider))
     }

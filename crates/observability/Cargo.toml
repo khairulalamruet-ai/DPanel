@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-observability"
+name = "builtpanel-observability"
 description = "Tracing, OpenTelemetry and Prometheus metrics initialisation."
 version.workspace = true
 edition.workspace = true

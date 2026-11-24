@@ -8,7 +8,7 @@ import {
   Button,
   Badge,
   useToast,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -17,9 +17,9 @@ import {
   Plus,
   RefreshCw,
 } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
-import { ClientIpRule, IpRuleAction } from "./types";
+import { useTranslation } from "@builtpanel/i18n";
+import { ClientIpRule } from "./types";
+import { addIpBlock, listIpBlocks, listOwnDomains, removeIpBlock, type OwnDomain } from "./api";
 import { ClientIpRulesTable } from "./ClientIpRulesTable";
 import { AddIpRuleDialog } from "./AddIpRuleDialog";
 
@@ -27,85 +27,89 @@ export function ClientFirewallPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [selectedDomain, setSelectedDomain] = useState("example.com");
+  const [domains, setDomains] = useState<OwnDomain[]>([]);
+  const [selectedId, setSelectedId] = useState("");
   const [rules, setRules] = useState<ClientIpRule[]>([]);
+  const [limit, setLimit] = useState(100);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [defaultActionForAdd, setDefaultActionForAdd] = useState<IpRuleAction>("block");
 
-  const fetchRules = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await apiFetch<ClientIpRule[]>(
-        `/api/v1/client/firewall/rules?domain=${encodeURIComponent(selectedDomain)}`
-      );
-      setRules(data);
-    } catch (err: any) {
+  const selected = domains.find((d) => d.id === selectedId);
+  const selectedDomain = selected?.name ?? "";
+
+  const failed = useCallback(
+    (err: unknown) =>
       toast({
         title: t("common.error"),
-        description: err.message || t("common.unknownError"),
+        description: err instanceof Error ? err.message : t("common.unknownError"),
         variant: "destructive",
-      });
+      }),
+    [toast, t],
+  );
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const list = await listOwnDomains();
+        setDomains(list);
+        setSelectedId((cur) => cur || list[0]?.id || "");
+        if (list.length === 0) setIsLoading(false);
+      } catch (err) {
+        failed(err);
+        setIsLoading(false);
+      }
+    })();
+  }, [failed]);
+
+  const fetchRules = useCallback(async () => {
+    if (!selected) return;
+    try {
+      setIsLoading(true);
+      const res = await listIpBlocks(selected);
+      setRules(res.rules);
+      setLimit(res.limit);
+    } catch (err) {
+      failed(err);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDomain, toast, t]);
+  }, [selected, failed]);
 
   useEffect(() => {
-    fetchRules();
+    void fetchRules();
   }, [fetchRules]);
 
-  // DoD: Client নিজের site-এর জন্য IP block করতে পারেন (Caddy পর্যায়ে)
-  const handleAddRule = async (newRule: {
-    domain: string;
-    ip_cidr: string;
-    action: IpRuleAction;
-    notes: string;
-  }) => {
+  // The web server turns the address away before the site sees the request.
+  const handleAddRule = async (newRule: { ip_cidr: string; notes: string }) => {
+    if (!selected) return;
     try {
-      await apiFetch("/api/v1/client/firewall/rules", {
-        method: "POST",
-        body: JSON.stringify(newRule),
-      });
+      await addIpBlock(selected, newRule.ip_cidr, newRule.notes);
       toast({
         title: t("common.success"),
-        description:
-          newRule.action === "block"
-            ? t("firewall.ipBlockedSuccess", { ip: newRule.ip_cidr, domain: newRule.domain })
-            : t("firewall.ipAllowedSuccess", { ip: newRule.ip_cidr, domain: newRule.domain }),
+        description: t("firewall.ipBlockedSuccess", { ip: newRule.ip_cidr, domain: selected.name }),
       });
       await fetchRules();
-    } catch (err: any) {
-      toast({
-        title: t("common.error"),
-        description: err.message || t("common.unknownError"),
-        variant: "destructive",
-      });
+    } catch (err) {
+      failed(err);
       throw err;
     }
   };
 
   const handleDeleteRule = async (ruleId: string, ipCidr: string) => {
+    if (!selected) return;
     try {
-      await apiFetch(`/api/v1/client/firewall/rules/${encodeURIComponent(ruleId)}`, {
-        method: "DELETE",
-      });
+      await removeIpBlock(selected, ruleId);
       toast({
         title: t("common.success"),
         description: t("firewall.ruleDeletedSuccess", { ip: ipCidr }),
       });
       await fetchRules();
-    } catch (err: any) {
-      toast({
-        title: t("common.error"),
-        description: err.message || t("common.unknownError"),
-        variant: "destructive",
-      });
+    } catch (err) {
+      failed(err);
     }
   };
 
-  const blockedCount = rules.filter((r) => r.action === "block").length;
-  const allowedCount = rules.filter((r) => r.action === "allow").length;
+  const blockedCount = rules.length;
 
   return (
     <div className="space-y-6">
@@ -132,13 +136,15 @@ export function ClientFirewallPage() {
             <Globe className="h-3.5 w-3.5 text-muted-foreground" />
             <select
               data-testid="select-firewall-domain"
-              value={selectedDomain}
-              onChange={(e) => setSelectedDomain(e.target.value)}
+              value={selectedId}
+              onChange={(e) => setSelectedId(e.target.value)}
               className="bg-transparent font-medium focus:outline-none"
             >
-              <option value="example.com">example.com</option>
-              <option value="shop.example.com">shop.example.com</option>
-              <option value="blog.example.com">blog.example.com</option>
+              {domains.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -156,10 +162,8 @@ export function ClientFirewallPage() {
 
           <Button
             size="sm"
-            onClick={() => {
-              setDefaultActionForAdd("block");
-              setIsAddOpen(true);
-            }}
+            disabled={!selected}
+            onClick={() => setIsAddOpen(true)}
             data-testid="btn-open-add-ip-rule"
             className="gap-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
@@ -176,8 +180,8 @@ export function ClientFirewallPage() {
           <p className="text-2xl font-bold font-mono text-destructive mt-0.5">{blockedCount}</p>
         </div>
         <div className="rounded-lg border bg-card p-3 shadow-sm" data-testid="card-allowed-ips-count">
-          <span className="text-[11px] text-muted-foreground uppercase">{t("firewall.allowedIps")}</span>
-          <p className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">{allowedCount}</p>
+          <span className="text-[11px] text-muted-foreground uppercase">{t("firewall.limit", "Most per domain")}</span>
+          <p className="text-2xl font-bold font-mono mt-0.5">{limit}</p>
         </div>
         <div className="rounded-lg border bg-card p-3 shadow-sm">
           <span className="text-[11px] text-muted-foreground uppercase">{t("firewall.enforcementScope")}</span>
@@ -205,7 +209,7 @@ export function ClientFirewallPage() {
         open={isAddOpen}
         onOpenChange={setIsAddOpen}
         domain={selectedDomain}
-        defaultAction={defaultActionForAdd}
+        blockOnly
         onConfirm={handleAddRule}
       />
     </div>

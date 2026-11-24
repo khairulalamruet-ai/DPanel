@@ -14,9 +14,9 @@ import {
   Button,
   Badge,
   Input,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { ShieldCheck, Ban, CheckCircle2, Trash2, Search, Filter } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { ClientIpRule } from "./types";
 
 interface ClientIpRulesTableProps {
@@ -91,7 +91,6 @@ export function ClientIpRulesTable({
           >
             <option value="all">{t("firewall.allRuleTypes")}</option>
             <option value="block">{t("firewall.onlyBlocked")}</option>
-            <option value="allow">{t("firewall.onlyAllowed")}</option>
           </select>
         </div>
       </CardHeader>

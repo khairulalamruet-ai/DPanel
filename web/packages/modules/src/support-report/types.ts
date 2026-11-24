@@ -177,7 +177,7 @@ export const MOCK_DIAGNOSTIC_BUNDLE: DiagnosticBundle = {
       driver: "postgres",
       host: "127.0.0.1",
       port: 5432,
-      database: "dhpanel_db",
+      database: "builtpanel_db",
       password: "[REDACTED_CONFIDENTIAL]",
     },
     redis: {
@@ -190,8 +190,8 @@ export const MOCK_DIAGNOSTIC_BUNDLE: DiagnosticBundle = {
       enrolled_nodes: 3,
     },
     storage: {
-      data_path: "/var/lib/dhpanel/data",
-      backup_path: "/var/lib/dhpanel/backups",
+      data_path: "/var/lib/builtpanel/data",
+      backup_path: "/var/lib/builtpanel/backups",
     },
     features: ["domains", "databases", "waf", "cron", "ssl", "backups"],
   },

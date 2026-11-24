@@ -9,5 +9,5 @@ USER root
 RUN apk upgrade --no-cache
 # The official image runs as this user (nginx): so does this one.
 USER 101
-LABEL org.opencontainers.image.title="DHPanel web (nginx)" \
+LABEL org.opencontainers.image.title="Built Panel web (nginx)" \
       org.opencontainers.image.description="The official unprivileged nginx with its OS packages upgraded"

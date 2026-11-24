@@ -1,13 +1,13 @@
-# DHPanel — পরিকল্পনা ও বিশ্লেষণ ডকুমেন্টেশন
+# Built Panel — পরিকল্পনা ও বিশ্লেষণ ডকুমেন্টেশন
 
-DHPanel হলো Docker/Podman-ভিত্তিক web hosting control panel। প্রত্যেক গ্রাহক নিজের আলাদা container পান, আর একটা panel দিয়ে অনেকগুলো VPS বা dedicated server পরিচালনা করা যায়।
+Built Panel হলো Docker/Podman-ভিত্তিক web hosting control panel। প্রত্যেক গ্রাহক নিজের আলাদা container পান, আর একটা panel দিয়ে অনেকগুলো VPS বা dedicated server পরিচালনা করা যায়।
 
 এই ফোল্ডারে এখনো কোনো কোড নেই। আছে তিনটা জিনিস:
 1. একটা চলমান OpenPanel সার্ভারের **ফিচার বিশ্লেষণ** (reference হিসেবে)।
-2. DHPanel-এর **architecture**।
+2. Built Panel-এর **architecture**।
 3. ছোট ছোট task-এ ভাগ করা **ধাপে ধাপে roadmap**।
 
-> **লক্ষ্য: Feature parity।** OpenPanel-এর সব ফিচার DHPanel-এ একই রকম থাকবে (তালিকা: `00-analysis/`)। কিন্তু code নিজেদের লেখা হবে।
+> **লক্ষ্য: Feature parity।** OpenPanel-এর সব ফিচার Built Panel-এ একই রকম থাকবে (তালিকা: `00-analysis/`)। কিন্তু code নিজেদের লেখা হবে।
 
 > All features will be add Go to rust Language (Backend)
 
@@ -41,7 +41,7 @@ docs/
 │   ├── 03-user-panel-features.md
 │   ├── 04-cli-and-system-services.md
 │   └── 05-decisions-and-gaps.md
-├── 01-architecture/              ← DHPanel কীভাবে বানাব
+├── 01-architecture/              ← Built Panel কীভাবে বানাব
 │   ├── 01-system-architecture.md
 │   ├── 02-tech-stack.md
 │   ├── 03-module-system.md
@@ -67,7 +67,7 @@ docs/
 
 ## তথ্যের উৎস
 
-- সার্ভার `167.104.101.81` (hostname `dhpanel`), OpenPanel 2.0.20। বিশ্লেষণ হয়েছে ২০২৬-১১-১০ তারিখে, শুধু পড়ার কমান্ড দিয়ে।
+- সার্ভার `167.104.101.81` (hostname `builtpanel`), OpenPanel 2.0.20। বিশ্লেষণ হয়েছে ২০২৬-১১-১০ তারিখে, শুধু পড়ার কমান্ড দিয়ে।
 - Admin binary `/usr/local/admin/openadmin-amd64` (Go 1.27.3, SHA-256 `1d88ece9…742b1`)। REA দিয়ে build info আর string বিশ্লেষণ করা হয়েছে।
 - `doc-guide/rust_recommended_stack_hosting_panel.pdf`
 - `doc-guide/complete_license_anti_nulled_architecture.pdf`

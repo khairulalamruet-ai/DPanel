@@ -8,9 +8,9 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
 import {
   FileText,
   ShieldCheck,
@@ -88,7 +88,7 @@ export function SupportReportPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `dhpanel-support-bundle-${bundle.metadata.bundle_id}.json`;
+    a.download = `builtpanel-support-bundle-${bundle.metadata.bundle_id}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -96,7 +96,7 @@ export function SupportReportPage() {
 
     toast({
       title: t("support.downloadStarted") || "Download Started",
-      description: `dhpanel-support-bundle-${bundle.metadata.bundle_id}.json`,
+      description: `builtpanel-support-bundle-${bundle.metadata.bundle_id}.json`,
     });
   };
 

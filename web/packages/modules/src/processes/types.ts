@@ -13,6 +13,8 @@ export interface ProcessItem {
   cpu_time: string;
   command: string;
   is_killable: boolean;
+  /** The container it runs in (a hosting account has a web and a PHP container). */
+  container?: string;
   tenant?: string; // only present in admin scope
   node?: string; // only present in admin scope
 }

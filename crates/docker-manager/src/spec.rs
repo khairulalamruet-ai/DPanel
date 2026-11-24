@@ -40,13 +40,13 @@ impl Limits {
 
 /// Label every object this crate creates carries. Actions refuse objects
 /// without it, so the agent can never touch a container it did not make.
-pub const MANAGED_LABEL: &str = "dhpanel.managed";
+pub const MANAGED_LABEL: &str = "builtpanel.managed";
 /// Label naming the tenant a container belongs to.
-pub const TENANT_LABEL: &str = "dhpanel.tenant";
+pub const TENANT_LABEL: &str = "builtpanel.tenant";
 /// Label naming the part a container plays in its stack.
-pub const ROLE_LABEL: &str = "dhpanel.role";
+pub const ROLE_LABEL: &str = "builtpanel.role";
 /// Prefix reserved for our own labels.
-pub const LABEL_PREFIX: &str = "dhpanel.";
+pub const LABEL_PREFIX: &str = "builtpanel.";
 
 /// Smallest memory limit Docker accepts (6 MiB).
 pub const MIN_MEMORY_BYTES: u64 = 6 * 1024 * 1024;
@@ -114,7 +114,7 @@ impl ImageRef {
     }
 }
 
-/// Name of a container, volume or network we manage: `dh-` followed by up to
+/// Name of a container, volume or network we manage: `bp-` followed by up to
 /// 60 characters of `a-z 0-9 _ . -`.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Name(String);
@@ -123,11 +123,11 @@ impl Name {
     /// Parses and validates a name.
     ///
     /// # Errors
-    /// Not of the form `dh-[a-z0-9][a-z0-9_.-]*`, or too long.
+    /// Not of the form `bp-[a-z0-9][a-z0-9_.-]*`, or too long.
     pub fn parse(name: &str) -> Result<Self, SpecError> {
         let rest = name
-            .strip_prefix("dh-")
-            .ok_or_else(|| invalid("name", "must start with `dh-`"))?;
+            .strip_prefix("bp-")
+            .ok_or_else(|| invalid("name", "must start with `bp-`"))?;
         let ok = (1..=60).contains(&rest.len())
             && rest.starts_with(|c: char| c.is_ascii_lowercase() || c.is_ascii_digit())
             && rest
@@ -138,7 +138,7 @@ impl Name {
         } else {
             Err(invalid(
                 "name",
-                "use dh- then a-z, 0-9, `_`, `.`, `-` (at most 60)",
+                "use bp- then a-z, 0-9, `_`, `.`, `-` (at most 60)",
             ))
         }
     }
@@ -273,13 +273,13 @@ pub struct ContainerSpec {
     pub cap_add: Vec<Capability>,
     /// Restart behaviour.
     pub restart: Restart,
-    /// Extra labels (not in the reserved `dhpanel.` space).
+    /// Extra labels (not in the reserved `builtpanel.` space).
     pub labels: BTreeMap<String, String>,
     /// The tenant the container belongs to, recorded as the reserved label
-    /// `dhpanel.tenant` (a UUID, so it needs no further checking).
+    /// `builtpanel.tenant` (a UUID, so it needs no further checking).
     pub tenant: Option<uuid::Uuid>,
     /// The part the container plays in its stack (`web`, `php`, ...), recorded
-    /// as `dhpanel.role`: 1-32 characters of `a-z`, `0-9`, `_`.
+    /// as `builtpanel.role`: 1-32 characters of `a-z`, `0-9`, `_`.
     pub role: Option<String>,
 }
 
@@ -595,7 +595,7 @@ impl ContainerSpec {
             working_dir: self.working_dir.clone(),
             env: Some(self.env.iter().map(|(k, v)| format!("{k}={v}")).collect()),
             user: self.user.map(|(uid, gid)| format!("{uid}:{gid}")),
-            labels: Some(labels),
+            labels: Some(labels.into_iter().collect()),
             exposed_ports: (!exposed.is_empty()).then_some(exposed),
             host_config: Some(host_config),
             tty: Some(false),
@@ -628,7 +628,7 @@ fn check_target(target: &str) -> Result<(), SpecError> {
     // and a PHP container.
     // And the mail server's own configuration folder (T13.02), which is its volume.
     if trimmed == "/etc/nginx/conf.d"
-        || trimmed == "/usr/local/etc/php/dhpanel.d"
+        || trimmed == "/usr/local/etc/php/builtpanel.d"
         || trimmed == "/etc/stalwart"
     {
         return Ok(());
@@ -660,7 +660,7 @@ mod tests {
     }
 
     fn spec() -> ContainerSpec {
-        ContainerSpec::new(Name::parse("dh-test").unwrap(), image())
+        ContainerSpec::new(Name::parse("bp-test").unwrap(), image())
     }
 
     #[test]
@@ -691,19 +691,19 @@ mod tests {
 
     #[test]
     fn names_are_ours_and_plain() {
-        for ok in ["dh-a", "dh-site_1.web-0", &format!("dh-{}", "a".repeat(60))] {
+        for ok in ["bp-a", "bp-site_1.web-0", &format!("bp-{}", "a".repeat(60))] {
             assert!(Name::parse(ok).is_ok(), "{ok}");
         }
         for bad in [
             "",
-            "dh-",
+            "bp-",
             "web",
-            "dh-Web",
-            "dh--x",
-            "dh-a b",
-            "dh-a/b",
-            "dh-a;rm",
-            &format!("dh-{}", "a".repeat(61)),
+            "bp-Web",
+            "bp--x",
+            "bp-a b",
+            "bp-a/b",
+            "bp-a;rm",
+            &format!("bp-{}", "a".repeat(61)),
         ] {
             assert!(Name::parse(bad).is_err(), "{bad:?}");
         }
@@ -763,7 +763,7 @@ mod tests {
     fn mounts_are_named_volumes_and_tmpfs_only() {
         let mut s = spec();
         s.volumes.push(VolumeMount {
-            volume: Name::parse("dh-data").unwrap(),
+            volume: Name::parse("bp-data").unwrap(),
             target: "/var/www".into(),
             read_only: true,
         });
@@ -775,7 +775,7 @@ mod tests {
         let mounts = host.mounts.unwrap();
         assert_eq!(mounts.len(), 1);
         assert_eq!(mounts[0].typ, Some(MountType::VOLUME));
-        assert_eq!(mounts[0].source.as_deref(), Some("dh-data"));
+        assert_eq!(mounts[0].source.as_deref(), Some("bp-data"));
         assert_eq!(mounts[0].read_only, Some(true));
         assert_eq!(
             mounts[0].volume_options.as_ref().and_then(|o| o.no_copy),
@@ -809,7 +809,7 @@ mod tests {
         ] {
             let mut s = spec();
             s.volumes.push(VolumeMount {
-                volume: Name::parse("dh-data").unwrap(),
+                volume: Name::parse("bp-data").unwrap(),
                 target: bad.into(),
                 read_only: false,
             });
@@ -818,15 +818,15 @@ mod tests {
         // The web server's site configuration directory, and only that, is allowed.
         let mut s = spec();
         s.volumes.push(VolumeMount {
-            volume: Name::parse("dh-data").unwrap(),
+            volume: Name::parse("bp-data").unwrap(),
             target: "/etc/nginx/conf.d".into(),
             read_only: true,
         });
         assert!(s.validate().is_ok());
         let mut s = spec();
         s.volumes.push(VolumeMount {
-            volume: Name::parse("dh-data").unwrap(),
-            target: "/usr/local/etc/php/dhpanel.d".into(),
+            volume: Name::parse("bp-data").unwrap(),
+            target: "/usr/local/etc/php/builtpanel.d".into(),
             read_only: true,
         });
         assert!(s.validate().is_ok());
@@ -851,7 +851,7 @@ mod tests {
         let mut s = spec();
         s.ports.push(port(8080));
         assert!(s.validate().is_err(), "no network");
-        s.network = Network::Named(Name::parse("dh-net").unwrap());
+        s.network = Network::Named(Name::parse("bp-net").unwrap());
         let body = s.to_create_body().unwrap();
         let bindings = body.host_config.unwrap().port_bindings.unwrap();
         let binding = &bindings["80/tcp"].as_ref().unwrap()[0];
@@ -913,7 +913,7 @@ mod tests {
         assert!(check(&|s| s.command = vec!["a\0b".into()]).is_err());
         assert!(
             check(&|s| {
-                s.labels.insert("dhpanel.managed".into(), "false".into());
+                s.labels.insert("builtpanel.managed".into(), "false".into());
             })
             .is_err()
         );

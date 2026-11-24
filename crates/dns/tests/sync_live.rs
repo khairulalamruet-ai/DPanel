@@ -4,9 +4,9 @@
 
 use std::sync::Arc;
 
-use dhpanel_database::dns::{self as store, StoredLine};
-use dhpanel_dns::{DnsError, mock::MockProvider, sync::ZoneSync};
-use dhpanel_domain::DnsRecord;
+use builtpanel_database::dns::{self as store, StoredLine};
+use builtpanel_dns::{DnsError, mock::MockProvider, sync::ZoneSync};
+use builtpanel_domain::DnsRecord;
 use sqlx::{PgPool, types::Uuid};
 
 const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA";
@@ -295,8 +295,8 @@ async fn zones_deleted_in_the_panel_are_removed_from_the_server(pool: PgPool) {
 /// A name server list the test can change.
 struct Changing(std::sync::Mutex<Vec<String>>);
 
-impl dhpanel_dns::sync::NameserverSource for Changing {
-    fn nameservers(&self) -> dhpanel_dns::BoxFuture<'_, Vec<String>> {
+impl builtpanel_dns::sync::NameserverSource for Changing {
+    fn nameservers(&self) -> builtpanel_dns::BoxFuture<'_, Vec<String>> {
         Box::pin(async move { self.0.lock().unwrap().clone() })
     }
 }

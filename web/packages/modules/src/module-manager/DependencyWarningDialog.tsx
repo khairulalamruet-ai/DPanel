@@ -8,8 +8,8 @@ import {
   DialogDescription,
   Button,
   Badge,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { AlertTriangle, Layers } from "lucide-react";
 import { ModuleItem } from "./types";
 

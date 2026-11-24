@@ -1,0 +1,8 @@
+slug        = "perl"
+name        = "PERL"
+category    = "server_side_scripting"
+kind        = "unavailable"
+description = "PERL."
+license     = "Apache-2.0"
+covers      = ["PERL"]
+reason      = "a language runtime or build tool, not a service; put it in your own container image (Containers)"

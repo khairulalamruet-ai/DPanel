@@ -8,11 +8,11 @@ import {
   DialogFooter,
   Button,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { createDbUser } from "./api";
 import { UserCheck, Key, RefreshCw, Eye, EyeOff, ShieldAlert } from "lucide-react";
-import { DatabaseItem, DatabaseUserItem, CreateDatabaseUserPayload } from "./types";
-import { useTranslation } from "@dhpanel/i18n";
+import { DatabaseItem, DatabaseUserItem } from "./types";
+import { useTranslation } from "@builtpanel/i18n";
 
 interface CreateDatabaseUserDialogProps {
   open: boolean;
@@ -37,7 +37,6 @@ export function CreateDatabaseUserDialog({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [host, setHost] = useState("10.0.0.%");
   const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -80,19 +79,14 @@ export function CreateDatabaseUserDialog({
       setIsSubmitting(true);
       setValidationError(null);
 
-      const payload: CreateDatabaseUserPayload = {
-        username: fullUsername,
+      const res = await createDbUser({
+        name: fullUsername,
+        prefix,
         password,
-        host,
-        assignments: selectedDatabases.map((dbName) => ({
-          db_name: dbName,
-          privileges: ["ALL PRIVILEGES"],
-        })),
-      };
-
-      const res = await apiFetch<DatabaseUserItem>("/api/v1/client/databases/users", {
-        method: "POST",
-        body: JSON.stringify(payload),
+        grants: selectedDatabases.flatMap((dbName) => {
+          const db = databases.find((d) => d.name === dbName);
+          return db ? [{ dbId: db.id, access: "all" as const }] : [];
+        }),
       });
 
       toast({
@@ -208,23 +202,6 @@ export function CreateDatabaseUserDialog({
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
-
-            {/* Allowed Connection Host (T07.04 & T07.05) */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">
-                {t("databases.fields.connectionHost", "Allowed Host")}
-              </label>
-              <select
-                value={host}
-                onChange={(e) => setHost(e.target.value)}
-                className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs font-mono"
-                data-testid="select-db-host"
-              >
-                <option value="10.0.0.%">10.0.0.% (Tenant Network - Default & Secure)</option>
-                <option value="localhost">localhost (Container Localhost Only)</option>
-                <option value="%">% (Any Host - Remote Access)</option>
-              </select>
             </div>
 
             {/* Assign Databases */}

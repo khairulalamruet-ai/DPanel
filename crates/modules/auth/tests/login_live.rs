@@ -1,5 +1,5 @@
 //! Login / logout / me against real PostgreSQL and Redis.
-//! Ignored by default: `eval "$(deploy/dev/devenv.sh test-env)" && cargo test -p dhpanel-mod-auth -- --include-ignored`
+//! Ignored by default: `eval "$(deploy/dev/devenv.sh test-env)" && cargo test -p builtpanel-mod-auth -- --include-ignored`
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::{
@@ -13,13 +13,13 @@ use axum::{
     extract::connect_info::MockConnectInfo,
     http::{Request, StatusCode, header},
 };
-use dhpanel_auth_core::password::{Argon2Params, PasswordHasher};
-use dhpanel_cache::{
+use builtpanel_auth_core::password::{Argon2Params, PasswordHasher};
+use builtpanel_cache::{
     RedisHandle,
     lockout::{FailureLimiter, LockoutPolicy},
 };
-use dhpanel_mod_auth::{AuthState, LoginLimits, router};
-use dhpanel_session::{SessionConfig, SessionStore};
+use builtpanel_mod_auth::{AuthState, LoginLimits, router};
+use builtpanel_session::{SessionConfig, SessionStore};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -72,23 +72,24 @@ fn limited_state(
         },
         trusted_proxies: trusted_proxies.to_vec().into(),
         redis: redis_handle,
-        master_key: dhpanel_auth_core::secretbox::MasterKey::from_bytes(&[42; 32]),
-        totp_issuer: "DHPanel Test".into(),
-        audit: dhpanel_audit::AuditWriter::new(pool.clone()),
+        master_key: builtpanel_auth_core::secretbox::MasterKey::from_bytes(&[42; 32]),
+        totp_issuer: "Built Panel Test".into(),
+        root_login: None,
+        audit: builtpanel_audit::AuditWriter::new(pool.clone()),
     }
 }
 
 fn app(state: AuthState) -> Router {
     let trusted = state.trusted_proxies.clone();
     router()
-        .merge(dhpanel_audit::router::<AuthState>())
+        .merge(builtpanel_audit::router::<AuthState>())
         .with_state(state)
         .layer(axum::middleware::from_fn_with_state(
             trusted,
-            dhpanel_http_kit::client_ip::client_ip_layer,
+            builtpanel_http_kit::client_ip::client_ip_layer,
         ))
         .layer(axum::middleware::from_fn(
-            dhpanel_http_kit::request_id::correlation_id_layer,
+            builtpanel_http_kit::request_id::correlation_id_layer,
         ))
         .layer(MockConnectInfo(SocketAddr::from((
             [198, 51, 100, 23],
@@ -224,7 +225,7 @@ async fn login_me_logout_flow(pool: PgPool) {
     assert!(r.body.get("password_hash").is_none());
     let set = r.set_cookie.expect("cookie");
     for attr in [
-        "__Host-dh_session=",
+        "__Host-bp_session=",
         "Secure",
         "HttpOnly",
         "SameSite=Strict",
@@ -677,7 +678,7 @@ async fn logout_without_csrf_header_is_403_and_keeps_the_session(pool: PgPool) {
 
 // ---------------------------------------------------------------- 2FA (T01.08)
 
-use dhpanel_auth_core::totp::TotpSecret;
+use builtpanel_auth_core::totp::TotpSecret;
 
 fn unix_now() -> u64 {
     std::time::SystemTime::now()
@@ -784,7 +785,7 @@ async fn password_step(app: &Router, name: &str) -> String {
     assert!(r.body.get("csrf_token").is_none());
     let set = r.set_cookie.expect("pending cookie");
     for attr in [
-        "__Host-dh_mfa=",
+        "__Host-bp_mfa=",
         "HttpOnly",
         "Secure",
         "SameSite=Strict",
@@ -793,7 +794,7 @@ async fn password_step(app: &Router, name: &str) -> String {
         assert!(set.contains(attr), "{set}");
     }
     assert!(
-        !set.contains("__Host-dh_session"),
+        !set.contains("__Host-bp_session"),
         "no session before the second factor"
     );
     cookie_pair(&set)
@@ -845,7 +846,7 @@ async fn account_with_2fa_cannot_log_in_without_the_second_step(pool: PgPool) {
     let pending = password_step(&app, "nina").await;
     let r = send(&app, "GET", "/api/v1/auth/me", Some(&pending), None).await;
     assert_eq!(r.status, StatusCode::UNAUTHORIZED);
-    let as_session = pending.replace("__Host-dh_mfa", "__Host-dh_session");
+    let as_session = pending.replace("__Host-bp_mfa", "__Host-bp_session");
     let r = send(&app, "GET", "/api/v1/auth/me", Some(&as_session), None).await;
     assert_eq!(r.status, StatusCode::UNAUTHORIZED);
 
@@ -856,7 +857,7 @@ async fn account_with_2fa_cannot_log_in_without_the_second_step(pool: PgPool) {
     assert_eq!(r.body["username"], "nina");
     assert_eq!(r.body["mfa_enabled"], true);
     let session = cookie_pair(&r.set_cookie.unwrap());
-    assert!(session.starts_with("__Host-dh_session="), "{session}");
+    assert!(session.starts_with("__Host-bp_session="), "{session}");
     let r = send(&app, "GET", "/api/v1/auth/me", Some(&session), None).await;
     assert_eq!(r.status, StatusCode::OK);
 
@@ -898,7 +899,7 @@ async fn totp_codes_and_pending_logins_are_single_use(pool: PgPool) {
     // No pending cookie, or a forged one: expired, not a code check.
     for cookie in [
         None,
-        Some("__Host-dh_mfa=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+        Some("__Host-bp_mfa=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
     ] {
         let r = mfa_step(&app, cookie, &code).await;
         assert_eq!(r.body["code"], "mfa_session_expired", "{cookie:?}");
@@ -1315,7 +1316,7 @@ async fn me_lists_roles_and_permissions(pool: PgPool) {
     let hasher = PasswordHasher::new(fast_params(2)).unwrap();
     let id = create_account(&pool, &hasher, "yuri", "active").await;
     for role in ["admin", "support"] {
-        dhpanel_database::rbac::assign_role(&pool, id, role, None)
+        builtpanel_database::rbac::assign_role(&pool, id, role, None)
             .await
             .unwrap();
     }
@@ -1349,7 +1350,7 @@ async fn audit_rows(pool: &PgPool) -> Vec<(String, String, Option<Uuid>)> {
 async fn login_failed_login_and_logout_appear_in_the_audit_log(pool: PgPool) {
     let hasher = PasswordHasher::new(fast_params(2)).unwrap();
     let id = create_account(&pool, &hasher, "audrey", "active").await;
-    dhpanel_database::rbac::assign_role(&pool, id, "super_admin", None)
+    builtpanel_database::rbac::assign_role(&pool, id, "super_admin", None)
         .await
         .unwrap();
     let app = app(state(&pool, hasher));
@@ -1744,4 +1745,296 @@ async fn ten_failures_from_one_address_block_it_for_an_hour(pool: PgPool) {
     assert_eq!(r.status, StatusCode::TOO_MANY_REQUESTS);
     let left: u64 = r.retry_after.expect("retry-after");
     assert!((3500..=3600).contains(&left), "{left}");
+}
+
+/// A stand-in for builtpanel-root-auth: root's password is `ROOT_PASSWORD`.
+const ROOT_PASSWORD: &str = "Server-Root-Secret-77";
+
+fn fake_root_helper() -> std::path::PathBuf {
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    let dir = std::env::temp_dir().join(format!("bp-root-live-{}", Uuid::now_v7().simple()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("root-auth.sock");
+    let listener = tokio::net::UnixListener::bind(&path).unwrap();
+    tokio::spawn(async move {
+        while let Ok((mut s, _)) = listener.accept().await {
+            let mut len = [0u8; 2];
+            if s.read_exact(&mut len).await.is_err() {
+                continue;
+            }
+            let mut pw = vec![0u8; usize::from(u16::from_be_bytes(len))];
+            if s.read_exact(&mut pw).await.is_err() {
+                continue;
+            }
+            let answer = if pw == ROOT_PASSWORD.as_bytes() {
+                b'Y'
+            } else {
+                b'N'
+            };
+            let _ = s.write_all(&[answer]).await;
+        }
+    });
+    path
+}
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn root_logs_in_with_the_servers_root_password(pool: PgPool) {
+    let hasher = PasswordHasher::new(fast_params(2)).unwrap();
+    let email = builtpanel_domain::Email::parse("root@panel.example.com").unwrap();
+    let (id, created) = builtpanel_database::accounts::enable_system_root(&pool, &email)
+        .await
+        .unwrap();
+    assert!(created);
+    // Turned on again: the same account.
+    assert_eq!(
+        builtpanel_database::accounts::enable_system_root(&pool, &email)
+            .await
+            .unwrap(),
+        (id, false)
+    );
+
+    // Without the helper configured, root cannot log in at all.
+    let off = app(state(&pool, hasher.clone()));
+    assert_eq!(
+        login(&off, "root", ROOT_PASSWORD, None).await.status,
+        StatusCode::UNAUTHORIZED
+    );
+
+    let mut st = state(&pool, hasher.clone());
+    st.root_login = Some(builtpanel_mod_auth::root_login::RootLogin::new(
+        fake_root_helper(),
+    ));
+    let on = app(st);
+    let r = login(&on, "root", "not-the-root-password", None).await;
+    assert_eq!(r.status, StatusCode::UNAUTHORIZED, "{:?}", r.body);
+    let r = login(&on, "ROOT", ROOT_PASSWORD, None).await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    assert_eq!(r.body["username"], "root");
+    assert_eq!(r.body["kind"], "admin");
+
+    // The marker is not a password: no other account can be given it.
+    let bad = sqlx::query(
+        "INSERT INTO accounts (kind, username, email, password_hash)
+         VALUES ('client', 'mallory', 'm@example.com', '!system:root')",
+    )
+    .execute(&pool)
+    .await;
+    assert!(bad.is_err());
+
+    // A helper that is down is reported, not taken for a wrong password.
+    let mut st = state(&pool, hasher.clone());
+    st.root_login = Some(builtpanel_mod_auth::root_login::RootLogin::new(
+        "/nonexistent/root-auth.sock".into(),
+    ));
+    let r = login(&app(st), "root", ROOT_PASSWORD, None).await;
+    assert_eq!(r.status, StatusCode::SERVICE_UNAVAILABLE, "{:?}", r.body);
+
+    // Turned off: the account is disabled and the login stops working.
+    assert!(
+        builtpanel_database::accounts::disable_system_root(&pool)
+            .await
+            .unwrap()
+    );
+    let mut st = state(&pool, hasher);
+    st.root_login = Some(builtpanel_mod_auth::root_login::RootLogin::new(
+        fake_root_helper(),
+    ));
+    let r = login(&app(st), "root", ROOT_PASSWORD, None).await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN, "{:?}", r.body);
+}
+
+// ------------------------------------------------------------ preferences
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn preferences_belong_to_one_account_and_are_checked(pool: PgPool) {
+    let hasher = PasswordHasher::new(fast_params(2)).unwrap();
+    create_account(&pool, &hasher, "amy", "active").await;
+    create_account(&pool, &hasher, "ben", "active").await;
+    let app = app(state(&pool, hasher));
+    let amy = sign_in(&app, "amy").await;
+    let ben = sign_in(&app, "ben").await;
+    let put = |b: &Browser, body: Value| {
+        let (app, cookie, csrf) = (app.clone(), b.cookie.clone(), b.csrf.clone());
+        async move {
+            send_with(
+                &app,
+                "PUT",
+                "/api/v1/auth/preferences",
+                Some(&cookie),
+                Some(body),
+                &[("x-csrf-token", &csrf)],
+            )
+            .await
+        }
+    };
+    let get = |b: &Browser| {
+        let (app, cookie) = (app.clone(), b.cookie.clone());
+        async move { send(&app, "GET", "/api/v1/auth/preferences", Some(&cookie), None).await }
+    };
+
+    // Nothing saved: the defaults.
+    let r = get(&amy).await;
+    assert_eq!(r.status, StatusCode::OK);
+    assert_eq!(r.body, json!({"locale": null, "favorites": []}));
+    // Saved, and read back in the order given.
+    let r = put(
+        &amy,
+        json!({"locale": "bn", "favorites": ["files", "domains/dns"]}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.body);
+    assert_eq!(
+        get(&amy).await.body,
+        json!({"locale": "bn", "favorites": ["files", "domains/dns"]})
+    );
+    // Replaced, not merged.
+    put(&amy, json!({"locale": null, "favorites": ["cron"]})).await;
+    assert_eq!(
+        get(&amy).await.body,
+        json!({"locale": null, "favorites": ["cron"]})
+    );
+    // Ben has his own.
+    assert_eq!(
+        get(&ben).await.body,
+        json!({"locale": null, "favorites": []})
+    );
+    // What is refused (and leaves the saved settings alone).
+    let many: Vec<String> = (0..31).map(|i| format!("k{i}")).collect();
+    for bad in [
+        json!({"locale": "fr", "favorites": []}),
+        json!({"locale": null, "favorites": ["Has Space"]}),
+        json!({"locale": null, "favorites": ["a", "a"]}),
+        json!({"locale": null, "favorites": [""]}),
+        json!({"locale": null, "favorites": many}),
+    ] {
+        let r = put(&amy, bad.clone()).await;
+        assert_eq!(
+            r.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{bad}: {}",
+            r.body
+        );
+    }
+    let r = put(&amy, json!({"locale": null, "favorites": [], "extra": 1})).await;
+    assert!(r.status.is_client_error(), "unknown field: {}", r.status);
+    assert_eq!(
+        get(&amy).await.body,
+        json!({"locale": null, "favorites": ["cron"]})
+    );
+    // Without a session.
+    let r = send(&app, "GET", "/api/v1/auth/preferences", None, None).await;
+    assert_eq!(r.status, StatusCode::UNAUTHORIZED);
+}
+
+// ------------------------------------------------------------ password
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn the_password_is_changed_only_with_the_old_one_and_signs_the_others_out(pool: PgPool) {
+    let hasher = PasswordHasher::new(fast_params(2)).unwrap();
+    create_account(&pool, &hasher, "amy", "active").await;
+    let app = app(state(&pool, hasher));
+    let first = sign_in(&app, "amy").await;
+    let second = sign_in(&app, "amy").await;
+    let change = |b: &Browser, body: Value| {
+        let (app, cookie, csrf) = (app.clone(), b.cookie.clone(), b.csrf.clone());
+        async move {
+            send_with(
+                &app,
+                "PUT",
+                "/api/v1/auth/password",
+                Some(&cookie),
+                Some(body),
+                &[("x-csrf-token", &csrf)],
+            )
+            .await
+        }
+    };
+    let strong = "Quiet-Harbor-Lantern-Orbit-77";
+
+    // A wrong current password: refused, and no new password is set.
+    let r = change(
+        &first,
+        json!({"current_password": "not-the-password", "new_password": strong}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+    assert_eq!(r.body["code"], "password_incorrect");
+    // The same password again, or one the policy refuses.
+    let r = change(
+        &first,
+        json!({"current_password": PASSWORD, "new_password": PASSWORD}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let codes: Vec<String> = r.body["errors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["code"].as_str().unwrap().to_owned())
+        .collect();
+    assert!(
+        codes.contains(&"password_unchanged".to_owned()),
+        "{codes:?}"
+    );
+    let r = change(
+        &first,
+        json!({"current_password": PASSWORD, "new_password": "short"}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(r.body["errors"][0]["code"], "password_too_short");
+
+    // Changed: the other session ends, this one stays, the old password stops working.
+    let r = change(
+        &first,
+        json!({"current_password": PASSWORD, "new_password": strong}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.body);
+    assert_eq!(r.body["other_sessions_ended"], 1);
+    assert_eq!(
+        send(&app, "GET", "/api/v1/auth/me", Some(&first.cookie), None)
+            .await
+            .status,
+        StatusCode::OK
+    );
+    assert_eq!(
+        send(&app, "GET", "/api/v1/auth/me", Some(&second.cookie), None)
+            .await
+            .status,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        login(&app, "amy", PASSWORD, None).await.status,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        login(&app, "amy", strong, None).await.status,
+        StatusCode::OK
+    );
+
+    // The change is in the audit log, with no password in it.
+    let (action, meta): (String, Value) = sqlx::query_as(
+        "SELECT action, metadata FROM audit_logs WHERE action = 'auth.password_changed'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(action, "auth.password_changed");
+    assert!(!meta.to_string().contains(strong));
+
+    // Without a session.
+    let r = send_with(
+        &app,
+        "PUT",
+        "/api/v1/auth/password",
+        None,
+        Some(json!({"current_password": "x", "new_password": strong})),
+        &[],
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::UNAUTHORIZED);
 }

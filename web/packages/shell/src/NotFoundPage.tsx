@@ -1,6 +1,6 @@
 import React from "react";
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { FileQuestion, Home } from "lucide-react";
 
 export interface NotFoundPageProps {

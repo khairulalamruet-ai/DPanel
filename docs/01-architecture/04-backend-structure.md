@@ -3,7 +3,7 @@
 PDF-এর প্রস্তাবিত গঠন আর module system মিলিয়ে বানানো। Clean Architecture + DDD। Domain নিয়ম Axum, SQLx বা Redis-এর ওপর নির্ভর করবে না।
 
 ```
-dhpanel/
+builtpanel/
 ├── Cargo.toml                    # workspace
 ├── apps/
 │   ├── control-api/              # Axum HTTP server (admin + client API)
@@ -11,7 +11,7 @@ dhpanel/
 │   ├── node-agent/               # প্রতি server-এ (Bollard)
 │   ├── priv-helper/              # ছোট root helper (allowlist করা কাজ)
 │   ├── license-authority/        # আলাদা service (পরের phase)
-│   └── dhctl/                    # admin CLI (bootstrap, recovery)
+│   └── bpctl/                    # admin CLI (bootstrap, recovery)
 ├── crates/
 │   ├── kernel/                   # module trait, registry, event bus, error type
 │   ├── common/                   # id type, time, pagination, result
@@ -68,5 +68,5 @@ crates/modules/domains/
 - Versioning: ভাঙনমূলক পরিবর্তন হলে `/api/v2`।
 
 ## Configuration
-- `/etc/dhpanel/control.toml` + env override (`DHPANEL_*`)।
-- Secret (DB password, session key, CA key) থাকবে `/etc/dhpanel/secrets/` (0600)-এ বা systemd credential-এ। Source code-এ কখনো নয়।
+- `/etc/builtpanel/control.toml` + env override (`BUILTPANEL_*`)।
+- Secret (DB password, session key, CA key) থাকবে `/etc/builtpanel/secrets/` (0600)-এ বা systemd credential-এ। Source code-এ কখনো নয়।

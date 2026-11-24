@@ -7,11 +7,10 @@ import {
   DialogDescription,
   DialogFooter,
   Button,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { applyToAll } from "./api";
 import { Send, CheckCircle2, AlertTriangle, RefreshCw, Server } from "lucide-react";
-import { useOperation } from "../operations/useOperation";
-import type { VhostTemplate, VhostApplyAllResponse } from "./types";
+import type { VhostTemplate } from "./types";
 
 interface VhostApplyAllDialogProps {
   open: boolean;
@@ -26,47 +25,37 @@ export function VhostApplyAllDialog({
   template,
   onSuccess,
 }: VhostApplyAllDialogProps) {
-  const [activeOpId, setActiveOpId] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Real-time operation tracker
-  const { operation, isPolling } = useOperation(activeOpId, {
-    enabled: !!activeOpId,
-    pollInterval: 1000,
-    onSuccess: () => {
-      onSuccess?.();
-    },
-  });
 
   const handleStartApply = async () => {
     if (!template) return;
     try {
       setIsSubmitting(true);
       setError(null);
-      const res = await apiFetch<VhostApplyAllResponse>(
-        `/api/v1/admin/vhost-templates/${template.id}/apply-all`,
-        { method: "POST" }
-      );
-      setActiveOpId(res.operation_id);
+      // Every account's web server files are sent again; the nodes do it in the background.
+      const res = await applyToAll();
+      setAccounts(res.tenants);
+      onSuccess?.();
     } catch (err: any) {
-      setError(err?.message || "Failed to dispatch apply-all operation");
+      setError(err?.message || "Failed to dispatch the apply operation");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    setActiveOpId(null);
+    setAccounts(null);
     setError(null);
     onOpenChange(false);
   };
 
   if (!template) return null;
 
-  const isComplete = operation?.status === "succeeded";
-  const isFailed = operation?.status === "failed";
-  const inProgress = isSubmitting || isPolling || (operation && !isComplete && !isFailed);
+  const isComplete = accounts !== null;
+  const isFailed = false;
+  const inProgress = isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -94,12 +83,12 @@ export function VhostApplyAllDialog({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground font-semibold">Active Domains:</span>
-              <span className="font-semibold text-primary">{template.domain_count} domains</span>
+              <span className="font-semibold text-primary">{template.domain_count ? `${template.domain_count} domains` : "all"}</span>
             </div>
           </div>
 
           {/* Operation Status Feedback */}
-          {activeOpId && (
+          {isComplete && (
             <div
               className={`p-3.5 rounded-lg border text-xs space-y-2 ${
                 isComplete
@@ -128,18 +117,9 @@ export function VhostApplyAllDialog({
               </div>
 
               <p className="text-[11px] leading-relaxed opacity-90">
-                {isComplete
-                  ? `Successfully re-rendered configuration and reloaded ${template.server_type} across all ${template.domain_count} domains.`
-                  : isFailed
-                  ? (operation?.error?.message || "Operation failed to reload web server.")
-                  : "Dispatching configuration reload operation to nodes..."}
+                {`The web server files of ${accounts} accounts are being sent again; the nodes do it in the background.`}
               </p>
 
-              {activeOpId && (
-                <p className="font-mono text-[10px] opacity-75">
-                  Operation ID: {activeOpId}
-                </p>
-              )}
             </div>
           )}
 
@@ -150,12 +130,11 @@ export function VhostApplyAllDialog({
             </div>
           )}
 
-          {!activeOpId && (
+          {!isComplete && (
             <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 rounded-lg flex items-start gap-2">
               <Server className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
               <span>
-                This operation will rebuild configuration files for all {template.domain_count} domains
-                and reload the web server. Zero-downtime graceful reload will be performed.
+                This sends the web server files of every account again, so a changed template reaches the sites that exist.
               </span>
             </div>
           )}

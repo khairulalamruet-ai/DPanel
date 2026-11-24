@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-pki"
+name = "builtpanel-pki"
 description = "Internal certificate authority for node mTLS: create the CA, issue and inspect certificates."
 version.workspace = true
 edition.workspace = true

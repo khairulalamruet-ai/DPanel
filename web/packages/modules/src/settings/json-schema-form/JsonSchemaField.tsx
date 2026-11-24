@@ -1,5 +1,5 @@
 import React from "react";
-import { Input } from "@dhpanel/ui";
+import { Input } from "@builtpanel/ui";
 import { JsonSchemaProperty } from "./types";
 
 export interface JsonSchemaFieldProps {

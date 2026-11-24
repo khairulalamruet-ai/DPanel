@@ -10,7 +10,7 @@
 
 use std::{sync::Arc, time::Duration};
 
-use dhpanel_node_protocol::{
+use builtpanel_node_protocol::{
     AGENT_SILENCE_TIMEOUT_SECS, AgentMessage, ControlMessage, Hello, MAX_FRAME_BYTES,
     PROTOCOL_VERSION, STREAM_PATH, decode, encode,
 };
@@ -211,7 +211,7 @@ pub async fn run(
 /// systemd collects in the journal. Never includes keys or tokens.
 #[allow(clippy::print_stderr)]
 fn tracing_line(line: &str) {
-    eprintln!("dhpanel-agent: {line}");
+    eprintln!("builtpanel-agent: {line}");
 }
 
 async fn stopped(shutdown: &mut watch::Receiver<bool>) {

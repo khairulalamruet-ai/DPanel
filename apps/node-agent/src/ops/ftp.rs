@@ -1,6 +1,6 @@
 //! SFTP and FTPS accounts (T08.11, T08.12).
 //!
-//! The node runs one SFTPGo container (`dh-sftpgo`) for every tenant. Each account is a
+//! The node runs one SFTPGo container (`bp-sftpgo`) for every tenant. Each account is a
 //! virtual user of it whose home is a folder of the tenant's files and that works as the
 //! tenant's own user id: SFTPGo changes to that id for everything it does with files,
 //! so the files are as closed to the account as they are to the tenant, and SFTPGo
@@ -14,11 +14,11 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_docker_manager::{
+use builtpanel_docker_manager::{
     Capability, ContainerSpec, DockerError, Network, PublishedPort, Restart, Tmpfs, VolumeMount,
 };
-use dhpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role};
+use builtpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role};
 use serde_json::{Value, json};
 
 use super::{
@@ -28,7 +28,7 @@ use super::{
 };
 
 /// The container's name.
-pub const CONTAINER: &str = "dh-sftpgo";
+pub const CONTAINER: &str = "bp-sftpgo";
 const MIB: u64 = 1024 * 1024;
 
 fn port_from(env: &str, default: u16) -> u16 {
@@ -39,28 +39,28 @@ fn port_from(env: &str, default: u16) -> u16 {
         .unwrap_or(default)
 }
 
-/// The port SFTP is offered on (`DHPANEL_AGENT_SFTP_PORT`).
+/// The port SFTP is offered on (`BUILTPANEL_AGENT_SFTP_PORT`).
 #[must_use]
 pub fn sftp_port() -> u16 {
-    port_from("DHPANEL_AGENT_SFTP_PORT", 2222)
+    port_from("BUILTPANEL_AGENT_SFTP_PORT", 2222)
 }
 
-/// The port FTP (with TLS) is offered on (`DHPANEL_AGENT_FTP_PORT`).
+/// The port FTP (with TLS) is offered on (`BUILTPANEL_AGENT_FTP_PORT`).
 #[must_use]
 pub fn ftp_port() -> u16 {
-    port_from("DHPANEL_AGENT_FTP_PORT", 2121)
+    port_from("BUILTPANEL_AGENT_FTP_PORT", 2121)
 }
 
-/// First port of the passive data range (`DHPANEL_AGENT_FTP_PASSIVE_START`, 20 ports).
+/// First port of the passive data range (`BUILTPANEL_AGENT_FTP_PASSIVE_START`, 20 ports).
 #[must_use]
 pub fn passive_start() -> u16 {
-    port_from("DHPANEL_AGENT_FTP_PASSIVE_START", 21_100)
+    port_from("BUILTPANEL_AGENT_FTP_PASSIVE_START", 21_100)
 }
 
-/// Where the REST API listens on the loopback address (`DHPANEL_AGENT_SFTPGO_API_PORT`).
+/// Where the REST API listens on the loopback address (`BUILTPANEL_AGENT_SFTPGO_API_PORT`).
 #[must_use]
 pub fn api_port() -> u16 {
-    port_from("DHPANEL_AGENT_SFTPGO_API_PORT", 18_083)
+    port_from("BUILTPANEL_AGENT_SFTPGO_API_PORT", 18_083)
 }
 
 const PASSIVE_PORTS: u16 = 20;
@@ -110,7 +110,7 @@ fn ensure_certificate(dir: &Path) -> Result<(), AgentError> {
         return Ok(());
     }
     let key = rcgen::KeyPair::generate().map_err(|_| failed("cannot make a key"))?;
-    let mut params = rcgen::CertificateParams::new(vec!["dhpanel-ftp".to_owned()])
+    let mut params = rcgen::CertificateParams::new(vec!["builtpanel-ftp".to_owned()])
         .map_err(|_| failed("cannot make a certificate"))?;
     let now = time::OffsetDateTime::now_utc();
     params.not_before = now - time::Duration::days(1);
@@ -180,9 +180,9 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
                 .ok_or_else(|| failed("the tenants folder has no parent"))?
                 .to_path_buf();
             let (v_data, v_certs, v_tenants) = (
-                db::name("dh-sftpgo-data")?,
-                db::name("dh-sftpgo-certs")?,
-                db::name("dh-sftpgo-tenants")?,
+                db::name("bp-sftpgo-data")?,
+                db::name("bp-sftpgo-certs")?,
+                db::name("bp-sftpgo-tenants")?,
             );
             docker
                 .create_bind_volume(&v_data, &data, &state)
@@ -196,7 +196,7 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
                 .create_bind_volume(&v_tenants, &context.tenants_root, &tenants_parent)
                 .await
                 .map_err(|e| docker_error(&e))?;
-            let network = db::name("dh-sftpgo-net")?;
+            let network = db::name("bp-sftpgo-net")?;
             docker
                 .ensure_network(&network, false)
                 .await
@@ -217,7 +217,7 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
                 "SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN".into(),
                 "true".into(),
             );
-            env.insert("SFTPGO_DEFAULT_ADMIN_USERNAME".into(), "dhpanel".into());
+            env.insert("SFTPGO_DEFAULT_ADMIN_USERNAME".into(), "builtpanel".into());
             env.insert(
                 "SFTPGO_DEFAULT_ADMIN_PASSWORD".into(),
                 admin_password(context)?,
@@ -247,7 +247,7 @@ async fn ensure_container(context: &TenantContext) -> Result<(), AgentError> {
                 "SFTPGO_FTPD__CERTIFICATE_KEY_FILE".into(),
                 "/certs/ftp.key".into(),
             );
-            if let Ok(ip) = std::env::var("DHPANEL_AGENT_FTP_PASSIVE_IP") {
+            if let Ok(ip) = std::env::var("BUILTPANEL_AGENT_FTP_PASSIVE_IP") {
                 env.insert("SFTPGO_FTPD__BINDINGS__0__FORCE_PASSIVE_IP".into(), ip);
             }
             // The web interfaces are off; only the REST API is on, and only on loopback.
@@ -348,7 +348,10 @@ fn agent() -> ureq::Agent {
 /// A token for the REST API (waiting for the server to come up).
 fn token(admin: &str) -> Result<String, AgentError> {
     let http = agent();
-    let basic = format!("Basic {}", base64_of(format!("dhpanel:{admin}").as_bytes()));
+    let basic = format!(
+        "Basic {}",
+        base64_of(format!("builtpanel:{admin}").as_bytes(),)
+    );
     let mut last = failed("the file transfer server did not come up").retryable();
     for _ in 0..60 {
         match http
@@ -501,7 +504,7 @@ pub async fn upsert_ftp_account(
             "denied_protocols": denied,
             "ftp_security": i32::from(!ftp_plain),
         },
-        "description": format!("dhpanel:{tenant_id}"),
+        "description": format!("builtpanel:{tenant_id}"),
     });
     let created = tokio::task::spawn_blocking(move || -> Result<bool, AgentError> {
         let http = agent();
@@ -622,7 +625,7 @@ mod tests {
 
     #[test]
     fn base64_matches_the_known_answers() {
-        assert_eq!(base64_of(b"dhpanel:secret"), "ZGhwYW5lbDpzZWNyZXQ=");
+        assert_eq!(base64_of(b"builtpanel:secret"), "YnVpbHRwYW5lbDpzZWNyZXQ=");
         assert_eq!(base64_of(b"ab"), "YWI=");
     }
 }

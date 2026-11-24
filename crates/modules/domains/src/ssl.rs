@@ -15,7 +15,7 @@
 //!
 //! **Uploading a certificate** (needs the `custom_ssl` feature): the site's
 //! certificate and the ones that vouch for it, and its private key. Everything is
-//! checked before anything is kept ([`dhpanel_pki::custom`]): the certificate must
+//! checked before anything is kept ([`builtpanel_pki::custom`]): the certificate must
 //! cover the domain and be valid now, each must be signed by the next, the key must
 //! be an unprotected PKCS#8 key and the one of the certificate; a failure is a 422
 //! naming the field and what is wrong (`key_mismatch` for a key of another
@@ -29,14 +29,14 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{certificates, plans};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{certificates, plans};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
-use dhpanel_session::rfc3339;
+use builtpanel_session::rfc3339;
 use secrecy::ExposeSecret as _;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -211,7 +211,7 @@ impl std::fmt::Debug for UploadCertificate {
 
 /// What the key is sealed to: this domain's certificate and nothing else.
 fn key_context(domain_id: Uuid) -> Vec<u8> {
-    dhpanel_database::certificates::key_context(domain_id)
+    builtpanel_database::certificates::key_context(domain_id)
 }
 
 async fn upload(
@@ -231,7 +231,7 @@ async fn upload(
             "Uploading a certificate is not included in this plan.",
         ));
     }
-    let checked = dhpanel_pki::custom::check(
+    let checked = builtpanel_pki::custom::check(
         &req.certificate,
         &req.private_key,
         &domain.domain.fqdn,
@@ -260,7 +260,7 @@ async fn upload(
     )
     .await
     .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("ssl.custom_uploaded", Outcome::Success)
             .actor(who.account_id())
@@ -292,7 +292,7 @@ async fn remove(
     {
         return Err(AppError::not_found("uploaded certificate"));
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("ssl.custom_removed", Outcome::Success)
             .actor(who.account_id())

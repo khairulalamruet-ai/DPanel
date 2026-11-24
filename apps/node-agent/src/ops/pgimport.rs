@@ -14,7 +14,7 @@
 
 use std::{io::Read as _, path::Path};
 
-use dhpanel_node_protocol::AgentError;
+use builtpanel_node_protocol::AgentError;
 use futures_util::SinkExt as _;
 use uuid::Uuid;
 

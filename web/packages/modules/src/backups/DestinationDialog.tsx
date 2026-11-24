@@ -8,10 +8,10 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { createDestination } from "./adminApi";
 import { HardDrive, Cloud, Server, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { BackupDestinationType } from "./types";
 
 interface DestinationDialogProps {
@@ -30,7 +30,7 @@ export function DestinationDialog({
 
   const [type, setType] = useState<BackupDestinationType>("s3");
   const [name, setName] = useState("");
-  const [localPath, setLocalPath] = useState("/var/backups/dhpanel");
+  const [localPath, setLocalPath] = useState("/var/backups/builtpanel");
 
   // S3 fields
   const [s3Bucket, setS3Bucket] = useState("");
@@ -44,47 +44,9 @@ export function DestinationDialog({
   const [sftpPort, setSftpPort] = useState(22);
   const [sftpUser, setSftpUser] = useState("");
   const [sftpPath, setSftpPath] = useState("/backups");
+  const [sftpPassword, setSftpPassword] = useState("");
 
-  const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleTestConnection = async () => {
-    try {
-      setIsTesting(true);
-      setTestResult(null);
-
-      await apiFetch("/api/v1/admin/backups/destinations/test", {
-        method: "POST",
-        body: JSON.stringify({
-          type,
-          config: {
-            local_path: type === "local" ? localPath : undefined,
-            s3_bucket: type === "s3" ? s3Bucket : undefined,
-            s3_region: type === "s3" ? s3Region : undefined,
-            s3_endpoint: type === "s3" ? s3Endpoint : undefined,
-            sftp_host: type === "sftp" ? sftpHost : undefined,
-            sftp_port: type === "sftp" ? Number(sftpPort) : undefined,
-          },
-        }),
-      });
-
-      setTestResult("success");
-      toast({
-        title: t("common.success"),
-        description: t("adminBackups.connectionTestSuccess"),
-      });
-    } catch (err: any) {
-      setTestResult("error");
-      toast({
-        title: t("common.error"),
-        description: err.message || t("adminBackups.connectionTestFailed"),
-        variant: "destructive",
-      });
-    } finally {
-      setIsTesting(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,22 +54,12 @@ export function DestinationDialog({
 
     try {
       setIsSubmitting(true);
-      await apiFetch("/api/v1/admin/backups/destinations", {
-        method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          type,
-          config: {
-            local_path: type === "local" ? localPath : undefined,
-            s3_bucket: type === "s3" ? s3Bucket : undefined,
-            s3_region: type === "s3" ? s3Region : undefined,
-            s3_endpoint: type === "s3" ? s3Endpoint : undefined,
-            sftp_host: type === "sftp" ? sftpHost : undefined,
-            sftp_port: type === "sftp" ? Number(sftpPort) : undefined,
-            sftp_user: type === "sftp" ? sftpUser : undefined,
-            sftp_path: type === "sftp" ? sftpPath : undefined,
-          },
-        }),
+      await createDestination({
+        type,
+        name: name.trim(),
+        local: { path: localPath },
+        s3: { endpoint: s3Endpoint, bucket: s3Bucket, region: s3Region, accessKey: s3AccessKey, secretKey: s3SecretKey },
+        sftp: { host: sftpHost, port: Number(sftpPort), user: sftpUser, path: sftpPath, password: sftpPassword },
       });
 
       toast({
@@ -209,7 +161,7 @@ export function DestinationDialog({
               <Input
                 value={localPath}
                 onChange={(e) => setLocalPath(e.target.value)}
-                placeholder="/var/backups/dhpanel"
+                placeholder="/var/backups/builtpanel"
                 className="font-mono text-xs"
                 data-testid="input-local-path"
               />
@@ -325,46 +277,20 @@ export function DestinationDialog({
                   />
                 </div>
               </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Password</label>
+                <Input
+                  type="password"
+                  value={sftpPassword}
+                  onChange={(e) => setSftpPassword(e.target.value)}
+                  className="font-mono text-xs"
+                  data-testid="input-sftp-password"
+                />
+              </div>
             </div>
           )}
 
-          {/* Test Connection Result */}
-          {testResult && (
-            <div
-              className={`p-2.5 rounded-lg border text-xs flex items-center gap-2 ${
-                testResult === "success"
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                  : "bg-destructive/10 border-destructive/30 text-destructive"
-              }`}
-              data-testid="test-connection-result"
-            >
-              {testResult === "success" ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-              )}
-              <span>
-                {testResult === "success"
-                  ? t("adminBackups.connectionTestSuccess")
-                  : t("adminBackups.connectionTestFailed")}
-              </span>
-            </div>
-          )}
-
-          <DialogFooter className="pt-2 flex items-center justify-between sm:justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleTestConnection}
-              disabled={isTesting}
-              className="gap-1.5"
-              data-testid="btn-test-connection"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? "animate-spin" : ""}`} />
-              <span>{isTesting ? t("common.loading") : t("adminBackups.testConnection")}</span>
-            </Button>
-
+          <DialogFooter className="pt-2">
             <div className="flex gap-2">
               <Button
                 type="button"

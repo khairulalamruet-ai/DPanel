@@ -15,9 +15,10 @@ import {
   TableRow,
   TableCell,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { apiFetch } from "@builtpanel/api";
+import { loadUserDetail } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   User,
   Globe,
@@ -64,7 +65,7 @@ export function UserDetailPage() {
   const fetchUserDetail = async () => {
     setIsLoading(true);
     try {
-      const data = await apiFetch<UserDetail>(`/api/v1/admin/users/${userId}`);
+      const data = await loadUserDetail(userId);
       setUser(data);
     } catch (err: any) {
       toast({

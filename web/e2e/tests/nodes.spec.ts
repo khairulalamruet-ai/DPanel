@@ -43,7 +43,7 @@ test.describe("Node Management UI (T02.16)", () => {
     // Verify command block appears
     const codeBlock = page.locator("pre code");
     await expect(codeBlock).toBeVisible();
-    await expect(codeBlock).toContainText("curl -sSL https://get.dhpanel.com/agent.sh");
+    await expect(codeBlock).toContainText("curl -sSL https://get.builtpanel.com/agent.sh");
 
     // Click copy command button
     const copyBtn = page.getByRole("button", { name: /Copy Command|কমান্ড কপি করুন/i });

@@ -28,3 +28,6 @@ COPY coraza.conf /etc/caddy/coraza.conf
 COPY --from=rules /crs/rules /etc/caddy/crs/rules
 COPY --from=rules /crs/crs-setup.conf.example /etc/caddy/crs/crs-setup.conf
 RUN caddy list-modules | grep -q http.handlers.waf
+# The firewall's audit log (coraza.conf); mount a directory of the host here for the node agent.
+RUN mkdir -p /var/log/caddy
+VOLUME /var/log/caddy

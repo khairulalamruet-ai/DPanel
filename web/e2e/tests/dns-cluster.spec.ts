@@ -11,7 +11,7 @@ test.describe("DNS Cluster Management UI (T16.04)", () => {
     // Verify initial nameservers in table
     await expect(page.locator("table").getByText("Primary PowerDNS US-East")).toBeVisible();
     await expect(page.locator("table").getByText("Secondary PowerDNS EU-Central")).toBeVisible();
-    await expect(page.locator("table").getByText("ns1.dhpanel.internal")).toBeVisible();
+    await expect(page.locator("table").getByText("ns1.builtpanel.internal")).toBeVisible();
   });
 
   test("DoD T16.04: adds a new DNS server to the cluster", async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe("DNS Cluster Management UI (T16.04)", () => {
 
     // Fill form
     await dialog.getByTestId("input-dns-name").fill("APAC High-Availability DNS");
-    await dialog.getByTestId("input-dns-hostname").fill("ns5.dhpanel.net");
+    await dialog.getByTestId("input-dns-hostname").fill("ns5.builtpanel.net");
     await dialog.getByTestId("input-dns-ip").fill("203.0.113.88");
 
     // Select Secondary role
@@ -38,7 +38,7 @@ test.describe("DNS Cluster Management UI (T16.04)", () => {
     // Verify new server is listed in the table
     const row = page.locator("tr", { hasText: "APAC High-Availability DNS" });
     await expect(row).toBeVisible();
-    await expect(row.getByText("ns5.dhpanel.net")).toBeVisible();
+    await expect(row.getByText("ns5.builtpanel.net")).toBeVisible();
   });
 
   test("DoD T16.04: resolves domain query even when a DNS server is offline", async ({ page }) => {

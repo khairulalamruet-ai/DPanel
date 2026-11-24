@@ -1,6 +1,6 @@
 [package]
-name = "dhpanel-config"
-description = "Typed service configuration: defaults, TOML file, DHPANEL_* environment, secret files and validation."
+name = "builtpanel-config"
+description = "Typed service configuration: defaults, TOML file, BUILTPANEL_* environment, secret files and validation."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

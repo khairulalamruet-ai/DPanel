@@ -1,0 +1,9 @@
+slug        = "postgresql"
+name        = "PostgreSQL"
+category    = "databases"
+kind        = "builtin"
+description = "The PostgreSQL database server; accounts get databases on it."
+license     = "PostgreSQL"
+homepage    = "https://www.postgresql.org"
+covers      = ["PostgreSQL", "PostgreSQL18", "PGSQL-common (library)"]
+provided_by = "Databases (PostgreSQL 18)"

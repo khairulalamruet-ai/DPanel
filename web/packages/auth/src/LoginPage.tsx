@@ -8,9 +8,9 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from "@dhpanel/ui";
-import { useTranslation, LanguageSwitcher } from "@dhpanel/i18n";
-import { api, setCsrfToken } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation, LanguageSwitcher } from "@builtpanel/i18n";
+import { api, setCsrfToken } from "@builtpanel/api";
 import { useSession } from "./context";
 import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowLeft } from "lucide-react";
 
@@ -21,7 +21,8 @@ export interface LoginPageProps {
 
 export function LoginPage({ title, onSuccess }: LoginPageProps) {
   const { t } = useTranslation();
-  const { refetch, data: session } = useSession();
+  const { refetch, data, publicBranding } = useSession();
+  const session = data ?? (publicBranding ? { branding: publicBranding } : null);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -108,7 +109,7 @@ export function LoginPage({ title, onSuccess }: LoginPageProps) {
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-muted/30 px-4 py-8 relative">
       {session?.branding?.customCss && (
-        <style id="dhpanel-login-custom-css" dangerouslySetInnerHTML={{ __html: session.branding.customCss }} />
+        <style id="builtpanel-login-custom-css" dangerouslySetInnerHTML={{ __html: session.branding.customCss }} />
       )}
       <div className="absolute top-4 right-4 flex items-center gap-2">
         <LanguageSwitcher />

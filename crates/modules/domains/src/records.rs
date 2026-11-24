@@ -12,7 +12,7 @@
 //! parent's zone, so asking for them on the subdomain is a 409 `no_zone`.
 //!
 //! A bad record is a 422 that names the field and says what is wrong
-//! (`dhpanel_domain::dns` has the rules per type: addresses, targets, TTL
+//! (`builtpanel_domain::dns` has the rules per type: addresses, targets, TTL
 //! 60..604800, priority for MX and SRV, no CNAME or apex NS). A record that
 //! clashes with the zone as it is, a CNAME beside other records or the same
 //! record twice, is a 409 with its own code. Changing records needs the `dns`
@@ -26,13 +26,13 @@ use axum::{
     http::StatusCode,
     routing::{get, patch},
 };
-use dhpanel_database::{
+use builtpanel_database::{
     dns::{self as store, RecordWriteError, StoredRecord, Zone},
     plans,
 };
-use dhpanel_domain::{DnsRecord, DnsRecordError, DomainKind, check_dns_conflicts};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_domain::{DnsRecord, DnsRecordError, DomainKind, check_dns_conflicts};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Principal, Require, RequireRecent,
     permissions::{DomainsManage, DomainsRead},
 };
@@ -254,7 +254,7 @@ async fn add_record(
         .map_err(|e| invalid(&e))?;
 
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
         .await
         .map_err(internal)?;
     let existing = store::records_in(&mut tx, zone.id)
@@ -278,7 +278,7 @@ async fn add_record(
     store::mark_changed(&mut tx, zone.id)
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("dns.record_added", who, hosting, domain_id).metadata(serde_json::json!({
             "zone": zone.name,
@@ -319,7 +319,7 @@ async fn update_record(
         )]));
     }
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
+    builtpanel_database::domains::lock_tenant(&mut tx, hosting.tenant.id)
         .await
         .map_err(internal)?;
     let existing = store::records_in(&mut tx, zone.id)
@@ -359,7 +359,7 @@ async fn update_record(
     store::mark_changed(&mut tx, zone.id)
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("dns.record_changed", who, hosting, domain_id).metadata(serde_json::json!({
             "zone": zone.name,
@@ -409,7 +409,7 @@ async fn delete_record(
     store::mark_changed(&mut tx, zone.id)
         .await
         .map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &entry("dns.record_deleted", who, hosting, domain_id).metadata(serde_json::json!({
             "zone": zone.name,

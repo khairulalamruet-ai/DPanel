@@ -50,7 +50,7 @@ CREATE TABLE licenses (
 );
 CREATE INDEX licenses_customer_idx ON licenses (customer_id);
 
--- One row per DHPanel installation ever seen (its identity is a key pair made at install time).
+-- One row per Built Panel installation ever seen (its identity is a key pair made at install time).
 CREATE TABLE installations (
     id            uuid        PRIMARY KEY,
     public_key    bytea       NOT NULL UNIQUE CHECK (length(public_key) = 32),

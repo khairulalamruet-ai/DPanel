@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
-import { useToast, Button } from "@dhpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
+import { useToast, Button } from "@builtpanel/ui";
 import {
   Users,
   Layers,

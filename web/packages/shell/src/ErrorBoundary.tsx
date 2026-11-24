@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@dhpanel/ui";
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@builtpanel/ui";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 
 export function RouteErrorFallback({ error, reset }: { error: any; reset?: () => void }) {

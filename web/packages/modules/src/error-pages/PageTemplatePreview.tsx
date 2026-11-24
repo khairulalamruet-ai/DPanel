@@ -1,8 +1,8 @@
 import React from "react";
-import { Button, Input } from "@dhpanel/ui";
+import { Button, Input } from "@builtpanel/ui";
 import { Monitor, Tablet, Smartphone, ExternalLink, RefreshCw } from "lucide-react";
 import { PageTemplateVariable } from "./types";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 interface PageTemplatePreviewProps {
   content: string;

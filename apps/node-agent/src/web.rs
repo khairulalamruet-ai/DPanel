@@ -12,7 +12,7 @@
 //! (it restarted without its autosave, someone reset it) the next reconcile pass
 //! loads it again, and a restart of the agent does the same. Only a hostname that
 //! the control plane assigned to one tenant is routed to that tenant's own
-//! containers (`dh-<tenant>-...`), so one tenant's route can never point at
+//! containers (`bp-<tenant>-...`), so one tenant's route can never point at
 //! another's.
 //!
 //! In what Caddy sends back to visitors there is no placeholder (`{...}`): the
@@ -25,11 +25,11 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_domain::{
+use builtpanel_domain::{
     Fqdn, SourcePath, Target, TenantUsername,
     error_pages::{self, Kind as ErrorKind},
 };
-use dhpanel_node_protocol::{
+use builtpanel_node_protocol::{
     AgentError, CertificateInfo, CustomCertificate, ErrorCode, MAX_CERTIFICATES_PER_REPORT,
     MAX_CUSTOM_CERTIFICATES_PER_TENANT, MAX_HOSTS_PER_TENANT, MAX_REDIRECTS_PER_TENANT,
     MAX_SITES_PER_TENANT, Operation, Output, SiteRoute,
@@ -39,7 +39,7 @@ use tokio::sync::Mutex;
 
 /// The name of the server inside Caddy's configuration.
 const LOAD_PEM: &str = "/config/apps/tls/certificates/load_pem";
-const SERVER: &str = "dhpanel";
+const SERVER: &str = "builtpanel";
 /// Time allowed for one call to Caddy.
 const TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -53,10 +53,10 @@ pub struct Settings {
     /// Let Caddy fetch certificates for the names it serves.
     pub automatic_https: bool,
     /// Caddy's data directory (where it keeps its certificates), so they can be
-    /// listed. `DHPANEL_AGENT_CADDY_DATA`; without it no certificates are reported.
+    /// listed. `BUILTPANEL_AGENT_CADDY_DATA`; without it no certificates are reported.
     pub data_dir: Option<PathBuf>,
     /// Where the web application firewall's rules are on the web server's machine
-    /// (`coraza.conf` and `crs/`; `DHPANEL_AGENT_WAF_DIR`). Without it no site gets the
+    /// (`coraza.conf` and `crs/`; `BUILTPANEL_AGENT_WAF_DIR`). Without it no site gets the
     /// firewall, whatever the policy says: Caddy would not know the module.
     pub waf_dir: Option<PathBuf>,
     /// The panel itself, when it runs on this machine too. One web server takes the visitors of the
@@ -65,9 +65,9 @@ pub struct Settings {
     pub panel: Option<Panel>,
 }
 
-/// The panel's own names and what answers them (`DHPANEL_AGENT_PANEL_HOST`,
-/// `DHPANEL_AGENT_PANEL_ADMIN_HOST`, `DHPANEL_AGENT_PANEL_WEB_ROOT`,
-/// `DHPANEL_AGENT_PANEL_UPSTREAM`, default `127.0.0.1:8080`).
+/// The panel's own names and what answers them (`BUILTPANEL_AGENT_PANEL_HOST`,
+/// `BUILTPANEL_AGENT_PANEL_ADMIN_HOST`, `BUILTPANEL_AGENT_PANEL_WEB_ROOT`,
+/// `BUILTPANEL_AGENT_PANEL_UPSTREAM`, default `127.0.0.1:8080`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Panel {
     /// Where the control plane listens (`/api/*` goes there).
@@ -88,26 +88,26 @@ pub struct PanelSite {
 }
 
 impl Settings {
-    /// From the environment: `DHPANEL_AGENT_CADDY_ADMIN` turns the web server
-    /// on; `DHPANEL_AGENT_CADDY_LISTEN` (comma separated, default `:80,:443`) and
-    /// `DHPANEL_AGENT_CADDY_AUTO_HTTPS` (`false` to turn it off, for tests) tune it.
+    /// From the environment: `BUILTPANEL_AGENT_CADDY_ADMIN` turns the web server
+    /// on; `BUILTPANEL_AGENT_CADDY_LISTEN` (comma separated, default `:80,:443`) and
+    /// `BUILTPANEL_AGENT_CADDY_AUTO_HTTPS` (`false` to turn it off, for tests) tune it.
     #[must_use]
     pub fn from_env() -> Option<Self> {
-        let admin = std::env::var("DHPANEL_AGENT_CADDY_ADMIN").ok()?;
-        let listen = std::env::var("DHPANEL_AGENT_CADDY_LISTEN")
+        let admin = std::env::var("BUILTPANEL_AGENT_CADDY_ADMIN").ok()?;
+        let listen = std::env::var("BUILTPANEL_AGENT_CADDY_LISTEN")
             .unwrap_or_else(|_| ":80,:443".to_owned())
             .split(',')
             .map(|s| s.trim().to_owned())
             .filter(|s| !s.is_empty())
             .collect();
-        let automatic_https = std::env::var("DHPANEL_AGENT_CADDY_AUTO_HTTPS")
+        let automatic_https = std::env::var("BUILTPANEL_AGENT_CADDY_AUTO_HTTPS")
             .map_or(true, |v| !matches!(v.as_str(), "false" | "0" | "no"));
         Some(Self {
             admin: admin.trim_end_matches('/').to_owned(),
             listen,
             automatic_https,
-            data_dir: std::env::var_os("DHPANEL_AGENT_CADDY_DATA").map(PathBuf::from),
-            waf_dir: std::env::var_os("DHPANEL_AGENT_WAF_DIR").map(PathBuf::from),
+            data_dir: std::env::var_os("BUILTPANEL_AGENT_CADDY_DATA").map(PathBuf::from),
+            waf_dir: std::env::var_os("BUILTPANEL_AGENT_WAF_DIR").map(PathBuf::from),
             panel: Panel::from_env(),
         })
     }
@@ -136,17 +136,17 @@ impl Panel {
         Self { upstream, sites }
     }
 
-    /// From the environment; `None` without `DHPANEL_AGENT_PANEL_HOST`.
+    /// From the environment; `None` without `BUILTPANEL_AGENT_PANEL_HOST`.
     #[must_use]
     pub fn from_env() -> Option<Self> {
         let var = |name: &str| std::env::var(name).ok().filter(|v| !v.is_empty());
         Some(Self::new(
-            var("DHPANEL_AGENT_PANEL_HOST")?,
-            var("DHPANEL_AGENT_PANEL_ADMIN_HOST"),
-            std::env::var_os("DHPANEL_AGENT_PANEL_WEB_ROOT")
+            var("BUILTPANEL_AGENT_PANEL_HOST")?,
+            var("BUILTPANEL_AGENT_PANEL_ADMIN_HOST"),
+            std::env::var_os("BUILTPANEL_AGENT_PANEL_WEB_ROOT")
                 .filter(|r| !r.is_empty())
                 .map(PathBuf::from),
-            var("DHPANEL_AGENT_PANEL_UPSTREAM").unwrap_or_else(|| "127.0.0.1:8080".to_owned()),
+            var("BUILTPANEL_AGENT_PANEL_UPSTREAM").unwrap_or_else(|| "127.0.0.1:8080".to_owned()),
         ))
     }
 }
@@ -167,12 +167,18 @@ pub struct WebContext {
     webmail_file: PathBuf,
     agent: ureq::Agent,
     /// Docker, to learn on which loopback port a site's web container is published.
-    docker: std::sync::OnceLock<dhpanel_docker_manager::DockerManager>,
+    docker: std::sync::OnceLock<builtpanel_docker_manager::DockerManager>,
     /// One change at a time: files and Caddy move together.
     busy: Mutex<()>,
 }
 
 impl WebContext {
+    /// Whether this node's web server has the firewall (its rules directory is set).
+    #[must_use]
+    pub fn has_waf(&self) -> bool {
+        self.settings.waf_dir.is_some()
+    }
+
     /// A context keeping its files in `<state_dir>/routes`.
     #[must_use]
     pub fn new(settings: Settings, state_dir: &Path) -> Arc<Self> {
@@ -230,7 +236,7 @@ fn load_pages(file: &Path) -> Pages {
         return Pages::default();
     };
     let Ok(map) = serde_json::from_slice::<BTreeMap<String, String>>(&bytes) else {
-        eprintln!("dhpanel-agent: ignoring the unusable error pages file");
+        eprintln!("builtpanel-agent: ignoring the unusable error pages file");
         return Pages::default();
     };
     // Only kinds and pages that pass today's checks.
@@ -256,7 +262,7 @@ fn validate(username: &TenantUsername, routes: &[SiteRoute]) -> Result<(), Agent
     for site in routes {
         if let Some(waf) = &site.waf
             && (!matches!(waf.mode.as_str(), "detect" | "block")
-                || waf.disabled_rules.len() > dhpanel_node_protocol::MAX_WAF_RULES
+                || waf.disabled_rules.len() > builtpanel_node_protocol::MAX_WAF_RULES
                 || waf
                     .disabled_rules
                     .iter()
@@ -264,10 +270,17 @@ fn validate(username: &TenantUsername, routes: &[SiteRoute]) -> Result<(), Agent
         {
             return Err(invalid("the firewall setting of a site is not valid"));
         }
+        if site.blocked_ips.len() > builtpanel_node_protocol::MAX_BLOCKED_IPS
+            || site.blocked_ips.iter().any(|ip| {
+                builtpanel_node_protocol::normalize_ip_block(ip).as_deref() != Ok(ip.as_str())
+            })
+        {
+            return Err(invalid("the blocked addresses of a site are not valid"));
+        }
     }
     let mut hosts = BTreeSet::new();
     let mut redirects = 0usize;
-    let prefix = format!("dh-{username}-");
+    let prefixes = [format!("bp-{username}-")];
     for site in routes {
         if site.hosts.is_empty() || site.hosts.len() > 100 {
             return Err(invalid("a site needs 1 to 100 names"));
@@ -286,7 +299,7 @@ fn validate(username: &TenantUsername, routes: &[SiteRoute]) -> Result<(), Agent
         }
         if let Some(upstream) = &site.upstream {
             let ok = upstream.split_once(':').is_some_and(|(name, port)| {
-                name.starts_with(&prefix)
+                prefixes.iter().any(|p| name.starts_with(p.as_str()))
                     && name.len() <= 100
                     && name
                         .bytes()
@@ -296,7 +309,7 @@ fn validate(username: &TenantUsername, routes: &[SiteRoute]) -> Result<(), Agent
             });
             if !ok {
                 return Err(invalid(
-                    "the upstream must be one of the tenant's own containers, `dh-<tenant>-<name>:<port>`",
+                    "the upstream must be one of the tenant's own containers, `bp-<tenant>-<name>:<port>`",
                 ));
             }
         }
@@ -348,29 +361,29 @@ fn page(status: u16, body: &str, extra: &[(&str, &str)]) -> Value {
 }
 
 /// Where phpMyAdmin's container listens, as the web server reaches it
-/// (`DHPANEL_AGENT_PMA_UPSTREAM`, default `dh-pma:80`).
+/// (`BUILTPANEL_AGENT_PMA_UPSTREAM`, default `bp-pma:80`).
 fn pma_upstream() -> String {
-    std::env::var("DHPANEL_AGENT_PMA_UPSTREAM")
+    std::env::var("BUILTPANEL_AGENT_PMA_UPSTREAM")
         .ok()
         .filter(|u| {
             u.len() <= 100
                 && u.bytes()
                     .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b':'))
         })
-        .unwrap_or_else(|| "dh-pma:80".to_owned())
+        .unwrap_or_else(|| "bp-pma:80".to_owned())
 }
 
 /// Where webmail's container listens, as the web server reaches it
-/// (`DHPANEL_AGENT_WEBMAIL_UPSTREAM`, default `dh-webmail:80`).
+/// (`BUILTPANEL_AGENT_WEBMAIL_UPSTREAM`, default `bp-webmail:80`).
 fn webmail_upstream() -> String {
-    std::env::var("DHPANEL_AGENT_WEBMAIL_UPSTREAM")
+    std::env::var("BUILTPANEL_AGENT_WEBMAIL_UPSTREAM")
         .ok()
         .filter(|u| {
             u.len() <= 100
                 && u.bytes()
                     .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b':'))
         })
-        .unwrap_or_else(|| "dh-webmail:80".to_owned())
+        .unwrap_or_else(|| "bp-webmail:80".to_owned())
 }
 
 /// The name phpMyAdmin is served under, if one was set and still passes today's checks.
@@ -487,7 +500,7 @@ fn host_route(host: &str, upstream: &str) -> Value {
 /// One site as a Caddy route.
 /// The directives of the firewall for one site: the base settings and the rule set, the mode,
 /// and the rules that do not apply. Only numbers and the agent's own directory go in.
-fn waf_directives(setting: &dhpanel_node_protocol::WafSetting, dir: &Path) -> String {
+fn waf_directives(setting: &builtpanel_node_protocol::WafSetting, dir: &Path) -> String {
     let dir = dir.display();
     let mut text = format!(
         "Include {dir}/coraza.conf\nInclude {dir}/crs/crs-setup.conf\nInclude {dir}/crs/rules/*.conf\nSecRuleEngine {}\n",
@@ -505,6 +518,20 @@ fn waf_directives(setting: &dhpanel_node_protocol::WafSetting, dir: &Path) -> St
 
 fn site_route(site: &SiteRoute, pages: &Pages, waf_dir: Option<&Path>) -> Value {
     let mut inner: Vec<Value> = Vec::new();
+    // Turned-away addresses come first: the firewall and the site never see them. Caddy sits
+    // on the machine's own ports, so this is the visitor's real address.
+    if !site.blocked_ips.is_empty() {
+        inner.push(json!({
+            "match": [{"remote_ip": {"ranges": site.blocked_ips}}],
+            "handle": [{
+                "handler": "static_response",
+                "status_code": 403,
+                "headers": {"Content-Type": ["text/plain; charset=utf-8"]},
+                "body": "Forbidden"
+            }],
+            "terminal": true
+        }));
+    }
     // The firewall looks at the request before anything answers it.
     if let (Some(setting), Some(dir), Some(_)) = (&site.waf, waf_dir, &site.upstream) {
         inner.push(json!({
@@ -566,14 +593,14 @@ fn site_route(site: &SiteRoute, pages: &Pages, waf_dir: Option<&Path>) -> Value 
     })
 }
 
-/// Every `dial` address in a Caddy configuration that names a container (`dh-…`).
+/// Every `dial` address in a Caddy configuration that names a container (`bp-…`).
 fn collect_dials(value: &Value, out: &mut BTreeSet<String>) {
     match value {
         Value::Object(map) => {
             for (key, v) in map {
                 if key == "dial"
                     && let Some(dial) = v.as_str()
-                    && dial.starts_with("dh-")
+                    && dial.starts_with("bp-")
                 {
                     out.insert(dial.to_owned());
                 }
@@ -741,7 +768,7 @@ fn load_all(dir: &Path) -> BTreeMap<String, Vec<SiteRoute>> {
             Ok(routes) if validate(&username, &routes).is_ok() => {
                 all.insert(user.to_owned(), routes);
             }
-            Ok(_) | Err(_) => eprintln!("dhpanel-agent: ignoring unusable routes file {name}"),
+            Ok(_) | Err(_) => eprintln!("builtpanel-agent: ignoring unusable routes file {name}"),
         }
     }
     all
@@ -803,7 +830,7 @@ fn load_all_certificates(dir: &Path) -> BTreeMap<String, Vec<CustomCertificate>>
             Ok(items) => {
                 all.insert(user.to_owned(), items);
             }
-            Err(_) => eprintln!("dhpanel-agent: ignoring unusable certificates file {name}"),
+            Err(_) => eprintln!("builtpanel-agent: ignoring unusable certificates file {name}"),
         }
     }
     all
@@ -859,7 +886,7 @@ impl WebContext {
     async fn load(self: &Arc<Self>, server: Value, exists: bool) -> Result<(), String> {
         let method = if exists { "POST" } else { "PUT" };
         let (status, text) = self
-            .call(method, "/config/apps/http/servers/dhpanel", Some(server))
+            .call(method, "/config/apps/http/servers/builtpanel", Some(server))
             .await?;
         if status == 200 {
             Ok(())
@@ -923,14 +950,14 @@ impl WebContext {
     /// exactly that. Returns whether it had to load.
     ///
     /// # Errors
-    /// Gives the context Docker, so that a site's upstream (`dh-<tenant>-web:8080`, a name only
+    /// Gives the context Docker, so that a site's upstream (`bp-<tenant>-web:8080`, a name only
     /// the tenant's network knows) can be turned into the loopback port the container is
     /// published on, which is how the node's web server reaches it.
-    pub fn use_docker(&self, docker: dhpanel_docker_manager::DockerManager) {
+    pub fn use_docker(&self, docker: builtpanel_docker_manager::DockerManager) {
         let _ = self.docker.set(docker);
     }
 
-    /// Replaces every `dh-…:port` upstream of `config` by `127.0.0.1:<published port>`. A name
+    /// Replaces every `bp-…:port` upstream of `config` by `127.0.0.1:<published port>`. A name
     /// that cannot be resolved (no such container yet) is left as it is: that site answers 502
     /// until the next round puts it right.
     async fn resolve_upstreams(&self, config: &mut Value) {
@@ -945,7 +972,7 @@ impl WebContext {
                 continue;
             };
             let (Ok(container), Ok(port)) = (
-                dhpanel_docker_manager::Name::parse(name),
+                builtpanel_docker_manager::Name::parse(name),
                 port.parse::<u16>(),
             ) else {
                 continue;
@@ -1024,9 +1051,9 @@ impl WebContext {
         loop {
             tick.tick().await;
             match self.reconcile().await {
-                Ok(true) => eprintln!("dhpanel-agent: the web server's routes were put back"),
+                Ok(true) => eprintln!("builtpanel-agent: the web server's routes were put back"),
                 Ok(false) => {}
-                Err(err) => eprintln!("dhpanel-agent: web server: {err}"),
+                Err(err) => eprintln!("builtpanel-agent: web server: {err}"),
             }
         }
     }
@@ -1208,14 +1235,15 @@ pub async fn set_custom_certificates(
             .as_deref()
             .ok_or_else(|| invalid("a certificate came without its key"))?;
         // The reason is a fixed word, never the material.
-        let ok =
-            dhpanel_pki::custom::check(&item.certificate, key, &item.host, now).map_err(|e| {
+        let ok = builtpanel_pki::custom::check(&item.certificate, key, &item.host, now).map_err(
+            |e| {
                 invalid(format!(
                     "certificate for {} refused: {}",
                     item.host,
                     e.code()
                 ))
-            })?;
+            },
+        )?;
         checked.push(CustomCertificate {
             host: item.host.clone(),
             certificate: ok.certificate_pem,
@@ -1403,7 +1431,7 @@ pub async fn set_user_agent_blocklist(
     let Operation::SetUserAgentBlocklist { patterns } = op else {
         return Err(crate::ops::wrong_operation());
     };
-    if patterns.len() > dhpanel_node_protocol::MAX_USER_AGENT_PATTERNS
+    if patterns.len() > builtpanel_node_protocol::MAX_USER_AGENT_PATTERNS
         || patterns.iter().any(|p| !agent_pattern_ok(p))
     {
         return Err(invalid("the list of User-Agent texts is not valid"));
@@ -1460,7 +1488,7 @@ pub async fn report_web_service(
         Err(e) => ("unreachable", e),
     };
     Ok(Output::Services {
-        items: vec![dhpanel_node_protocol::ServiceStatus {
+        items: vec![builtpanel_node_protocol::ServiceStatus {
             name: "caddy".into(),
             state: state.into(),
             detail: detail.chars().take(200).collect(),
@@ -1471,13 +1499,14 @@ pub async fn report_web_service(
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
-    use dhpanel_node_protocol::RouteRedirect;
+    use builtpanel_node_protocol::RouteRedirect;
 
     use super::*;
 
     fn site(hosts: &[&str], upstream: Option<&str>) -> SiteRoute {
         SiteRoute {
             waf: None,
+            blocked_ips: Vec::new(),
             hosts: hosts.iter().map(|h| (*h).to_owned()).collect(),
             upstream: upstream.map(str::to_owned),
             redirects: vec![],
@@ -1503,31 +1532,72 @@ mod tests {
     }
 
     #[test]
+    fn turned_away_addresses_are_answered_403_before_anything_else() {
+        let mut s = site(&["a.com"], Some("bp-alice-web:8080"));
+        s.blocked_ips = vec!["203.0.113.9".into(), "198.51.100.0/24".into()];
+        assert!(validate(&alice(), &[s.clone()]).is_ok());
+        let route = site_route(&s, &Pages::default(), None).to_string();
+        let blocked = route.find("remote_ip").expect("the match is there");
+        let proxy = route.find("reverse_proxy").unwrap();
+        assert!(blocked < proxy, "{route}");
+        assert!(
+            route.contains("\"ranges\":[\"203.0.113.9\",\"198.51.100.0/24\"]"),
+            "{route}"
+        );
+        assert!(route.contains("\"status_code\":403"), "{route}");
+        // A site with none has no such match.
+        assert!(
+            !site_route(
+                &site(&["a.com"], Some("bp-alice-web:8080")),
+                &Pages::default(),
+                None
+            )
+            .to_string()
+            .contains("remote_ip")
+        );
+        // What is not canonical, or too many, is refused.
+        for bad in [
+            vec!["203.0.113.9/24".to_owned()],
+            vec!["nonsense".to_owned()],
+            vec!["127.0.0.1".to_owned()],
+        ] {
+            let mut s = site(&["a.com"], Some("bp-alice-web:8080"));
+            s.blocked_ips = bad;
+            assert!(validate(&alice(), &[s]).is_err());
+        }
+        let mut s = site(&["a.com"], Some("bp-alice-web:8080"));
+        s.blocked_ips = (0..=builtpanel_node_protocol::MAX_BLOCKED_IPS)
+            .map(|i| format!("10.{}.{}.1", i / 256, i % 256))
+            .collect();
+        assert!(validate(&alice(), &[s]).is_err());
+    }
+
+    #[test]
     fn container_names_in_upstreams_are_found_and_replaced_wherever_they_are() {
         let mut config = json!({"routes": [
-            {"handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "dh-alice-web:8080"}]}]},
+            {"handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "bp-alice-web:8080"}]}]},
             {"handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "127.0.0.1:8080"}]}]},
-            {"handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "dh-bob-web:8080"}]}]}
+            {"handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "bp-bob-web:8080"}]}]}
         ]});
         let mut found = BTreeSet::new();
         collect_dials(&config, &mut found);
         // The panel's own address is not a container's.
         assert_eq!(
             found.iter().map(String::as_str).collect::<Vec<_>>(),
-            ["dh-alice-web:8080", "dh-bob-web:8080"]
+            ["bp-alice-web:8080", "bp-bob-web:8080"]
         );
         // Only what could be resolved changes; the rest stays (and answers 502 meanwhile).
         let resolved =
-            BTreeMap::from([("dh-alice-web:8080".to_owned(), "127.0.0.1:41234".to_owned())]);
+            BTreeMap::from([("bp-alice-web:8080".to_owned(), "127.0.0.1:41234".to_owned())]);
         replace_dials(&mut config, &resolved);
         let text = config.to_string();
         assert!(
             text.contains("\"127.0.0.1:41234\"")
-                && text.contains("\"dh-bob-web:8080\"")
+                && text.contains("\"bp-bob-web:8080\"")
                 && text.contains("\"127.0.0.1:8080\""),
             "{text}"
         );
-        assert!(!text.contains("dh-alice-web"), "{text}");
+        assert!(!text.contains("bp-alice-web"), "{text}");
     }
 
     #[test]
@@ -1546,7 +1616,7 @@ mod tests {
             )
         };
         let routes = |config: &Value| {
-            config["apps"]["http"]["servers"]["dhpanel"]["routes"]
+            config["apps"]["http"]["servers"]["builtpanel"]["routes"]
                 .as_array()
                 .unwrap()
                 .clone()
@@ -1578,22 +1648,22 @@ mod tests {
             sites: vec![
                 PanelSite {
                     host: "panel.example.com".into(),
-                    web_root: Some("/usr/share/dhpanel/web/client".into()),
+                    web_root: Some("/usr/share/builtpanel/web/client".into()),
                 },
                 PanelSite {
                     host: "admin.panel.example.com".into(),
-                    web_root: Some("/usr/share/dhpanel/web/admin".into()),
+                    web_root: Some("/usr/share/builtpanel/web/admin".into()),
                 },
             ],
         })));
         assert_eq!(both.len(), 3);
         let (client, admin) = (both[0].to_string(), both[1].to_string());
         assert!(
-            client.contains("/usr/share/dhpanel/web/client") && !client.contains("web/admin"),
+            client.contains("/usr/share/builtpanel/web/client") && !client.contains("web/admin"),
             "{client}"
         );
         assert!(
-            admin.contains("/usr/share/dhpanel/web/admin") && !admin.contains("web/client"),
+            admin.contains("/usr/share/builtpanel/web/admin") && !admin.contains("web/client"),
             "{admin}"
         );
         for text in [&client, &admin] {
@@ -1639,27 +1709,27 @@ mod tests {
         let ok = vec![
             site(
                 &["example.com", "www.example.com"],
-                Some("dh-alice-web:8080"),
+                Some("bp-alice-web:8080"),
             ),
             site(&["paused.org"], None),
         ];
         assert!(validate(&alice(), &ok).is_ok());
         for bad in [
-            site(&[], Some("dh-alice-web:8080")),
-            site(&["Example.com"], Some("dh-alice-web:8080")),
-            site(&["com"], Some("dh-alice-web:8080")),
+            site(&[], Some("bp-alice-web:8080")),
+            site(&["Example.com"], Some("bp-alice-web:8080")),
+            site(&["com"], Some("bp-alice-web:8080")),
             site(&["a b.com"], None),
             site(&["a.com", "a.com"], None),
             // The upstream must be the tenant's own.
-            site(&["a.com"], Some("dh-bobby-web:8080")),
-            site(&["a.com"], Some("dh-alice-web")),
-            site(&["a.com"], Some("dh-alice-web:0")),
-            site(&["a.com"], Some("dh-alice-web:99999")),
-            site(&["a.com"], Some("dh-alice-web:+80")),
+            site(&["a.com"], Some("bp-bobby-web:8080")),
+            site(&["a.com"], Some("bp-alice-web")),
+            site(&["a.com"], Some("bp-alice-web:0")),
+            site(&["a.com"], Some("bp-alice-web:99999")),
+            site(&["a.com"], Some("bp-alice-web:+80")),
             site(&["a.com"], Some("evil.example.org:80")),
             site(&["a.com"], Some("169.254.169.254:80")),
-            site(&["a.com"], Some("dh-alice-WEB:80")),
-            site(&["a.com"], Some("dh-alice-web/x:80")),
+            site(&["a.com"], Some("bp-alice-WEB:80")),
+            site(&["a.com"], Some("bp-alice-web/x:80")),
         ] {
             assert!(
                 validate(&alice(), std::slice::from_ref(&bad)).is_err(),
@@ -1669,7 +1739,7 @@ mod tests {
         // The same name in two sites is refused too.
         assert!(validate(&alice(), &[site(&["a.com"], None), site(&["a.com"], None)]).is_err());
         let redirect = |path: &str, target: &str, code: u16| {
-            let mut s = site(&["a.com"], Some("dh-alice-web:8080"));
+            let mut s = site(&["a.com"], Some("bp-alice-web:8080"));
             s.redirects.push(RouteRedirect {
                 path: path.into(),
                 target: target.into(),
@@ -1702,7 +1772,7 @@ mod tests {
         let mut all = BTreeMap::new();
         let mut a = site(
             &["example.com", "www.example.com"],
-            Some("dh-alice-web:8080"),
+            Some("bp-alice-web:8080"),
         );
         a.redirects.push(RouteRedirect {
             path: "/old".into(),
@@ -1712,7 +1782,7 @@ mod tests {
         all.insert("alice".to_owned(), vec![a, site(&["paused.org"], None)]);
         all.insert(
             "bobby".to_owned(),
-            vec![site(&["bobs.net"], Some("dh-bobby-web:8080"))],
+            vec![site(&["bobs.net"], Some("bp-bobby-web:8080"))],
         );
         let config = compile(
             &all,
@@ -1722,7 +1792,7 @@ mod tests {
             None,
             None,
         );
-        let server = &config["apps"]["http"]["servers"]["dhpanel"];
+        let server = &config["apps"]["http"]["servers"]["builtpanel"];
         assert_eq!(server["listen"], json!([":80", ":443"]));
         let routes = server["routes"].as_array().unwrap();
         assert_eq!(routes.len(), 4, "three sites and the last-resort 404");
@@ -1739,7 +1809,7 @@ mod tests {
         );
         assert_eq!(
             inner[1]["handle"][0]["upstreams"][0]["dial"],
-            "dh-alice-web:8080"
+            "bp-alice-web:8080"
         );
         assert_eq!(
             routes[1]["handle"][0]["routes"][0]["handle"][0]["status_code"], 503,
@@ -1747,7 +1817,7 @@ mod tests {
         );
         assert_eq!(
             routes[2]["handle"][0]["routes"][0]["handle"][0]["upstreams"][0]["dial"],
-            "dh-bobby-web:8080"
+            "bp-bobby-web:8080"
         );
         assert!(routes[3].get("match").is_none());
         assert_eq!(routes[3]["handle"][0]["status_code"], 404);
@@ -1790,19 +1860,19 @@ mod tests {
             None,
         );
         assert_eq!(
-            off["apps"]["http"]["servers"]["dhpanel"]["automatic_https"]["disable"],
+            off["apps"]["http"]["servers"]["builtpanel"]["automatic_https"]["disable"],
             true
         );
         // Caddy's blanket redirect is off: each site decides for itself.
         assert_eq!(
-            config["apps"]["http"]["servers"]["dhpanel"]["automatic_https"],
+            config["apps"]["http"]["servers"]["builtpanel"]["automatic_https"],
             json!({"disable_redirects": true})
         );
     }
 
     #[test]
     fn force_https_and_hsts_become_a_redirect_and_a_header_in_front_of_the_site() {
-        let mut secure = site(&["example.com"], Some("dh-alice-web:8080"));
+        let mut secure = site(&["example.com"], Some("bp-alice-web:8080"));
         secure.force_https = true;
         secure.hsts = true;
         secure.redirects.push(RouteRedirect {
@@ -1810,7 +1880,7 @@ mod tests {
             target: "/new".into(),
             code: 301,
         });
-        let mut only_redirect = site(&["plain.org"], Some("dh-alice-web:8080"));
+        let mut only_redirect = site(&["plain.org"], Some("bp-alice-web:8080"));
         only_redirect.force_https = true;
         let all = BTreeMap::from([(
             "alice".to_owned(),
@@ -1824,7 +1894,7 @@ mod tests {
             None,
             None,
         );
-        let routes = config["apps"]["http"]["servers"]["dhpanel"]["routes"]
+        let routes = config["apps"]["http"]["servers"]["builtpanel"]["routes"]
             .as_array()
             .unwrap();
         let inner = |i: usize| routes[i]["handle"][0]["routes"].as_array().unwrap().clone();
@@ -1886,7 +1956,7 @@ mod tests {
 
     #[test]
     fn certificates_are_listed_from_caddys_storage_without_touching_keys() {
-        let dir = std::env::temp_dir().join(format!("dh-certs-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bp-certs-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         write_cert(
             &dir,
@@ -1934,9 +2004,9 @@ mod tests {
 
     #[test]
     fn routes_are_kept_in_files_and_unusable_files_are_ignored() {
-        let dir = std::env::temp_dir().join(format!("dh-routes-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bp-routes-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
-        let routes = vec![site(&["example.com"], Some("dh-alice-web:8080"))];
+        let routes = vec![site(&["example.com"], Some("bp-alice-web:8080"))];
         save(&dir, "alice", &routes).unwrap();
         save(&dir, "bobby", &[site(&["bobs.net"], None)]).unwrap();
         assert_eq!(load_all(&dir)["alice"], routes);
@@ -1949,7 +2019,7 @@ mod tests {
         std::fs::write(dir.join("carol.json"), b"not json").unwrap();
         std::fs::write(
             dir.join("dave.json"),
-            serde_json::to_vec(&[site(&["d.com"], Some("dh-alice-web:8080"))]).unwrap(),
+            serde_json::to_vec(&[site(&["d.com"], Some("bp-alice-web:8080"))]).unwrap(),
         )
         .unwrap();
         std::fs::write(dir.join("README"), b"x").unwrap();
@@ -2001,7 +2071,7 @@ mod tests {
             Some("pma.example.com"),
             None,
         );
-        let routes = |c: &Value| c["apps"]["http"]["servers"]["dhpanel"]["routes"].clone();
+        let routes = |c: &Value| c["apps"]["http"]["servers"]["builtpanel"]["routes"].clone();
         assert_eq!(routes(&none).as_array().unwrap().len(), 1, "just the 404");
         let with = routes(&some);
         assert_eq!(with.as_array().unwrap().len(), 2);
@@ -2018,7 +2088,7 @@ mod tests {
     #[test]
     fn certificates_are_kept_private_and_loaded_with_their_keys() {
         use std::os::unix::fs::PermissionsExt as _;
-        let dir = std::env::temp_dir().join(format!("dh-certs-unit-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bp-certs-unit-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let item = CustomCertificate {
             host: "a.org".into(),

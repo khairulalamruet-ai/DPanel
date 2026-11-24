@@ -13,10 +13,10 @@ import {
   TableRow,
   TableCell,
   useToast,
-} from "@dhpanel/ui";
-import { useTranslation, useFormatters } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
-import { useSession } from "@dhpanel/auth";
+} from "@builtpanel/ui";
+import { useTranslation, useFormatters } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
+import { useSession } from "@builtpanel/auth";
 import {
   KeyRound,
   ShieldCheck,

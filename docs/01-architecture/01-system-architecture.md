@@ -30,16 +30,16 @@
    │  A[web,php] B…  │       │                 │       │                 │
    └─────────────────┘       └─────────────────┘       └─────────────────┘
 
-   আলাদা: LICENSE AUTHORITY (Rust) ── শুধু DHPanel installation-এর license, release ও integrity
+   আলাদা: LICENSE AUTHORITY (Rust) ── শুধু Built Panel installation-এর license, release ও integrity
 ```
 
 ## Process ও বিশ্বাসের সীমানা (trust boundary)
 
 | Process | User | কী করতে পারে | কী করতে পারে না |
 |---|---|---|---|
-| `control-api` | `dhpanel` (root নয়) | DB, Redis, agent-কে typed কাজ পাঠানো | Docker socket, host ফাইল |
-| `worker` | `dhpanel` | Scheduled job, email, retry | একই |
-| `node-agent` | `dhpanel-agent` (docker group অথবা rootless) | Bollard দিয়ে Docker, tenant volume, Caddy admin API | যেকোনো shell command |
+| `control-api` | `builtpanel` (root নয়) | DB, Redis, agent-কে typed কাজ পাঠানো | Docker socket, host ফাইল |
+| `worker` | `builtpanel` | Scheduled job, email, retry | একই |
+| `node-agent` | `builtpanel-agent` (docker group অথবা rootless) | Bollard দিয়ে Docker, tenant volume, Caddy admin API | যেকোনো shell command |
 | `priv-helper` | root, ছোট binary | শুধু নির্দিষ্ট কিছু কাজ (nftables rule, quota, user namespace) | তালিকার বাইরের কিছু |
 | Tenant container | non-root UID | নিজের ফাইল আর নিজের service | অন্যের volume, Docker socket |
 

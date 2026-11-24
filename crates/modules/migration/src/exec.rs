@@ -21,10 +21,10 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_database::migration_transfers::{self as store, Progress, Transfer};
-use dhpanel_import::{Action, DomainKind, ImportModel, Plan};
-use dhpanel_kernel::ModuleMount;
-use dhpanel_session::{CSRF_HEADER, NewSession, RevokeReason, SessionStore, set_cookie};
+use builtpanel_database::migration_transfers::{self as store, Progress, Transfer};
+use builtpanel_import::{Action, DomainKind, ImportModel, Plan};
+use builtpanel_kernel::ModuleMount;
+use builtpanel_session::{CSRF_HEADER, NewSession, RevokeReason, SessionStore, set_cookie};
 use serde_json::{Value, json};
 use sha2::{Digest as _, Sha256};
 use sqlx::PgPool;
@@ -42,7 +42,7 @@ const POLL: Duration = Duration::from_secs(2);
 /// The size of one uploaded piece (the API takes at most 8 MiB).
 const CHUNK: usize = 8 * 1024 * 1024;
 /// Where the packed home folder waits in the account's files while it is unpacked.
-const HOLDING: &str = ".dh-import/home.tar.gz";
+const HOLDING: &str = ".bp-import/home.tar.gz";
 
 /// How the executor calls the panel's own routes. The mount is set when the panel starts.
 #[derive(Clone, Default)]
@@ -121,7 +121,7 @@ async fn login(
     let new = NewSession {
         account_id: account,
         ip: None,
-        user_agent: Some("dhpanel-import".to_owned()),
+        user_agent: Some("builtpanel-import".to_owned()),
     };
     let (token, data) = match on_behalf_of {
         Some(admin) => sessions.create_impersonated(new, admin).await,
@@ -332,7 +332,7 @@ impl Run<'_> {
 
     // ------------------------------------------------------------------ the steps
 
-    async fn step(&mut self, step: &dhpanel_import::Step) -> Result<Option<String>, String> {
+    async fn step(&mut self, step: &builtpanel_import::Step) -> Result<Option<String>, String> {
         match step.action {
             Action::CreateAccount => self.create_account().await,
             Action::AddDomain => self.add_domain(&step.subject).await,
@@ -730,7 +730,7 @@ impl Run<'_> {
             let file = std::fs::File::open(&backup).map_err(|e| e.to_string())?;
             let out = std::fs::File::create(&tmp2).map_err(|e| e.to_string())?;
             let mut out = HashingWriter::new(out);
-            let n = dhpanel_import::copy_file(std::io::BufReader::new(file), &wanted, &mut out)
+            let n = builtpanel_import::copy_file(std::io::BufReader::new(file), &wanted, &mut out)
                 .map_err(|e| e.to_string())?;
             out.flush().map_err(|e| e.to_string())?;
             Ok((n, out.finish()))
@@ -984,7 +984,7 @@ impl Run<'_> {
             let file = std::fs::File::open(&backup).map_err(|e| e.to_string())?;
             let out = std::fs::File::create(&tmp2).map_err(|e| e.to_string())?;
             let prefix = format!("{home}/");
-            dhpanel_import::repack(
+            builtpanel_import::repack(
                 std::io::BufReader::new(file),
                 |p| {
                     let rel = p.strip_prefix(&prefix)?;
@@ -1009,7 +1009,7 @@ impl Run<'_> {
     async fn upload_home(
         &mut self,
         tmp: &FsPath,
-        packed: dhpanel_import::Repacked,
+        packed: builtpanel_import::Repacked,
     ) -> Result<Option<String>, String> {
         if packed.entries == 0 {
             return Ok(Some("There was nothing to restore.".to_owned()));

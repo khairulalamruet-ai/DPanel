@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-rbac"
+name = "builtpanel-rbac"
 description = "Role-based access control: permission keys, wildcard matching and the Require extractor."
 version.workspace = true
 edition.workspace = true
@@ -11,15 +11,15 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-database.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-session.workspace = true
+builtpanel-database.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-session.workspace = true
 axum = "0.8"
 tracing = "0.1.44"
 uuid = "1"
 
 [dev-dependencies]
-dhpanel-cache.workspace = true
+builtpanel-cache.workspace = true
 secrecy = "0.10"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "macros", "uuid", "migrate"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

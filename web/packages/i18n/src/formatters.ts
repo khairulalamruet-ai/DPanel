@@ -13,7 +13,7 @@ export function toBengaliDigits(input: number | string): string {
  * Get current normalized locale ('bn-BD' or 'en-US')
  */
 export function getCurrentLocale(locale?: string): string {
-  const current = locale || i18n.language || "bn";
+  const current = locale || i18n.language || "en";
   return current.startsWith("bn") ? "bn-BD" : "en-US";
 }
 

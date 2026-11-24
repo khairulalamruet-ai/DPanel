@@ -5,18 +5,18 @@
 
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use dhpanel_database::nodes::{self, NewNode, NewNodeCertificate};
-use dhpanel_dispatcher::{Dispatcher, Settings};
-use dhpanel_node_agent::{
+use builtpanel_database::nodes::{self, NewNode, NewNodeCertificate};
+use builtpanel_dispatcher::{Dispatcher, Settings};
+use builtpanel_node_agent::{
     ops::{Executor, Registry, cache::ResultCache},
     stream::{self, Params},
 };
-use dhpanel_node_gateway::{Gateway, NodeResult, Settings as GatewaySettings, tls};
-use dhpanel_node_protocol::{
+use builtpanel_node_gateway::{Gateway, NodeResult, Settings as GatewaySettings, tls};
+use builtpanel_node_protocol::{
     AgentError, ErrorCode, Operation, OperationResult, Output, ResultStatus,
 };
-use dhpanel_operations::{Operations, Request, Row, Status};
-use dhpanel_pki::CertificateAuthority;
+use builtpanel_operations::{Operations, Request, Row, Status};
+use builtpanel_pki::CertificateAuthority;
 use rcgen::{CertificateParams, KeyPair};
 use secrecy::{ExposeSecret as _, SecretString};
 use sqlx::PgPool;
@@ -82,7 +82,7 @@ async fn plane(pool: &PgPool) -> Plane {
             max_connections: 64,
         },
     );
-    let listener = dhpanel_node_gateway::bind("127.0.0.1:0".parse().unwrap())
+    let listener = builtpanel_node_gateway::bind("127.0.0.1:0".parse().unwrap())
         .await
         .unwrap();
     let addr = listener.local_addr().unwrap();
@@ -464,14 +464,14 @@ async fn an_operation_a_node_never_answers_is_retried_and_then_fails_with_a_time
         .await
         .unwrap();
     let (mut ws, _) = tokio_tungstenite::client_async(
-        format!("wss://{}{}", p.addr, dhpanel_node_protocol::STREAM_PATH),
+        format!("wss://{}{}", p.addr, builtpanel_node_protocol::STREAM_PATH),
         tls,
     )
     .await
     .unwrap();
     use futures_util::SinkExt as _;
-    let hello = dhpanel_node_protocol::encode(&dhpanel_node_protocol::AgentMessage::Hello(
-        dhpanel_node_protocol::Hello {
+    let hello = builtpanel_node_protocol::encode(&builtpanel_node_protocol::AgentMessage::Hello(
+        builtpanel_node_protocol::Hello {
             protocol_version: 1,
             agent_version: "mute".into(),
         },
@@ -508,7 +508,7 @@ async fn a_slow_operation_that_is_sent_again_still_runs_only_once(pool: PgPool) 
             tokio::time::sleep(Duration::from_millis(2500)).await;
             match op {
                 Operation::Ping { nonce } => Ok(Output::Pong { nonce }),
-                _ => Err(dhpanel_node_agent::ops::wrong_operation()),
+                _ => Err(builtpanel_node_agent::ops::wrong_operation()),
             }
         }
     });
@@ -565,7 +565,7 @@ async fn a_connected_node_is_asked_for_its_capabilities_and_they_are_stored(pool
     }
     let stored = stored.expect("capabilities stored within 10 s");
     let caps = &stored.capabilities;
-    assert_eq!(caps["agent_version"], dhpanel_node_agent::AGENT_VERSION);
+    assert_eq!(caps["agent_version"], builtpanel_node_agent::AGENT_VERSION);
     assert!(caps["cpu_cores"].as_u64().unwrap() >= 1);
     assert!(caps["memory_bytes"].as_u64().unwrap() > 0);
     assert!(
@@ -657,7 +657,7 @@ async fn data_of_deleted_tenants_is_purged_when_due_and_the_tenant_goes_when_the
         .await
         .unwrap();
     assert!(
-        dhpanel_database::operations::succeed(&pool, op, &serde_json::json!({}))
+        builtpanel_database::operations::succeed(&pool, op, &serde_json::json!({}))
             .await
             .unwrap()
     );
@@ -672,7 +672,7 @@ async fn data_of_deleted_tenants_is_purged_when_due_and_the_tenant_goes_when_the
 #[sqlx::test(migrations = "../../migrations")]
 #[ignore = "needs PostgreSQL"]
 async fn a_tenants_routes_are_sent_when_anything_they_are_made_of_changes(pool: PgPool) {
-    use dhpanel_node_protocol::Operation as Op;
+    use builtpanel_node_protocol::Operation as Op;
     let p = plane(&pool).await;
     // Not running: the test asks for the sync itself, at the moment it wants to.
     let d = Dispatcher::new(p.ops.clone(), p.gateway.clone(), None, dispatch_settings());
@@ -757,7 +757,7 @@ async fn a_tenants_routes_are_sent_when_anything_they_are_made_of_changes(pool: 
         routes[0]["hosts"],
         serde_json::json!(["example.com", "example.net"])
     );
-    assert_eq!(routes[0]["upstream"], "dh-zedhost-web:8080");
+    assert_eq!(routes[0]["upstream"], "bp-zedhost-web:8080");
     assert_eq!(routes[0]["redirects"][0]["path"], "/old");
     assert_eq!(routes[0]["redirects"][0]["code"], 301);
 
@@ -815,7 +815,7 @@ async fn a_tenants_routes_are_sent_when_anything_they_are_made_of_changes(pool: 
         .execute(&pool)
         .await
         .unwrap();
-    dhpanel_database::operations::fail(&pool, last, &serde_json::json!({"code": "boom"}), None)
+    builtpanel_database::operations::fail(&pool, last, &serde_json::json!({"code": "boom"}), None)
         .await
         .unwrap();
     let pending: i64 = sqlx::query_scalar(
@@ -836,7 +836,7 @@ async fn a_tenants_routes_are_sent_when_anything_they_are_made_of_changes(pool: 
 #[sqlx::test(migrations = "../../migrations")]
 #[ignore = "needs PostgreSQL"]
 async fn reported_certificates_are_kept_and_an_ending_one_is_announced_once(pool: PgPool) {
-    use dhpanel_node_protocol::{CertificateInfo, Output};
+    use builtpanel_node_protocol::{CertificateInfo, Output};
     let p = plane(&pool).await;
     let d = Dispatcher::new(p.ops.clone(), p.gateway.clone(), None, dispatch_settings());
     let node = make_node(&p, &pool, "certs").await;
@@ -889,9 +889,9 @@ async fn reported_certificates_are_kept_and_an_ending_one_is_announced_once(pool
             let op = p_enqueue(&ops, node_id).await;
             d.handle_result(NodeResult {
                 node_id,
-                result: dhpanel_node_protocol::OperationResult {
+                result: builtpanel_node_protocol::OperationResult {
                     op_id: op,
-                    status: dhpanel_node_protocol::ResultStatus::Succeeded,
+                    status: builtpanel_node_protocol::ResultStatus::Succeeded,
                     output: Some(Output::Certificates { items }),
                     error: None,
                 },
@@ -902,7 +902,7 @@ async fn reported_certificates_are_kept_and_an_ending_one_is_announced_once(pool
     async fn p_enqueue(ops: &Operations, node: Uuid) -> Uuid {
         let r = Request::new(
             node,
-            dhpanel_node_protocol::Operation::ReportCertificates,
+            builtpanel_node_protocol::Operation::ReportCertificates,
             format!("c-{}", Uuid::now_v7().simple()),
         );
         let row = ops.enqueue(&r).await.unwrap();
@@ -999,7 +999,7 @@ async fn an_uploaded_certificate_reaches_the_node_with_its_key_and_the_ledger_ne
     use std::sync::Mutex;
     let p = plane(&pool).await;
     // The hook plays the sealed-key lookup: whatever it is given gets this key.
-    let filler: dhpanel_dispatcher::SecretFiller = Arc::new(|op| {
+    let filler: builtpanel_dispatcher::SecretFiller = Arc::new(|op| {
         Box::pin(async move {
             match op {
                 Operation::SetCustomCertificates {
@@ -1035,7 +1035,7 @@ async fn an_uploaded_certificate_reaches_the_node_with_its_key_and_the_ledger_ne
                         applied: true,
                     })
                 }
-                _ => Err(dhpanel_node_agent::ops::wrong_operation()),
+                _ => Err(builtpanel_node_agent::ops::wrong_operation()),
             }
         }
     });
@@ -1058,7 +1058,7 @@ async fn an_uploaded_certificate_reaches_the_node_with_its_key_and_the_ledger_ne
                 hosts: 0,
                 applied: true,
             }),
-            _ => Err(dhpanel_node_agent::ops::wrong_operation()),
+            _ => Err(builtpanel_node_agent::ops::wrong_operation()),
         }
     });
     let node = make_node_with(&p, &pool, "certs", registry).await;
@@ -1105,9 +1105,9 @@ async fn an_uploaded_certificate_reaches_the_node_with_its_key_and_the_ledger_ne
         .unwrap();
     assert_eq!(d.request_route_syncs().await, 0);
     let mut conn = pool.acquire().await.unwrap();
-    dhpanel_database::certificates::set_custom(
+    builtpanel_database::certificates::set_custom(
         &mut conn,
-        &dhpanel_database::certificates::NewCustom {
+        &builtpanel_database::certificates::NewCustom {
             domain_id: domain,
             issuer: "Test CA",
             not_before: 1_700_000_000,
@@ -1164,7 +1164,7 @@ async fn an_uploaded_certificate_reaches_the_node_with_its_key_and_the_ledger_ne
         .unwrap();
     let mut conn = pool.acquire().await.unwrap();
     assert!(
-        dhpanel_database::certificates::remove_custom(&mut conn, domain)
+        builtpanel_database::certificates::remove_custom(&mut conn, domain)
             .await
             .unwrap()
     );
@@ -1239,7 +1239,7 @@ async fn a_tenants_web_server_files_are_sent_with_its_routes_and_what_is_gone_is
             .contains("server_name vera.example.com www.vera.example.com;")
     );
     assert!(attached[1].1.contains("root /var/www/html/public_html;"));
-    assert!(attached[1].1.contains("fastcgi_pass dh-verahost-php:9000;"));
+    assert!(attached[1].1.contains("fastcgi_pass bp-verahost-php:9000;"));
     let keep: serde_json::Value = sqlx::query_scalar(
         "SELECT payload FROM operations WHERE kind = 'keep_domains' ORDER BY created_at DESC LIMIT 1",
     )
@@ -1312,7 +1312,7 @@ async fn a_tenants_web_server_files_are_sent_with_its_routes_and_what_is_gone_is
     .await
     .unwrap();
     assert_eq!(
-        dhpanel_database::operations::fail(
+        builtpanel_database::operations::fail(
             &pool,
             op,
             &serde_json::json!({"code": "invalid_arguments", "message": "refused", "retryable": false}),
@@ -1320,7 +1320,7 @@ async fn a_tenants_web_server_files_are_sent_with_its_routes_and_what_is_gone_is
         )
         .await
         .unwrap(),
-        Some(dhpanel_operations::Status::Failed)
+        Some(builtpanel_operations::Status::Failed)
     );
     assert_eq!(
         d.request_route_syncs().await,
@@ -1408,11 +1408,11 @@ async fn php_containers_are_set_before_the_files_that_point_to_them(pool: PgPool
         .await
         .unwrap();
     assert!(
-        dhpanel_database::operations::succeed(&pool, sent[0].0, &serde_json::json!({}))
+        builtpanel_database::operations::succeed(&pool, sent[0].0, &serde_json::json!({}))
             .await
             .unwrap()
     );
-    let state = dhpanel_database::php::state(&pool, tenant)
+    let state = builtpanel_database::php::state(&pool, tenant)
         .await
         .unwrap()
         .unwrap();
@@ -1429,12 +1429,12 @@ async fn php_containers_are_set_before_the_files_that_point_to_them(pool: PgPool
     assert!(
         files[0]
             .1
-            .contains("fastcgi_pass dh-philhost-php-8-2:9000;"),
+            .contains("fastcgi_pass bp-philhost-php-8-2:9000;"),
         "{}",
         files[0].1
     );
     assert!(
-        files[1].1.contains("fastcgi_pass dh-philhost-php:9000;"),
+        files[1].1.contains("fastcgi_pass bp-philhost-php:9000;"),
         "{}",
         files[1].1
     );
@@ -1479,7 +1479,7 @@ async fn error_pages_go_to_every_connected_node_once_per_version(pool: PgPool) {
     assert_eq!(d.request_error_pages().await, 1);
     assert_eq!(d.request_error_pages().await, 0);
     let mut conn = pool.acquire().await.unwrap();
-    dhpanel_database::error_pages::set(&mut conn, "not_found", "<p>gone</p>", None)
+    builtpanel_database::error_pages::set(&mut conn, "not_found", "<p>gone</p>", None)
         .await
         .unwrap();
     drop(conn);
@@ -1510,11 +1510,11 @@ async fn database_sizes_are_asked_for_only_where_there_are_databases_and_kept(po
     registry.register("report_db_sizes", |_| async move {
         Ok(Output::DbSizes {
             items: vec![
-                dhpanel_node_protocol::DbSize {
+                builtpanel_node_protocol::DbSize {
                     name: "dina_shop".into(),
                     bytes: 123_456,
                 },
-                dhpanel_node_protocol::DbSize {
+                builtpanel_node_protocol::DbSize {
                     name: "someone_elses".into(),
                     bytes: 9,
                 },
@@ -1681,7 +1681,7 @@ async fn running_imports_are_asked_how_far_they_are_and_the_answer_is_kept(pool:
     assert_eq!((stage.as_str(), done), ("importing", 4_000));
 
     // A node that has lost the import (it restarted) ends it, but not at once.
-    dhpanel_database::imports::lost(&pool, import)
+    builtpanel_database::imports::lost(&pool, import)
         .await
         .unwrap();
     let status: String = sqlx::query_scalar("SELECT status FROM db_imports WHERE id = $1")
@@ -1695,7 +1695,7 @@ async fn running_imports_are_asked_how_far_they_are_and_the_answer_is_kept(pool:
         .execute(&pool)
         .await
         .unwrap();
-    dhpanel_database::imports::lost(&pool, import)
+    builtpanel_database::imports::lost(&pool, import)
         .await
         .unwrap();
     let (status, error): (String, Option<String>) =
@@ -1713,7 +1713,7 @@ async fn running_imports_are_asked_how_far_they_are_and_the_answer_is_kept(pool:
 #[sqlx::test(migrations = "../../migrations")]
 #[ignore = "needs PostgreSQL"]
 async fn a_disk_usage_answer_is_kept_for_the_account(pool: PgPool) {
-    use dhpanel_node_protocol::files::{FileRequest, FileResult, FolderUsage};
+    use builtpanel_node_protocol::files::{FileRequest, FileResult, FolderUsage};
     let p = plane(&pool).await;
     let d = Dispatcher::new(p.ops.clone(), p.gateway.clone(), None, dispatch_settings());
     let mut registry = Registry::new();
@@ -1758,9 +1758,9 @@ async fn a_disk_usage_answer_is_kept_for_the_account(pool: PgPool) {
     .fetch_one(&pool)
     .await
     .unwrap();
-    let mut request = dhpanel_operations::Request::new(
+    let mut request = builtpanel_operations::Request::new(
         node.id,
-        dhpanel_node_protocol::Operation::FileOp {
+        builtpanel_node_protocol::Operation::FileOp {
             tenant_id: tenant,
             uid: 10_006,
             request: FileRequest::DiskUsage { top: 5 },
@@ -1771,7 +1771,7 @@ async fn a_disk_usage_answer_is_kept_for_the_account(pool: PgPool) {
     p.ops.enqueue(&request).await.unwrap();
     let mut found = None;
     for _ in 0..100 {
-        found = dhpanel_database::file_transfers::usage_of(&pool, tenant)
+        found = builtpanel_database::file_transfers::usage_of(&pool, tenant)
             .await
             .unwrap();
         if found.is_some() {
@@ -2014,7 +2014,7 @@ async fn an_application_without_a_database_goes_straight_to_the_installer(pool: 
     .fetch_one(&pool)
     .await
     .unwrap();
-    let definition = dhpanel_catalog::Catalog::embedded()
+    let definition = builtpanel_catalog::Catalog::embedded()
         .unwrap()
         .get("static-site")
         .unwrap()
@@ -2065,7 +2065,7 @@ async fn a_cache_server_is_ready_when_the_node_says_so_and_gone_when_it_is_remov
     let mut registry = Registry::new();
     registry.register("set_cache_instance", |_| async move {
         Ok(Output::CacheInstanceSet {
-            host: "dh-gus-redis".into(),
+            host: "bp-gus-redis".into(),
             port: 6379,
         })
     });
@@ -2111,8 +2111,8 @@ async fn a_cache_server_is_ready_when_the_node_says_so_and_gone_when_it_is_remov
         let ops = p.ops.clone();
         async move {
             match ops.enqueue(&request).await.unwrap() {
-                dhpanel_operations::Enqueued::Created(op)
-                | dhpanel_operations::Enqueued::Existing(op) => op.id,
+                builtpanel_operations::Enqueued::Created(op)
+                | builtpanel_operations::Enqueued::Existing(op) => op.id,
             }
         }
     };
@@ -2152,7 +2152,7 @@ async fn a_cache_server_is_ready_when_the_node_says_so_and_gone_when_it_is_remov
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    assert_eq!(now, Some(("ready".into(), Some("dh-gus-redis".into()))));
+    assert_eq!(now, Some(("ready".into(), Some("bp-gus-redis".into()))));
     // Removing: the row goes when the node has removed the server.
     let op = ask(
         Operation::RemoveCacheInstance {
@@ -2201,7 +2201,7 @@ async fn an_application_is_ready_when_the_node_says_so_failed_with_its_reason_an
             ));
         }
         Ok(Output::RuntimeAppSet {
-            host: format!("dh-gus-app-{name}:{port}"),
+            host: format!("bp-gus-app-{name}:{port}"),
         })
     });
     registry.register("remove_runtime_app", |_| async move {
@@ -2270,8 +2270,8 @@ async fn an_application_is_ready_when_the_node_says_so_failed_with_its_reason_an
             .await
             .unwrap()
         {
-            dhpanel_operations::Enqueued::Created(op)
-            | dhpanel_operations::Enqueued::Existing(op) => op.id,
+            builtpanel_operations::Enqueued::Created(op)
+            | builtpanel_operations::Enqueued::Existing(op) => op.id,
         };
         sqlx::query("UPDATE runtime_apps SET op_id = $2 WHERE id = $1")
             .bind(app)
@@ -2305,7 +2305,7 @@ async fn an_application_is_ready_when_the_node_says_so_failed_with_its_reason_an
     }
     assert_eq!(
         api,
-        Some(("ready".into(), Some("dh-gus-app-api:3000".into()), None))
+        Some(("ready".into(), Some("bp-gus-app-api:3000".into()), None))
     );
     let (status, host, error) = broken.unwrap();
     assert_eq!((status.as_str(), host), ("failed", None));
@@ -2325,9 +2325,8 @@ async fn an_application_is_ready_when_the_node_says_so_failed_with_its_reason_an
         .await
         .unwrap()
     {
-        dhpanel_operations::Enqueued::Created(op) | dhpanel_operations::Enqueued::Existing(op) => {
-            op.id
-        }
+        builtpanel_operations::Enqueued::Created(op)
+        | builtpanel_operations::Enqueued::Existing(op) => op.id,
     };
     sqlx::query("UPDATE runtime_apps SET op_id = $2, status = 'removing' WHERE id = $1")
         .bind(ids[0])
@@ -2436,8 +2435,8 @@ async fn a_git_deploy_is_live_when_the_node_says_so_failed_with_its_reason_and_g
             .await
             .unwrap()
         {
-            dhpanel_operations::Enqueued::Created(op)
-            | dhpanel_operations::Enqueued::Existing(op) => op.id,
+            builtpanel_operations::Enqueued::Created(op)
+            | builtpanel_operations::Enqueued::Existing(op) => op.id,
         };
         sqlx::query("UPDATE git_deploys SET op_id = $2 WHERE id = $1")
             .bind(id)
@@ -2493,9 +2492,8 @@ async fn a_git_deploy_is_live_when_the_node_says_so_failed_with_its_reason_and_g
         .await
         .unwrap()
     {
-        dhpanel_operations::Enqueued::Created(op) | dhpanel_operations::Enqueued::Existing(op) => {
-            op.id
-        }
+        builtpanel_operations::Enqueued::Created(op)
+        | builtpanel_operations::Enqueued::Existing(op) => op.id,
     };
     sqlx::query("UPDATE git_deploys SET op_id = $2, status = 'removing' WHERE id = $1")
         .bind(ids[0])
@@ -2595,7 +2593,7 @@ async fn a_plan_with_dedicated_databases_moves_a_tenants_databases_and_back(pool
     let state = || {
         let pool = pool.clone();
         async move {
-            dhpanel_database::tenant_db::state(&pool, tenant, "mysql")
+            builtpanel_database::tenant_db::state(&pool, tenant, "mysql")
                 .await
                 .unwrap()
         }
@@ -2633,7 +2631,7 @@ async fn a_plan_with_dedicated_databases_moves_a_tenants_databases_and_back(pool
     assert!(payload.get("password").is_none());
     // While it runs, new work for the tenant is told to wait.
     assert!(
-        dhpanel_database::tenant_db::dedicated_for(&pool, tenant, "dina", "mysql")
+        builtpanel_database::tenant_db::dedicated_for(&pool, tenant, "dina", "mysql")
             .await
             .unwrap()
             .is_err()
@@ -2650,7 +2648,7 @@ async fn a_plan_with_dedicated_databases_moves_a_tenants_databases_and_back(pool
     }
     assert_eq!(switched, "dedicated");
     assert_eq!(
-        dhpanel_database::tenant_db::dedicated_for(&pool, tenant, "dina", "mysql")
+        builtpanel_database::tenant_db::dedicated_for(&pool, tenant, "dina", "mysql")
             .await
             .unwrap(),
         Ok(Some("dina".to_owned()))
@@ -2673,7 +2671,7 @@ async fn a_plan_with_dedicated_databases_moves_a_tenants_databases_and_back(pool
     );
     // PostgreSQL has nothing: it was switched too, with nothing to move.
     assert_eq!(
-        dhpanel_database::tenant_db::state(&pool, tenant, "postgres")
+        builtpanel_database::tenant_db::state(&pool, tenant, "postgres")
             .await
             .unwrap(),
         "dedicated"

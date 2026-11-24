@@ -4,7 +4,7 @@
 //! only way out is the network of the account, as for the account's own applications):
 //!
 //! 1. **fetch**: `git clone --depth 1` of one branch into a new release folder,
-//!    `.dh-releases/<name>/<time>` below the web directory (over http(s) only; the token of a
+//!    `.bp-releases/<name>/<time>` below the web directory (over http(s) only; the token of a
 //!    private repository is in a configuration file that is mounted read-only, never in the
 //!    container's command line or environment);
 //! 2. **build**: each build step is a list of words run in the runtime's image (Node.js or Python)
@@ -18,10 +18,10 @@
 
 use std::{os::unix::fs::PermissionsExt as _, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerError, Name, Network, Tmpfs, VolumeMount};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
+use builtpanel_docker_manager::{ContainerSpec, DockerError, Name, Network, Tmpfs, VolumeMount};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_protocol::{AgentError, ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::{Allowlist, Role, files_volume_name, network_name};
 
 use super::{
     db,
@@ -37,7 +37,7 @@ const STEP_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 /// What stays of each step's output in the log.
 const LOG_PER_STEP: usize = 1500;
 const APP_ROOT: &str = "/app";
-const CONFIG_DIR: &str = "/opt/dh-git";
+const CONFIG_DIR: &str = "/opt/bp-git";
 
 fn invalid(what: &str) -> AgentError {
     AgentError::new(ErrorCode::InvalidArguments, what.to_owned())
@@ -59,7 +59,7 @@ fn valid_dest(dir: &str) -> bool {
         && !dir.starts_with('/')
         && !dir
             .split('/')
-            .any(|p| p.is_empty() || p == ".." || p == "." || p.starts_with(".dh-"))
+            .any(|p| p.is_empty() || p == ".." || p == "." || p.starts_with(".bp-"))
         && dir
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-' | b'/'))
@@ -146,7 +146,7 @@ const FETCH_SCRIPT: &str = "set -e; umask 022; rel=\"$3\"; mkdir -p \"$(dirname 
 
 const SWITCH_SCRIPT: &str = "set -e; target=\"$1\"; dest=\"$2\"; dir=\"$3\"; keep=\"$4\"; \
      if [ -e \"$dest\" ] && [ ! -L \"$dest\" ]; then echo \"$dest exists and is not a link made by a deploy\" >&2; exit 3; fi; \
-     mkdir -p \"$(dirname \"$dest\")\"; rm -f \"$dest.dh-new\"; ln -s \"$target\" \"$dest.dh-new\"; mv -T \"$dest.dh-new\" \"$dest\"; \
+     mkdir -p \"$(dirname \"$dest\")\"; rm -f \"$dest.bp-new\"; ln -s \"$target\" \"$dest.bp-new\"; mv -T \"$dest.bp-new\" \"$dest\"; \
      cd \"$dir\"; ls -1t | tail -n +$((keep + 1)) | while read -r d; do case \"$d\" in ''|*[!0-9]*) ;; *) rm -rf -- \"$d\" ;; esac; done";
 
 /// `run_git_deploy`.
@@ -239,7 +239,7 @@ pub async fn run_git_deploy(
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_millis());
-    let release_dir = format!(".dh-releases/{name}");
+    let release_dir = format!(".bp-releases/{name}");
     let release = format!("{release_dir}/{stamp}");
     let short = &deploy_id.simple().to_string()[..8];
 
@@ -247,7 +247,7 @@ pub async fn run_git_deploy(
     let config_dir = state(&context)?
         .join("gitdeploy")
         .join(format!("{}-{name}", username.as_str()));
-    let config_volume = db::name(&format!("dh-{}-git-{name}-cfg", username.as_str()))?;
+    let config_volume = db::name(&format!("bp-{}-git-{name}-cfg", username.as_str()))?;
     let _ = docker.remove_volume(&config_volume).await;
     if let Some(token) = &token {
         std::fs::create_dir_all(&config_dir)
@@ -266,13 +266,13 @@ pub async fn run_git_deploy(
     }
 
     let job = |suffix: &str,
-               image: &dhpanel_docker_manager::ImageRef,
+               image: &builtpanel_docker_manager::ImageRef,
                workdir: &str,
                tmpfs_mb: u64,
                memory_mb: u64|
      -> Result<ContainerSpec, AgentError> {
         let mut spec = ContainerSpec::new(
-            db::name(&format!("dh-{}-gitjob-{short}-{suffix}", username.as_str()))?,
+            db::name(&format!("bp-{}-gitjob-{short}-{suffix}", username.as_str()))?,
             image.clone(),
         );
         spec.user = Some((uid, uid));
@@ -323,7 +323,7 @@ pub async fn run_git_deploy(
             "sh".into(),
             "-c".into(),
             FETCH_SCRIPT.into(),
-            "dh-git".into(),
+            "bp-git".into(),
             repo_url.clone(),
             branch.clone(),
             release.clone(),
@@ -376,7 +376,7 @@ pub async fn run_git_deploy(
             "sh".into(),
             "-c".into(),
             SWITCH_SCRIPT.into(),
-            "dh-switch".into(),
+            "bp-switch".into(),
             format!("{}{release}", up(&dest)),
             dest.clone(),
             release_dir.clone(),
@@ -407,7 +407,7 @@ pub async fn run_git_deploy(
     };
     // 4. the application that runs the files
     if let Some(app) = restart_app {
-        let container = db::name(&format!("dh-{}-app-{app}", username.as_str()))?;
+        let container = db::name(&format!("bp-{}-app-{app}", username.as_str()))?;
         match docker.restart(&container, Duration::from_secs(10)).await {
             Ok(()) | Err(DockerError::NotFound) => {}
             Err(e) => return Err(docker_error(&e)),
@@ -442,7 +442,7 @@ pub async fn remove_git_deploy(
     let _ = context
         .docker
         .remove_volume(
-            &Name::parse(&format!("dh-{}-git-{name}-cfg", username.as_str()))
+            &Name::parse(&format!("bp-{}-git-{name}-cfg", username.as_str()))
                 .map_err(|e| invalid(&e.to_string()))?,
         )
         .await;
@@ -481,7 +481,7 @@ mod tests {
 
     #[test]
     fn repositories_branches_and_folders_are_checked() {
-        for ok in ["https://github.com/a/b.git", "http://dh-x:8000/r.git"] {
+        for ok in ["https://github.com/a/b.git", "http://bp-x:8000/r.git"] {
             assert!(valid_repo(ok), "{ok}");
         }
         for bad in [
@@ -505,7 +505,7 @@ mod tests {
         for ok in ["site", "apps/site"] {
             assert!(valid_dest(ok), "{ok}");
         }
-        for bad in ["", "/x", "../x", "a//b", ".dh-releases/x", "a/.dh-x", "a b"] {
+        for bad in ["", "/x", "../x", "a//b", ".bp-releases/x", "a/.bp-x", "a b"] {
             assert!(!valid_dest(bad), "{bad}");
         }
         assert_eq!(up("site"), "");

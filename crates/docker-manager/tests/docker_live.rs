@@ -1,6 +1,6 @@
 //! The manager against a real Docker daemon (the build box's rootless one).
 //! Ignored by default; run with `--include-ignored` on a machine with Docker.
-//! The socket is `DHPANEL_TEST_DOCKER_SOCKET`, else the user's rootless socket,
+//! The socket is `BUILTPANEL_TEST_DOCKER_SOCKET`, else the user's rootless socket,
 //! else `/var/run/docker.sock`.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
@@ -9,7 +9,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use dhpanel_docker_manager::{
+use builtpanel_docker_manager::{
     ContainerSpec, DockerError, DockerManager, ImageRef, Name, Network, Tmpfs, VolumeMount,
 };
 
@@ -18,7 +18,7 @@ const BUSYBOX: &str =
     "busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec";
 
 fn socket() -> PathBuf {
-    if let Ok(path) = std::env::var("DHPANEL_TEST_DOCKER_SOCKET") {
+    if let Ok(path) = std::env::var("BUILTPANEL_TEST_DOCKER_SOCKET") {
         return path.into();
     }
     let uid = std::fs::read_to_string("/proc/self/status")
@@ -39,7 +39,7 @@ fn socket() -> PathBuf {
     candidates
         .into_iter()
         .find(|p| p.exists())
-        .expect("no Docker socket found; set DHPANEL_TEST_DOCKER_SOCKET")
+        .expect("no Docker socket found; set BUILTPANEL_TEST_DOCKER_SOCKET")
 }
 
 fn manager() -> DockerManager {
@@ -52,7 +52,7 @@ fn unique(tag: &str) -> Name {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .subsec_nanos();
-    Name::parse(&format!("dh-t{}-{tag}-{nanos}", std::process::id())).unwrap()
+    Name::parse(&format!("bp-t{}-{tag}-{nanos}", std::process::id())).unwrap()
 }
 
 fn busybox() -> ImageRef {
@@ -112,7 +112,7 @@ async fn a_container_really_runs_with_the_hardening_applied() {
         ("created", false)
     );
     assert_eq!(created.name, name.as_str());
-    assert_eq!(created.labels["dhpanel.managed"], "true");
+    assert_eq!(created.labels["builtpanel.managed"], "true");
     assert!(m.list().await.unwrap().contains(&name.as_str().to_owned()));
 
     m.start(&name).await.unwrap();

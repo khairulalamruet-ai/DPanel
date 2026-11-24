@@ -2,7 +2,7 @@
 //! Ignored by default; see tests/migrations.rs for how to run.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use dhpanel_database::node_enrollments::{
+use builtpanel_database::node_enrollments::{
     ConsumedToken, RevokeOutcome, TokenStatus, consume_token, insert_token, list_tokens,
     name_in_use, revoke_token,
 };

@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { OperationsPage } from "./OperationsPage";
-import { ToastProvider } from "@dhpanel/ui";
-import * as dhpanelApi from "@dhpanel/api";
+import { ToastProvider } from "@builtpanel/ui";
+import * as builtpanelApi from "@builtpanel/api";
 
 let mockHasPermission = true;
 
-vi.mock("@dhpanel/auth", () => ({
+vi.mock("@builtpanel/auth", () => ({
   useSession: () => ({
     data: {
       user: { id: "00000000-0000-0000-0000-000000000001", username: "admin" },
@@ -20,7 +20,7 @@ vi.mock("@dhpanel/auth", () => ({
   }),
 }));
 
-vi.mock("@dhpanel/i18n", () => ({
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const dict: Record<string, string> = {
@@ -120,13 +120,13 @@ const mockOperationsList = [
   {
     id: "00000000-0000-0000-0000-000000000101",
     idempotency_key: "idemp_ping_001",
-    op_type: "Ping",
+    op_type: "ping",
     node_id: "00000000-0000-0000-0000-0000000000aa",
     node_name: "node-master-01",
     tenant_id: null,
     status: "succeeded" as const,
     retries_count: 0,
-    payload: { echo: "dhpanel-heartbeat" },
+    payload: { echo: "builtpanel-heartbeat" },
     output: { pong: true, latency_ms: 1.4 },
     error: null,
     created_at: "2026-11-12T00:00:00Z",
@@ -135,7 +135,7 @@ const mockOperationsList = [
   {
     id: "00000000-0000-0000-0000-000000000103",
     idempotency_key: "idemp_pull_003",
-    op_type: "PullImage",
+    op_type: "pull_image",
     node_id: "00000000-0000-0000-0000-0000000000bb",
     node_name: "node-worker-02",
     tenant_id: null,
@@ -153,75 +153,34 @@ const mockOperationsList = [
   },
 ];
 
+/** An operation as the backend returns it (`OperationView`). */
+const view = (o: (typeof mockOperationsList)[number]) => ({
+  id: o.id,
+  idempotency_key: o.idempotency_key,
+  kind: o.op_type,
+  node_id: o.node_id,
+  tenant_id: o.tenant_id,
+  status: o.status,
+  attempts: o.retries_count + 1,
+  payload: o.payload,
+  output: o.output,
+  error: o.error ? { code: o.error.code, message: o.error.message, retryable: true } : null,
+  created_at: o.created_at,
+  finished_at: o.updated_at,
+});
+
 describe("OperationsPage", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     mockHasPermission = true;
 
-    vi.spyOn(dhpanelApi, "apiFetch").mockImplementation(async (url: string, opts?: any) => {
+    vi.spyOn(builtpanelApi, "apiFetch").mockImplementation(async (url: string, opts?: any) => {
       if (opts?.method === "POST" && url.includes("/retry")) {
-        return {
-          success: true,
-          operation: {
-            ...mockOperationsList[1],
-            status: "pending",
-            retries_count: 3,
-            error: null,
-          },
-        };
+        return view({ ...mockOperationsList[1], status: "pending" as never, retries_count: 3, error: null as never });
       }
-      if (opts?.method === "POST" && url.includes("/cluster/apply-all")) {
-        const body = JSON.parse(opts.body || "{}");
-        const isSimulation = !!body.simulate_fail_node_id;
-        if (isSimulation) {
-          return {
-            id: "roll_sim_fail",
-            op_type: body.op_type || "SyncSettings",
-            total_nodes: 10,
-            completed_nodes: 4,
-            succeeded_nodes: 3,
-            failed_nodes: 1,
-            skipped_nodes: 6,
-            status: "halted",
-            batches_count: 5,
-            message: "Rolling execution halted after node failure in batch. Circuit breaker tripped.",
-            node_results: [
-              { node_id: "node-01", node_name: "node-master-01", batch_index: 0, status: "succeeded", duration_ms: 45 },
-              { node_id: "node-02", node_name: "node-worker-02", batch_index: 0, status: "succeeded", duration_ms: 50 },
-              { node_id: "node-03", node_name: "node-worker-03", batch_index: 1, status: "succeeded", duration_ms: 55 },
-              { node_id: "node-04", node_name: "node-worker-04", batch_index: 1, status: "failed", duration_ms: 120, error: "Connection timeout" },
-              { node_id: "node-05", node_name: "node-worker-05", batch_index: 2, status: "skipped", duration_ms: 0, output: "Skipped due to circuit breaker trip" },
-              { node_id: "node-06", node_name: "node-worker-06", batch_index: 2, status: "skipped", duration_ms: 0, output: "Skipped due to circuit breaker trip" },
-              { node_id: "node-07", node_name: "node-worker-07", batch_index: 3, status: "skipped", duration_ms: 0, output: "Skipped due to circuit breaker trip" },
-              { node_id: "node-08", node_name: "node-worker-08", batch_index: 3, status: "skipped", duration_ms: 0, output: "Skipped due to circuit breaker trip" },
-              { node_id: "node-09", node_name: "node-worker-09", batch_index: 4, status: "skipped", duration_ms: 0, output: "Skipped due to circuit breaker trip" },
-              { node_id: "node-10", node_name: "node-worker-10", batch_index: 4, status: "skipped", duration_ms: 0, output: "Skipped due to circuit breaker trip" },
-            ],
-          };
-        }
-        return {
-          id: "roll_success",
-          op_type: body.op_type || "SyncSettings",
-          total_nodes: 10,
-          completed_nodes: 10,
-          succeeded_nodes: 10,
-          failed_nodes: 0,
-          skipped_nodes: 0,
-          status: "succeeded",
-          batches_count: 5,
-          message: "Rolling execution completed across all 10 nodes successfully.",
-          node_results: Array.from({ length: 10 }).map((_, i) => ({
-            node_id: `node-${i + 1}`,
-            node_name: `node-worker-${String(i + 1).padStart(2, "0")}`,
-            batch_index: Math.floor(i / 2),
-            status: "succeeded",
-            duration_ms: 40 + i * 5,
-            output: "SyncSettings executed successfully",
-          })),
-        };
-      }
+      if (url.startsWith("/api/v1/admin/nodes")) return { items: [] };
       if (url.includes("/api/v1/admin/operations")) {
-        return { items: mockOperationsList, total: 2 };
+        return { items: mockOperationsList.map(view) };
       }
       return {};
     });
@@ -237,8 +196,8 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Operation Ledger")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText("Ping")).toBeInTheDocument();
-      expect(screen.getByText("PullImage")).toBeInTheDocument();
+      expect(screen.getByText("ping")).toBeInTheDocument();
+      expect(screen.getByText("pull_image")).toBeInTheDocument();
       expect(screen.getAllByText("Succeeded").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Failed").length).toBeGreaterThanOrEqual(1);
     });
@@ -252,7 +211,7 @@ describe("OperationsPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("PullImage")).toBeInTheDocument();
+      expect(screen.getByText("pull_image")).toBeInTheDocument();
     });
 
     const viewButtons = screen.getAllByRole("button", { name: /View Payload & Logs/i });
@@ -273,7 +232,7 @@ describe("OperationsPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("PullImage")).toBeInTheDocument();
+      expect(screen.getByText("pull_image")).toBeInTheDocument();
     });
 
     // Failed operation has a Retry button
@@ -295,70 +254,5 @@ describe("OperationsPage", () => {
       </ToastProvider>
     );
     expect(screen.getByText("Permission denied")).toBeInTheDocument();
-  });
-
-  it("opens Apply-to-All dialog and executes rolling apply across 10 nodes (DoD T16.06)", async () => {
-    render(
-      <ToastProvider>
-        <OperationsPage />
-      </ToastProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId("btn-open-apply-all")).toBeInTheDocument();
-    });
-
-    // Open Apply to All Dialog
-    fireEvent.click(screen.getByTestId("btn-open-apply-all"));
-
-    await waitFor(() => {
-      expect(screen.getByText("Rolling Cluster Orchestrator")).toBeInTheDocument();
-      expect(screen.getByTestId("btn-start-rolling-apply")).toBeInTheDocument();
-    });
-
-    // Start rolling execution
-    fireEvent.click(screen.getByTestId("btn-start-rolling-apply"));
-
-    // Verify 10 nodes executed successfully (DoD T16.06)
-    await waitFor(() => {
-      expect(screen.getByTestId("rolling-status-title")).toHaveTextContent("Rolling Apply Completed");
-      expect(screen.getByTestId("metric-total-nodes")).toHaveTextContent("10");
-      expect(screen.getByTestId("metric-succeeded-nodes")).toHaveTextContent("10");
-      expect(screen.getByTestId("rolling-result-badge")).toHaveTextContent("succeeded");
-    });
-  });
-
-  it("stops rolling apply and skips remaining nodes when a node fails with circuit breaker (DoD T16.06)", async () => {
-    render(
-      <ToastProvider>
-        <OperationsPage />
-      </ToastProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId("btn-open-apply-all")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTestId("btn-open-apply-all"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("select-simulate-fail")).toBeInTheDocument();
-    });
-
-    // Select fault injection on node-04
-    fireEvent.change(screen.getByTestId("select-simulate-fail"), {
-      target: { value: "node-04" },
-    });
-
-    // Start execution
-    fireEvent.click(screen.getByTestId("btn-start-rolling-apply"));
-
-    // Verify circuit breaker tripped: execution halted, remaining nodes skipped
-    await waitFor(() => {
-      expect(screen.getByTestId("rolling-status-title")).toHaveTextContent("Execution Halted by Circuit Breaker");
-      expect(screen.getByTestId("metric-succeeded-nodes")).toHaveTextContent("3");
-      expect(screen.getByTestId("metric-skipped-nodes")).toHaveTextContent("6");
-      expect(screen.getByTestId("rolling-result-badge")).toHaveTextContent("halted");
-    });
   });
 });

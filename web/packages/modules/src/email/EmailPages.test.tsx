@@ -19,14 +19,14 @@ import {
   DeliverabilityCheck,
 } from "./types";
 
-// Mock @dhpanel/api
+// Mock @builtpanel/api
 const mockApiFetch = vi.fn();
-vi.mock("@dhpanel/api", () => ({
+vi.mock("@builtpanel/api", () => ({
   apiFetch: (...args: any[]) => mockApiFetch(...args),
 }));
 
-// Mock @dhpanel/i18n
-vi.mock("@dhpanel/i18n", () => ({
+// Mock @builtpanel/i18n
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, defaultVal?: string | Record<string, any>) => {
       if (typeof defaultVal === "string") return defaultVal;
@@ -36,10 +36,10 @@ vi.mock("@dhpanel/i18n", () => ({
   }),
 }));
 
-// Mock @dhpanel/ui toast
+// Mock @builtpanel/ui toast
 const mockToast = vi.fn();
-vi.mock("@dhpanel/ui", async () => {
-  const actual = await vi.importActual<any>("@dhpanel/ui");
+vi.mock("@builtpanel/ui", async () => {
+  const actual = await vi.importActual<any>("@builtpanel/ui");
   return {
     ...actual,
     useToast: () => ({ toast: mockToast }),
@@ -118,7 +118,7 @@ describe("Email Module UI Components (T13.12, T13.10, T13.11)", () => {
       mx_status: "pass",
       rbl_blacklisted: false,
       rbl_listings: [],
-      recommendations: ["DKIM selector 'dhpanel' is active with 2048-bit RSA key."],
+      recommendations: ["DKIM selector 'builtpanel' is active with 2048-bit RSA key."],
     },
   ];
 

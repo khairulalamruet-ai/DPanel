@@ -10,7 +10,7 @@
 //! | POST | `/api/v1/auth/mfa/totp/disable` | session in sudo mode |
 //!
 //! Login with 2FA enabled is two requests. The password step answers 202 and
-//! sets `__Host-dh_mfa`, an HttpOnly cookie holding a random token whose
+//! sets `__Host-bp_mfa`, an HttpOnly cookie holding a random token whose
 //! SHA-256 keys a 5-minute Redis entry naming the account. No session exists
 //! until the second step succeeds, so a password alone grants nothing.
 //!
@@ -36,17 +36,17 @@ use axum::{
     routing::{get, post},
 };
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_auth_core::totp::{self, TotpSecret};
-use dhpanel_database::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_auth_core::totp::{self, TotpSecret};
+use builtpanel_database::{
     accounts::{self, DbAccountStatus, LoginEvent, LoginOutcome},
     mfa as db,
 };
-use dhpanel_http_kit::{
+use builtpanel_http_kit::{
     AppError, ProblemDetails,
     client_ip::{client_ip, rate_limit_key},
 };
-use dhpanel_session::{Authenticated, RecentAuth, cookie_value};
+use builtpanel_session::{Authenticated, RecentAuth, cookie_value};
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
@@ -59,10 +59,10 @@ use crate::{
 };
 
 /// Cookie carrying the pending-login token between the two login steps.
-pub const MFA_COOKIE_NAME: &str = "__Host-dh_mfa";
+pub const MFA_COOKIE_NAME: &str = "__Host-bp_mfa";
 /// How long the second step may take.
 pub const MFA_PENDING_TTL: Duration = Duration::from_secs(300);
-const PENDING_PREFIX: &str = "dhpanel:mfa_pending:";
+const PENDING_PREFIX: &str = "builtpanel:mfa_pending:";
 const TOKEN_BYTES: usize = 32;
 /// Longest accepted second-factor input (bytes).
 const MAX_CODE_BYTES: usize = 32;
@@ -385,7 +385,7 @@ pub async fn login_mfa(
 
 /// Re-checks the signed-in user's password before a sensitive change.
 /// Wrong passwords count toward the account lockout.
-async fn require_password(
+pub(crate) async fn require_password(
     state: &AuthState,
     account_id: Uuid,
     password: String,
@@ -405,11 +405,8 @@ async fn require_password(
         .map_err(AppError::internal)?
         .ok_or(AppError::Unauthorized)?;
     let matches = password.len() <= MAX_PASSWORD_BYTES
-        && state
-            .hasher
-            .verify_async(SecretString::from(password), account.password_hash)
-            .await
-            .map_err(AppError::internal)?
+        && crate::check_password(state, &SecretString::from(password), &account.password_hash)
+            .await?
             .matches;
     if !matches {
         count_failure(&state.limits.account, &subject).await?;
@@ -700,7 +697,7 @@ mod tests {
         let c = mfa_cookie("tok", 300).unwrap();
         let c = c.to_str().unwrap();
         for attr in [
-            "__Host-dh_mfa=tok",
+            "__Host-bp_mfa=tok",
             "Path=/",
             "Secure",
             "HttpOnly",
@@ -712,7 +709,7 @@ mod tests {
         let mut h = HeaderMap::new();
         h.append(
             header::COOKIE,
-            HeaderValue::from_static("a=1; __Host-dh_mfa=tok; __Host-dh_session=s"),
+            HeaderValue::from_static("a=1; __Host-bp_mfa=tok; __Host-bp_session=s"),
         );
         assert_eq!(mfa_cookie_value(&h), Some("tok"));
         assert_eq!(mfa_cookie_value(&HeaderMap::new()), None);

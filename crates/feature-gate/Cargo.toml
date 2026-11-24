@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-feature-gate"
+name = "builtpanel-feature-gate"
 description = "Plan-based gating: is this feature on for the tenant, is one more allowed under the limit."
 version.workspace = true
 edition.workspace = true
@@ -11,8 +11,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-cache.workspace = true
-dhpanel-http-kit.workspace = true
+builtpanel-cache.workspace = true
+builtpanel-http-kit.workspace = true
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2.0.21"

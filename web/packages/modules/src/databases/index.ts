@@ -6,3 +6,4 @@ export * from "./SqlImportDialog";
 export * from "./RemoteAccessDialog";
 export * from "./ClientDatabasesPage";
 export * from "./AdminDatabasesPage";
+export * from "./studio";

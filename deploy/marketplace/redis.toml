@@ -1,0 +1,16 @@
+slug        = "redis"
+name        = "Redis"
+category    = "databases"
+kind        = "container"
+description = "An in-memory data store used as a cache, a session store and a message broker."
+license     = "BSD-3-Clause"
+homepage    = "https://redis.io"
+covers      = ["Redis"]
+version     = "8.10.3"
+image       = "docker.io/library/redis"
+track       = "8"
+tag         = "8.10.3"
+digest      = "sha256:1f88291b4c57bdf249f02eb085a8669889b2d2954e91d4de5118a5da6b78dd53"
+port        = 6379
+memory_mb   = 256
+usage       = "Connect from your other applications to host \"redis\", port 6379. It has no password and is reachable only from inside your account."

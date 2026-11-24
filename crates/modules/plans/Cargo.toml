@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-mod-plans"
+name = "builtpanel-mod-plans"
 description = "Plans module: feature sets and hosting plans."
 version.workspace = true
 edition.workspace = true
@@ -11,12 +11,12 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-audit.workspace = true
-dhpanel-database.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-kernel.workspace = true
-dhpanel-rbac.workspace = true
-dhpanel-session.workspace = true
+builtpanel-audit.workspace = true
+builtpanel-database.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-kernel.workspace = true
+builtpanel-rbac.workspace = true
+builtpanel-session.workspace = true
 axum = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -24,7 +24,7 @@ utoipa = { version = "6", features = ["uuid"] }
 uuid = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
-dhpanel-cache.workspace = true
+builtpanel-cache.workspace = true
 secrecy = "0.10"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "macros", "uuid", "json", "migrate"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }

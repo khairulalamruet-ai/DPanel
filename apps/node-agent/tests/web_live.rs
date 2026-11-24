@@ -1,19 +1,19 @@
 //! The web server operations against a real Caddy, with a real site behind it.
 //! Ignored by default; needs a Caddy whose admin API and HTTP port the script
 //! publishes (see deploy/dev/web-live.sh):
-//!   DHPANEL_TEST_CADDY_ADMIN=http://127.0.0.1:12019
-//!   DHPANEL_TEST_CADDY_URL=http://127.0.0.1:18080
-//!   DHPANEL_TEST_CADDY_CONTAINER=<name of the caddy container>
-//! and a container `dh-alice-web` (port 8080) on a network Caddy is also on.
+//!   BUILTPANEL_TEST_CADDY_ADMIN=http://127.0.0.1:12019
+//!   BUILTPANEL_TEST_CADDY_URL=http://127.0.0.1:18080
+//!   BUILTPANEL_TEST_CADDY_CONTAINER=<name of the caddy container>
+//! and a container `bp-alice-web` (port 8080) on a network Caddy is also on.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::{process::Command, time::Duration};
 
-use dhpanel_node_agent::web::{
+use builtpanel_node_agent::web::{
     Settings, WebContext, set_custom_certificates, set_error_pages, set_site_routes,
     set_user_agent_blocklist,
 };
-use dhpanel_node_protocol::{
+use builtpanel_node_protocol::{
     CustomCertificate, ErrorCode, ErrorPage, Operation, Output, RouteRedirect, SiteRoute,
 };
 
@@ -55,6 +55,7 @@ async fn get(url: &str, host: &str, path: &str) -> (u16, Option<String>, String)
 fn site(hosts: &[&str], upstream: Option<&str>, redirects: Vec<RouteRedirect>) -> SiteRoute {
     SiteRoute {
         waf: None,
+        blocked_ips: Vec::new(),
         hosts: hosts.iter().map(|h| (*h).to_owned()).collect(),
         upstream: upstream.map(str::to_owned),
         redirects,
@@ -75,14 +76,14 @@ fn set(username: &str, routes: Vec<SiteRoute>) -> Operation {
 #[ignore = "needs a Caddy and a site behind it (see the file header)"]
 async fn sites_are_served_suspended_redirected_and_put_back_after_caddy_forgets_them() {
     let (Some(admin), Some(url), Some(container)) = (
-        env("DHPANEL_TEST_CADDY_ADMIN"),
-        env("DHPANEL_TEST_CADDY_URL"),
-        env("DHPANEL_TEST_CADDY_CONTAINER"),
+        env("BUILTPANEL_TEST_CADDY_ADMIN"),
+        env("BUILTPANEL_TEST_CADDY_URL"),
+        env("BUILTPANEL_TEST_CADDY_CONTAINER"),
     ) else {
         eprintln!("skipped: no Caddy (see the script)");
         return;
     };
-    let dir = std::env::temp_dir().join(format!("dh-web-live-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-web-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let web = WebContext::new(
         Settings {
@@ -109,7 +110,7 @@ async fn sites_are_served_suspended_redirected_and_put_back_after_caddy_forgets_
             "alice",
             vec![site(
                 &["example.com", "www.example.com"],
-                Some("dh-alice-web:8080"),
+                Some("bp-alice-web:8080"),
                 vec![
                     RouteRedirect {
                         path: "/old".into(),
@@ -176,7 +177,7 @@ async fn sites_are_served_suspended_redirected_and_put_back_after_caddy_forgets_
             "alice",
             vec![site(
                 &["example.com", "www.example.com"],
-                Some("dh-alice-web:8080"),
+                Some("bp-alice-web:8080"),
                 vec![],
             )],
         ),
@@ -232,7 +233,7 @@ async fn sites_are_served_suspended_redirected_and_put_back_after_caddy_forgets_
         web.clone(),
         set(
             "bobby",
-            vec![site(&["example.com"], Some("dh-bobby-web:8080"), vec![])],
+            vec![site(&["example.com"], Some("bp-bobby-web:8080"), vec![])],
         ),
     )
     .await
@@ -242,7 +243,7 @@ async fn sites_are_served_suspended_redirected_and_put_back_after_caddy_forgets_
         web.clone(),
         set(
             "bobby",
-            vec![site(&["bobs.net"], Some("dh-alice-web:8080"), vec![])],
+            vec![site(&["bobs.net"], Some("bp-alice-web:8080"), vec![])],
         ),
     )
     .await
@@ -273,7 +274,7 @@ async fn sites_are_served_suspended_redirected_and_put_back_after_caddy_forgets_
 #[tokio::test]
 #[ignore = "needs a Caddy (see the file header)"]
 async fn routes_are_kept_when_caddy_cannot_be_reached_and_applied_later() {
-    let dir = std::env::temp_dir().join(format!("dh-web-down-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-web-down-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let web = WebContext::new(
         Settings {
@@ -290,7 +291,7 @@ async fn routes_are_kept_when_caddy_cannot_be_reached_and_applied_later() {
         web.clone(),
         set(
             "alice",
-            vec![site(&["example.com"], Some("dh-alice-web:8080"), vec![])],
+            vec![site(&["example.com"], Some("bp-alice-web:8080"), vec![])],
         ),
     )
     .await
@@ -340,14 +341,14 @@ fn https_get(port: &str, host: &str, path: &str) -> (u16, String, String) {
 #[ignore = "needs a Caddy with HTTP and HTTPS ports (see the file header)"]
 async fn force_https_redirects_plain_requests_and_hsts_is_sent_over_https_only() {
     let (Some(admin), Some(url), Some(tls_port)) = (
-        env("DHPANEL_TEST_CADDY_ADMIN"),
-        env("DHPANEL_TEST_CADDY_URL"),
-        env("DHPANEL_TEST_CADDY_TLS_PORT"),
+        env("BUILTPANEL_TEST_CADDY_ADMIN"),
+        env("BUILTPANEL_TEST_CADDY_URL"),
+        env("BUILTPANEL_TEST_CADDY_TLS_PORT"),
     ) else {
         eprintln!("skipped: no Caddy (see the script)");
         return;
     };
-    let dir = std::env::temp_dir().join(format!("dh-web-https-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-web-https-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let web = WebContext::new(
         Settings {
@@ -361,7 +362,7 @@ async fn force_https_redirects_plain_requests_and_hsts_is_sent_over_https_only()
         &dir,
     );
     let secure = |hosts: &[&str], force: bool, hsts: bool| {
-        let mut s = site(hosts, Some("dh-alice-web:8080"), vec![]);
+        let mut s = site(hosts, Some("bp-alice-web:8080"), vec![]);
         s.force_https = force;
         s.hsts = hsts;
         s
@@ -479,13 +480,13 @@ fn served_issuer(port: &str, host: &str) -> String {
 #[ignore = "needs a Caddy with HTTP and HTTPS ports (see the file header)"]
 async fn an_uploaded_certificate_is_served_until_it_is_removed() {
     let (Some(admin), Some(tls_port)) = (
-        env("DHPANEL_TEST_CADDY_ADMIN"),
-        env("DHPANEL_TEST_CADDY_TLS_PORT"),
+        env("BUILTPANEL_TEST_CADDY_ADMIN"),
+        env("BUILTPANEL_TEST_CADDY_TLS_PORT"),
     ) else {
         eprintln!("skipped: no Caddy (see the script)");
         return;
     };
-    let dir = std::env::temp_dir().join(format!("dh-web-certs-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-web-certs-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let web = WebContext::new(
         Settings {
@@ -523,7 +524,7 @@ async fn an_uploaded_certificate_is_served_until_it_is_removed() {
             "alice",
             vec![site(
                 &["own.example.com", "auto.example.com"],
-                Some("dh-alice-web:8080"),
+                Some("bp-alice-web:8080"),
                 vec![],
             )],
         ),
@@ -642,13 +643,13 @@ async fn an_uploaded_certificate_is_served_until_it_is_removed() {
 #[ignore = "needs a Caddy and a site behind it (see the file header)"]
 async fn error_pages_are_the_installations_until_an_administrator_replaces_them() {
     let (Some(admin), Some(url)) = (
-        env("DHPANEL_TEST_CADDY_ADMIN"),
-        env("DHPANEL_TEST_CADDY_URL"),
+        env("BUILTPANEL_TEST_CADDY_ADMIN"),
+        env("BUILTPANEL_TEST_CADDY_URL"),
     ) else {
         eprintln!("skipped: no Caddy (see the script)");
         return;
     };
-    let dir = std::env::temp_dir().join(format!("dh-web-pages-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-web-pages-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let web = WebContext::new(
         Settings {
@@ -665,7 +666,7 @@ async fn error_pages_are_the_installations_until_an_administrator_replaces_them(
     by_domain.suspended_by = Some("domain".into());
     let mut by_account = site(&["account-off.example.com"], None, vec![]);
     by_account.suspended_by = Some("account".into());
-    let broken = site(&["broken.example.com"], Some("dh-alice-gone:8080"), vec![]);
+    let broken = site(&["broken.example.com"], Some("bp-alice-gone:8080"), vec![]);
     set_site_routes(
         web.clone(),
         set("alice", vec![by_domain, by_account, broken]),
@@ -753,17 +754,17 @@ async fn error_pages_are_the_installations_until_an_administrator_replaces_them(
 }
 
 #[tokio::test]
-#[ignore = "needs the Caddy with the firewall (CADDY_IMAGE=dh-caddy-waf:test deploy/dev/web-live.sh; see the file header)"]
+#[ignore = "needs the Caddy with the firewall (CADDY_IMAGE=bp-caddy-waf:test deploy/dev/web-live.sh; see the file header)"]
 async fn a_policy_change_reaches_a_running_caddy_without_a_restart() {
     let (Some(admin), Some(url), Some(waf_dir)) = (
-        env("DHPANEL_TEST_CADDY_ADMIN"),
-        env("DHPANEL_TEST_CADDY_URL"),
-        env("DHPANEL_TEST_WAF_DIR").filter(|d| !d.is_empty()),
+        env("BUILTPANEL_TEST_CADDY_ADMIN"),
+        env("BUILTPANEL_TEST_CADDY_URL"),
+        env("BUILTPANEL_TEST_WAF_DIR").filter(|d| !d.is_empty()),
     ) else {
         eprintln!("skipped: no Caddy with the firewall");
         return;
     };
-    let dir = std::env::temp_dir().join(format!("dh-waf-live-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-waf-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let web = WebContext::new(
         Settings {
@@ -776,13 +777,13 @@ async fn a_policy_change_reaches_a_running_caddy_without_a_restart() {
         },
         &dir,
     );
-    let with = |waf: Option<dhpanel_node_protocol::WafSetting>| {
-        let mut route = site(&["example.com"], Some("dh-alice-web:8080"), Vec::new());
+    let with = |waf: Option<builtpanel_node_protocol::WafSetting>| {
+        let mut route = site(&["example.com"], Some("bp-alice-web:8080"), Vec::new());
         route.waf = waf;
         set_site_routes(web.clone(), set("alice", vec![route]))
     };
     let setting = |mode: &str, rules: &[u32]| {
-        Some(dhpanel_node_protocol::WafSetting {
+        Some(builtpanel_node_protocol::WafSetting {
             mode: mode.into(),
             disabled_rules: rules.to_vec(),
         })
@@ -861,13 +862,13 @@ async fn get_agent(url: &str, host: &str, agent: &str) -> u16 {
 #[ignore = "needs a Caddy and a site behind it (see the file header)"]
 async fn a_listed_user_agent_is_refused_before_any_site_and_the_list_is_kept() {
     let (Some(admin), Some(url)) = (
-        env("DHPANEL_TEST_CADDY_ADMIN"),
-        env("DHPANEL_TEST_CADDY_URL"),
+        env("BUILTPANEL_TEST_CADDY_ADMIN"),
+        env("BUILTPANEL_TEST_CADDY_URL"),
     ) else {
         eprintln!("skipped: no Caddy (see the script)");
         return;
     };
-    let dir = std::env::temp_dir().join(format!("dh-ua-live-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bp-ua-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let settings = || Settings {
         admin: admin.clone(),
@@ -884,7 +885,7 @@ async fn a_listed_user_agent_is_refused_before_any_site_and_the_list_is_kept() {
             "alice",
             vec![site(
                 &["example.com"],
-                Some("dh-alice-web:8080"),
+                Some("bp-alice-web:8080"),
                 Vec::new(),
             )],
         ),

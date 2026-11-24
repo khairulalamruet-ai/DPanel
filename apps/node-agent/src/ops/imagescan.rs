@@ -7,11 +7,11 @@
 
 use std::{sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ImageRef, Network, Tmpfs, VolumeMount};
-use dhpanel_node_protocol::{
+use builtpanel_docker_manager::{ImageRef, Network, Tmpfs, VolumeMount};
+use builtpanel_node_protocol::{
     AgentError, ErrorCode, ImageDigest, ImageVulnerability, Operation, Output,
 };
-use dhpanel_tenant_stack::{Allowlist, Role};
+use builtpanel_tenant_stack::{Allowlist, Role};
 
 use super::{
     db,
@@ -20,7 +20,7 @@ use super::{
     tenant::{TenantContext, docker_error},
 };
 
-const NETWORK: &str = "dh-trivy-net";
+const NETWORK: &str = "bp-trivy-net";
 const LIMIT: Duration = Duration::from_secs(30 * 60);
 const MAX_TOP: usize = 50;
 
@@ -126,8 +126,8 @@ pub async fn scan_image(context: Arc<TenantContext>, op: Operation) -> Result<Ou
         }
     }
     let state_dir = state(&context)?;
-    let cache_volume = db::name("dh-trivy-cache")?;
-    let out_volume = db::name("dh-trivy-out")?;
+    let cache_volume = db::name("bp-trivy-cache")?;
+    let out_volume = db::name("bp-trivy-out")?;
     for (volume, dir) in [(&cache_volume, &cache), (&out_volume, &out)] {
         context
             .docker
@@ -148,7 +148,7 @@ pub async fn scan_image(context: Arc<TenantContext>, op: Operation) -> Result<Ou
         h.finish()
     });
     let mut spec = base_spec(
-        db::name("dh-trivy-scan")?,
+        db::name("bp-trivy-scan")?,
         trivy,
         &[
             "trivy",

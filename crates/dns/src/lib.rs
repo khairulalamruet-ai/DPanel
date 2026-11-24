@@ -7,7 +7,7 @@
 //! provider (Cloudflare) later only has to implement the trait.
 //!
 //! The provider works with **names without the final dot** for zones
-//! (`example.com`) and the records of `dhpanel_domain::DnsRecord` (names relative
+//! (`example.com`) and the records of `builtpanel_domain::DnsRecord` (names relative
 //! to the zone); the SOA and the apex name servers are the server's own and are
 //! neither listed nor changed.
 
@@ -18,7 +18,7 @@ pub mod sync;
 
 use std::{future::Future, pin::Pin};
 
-use dhpanel_domain::DnsRecord;
+use builtpanel_domain::DnsRecord;
 
 /// A boxed future, so providers can be used as `dyn DnsProvider`.
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;

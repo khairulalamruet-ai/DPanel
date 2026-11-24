@@ -4,12 +4,12 @@
 
 use std::sync::{Arc, OnceLock};
 
-use dhpanel_auth_core::secretbox::MasterKey;
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::notifications as store;
-use dhpanel_kernel::Event;
-use dhpanel_mod_notifications::{NotificationsState, deliver_due, handle_event};
-use dhpanel_session::{SessionConfig, SessionStore};
+use builtpanel_auth_core::secretbox::MasterKey;
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::notifications as store;
+use builtpanel_kernel::Event;
+use builtpanel_mod_notifications::{NotificationsState, deliver_due, handle_event};
+use builtpanel_session::{SessionConfig, SessionStore};
 use secrecy::SecretString;
 use sqlx::PgPool;
 use tokio::{
@@ -334,7 +334,7 @@ async fn a_channel_gets_its_events_by_mail_and_a_pause_or_snooze_stops_it(pool: 
         sent[0]
     );
     assert!(
-        sent[0].contains("DHPanel"),
+        sent[0].contains("Built Panel"),
         "the panel's name is in the mail: {}",
         sent[0]
     );
@@ -432,7 +432,7 @@ async fn a_mail_that_cannot_be_sent_is_tried_again_and_then_given_up(pool: PgPoo
     assert!(error.is_some(), "the reason is kept");
     // Not tried again at once (it waits a minute), and given up after the last try.
     assert_eq!(deliver_due(&st).await, 0);
-    for _ in 1..dhpanel_mod_notifications::MAX_ATTEMPTS {
+    for _ in 1..builtpanel_mod_notifications::MAX_ATTEMPTS {
         sqlx::query("UPDATE notification_deliveries SET next_attempt_at = now()")
             .execute(&pool)
             .await
@@ -446,6 +446,6 @@ async fn a_mail_that_cannot_be_sent_is_tried_again_and_then_given_up(pool: PgPoo
             .unwrap();
     assert_eq!(
         (status.as_str(), attempts),
-        ("failed", dhpanel_mod_notifications::MAX_ATTEMPTS)
+        ("failed", builtpanel_mod_notifications::MAX_ATTEMPTS)
     );
 }

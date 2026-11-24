@@ -2,8 +2,8 @@
 
 use std::collections::BTreeMap;
 
-use dhpanel_database::routes::{RoutedDomain, RoutedRedirect};
-use dhpanel_node_protocol::{
+use builtpanel_database::routes::{RoutedDomain, RoutedRedirect};
+use builtpanel_node_protocol::{
     MAX_HOSTS_PER_TENANT, MAX_REDIRECTS_PER_TENANT, MAX_SITES_PER_TENANT, RouteRedirect, SiteRoute,
 };
 use uuid::Uuid;
@@ -12,10 +12,24 @@ use uuid::Uuid;
 /// (the primary name of a site is the key; a mode of `off` is simply not in it).
 pub fn apply_waf(
     routes: &mut [SiteRoute],
-    by_host: &BTreeMap<String, dhpanel_node_protocol::WafSetting>,
+    by_host: &BTreeMap<String, builtpanel_node_protocol::WafSetting>,
 ) {
     for site in routes {
         site.waf = site.hosts.first().and_then(|h| by_host.get(h)).cloned();
+    }
+}
+
+/// Puts the turned-away addresses into the sites: `by_host` is the list of each domain (the
+/// primary name of a site is the key).
+pub fn apply_ip_blocks(routes: &mut [SiteRoute], by_host: &BTreeMap<String, Vec<String>>) {
+    for site in routes {
+        if let Some(list) = site.hosts.first().and_then(|h| by_host.get(h)) {
+            site.blocked_ips = list
+                .iter()
+                .take(builtpanel_node_protocol::MAX_BLOCKED_IPS)
+                .cloned()
+                .collect();
+        }
     }
 }
 
@@ -47,6 +61,7 @@ pub fn build(
     for d in domains.iter().filter(|d| d.kind != "alias") {
         let route = SiteRoute {
             waf: None,
+            blocked_ips: Vec::new(),
             hosts: vec![d.fqdn.clone()],
             upstream: (!suspended[&d.id]).then(|| upstream.to_owned()),
             redirects: redirects
@@ -133,7 +148,7 @@ mod tests {
         }
     }
 
-    const UP: &str = "dh-alice-web:8080";
+    const UP: &str = "bp-alice-web:8080";
 
     #[test]
     fn domains_become_sites_aliases_join_their_domain() {
@@ -274,8 +289,25 @@ mod tests {
     }
 
     #[test]
+    fn turned_away_addresses_go_to_the_site_of_their_primary_name_only() {
+        let domains = [
+            dom(1, "a.com", "primary", None, "active"),
+            dom(2, "b.com", "primary", None, "active"),
+        ];
+        let mut routes = build("active", UP, &domains, &[]);
+        let mut by_host = BTreeMap::new();
+        by_host.insert(
+            "a.com".to_owned(),
+            vec!["203.0.113.9".to_owned(), "198.51.100.0/24".to_owned()],
+        );
+        apply_ip_blocks(&mut routes, &by_host);
+        assert_eq!(routes[0].blocked_ips, ["203.0.113.9", "198.51.100.0/24"]);
+        assert!(routes[1].blocked_ips.is_empty());
+    }
+
+    #[test]
     fn the_firewall_setting_goes_to_the_site_of_its_primary_name_only() {
-        use dhpanel_node_protocol::WafSetting;
+        use builtpanel_node_protocol::WafSetting;
         let domains = [
             dom(1, "a.com", "primary", None, "active"),
             dom(2, "b.com", "primary", None, "active"),

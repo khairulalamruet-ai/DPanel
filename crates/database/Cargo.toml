@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-database"
+name = "builtpanel-database"
 description = "PostgreSQL pool, transaction helpers, migrations and tenant-scoped repository base."
 version.workspace = true
 edition.workspace = true
@@ -11,7 +11,7 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-domain.workspace = true
+builtpanel-domain.workspace = true
 # Async PostgreSQL driver + migrations (fixed stack). No TLS yet: the database
 # listens on localhost / a private network; TLS is added with remote DB support.
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros", "uuid", "time", "json"] }
@@ -25,5 +25,5 @@ thiserror = "2.0.21"
 tracing = "0.1.44"
 
 [dev-dependencies]
-dhpanel-rbac.workspace = true
+builtpanel-rbac.workspace = true
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }

@@ -10,8 +10,8 @@ use std::{
     time::Duration,
 };
 
-use dhpanel_events::{PassStats, Relay, Settings, publish};
-use dhpanel_kernel::{
+use builtpanel_events::{PassStats, Relay, Settings, publish};
+use builtpanel_kernel::{
     Event, Manifest, Module,
     module::{BoxFuture, EventError},
 };
@@ -145,7 +145,7 @@ async fn every_active_module_gets_every_event_in_order(pool: PgPool) {
     assert_eq!(relay.run_once().await.unwrap().delivered, 6);
     assert_eq!(*a.seen.lock().unwrap(), sent);
     assert_eq!(*b.seen.lock().unwrap(), sent);
-    let (pending, dead) = dhpanel_database::outbox::counts(&pool).await.unwrap();
+    let (pending, dead) = builtpanel_database::outbox::counts(&pool).await.unwrap();
     assert_eq!((pending, dead), (0, 0));
 }
 
@@ -206,7 +206,7 @@ async fn a_failing_module_is_retried_and_a_hopeless_event_is_set_aside(pool: PgP
             .unwrap();
     assert_eq!((attempts, is_dead), (3, true));
     assert_eq!(
-        dhpanel_database::outbox::counts(&pool).await.unwrap(),
+        builtpanel_database::outbox::counts(&pool).await.unwrap(),
         (0, 1)
     );
 }
@@ -280,7 +280,7 @@ async fn several_relays_deliver_each_event_once(pool: PgPool) {
                 if stats == PassStats::default() {
                     // Another relay may still hold rows; look once more before leaving.
                     tokio::time::sleep(Duration::from_millis(50)).await;
-                    if dhpanel_database::outbox::counts(&pool).await.unwrap().0 == 0 {
+                    if builtpanel_database::outbox::counts(&pool).await.unwrap().0 == 0 {
                         return delivered;
                     }
                 }

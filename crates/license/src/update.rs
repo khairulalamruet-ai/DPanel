@@ -191,7 +191,7 @@ mod tests {
     }
 
     fn rig() -> Rig {
-        let base = std::env::temp_dir().join(format!("dh-update-{}", uuid::Uuid::new_v4()));
+        let base = std::env::temp_dir().join(format!("bp-update-{}", uuid::Uuid::new_v4()));
         let (from, to) = (base.join("from"), base.join("to"));
         fs::create_dir_all(&from).unwrap();
         fs::create_dir_all(&to).unwrap();

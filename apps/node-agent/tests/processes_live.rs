@@ -4,15 +4,19 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name};
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name};
+use builtpanel_node_agent::ops::{
     services::{list_processes, signal_process},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output, ProcessItem, SignalOutcome};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output, ProcessItem, SignalOutcome};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -59,10 +63,10 @@ async fn an_account_sees_and_ends_only_its_own_processes() {
             name
         }
     };
-    let a = make(format!("dh-pra{pid}-php"), alice, script_a).await;
-    let b = make(format!("dh-prb{pid}-php"), bob, "sleep 999").await;
+    let a = make(format!("bp-pra{pid}-php"), alice, script_a).await;
+    let b = make(format!("bp-prb{pid}-php"), bob, "sleep 999").await;
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    let base = std::env::temp_dir().join(format!("dh-processes-live-{pid}"));
+    let base = std::env::temp_dir().join(format!("bp-processes-live-{pid}"));
     let context = Arc::new(TenantContext {
         helper_socket: base.join("none.sock"),
         tenants_root: base.join("tenants"),

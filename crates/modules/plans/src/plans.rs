@@ -28,14 +28,14 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::plans::{self, DeleteOutcome, NodeMaximum, Plan, PlanWrite, WriteError};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_rbac::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::plans::{self, DeleteOutcome, NodeMaximum, Plan, PlanWrite, WriteError};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_rbac::{
     Require, RequireRecent,
     permissions::{PlansManage, PlansRead},
 };
-use dhpanel_session::rfc3339;
+use builtpanel_session::rfc3339;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -574,7 +574,7 @@ pub async fn create_plan(
         &declared,
     );
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("admin.plan_created", Outcome::Success)
             .actor(who.account_id())
@@ -668,7 +668,7 @@ pub async fn update_plan(
         &declared,
     );
     let mut tx = state.db.begin().await.map_err(internal)?;
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("admin.plan_updated", Outcome::Success)
             .actor(who.account_id())
@@ -731,7 +731,7 @@ pub async fn delete_plan(
         }
         DeleteOutcome::Deleted => {}
     }
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &mut *tx,
         &AuditEntry::new("admin.plan_deleted", Outcome::Success)
             .actor(who.account_id())

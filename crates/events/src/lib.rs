@@ -6,7 +6,7 @@
 //! ```ignore
 //! let mut tx = pool.begin().await?;
 //! delete_tenant(&mut tx, id).await?;
-//! dhpanel_events::publish(&mut tx, &Event::TenantDeleted { tenant_id: id }).await?;
+//! builtpanel_events::publish(&mut tx, &Event::TenantDeleted { tenant_id: id }).await?;
 //! tx.commit().await?;   // both happen, or neither
 //! ```
 //!
@@ -15,7 +15,7 @@
 //! durable before the transaction returns.
 //!
 //! **Delivering** is the [`Relay`]: it takes undelivered events oldest first
-//! and calls [`Module::on_event`](dhpanel_kernel::Module::on_event) of every
+//! and calls [`Module::on_event`](builtpanel_kernel::Module::on_event) of every
 //! active module, dependencies first. If a module fails or takes too long, the
 //! event is tried again later with a growing delay (all modules see it again,
 //! which is why handlers must be safe to repeat); after too many failures it is
@@ -24,11 +24,11 @@
 
 use std::{sync::Arc, time::Duration};
 
-use dhpanel_database::{
+use builtpanel_database::{
     outbox,
     sqlx::{self, PgConnection, PgPool},
 };
-use dhpanel_kernel::{Event, Module};
+use builtpanel_kernel::{Event, Module};
 use tokio::sync::watch;
 use uuid::Uuid;
 

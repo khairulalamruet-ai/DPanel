@@ -12,8 +12,8 @@ use axum::{
     http::StatusCode,
     routing::{get, post, put},
 };
-use dhpanel_http_kit::{AppError, FieldError};
-use dhpanel_license::FileSigningKey;
+use builtpanel_http_kit::{AppError, FieldError};
+use builtpanel_license::FileSigningKey;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -302,7 +302,7 @@ pub struct Product {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NewProduct {
-    /// Slug (`dhpanel`).
+    /// Slug (`builtpanel`).
     pub slug: String,
     /// Name.
     pub name: String,
@@ -1079,7 +1079,7 @@ async fn rotate_keys(
     }
     let path = state.settings.key_dir.join(format!("{}.key", req.kid));
     let key = FileSigningKey::generate_to_file(&path, &req.kid).map_err(|e| match e {
-        dhpanel_license::KeyError::File(_) => {
+        builtpanel_license::KeyError::File(_) => {
             AppError::conflict("key_exists", "A key with this id is there already.")
         }
         other => AppError::internal(other),

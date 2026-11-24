@@ -21,9 +21,9 @@ import {
   DialogDescription,
   DialogFooter,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { listZones, loadZone, updateRecord, deleteRecord, verifyNameservers } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   Globe,
   Plus,
@@ -84,12 +84,10 @@ export function DnsEditorPage() {
   const fetchZones = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<{ items: DnsZone[]; total: number }>(
-        "/api/v1/client/dns/zones"
-      );
-      setZones(res.items);
-      if (res.items.length > 0 && !selectedZoneId) {
-        setSelectedZoneId(res.items[0].id);
+      const items = await listZones();
+      setZones(items);
+      if (items.length > 0) {
+        setSelectedZoneId((current) => current || items[0].id);
       }
     } catch {
       toast({
@@ -100,7 +98,7 @@ export function DnsEditorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedZoneId, t, toast]);
+  }, [t, toast]);
 
   useEffect(() => {
     fetchZones();
@@ -111,9 +109,9 @@ export function DnsEditorPage() {
     if (!zoneId) return;
     try {
       setIsLoading(true);
-      const res = await apiFetch<DnsZoneDetailResponse>(
-        `/api/v1/client/dns/zones/${zoneId}`
-      );
+      const base = zones.find((z) => z.id === zoneId);
+      if (!base) return;
+      const res = await loadZone(base);
       setActiveZone(res.zone);
       setRecords(res.records);
     } catch {
@@ -125,10 +123,10 @@ export function DnsEditorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [t, toast]);
+  }, [zones, t, toast]);
 
   useEffect(() => {
-    if (selectedZoneId) {
+    if (selectedZoneId && zones.length > 0) {
       fetchZoneDetails(selectedZoneId);
     }
   }, [selectedZoneId, fetchZoneDetails]);
@@ -157,14 +155,9 @@ export function DnsEditorPage() {
   // 4. Save inline edited record
   const handleSaveInline = async (recordId: string, payload: UpdateDnsRecordPayload) => {
     try {
-      const updated = await apiFetch<DnsRecord>(
-        `/api/v1/client/dns/zones/${selectedZoneId}/records/${recordId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const current = records.find((r) => r.id === recordId);
+      if (!current || !selectedZoneId) return;
+      const updated = await updateRecord(selectedZoneId, current, payload);
 
       setRecords((prev) => prev.map((r) => (r.id === recordId ? updated : r)));
       setEditingRecordId(null);
@@ -185,10 +178,7 @@ export function DnsEditorPage() {
   const handleDeleteRecord = async () => {
     if (!deletingRecord) return;
     try {
-      await apiFetch(
-        `/api/v1/client/dns/zones/${selectedZoneId}/records/${deletingRecord.id}`,
-        { method: "DELETE" }
-      );
+      await deleteRecord(selectedZoneId as string, deletingRecord.id);
       setRecords((prev) => prev.filter((r) => r.id !== deletingRecord.id));
       toast({
         title: t("common.success", "Success"),
@@ -209,13 +199,15 @@ export function DnsEditorPage() {
     if (!selectedZoneId) return;
     try {
       setIsVerifyingNs(true);
-      const res = await apiFetch<{ valid: boolean; message: string }>(
-        `/api/v1/client/dns/zones/${selectedZoneId}/verify-ns`,
-        { method: "POST" }
-      );
+      const res = await verifyNameservers(selectedZoneId);
       toast({
-        title: t("dns.toast.nsVerifiedTitle", "Nameservers Verified"),
-        description: res.message,
+        title: res.ok
+          ? t("dns.toast.nsVerifiedTitle", "Nameservers Verified")
+          : t("dns.toast.nsNotVerifiedTitle", "Nameservers not set yet"),
+        description: res.ok
+          ? res.found.join(", ")
+          : t("dns.toast.nsMissing", "Point the domain at: {{servers}}", { servers: res.expected.join(", ") }),
+        variant: res.ok ? "default" : "destructive",
       });
     } catch (err: any) {
       toast({
@@ -447,6 +439,8 @@ export function DnsEditorPage() {
         onOpenChange={setIsBindOpen}
         zoneId={selectedZoneId}
         domainName={activeZone?.domain_name || ""}
+        records={records}
+        nameservers={activeZone?.nameservers ?? []}
         onImportSuccess={() => {
           fetchZoneDetails(selectedZoneId);
         }}

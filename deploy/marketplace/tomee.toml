@@ -1,0 +1,16 @@
+slug        = "tomee"
+name        = "Apache TomEE"
+category    = "java_containers"
+kind        = "container"
+description = "Tomcat with Jakarta EE."
+license     = "Apache-2.0"
+homepage    = "https://tomee.apache.org"
+covers      = ["Apache TomEE Plus"]
+version     = "10.3.0"
+image       = "docker.io/library/tomee"
+track       = "10"
+tag         = "10.3.0"
+digest      = "sha256:d4bbd8edf3da626cf4aedcd596e6654c8988df2e878db5f78ac2601180ba95d2"
+port        = 8080
+memory_mb   = 768
+usage       = "Host \"tomee\", port 8080, from inside your account or on a domain."

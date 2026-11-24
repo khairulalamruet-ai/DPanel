@@ -1,5 +1,5 @@
 -- T06.13: pages an administrator wrote for the cases a site cannot answer
--- (see dhpanel_domain::error_pages). A kind without a row uses the installation's
+-- (see builtpanel_domain::error_pages). A kind without a row uses the installation's
 -- own page.
 CREATE TABLE error_pages (
     kind       text PRIMARY KEY

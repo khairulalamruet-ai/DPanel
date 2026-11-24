@@ -3,22 +3,22 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrandingPage } from "./BrandingPage";
 import { sanitizeCustomCss, DEFAULT_BRANDING } from "./types";
-import { useSession } from "@dhpanel/auth";
-import { useToast } from "@dhpanel/ui";
+import { useSession } from "@builtpanel/auth";
+import { useToast } from "@builtpanel/ui";
 
-vi.mock("@dhpanel/auth", () => ({
+vi.mock("@builtpanel/auth", () => ({
   useSession: vi.fn(),
 }));
 
-vi.mock("@dhpanel/ui", async () => {
-  const actual = await vi.importActual<any>("@dhpanel/ui");
+vi.mock("@builtpanel/ui", async () => {
+  const actual = await vi.importActual<any>("@builtpanel/ui");
   return {
     ...actual,
     useToast: vi.fn(),
   };
 });
 
-vi.mock("@dhpanel/api", () => ({
+vi.mock("@builtpanel/api", () => ({
   apiFetch: vi.fn().mockImplementation(async (url: string, opts?: any) => {
     if (opts?.method === "PUT") {
       return JSON.parse(opts.body);
@@ -27,7 +27,7 @@ vi.mock("@dhpanel/api", () => ({
   }),
 }));
 
-vi.mock("@dhpanel/i18n", () => ({
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: { language: "en" },
@@ -85,14 +85,14 @@ describe("BrandingPage Component", () => {
         roles: ["admin"],
         permissions: ["*"],
         branding: {
-          companyName: "DHPanel",
+          companyName: "Built Panel",
           logoUrl: "",
           faviconUrl: "",
           accentColor: "#3b82f6",
-          loginTitle: "DHPanel",
+          loginTitle: "Built Panel",
           loginSubtitle: "Sign in",
-          loginFooterText: "DHPanel Cloud",
-          nameservers: ["ns1.dhpanel.net", "ns2.dhpanel.net"],
+          loginFooterText: "Built Panel Cloud",
+          nameservers: ["ns1.builtpanel.net", "ns2.builtpanel.net"],
           customCss: "",
         },
       },
@@ -104,9 +104,9 @@ describe("BrandingPage Component", () => {
     render(<BrandingPage />);
 
     expect(screen.getByTestId("branding-page")).toBeInTheDocument();
-    expect(screen.getByTestId("branding-name-input")).toHaveValue("DHPanel");
+    expect(screen.getByTestId("branding-name-input")).toHaveValue("Built Panel");
     expect(screen.getByTestId("branding-live-preview")).toBeInTheDocument();
-    expect(screen.getByTestId("preview-brand-name")).toHaveTextContent("DHPanel");
+    expect(screen.getByTestId("preview-brand-name")).toHaveTextContent("Built Panel");
   });
 
   it("updates preview and applies branding live to session on submit without reload", async () => {

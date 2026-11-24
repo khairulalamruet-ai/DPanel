@@ -9,9 +9,9 @@ import {
   Button,
   Badge,
   useToast,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch, getCsrfToken } from "@dhpanel/api";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch, getCsrfToken } from "@builtpanel/api";
 import { AlertTriangle, ArrowRight, Server, ShieldCheck, RefreshCw } from "lucide-react";
 import type { NodeItem } from "./types";
 

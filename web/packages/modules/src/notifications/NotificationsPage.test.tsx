@@ -1,8 +1,8 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
-import { NotificationItem, NotificationChannelConfig } from "./types";
+import { ToastProvider } from "@builtpanel/ui";
+import { NotificationItem } from "./types";
 import { NotificationBell } from "./NotificationBell";
 import { NotificationPreferencesPage } from "./NotificationPreferencesPage";
 
@@ -38,52 +38,51 @@ const mockNotifications: NotificationItem[] = [
   },
 ];
 
-const mockConfig: NotificationChannelConfig = {
-  email_enabled: true,
-  email_recipients: ["admin@enterprise.io"],
-  webhook_enabled: false,
-  webhook_url: "",
-  in_app_enabled: true,
-  notify_on_ssl_expiry: true,
-  notify_on_backup_failure: true,
-  notify_on_node_offline: true,
-  notify_on_security_alert: true,
-  snooze_until: null,
-};
+const view = (n: NotificationItem) => ({
+  id: n.id,
+  event_type: n.category === "ssl" ? "ssl.expiring" : n.category === "backup" ? "backup.finished" : "system.node",
+  severity: n.severity === "error" ? "critical" : n.severity,
+  subject: n.title,
+  body: n.message,
+  read: n.read,
+  created_at: Math.floor(new Date(n.created_at).getTime() / 1000),
+});
 
-vi.mock("@dhpanel/api", () => ({
+let quiet: { paused: boolean; snoozed_until: number | null } = { paused: false, snoozed_until: null };
+
+vi.mock("@builtpanel/api", () => ({
   apiFetch: vi.fn(async (url: string, opts?: any) => {
-    if (url === "/api/v1/notifications") {
-      return mockNotifications;
+    if (url === "/api/v1/client/notifications") {
+      return { items: mockNotifications.map(view), unread: mockNotifications.filter((n) => !n.read).length };
     }
-    if (url === "/api/v1/notifications/settings") {
-      if (opts?.method === "PUT") {
-        return JSON.parse(opts.body);
+    if (url === "/api/v1/client/notifications/read") {
+      return { updated: 1 };
+    }
+    if (url === "/api/v1/client/notifications/events") {
+      return { events: ["ssl.expiring", "backup.finished"] };
+    }
+    if (url === "/api/v1/client/notifications/channels") {
+      if (opts?.method === "POST") {
+        const body = JSON.parse(opts.body);
+        return { channel: { id: "ch_new", enabled: true, ...body }, secret: null };
       }
-      return mockConfig;
+      return [{ id: "ch_01", kind: "email", name: "Me", target: "admin@enterprise.io", events: [], enabled: true }];
     }
-    if (url === "/api/v1/notifications/read-all") {
-      return { success: true };
+    if (url === "/api/v1/client/notifications/quiet") {
+      if (opts?.method === "PUT") {
+        const body = JSON.parse(opts.body);
+        quiet = { paused: body.paused, snoozed_until: body.snooze_minutes ? Math.floor(Date.now() / 1000) + body.snooze_minutes * 60 : null };
+      }
+      return quiet;
     }
-    if (url.endsWith("/read")) {
-      return { success: true };
-    }
-    if (url === "/api/v1/notifications/snooze") {
-      const body = JSON.parse(opts.body);
-      return {
-        snooze_until: body.duration_hours > 0 ? new Date(Date.now() + body.duration_hours * 3600000).toISOString() : null,
-      };
-    }
-    if (url === "/api/v1/notifications/test") {
-      return { success: true };
-    }
-    return { success: true };
+    return {};
   }),
 }));
 
 describe("Notification UI Module (T18.05)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    quiet = { paused: false, snoozed_until: null };
   });
 
   describe("NotificationBell", () => {
@@ -191,7 +190,7 @@ describe("Notification UI Module (T18.05)", () => {
       });
     });
 
-    it("triggers test notification dispatch", async () => {
+    it("adds an e-mail channel", async () => {
       render(
         <ToastProvider>
           <NotificationPreferencesPage />
@@ -199,13 +198,15 @@ describe("Notification UI Module (T18.05)", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("btn-test-notification")).toBeDefined();
+        expect(screen.getByTestId("channel-ch_01")).toBeDefined();
       });
 
-      fireEvent.click(screen.getByTestId("btn-test-notification"));
+      fireEvent.change(screen.getByTestId("input-channel-name"), { target: { value: "Ops" } });
+      fireEvent.change(screen.getByTestId("input-channel-target"), { target: { value: "ops@example.com" } });
+      fireEvent.click(screen.getByTestId("btn-add-channel"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("btn-test-notification")).toBeDefined();
+        expect(screen.getByTestId("channel-ch_new")).toBeDefined();
       });
     });
   });

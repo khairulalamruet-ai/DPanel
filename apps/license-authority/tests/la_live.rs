@@ -13,9 +13,9 @@ use base64::{
     Engine as _,
     engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
 };
-use dhpanel_auth_core::password::{Argon2Params, PasswordHasher};
-use dhpanel_license::{Document, Expect, FileSigningKey, PublicKeys, SigningKey as _};
-use dhpanel_license_authority::{
+use builtpanel_auth_core::password::{Argon2Params, PasswordHasher};
+use builtpanel_license::{Document, Expect, FileSigningKey, PublicKeys, SigningKey as _};
+use builtpanel_license_authority::{
     LaState, Settings, config::LaConfig, public::proof_message, register_key, router,
 };
 use secrecy::SecretString;
@@ -30,7 +30,7 @@ struct Env {
 }
 
 async fn env(pool: &PgPool) -> Env {
-    let key_dir = std::env::temp_dir().join(format!("dh-la-{}", Uuid::new_v4().simple()));
+    let key_dir = std::env::temp_dir().join(format!("bp-la-{}", Uuid::new_v4().simple()));
     std::fs::create_dir_all(&key_dir).unwrap();
     let key =
         FileSigningKey::generate_to_file(&key_dir.join("license-1.key"), "license-1").unwrap();
@@ -43,7 +43,7 @@ async fn env(pool: &PgPool) -> Env {
         db: pool.clone(),
         signer: Arc::new(std::sync::RwLock::new(Arc::new(key))),
         settings: Settings::from_config(&config),
-        prover: dhpanel_license_authority::domain_proof::default_prover(),
+        prover: builtpanel_license_authority::domain_proof::default_prover(),
         hasher: Arc::new(
             PasswordHasher::new(Argon2Params {
                 memory_kib: 19 * 1024,
@@ -142,7 +142,7 @@ async fn license(env: &Env, token: &str, max: i32, features: &[&str]) -> (String
         Some(json!({"name": "Acme", "email": format!("{}@acme.example", Uuid::new_v4().simple())})),
     )
     .await;
-    let (_, product) = call(&env.app, "POST", "/api/v1/admin/products", Some(token), Some(json!({"slug": format!("p{}", &Uuid::new_v4().simple().to_string()[..8]), "name": "DHPanel"}))).await;
+    let (_, product) = call(&env.app, "POST", "/api/v1/admin/products", Some(token), Some(json!({"slug": format!("p{}", &Uuid::new_v4().simple().to_string()[..8]), "name": "Built Panel"}))).await;
     let (status, plan) = call(
         &env.app,
         "POST",
@@ -219,7 +219,7 @@ impl Installation {
         ip: &str,
     ) -> (StatusCode, Value) {
         let nonce = self.nonce(env).await;
-        let hash: String = dhpanel_license_authority::sha256(key.trim())
+        let hash: String = builtpanel_license_authority::sha256(key.trim())
             .iter()
             .map(|b| format!("{b:02x}"))
             .collect();
@@ -272,11 +272,11 @@ async fn bundle(env: &Env) -> PublicKeys {
 
 fn expect(inst: Uuid) -> Expect<'static> {
     Expect {
-        issuer: "dhpanel-la",
-        audience: "dhpanel",
+        issuer: "builtpanel-la",
+        audience: "builtpanel",
         installation_id: inst,
         clock_skew: 120,
-        host: dhpanel_license::HostFacts {
+        host: builtpanel_license::HostFacts {
             hostname: "web1",
             domain: "panel.example",
         },
@@ -827,7 +827,7 @@ async fn the_private_key_is_never_in_the_database_and_a_replayed_activation_gets
     let (_, key2) = license(&e, &root, 1, &["x"]).await;
     let other = Installation::new(&e.key_dir);
     let send = |nonce: String| {
-        let hash: String = dhpanel_license_authority::sha256(&key2)
+        let hash: String = builtpanel_license_authority::sha256(&key2)
             .iter()
             .map(|b| format!("{b:02x}"))
             .collect();
@@ -939,7 +939,7 @@ async fn a_license_is_bound_to_its_domain_host_name_and_address(pool: PgPool) {
     assert_eq!(claims.bind.ips, vec!["203.0.113.7"]);
     // An installation that is elsewhere cannot verify it either.
     let elsewhere = Expect {
-        host: dhpanel_license::HostFacts {
+        host: builtpanel_license::HostFacts {
             hostname: "web9",
             domain: "panel.example",
         },
@@ -1031,7 +1031,7 @@ async fn a_license_is_bound_to_its_domain_host_name_and_address(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 #[ignore = "needs PostgreSQL"]
 async fn a_changed_binary_fails_the_next_scan_and_leaves_an_event(pool: PgPool) {
-    use dhpanel_license::{ReleaseManifest, SignedManifest, integrity_report_text, sha256_hex};
+    use builtpanel_license::{ReleaseManifest, SignedManifest, integrity_report_text, sha256_hex};
     let e = env(&pool).await;
     let token = admin(&pool, &e, "root@la.example", "admin").await;
     let (_, key) = license(&e, &token, 1, &["mail"]).await;
@@ -1044,10 +1044,10 @@ async fn a_changed_binary_fails_the_next_scan_and_leaves_an_event(pool: PgPool) 
         FileSigningKey::generate_to_file(&e.key_dir.join("release-1.key"), "release-1").unwrap();
     let files = vec![
         (
-            "dhpanel-control-api".to_owned(),
+            "builtpanel-control-api".to_owned(),
             b"control api 1.0".to_vec(),
         ),
-        ("dhpanel-worker".to_owned(), b"worker 1.0".to_vec()),
+        ("builtpanel-worker".to_owned(), b"worker 1.0".to_vec()),
     ];
     let manifest = ReleaseManifest::build("1.0.0", "abcdef0", 1_700_000_000, &files).unwrap();
     let signed = SignedManifest::sign(&manifest, &release_key).unwrap();
@@ -1127,7 +1127,7 @@ async fn a_changed_binary_fails_the_next_scan_and_leaves_an_event(pool: PgPool) 
     let (c, _, status, r) = scan("1.0.0", honest(&files), None).await;
     assert_eq!(
         c["components"],
-        json!(["dhpanel-control-api", "dhpanel-worker"])
+        json!(["builtpanel-control-api", "builtpanel-worker"])
     );
     assert_eq!(
         (status, r["result"].clone()),
@@ -1153,7 +1153,7 @@ async fn a_changed_binary_fails_the_next_scan_and_leaves_an_event(pool: PgPool) 
         (StatusCode::OK, json!("failed")),
         "{r}"
     );
-    assert_eq!(r["mismatched"], json!(["dhpanel-control-api"]));
+    assert_eq!(r["mismatched"], json!(["builtpanel-control-api"]));
     let (kind, detail): (String, Value) =
         sqlx::query_as("SELECT kind, detail FROM integrity_events WHERE scan_id = $1")
             .bind(scan_id)
@@ -1161,7 +1161,7 @@ async fn a_changed_binary_fails_the_next_scan_and_leaves_an_event(pool: PgPool) 
             .await
             .unwrap();
     assert_eq!(kind, "mismatch");
-    assert_eq!(detail["mismatched"], json!(["dhpanel-control-api"]));
+    assert_eq!(detail["mismatched"], json!(["builtpanel-control-api"]));
     let (status, listed) = call(
         &e.app,
         "GET",
@@ -1175,10 +1175,10 @@ async fn a_changed_binary_fails_the_next_scan_and_leaves_an_event(pool: PgPool) 
 
     // A program that is not there: partial. A version nobody published: unverifiable.
     let mut fewer = honest(&files);
-    fewer.remove("dhpanel-worker");
+    fewer.remove("builtpanel-worker");
     let (_, _, _, r) = scan("1.0.0", fewer, None).await;
     assert_eq!(r["result"], "partial");
-    assert_eq!(r["missing"], json!(["dhpanel-worker"]));
+    assert_eq!(r["missing"], json!(["builtpanel-worker"]));
     let (c, _, _, r) = scan("9.9.9", honest(&files), None).await;
     assert_eq!(c["components"], json!([]));
     assert_eq!(r["result"], "unverifiable");
@@ -1236,7 +1236,7 @@ async fn a_changed_binary_fails_the_next_scan_and_leaves_an_event(pool: PgPool) 
 async fn a_failed_scan_takes_the_license_away_until_a_recovery_is_approved_and_the_scan_is_clean(
     pool: PgPool,
 ) {
-    use dhpanel_license::{ReleaseManifest, SignedManifest, integrity_report_text, sha256_hex};
+    use builtpanel_license::{ReleaseManifest, SignedManifest, integrity_report_text, sha256_hex};
     let e = env(&pool).await;
     let token = admin(&pool, &e, "root@la.example", "admin").await;
     let viewer = admin(&pool, &e, "viewer@la.example", "viewer").await;
@@ -1247,7 +1247,7 @@ async fn a_failed_scan_takes_the_license_away_until_a_recovery_is_approved_and_t
     // A published release.
     let release_key =
         FileSigningKey::generate_to_file(&e.key_dir.join("release-1.key"), "release-1").unwrap();
-    let files = vec![("dhpanel-control-api".to_owned(), b"control api".to_vec())];
+    let files = vec![("builtpanel-control-api".to_owned(), b"control api".to_vec())];
     let signed = SignedManifest::sign(
         &ReleaseManifest::build("1.0.0", "abcdef0", 1, &files).unwrap(),
         &release_key,
@@ -1292,7 +1292,7 @@ async fn a_failed_scan_takes_the_license_away_until_a_recovery_is_approved_and_t
             .await;
             let scan_id: Uuid = c["scan_id"].as_str().unwrap().parse().unwrap();
             let found: std::collections::BTreeMap<String, String> =
-                [("dhpanel-control-api".to_owned(), sha256_hex(content))].into();
+                [("builtpanel-control-api".to_owned(), sha256_hex(content))].into();
             let signature = inst.sign(
                 "integrity-report",
                 c["nonce"].as_str().unwrap(),

@@ -10,7 +10,7 @@ use rustls::{
 };
 
 /// File names of the control plane's server certificate inside `pki.ca_dir`
-/// (written by `dhctl ca issue-server`).
+/// (written by `bpctl ca issue-server`).
 pub const SERVER_CERT_FILE: &str = "server.crt";
 /// See [`SERVER_CERT_FILE`].
 pub const SERVER_KEY_FILE: &str = "server.key";

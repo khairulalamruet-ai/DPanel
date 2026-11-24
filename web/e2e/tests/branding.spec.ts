@@ -27,7 +27,7 @@ test.describe("Branding & Live Theming (T18.06)", () => {
   test("DoD: updating branding immediately updates navbar and CSS live without page reload", async ({ page }) => {
     // Wait for initial fetch to complete and settle
     const nameInput = page.getByTestId("branding-name-input");
-    await expect(nameInput).toHaveValue("DHPanel");
+    await expect(nameInput).toHaveValue("Built Panel");
 
     // Set a window variable to strictly prove no page reload occurred
     await page.evaluate(() => {
@@ -38,7 +38,7 @@ test.describe("Branding & Live Theming (T18.06)", () => {
 
     // Add sanitized custom CSS
     const cssInput = page.getByTestId("branding-css-input");
-    await cssInput.fill(".dhpanel-custom-branding-test { border: 4px dashed rgb(255, 0, 0); }");
+    await cssInput.fill(".builtpanel-custom-branding-test { border: 4px dashed rgb(255, 0, 0); }");
 
     // Live preview updates immediately while typing
     await expect(page.getByTestId("preview-brand-name")).toHaveText("Hyperion Cloud Panel");
@@ -57,10 +57,10 @@ test.describe("Branding & Live Theming (T18.06)", () => {
     await expect(appBrandTitle).toHaveText("Hyperion Cloud Panel");
 
     // Verify injected style tag in DOM
-    const liveStyleTag = page.locator("#dhpanel-live-custom-css");
+    const liveStyleTag = page.locator("#builtpanel-live-custom-css");
     await expect(liveStyleTag).toBeAttached();
     const styleContent = await liveStyleTag.innerHTML();
-    expect(styleContent).toContain(".dhpanel-custom-branding-test");
+    expect(styleContent).toContain(".builtpanel-custom-branding-test");
 
     // Verify window marker is still intact (NO reload was triggered)
     const markerValue = await page.evaluate(() => (window as any).__NO_RELOAD_TEST_MARKER__);
@@ -69,7 +69,7 @@ test.describe("Branding & Live Theming (T18.06)", () => {
 
   test("sanitizes custom CSS to neutralize script tags and javascript pseudo-protocols", async ({ page }) => {
     // Wait for initial fetch to complete and settle
-    await expect(page.getByTestId("branding-name-input")).toHaveValue("DHPanel");
+    await expect(page.getByTestId("branding-name-input")).toHaveValue("Built Panel");
 
     const cssInput = page.getByTestId("branding-css-input");
     await cssInput.fill("</style><script>alert('xss')</script>body { background: url('javascript:void(0)'); }");
@@ -83,7 +83,7 @@ test.describe("Branding & Live Theming (T18.06)", () => {
     await saveBtn.click();
 
     // Verify the injected style element in DOM does NOT contain <script> or javascript:
-    const liveStyleTag = page.locator("#dhpanel-live-custom-css");
+    const liveStyleTag = page.locator("#builtpanel-live-custom-css");
     await expect(liveStyleTag).toBeAttached();
     const styleContent = await liveStyleTag.innerHTML();
     expect(styleContent).not.toContain("<script>");

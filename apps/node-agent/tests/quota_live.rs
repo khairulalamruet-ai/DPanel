@@ -1,21 +1,27 @@
 //! Storage quotas for real, on an XFS filesystem mounted with project quotas
 //! (the live script makes a loop-mounted one), with the privileged helper
 //! running as root and a container running as the tenant.
-//! Ignored by default; without DHPANEL_TEST_HELPER_SOCKET / _TENANTS_ROOT it
+//! Ignored by default; without BUILTPANEL_TEST_HELPER_SOCKET / _TENANTS_ROOT it
 //! says so and passes.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name, Network, VolumeMount};
-use dhpanel_node_agent::ops::tenant::{TenantContext, create_tenant, set_storage_quota};
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_docker_manager::{
+    ContainerSpec, DockerManager, ImageRef, Name, Network, VolumeMount,
+};
+use builtpanel_node_agent::ops::tenant::{TenantContext, create_tenant, set_storage_quota};
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
 use uuid::Uuid;
 
 const BUSYBOX: &str =
     "busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -33,10 +39,10 @@ async fn as_tenant(
     volume: &str,
     script: &str,
 ) -> i64 {
-    let net = Name::parse(&format!("dh-{name}-net")).unwrap();
+    let net = Name::parse(&format!("bp-{name}-net")).unwrap();
     let mut spec = ContainerSpec::new(
         Name::parse(&format!(
-            "dh-{name}-run{}",
+            "bp-{name}-run{}",
             Uuid::now_v7().simple().to_string().get(24..30).unwrap()
         ))
         .unwrap(),
@@ -69,8 +75,8 @@ async fn as_tenant(
 #[ignore = "needs the privileged helper as root and an XFS filesystem with project quotas"]
 async fn writing_more_than_the_quota_fails_and_raising_it_lets_the_write_through() {
     let (Some(helper_socket), Some(tenants_root)) = (
-        std::env::var_os("DHPANEL_TEST_HELPER_SOCKET"),
-        std::env::var_os("DHPANEL_TEST_TENANTS_ROOT"),
+        std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET"),
+        std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT"),
     ) else {
         eprintln!("skipped: no helper (see the live script)");
         return;
@@ -80,7 +86,7 @@ async fn writing_more_than_the_quota_fails_and_raising_it_lets_the_write_through
         helper_socket: helper_socket.into(),
         tenants_root: tenants_root.into(),
         docker: docker.clone(),
-        vhosts_root: std::env::temp_dir().join(format!("dh-vhosts-{}", std::process::id())),
+        vhosts_root: std::env::temp_dir().join(format!("bp-vhosts-{}", std::process::id())),
     });
     docker
         .pull_image(&ImageRef::parse(BUSYBOX).unwrap())
@@ -169,7 +175,7 @@ async fn writing_more_than_the_quota_fails_and_raising_it_lets_the_write_through
     .await;
     assert_eq!(many, 3, "creating files past the file limit must fail");
     let made: usize = std::fs::read_dir(
-        std::env::var_os("DHPANEL_TEST_TENANTS_ROOT")
+        std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT")
             .map(std::path::PathBuf::from)
             .unwrap()
             .join(tenant_id.to_string())

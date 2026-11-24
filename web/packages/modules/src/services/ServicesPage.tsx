@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Card, Button, useToast } from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+import { Card, Button, useToast } from "@builtpanel/ui";
+import { apiFetch } from "@builtpanel/api";
+import { useTranslation } from "@builtpanel/i18n";
 import { Server, RefreshCw, ShieldAlert, Activity } from "lucide-react";
 import type { ServiceItem } from "./types";
 import { ServiceCard } from "./ServiceCard";

@@ -13,9 +13,9 @@ import {
   TableBody,
   TableCell,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { diskUsage, remeasure } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   HardDrive,
   Folder,
@@ -39,7 +39,7 @@ export function DiskUsagePage() {
   const fetchDiskUsage = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch<DiskUsageResponse>("/api/v1/client/files/disk-usage");
+      const res = await diskUsage();
       setData(res);
     } catch (err: any) {
       toast({
@@ -59,9 +59,7 @@ export function DiskUsagePage() {
   const handleRecalculate = async () => {
     try {
       setIsRecalculating(true);
-      await apiFetch("/api/v1/client/files/disk-usage/recalculate", {
-        method: "POST",
-      });
+      await remeasure();
       toast({
         title: t("common.success"),
         description: t("diskUsage.recalculatedSuccess"),

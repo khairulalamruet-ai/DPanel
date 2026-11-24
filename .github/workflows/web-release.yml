@@ -56,9 +56,9 @@ jobs:
       - name: Package Dist Tarballs & Checksums
         run: |
           mkdir -p ../release-artifacts
-          tar -czf ../release-artifacts/dhpanel-admin-web.tar.gz -C apps/admin/dist .
-          tar -czf ../release-artifacts/dhpanel-client-web.tar.gz -C apps/client/dist .
-          cp sbom.json ../release-artifacts/dhpanel-web-sbom.json
+          tar -czf ../release-artifacts/builtpanel-admin-web.tar.gz -C apps/admin/dist .
+          tar -czf ../release-artifacts/builtpanel-client-web.tar.gz -C apps/client/dist .
+          cp sbom.json ../release-artifacts/builtpanel-web-sbom.json
           cd ../release-artifacts
           sha256sum * > SHA256SUMS.txt
 

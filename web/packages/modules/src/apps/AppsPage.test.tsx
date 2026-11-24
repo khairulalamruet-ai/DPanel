@@ -8,14 +8,14 @@ import { WordPressManagerDialog } from "./WordPressManagerDialog";
 import { AppsPage } from "./AppsPage";
 import { CatalogApp, InstalledApp, WordPressDetails } from "./types";
 
-// Mock @dhpanel/api
+// Mock @builtpanel/api
 const mockApiFetch = vi.fn();
-vi.mock("@dhpanel/api", () => ({
+vi.mock("@builtpanel/api", () => ({
   apiFetch: (...args: any[]) => mockApiFetch(...args),
 }));
 
-// Mock @dhpanel/i18n
-vi.mock("@dhpanel/i18n", () => ({
+// Mock @builtpanel/i18n
+vi.mock("@builtpanel/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, defaultVal?: string | Record<string, any>) => {
       if (typeof defaultVal === "string") return defaultVal;
@@ -25,10 +25,10 @@ vi.mock("@dhpanel/i18n", () => ({
   }),
 }));
 
-// Mock @dhpanel/ui toast
+// Mock @builtpanel/ui toast
 const mockToast = vi.fn();
-vi.mock("@dhpanel/ui", async () => {
-  const actual = await vi.importActual<any>("@dhpanel/ui");
+vi.mock("@builtpanel/ui", async () => {
+  const actual = await vi.importActual<any>("@builtpanel/ui");
   return {
     ...actual,
     useToast: () => ({ toast: mockToast }),
@@ -176,6 +176,10 @@ describe("Autoinstaller & Apps Management UI (T12.06 & T12.03)", () => {
     expect(screen.getByTestId("select-app-domain")).toBeDefined();
     expect(screen.getByTestId("input-site-name")).toBeDefined();
 
+    // There is no preset login: the e-mail and the password are given
+    fireEvent.change(screen.getByTestId("input-admin-email"), { target: { value: "me@client-site.com" } });
+    fireEvent.change(screen.getByTestId("input-admin-password"), { target: { value: "A-long-unique-pass-17" } });
+
     // Submit form
     const submitBtn = screen.getByTestId("btn-submit-install");
     fireEvent.click(submitBtn);
@@ -220,9 +224,7 @@ describe("Autoinstaller & Apps Management UI (T12.06 & T12.03)", () => {
 
   it("WordPressManagerDialog: meets T12.03 DoD by allowing plugin updates from UI", async () => {
     const handleUpdatePlugin = vi.fn().mockResolvedValue(undefined);
-    const handleTogglePlugin = vi.fn();
     const handleToggleMaint = vi.fn();
-    const handleClone = vi.fn();
     const handleClose = vi.fn();
 
     render(
@@ -232,9 +234,9 @@ describe("Autoinstaller & Apps Management UI (T12.06 & T12.03)", () => {
         details={mockWpDetails}
         onClose={handleClose}
         onUpdatePlugin={handleUpdatePlugin}
-        onTogglePlugin={handleTogglePlugin}
         onToggleMaintenance={handleToggleMaint}
-        onCloneStaging={handleClone}
+        onScan={vi.fn()}
+        onHarden={vi.fn()}
       />
     );
 
@@ -259,9 +261,37 @@ describe("Autoinstaller & Apps Management UI (T12.06 & T12.03)", () => {
 
   it("AppsPage: fetches catalog and installed apps and enables tab switching", async () => {
     mockApiFetch.mockImplementation(async (url: string) => {
-      if (url.includes("/catalog")) return mockCatalog;
-      if (url.includes("/installed")) return mockInstalled;
-      return [];
+      if (url.includes("/apps/catalog")) {
+        return {
+          items: mockCatalog.map((c) => ({
+            slug: c.id,
+            name: c.name,
+            category: c.category,
+            version: c.version,
+            description: c.description,
+            document_root: "",
+            needs_database: c.requires_db,
+            needs_admin: true,
+          })),
+        };
+      }
+      if (url.endsWith("/api/v1/client/apps")) {
+        return {
+          items: mockInstalled.map((a) => ({
+            id: a.id,
+            kind: a.catalog_app_id,
+            name: a.name,
+            path: a.path,
+            fqdn: a.domain,
+            domain_id: "dom_01",
+            version: a.version,
+            status: "active",
+            created_at: 1_790_000_000,
+          })),
+        };
+      }
+      if (url.endsWith("/api/v1/client/domains")) return { items: [{ id: "dom_01", fqdn: "client-site.com", unicode: "client-site.com" }] };
+      return {};
     });
 
     render(<AppsPage />);

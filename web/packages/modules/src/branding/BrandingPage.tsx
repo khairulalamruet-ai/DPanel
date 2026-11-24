@@ -9,10 +9,10 @@ import {
   Button,
   Input,
   useToast,
-} from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
-import { apiFetch } from "@dhpanel/api";
-import { useSession } from "@dhpanel/auth";
+} from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
+import { apiFetch } from "@builtpanel/api";
+import { useSession } from "@builtpanel/auth";
 import {
   Palette,
   ShieldCheck,
@@ -173,7 +173,7 @@ export function BrandingPage() {
     applyBrandingToDom(DEFAULT_BRANDING);
     toast({
       title: t("branding.resetTitle") || "Branding Reset",
-      description: t("branding.resetDesc") || "Restored default DHPanel branding.",
+      description: t("branding.resetDesc") || "Restored default Built Panel branding.",
     });
   };
 
@@ -467,7 +467,7 @@ export function BrandingPage() {
                         </div>
                       )}
                       <span className="font-bold text-sm tracking-tight" data-testid="preview-brand-name">
-                        {settings.companyName || "DHPanel"}
+                        {settings.companyName || "Built Panel"}
                       </span>
                     </div>
                     <span className="text-[10px] text-muted-foreground border px-1.5 py-0.5 rounded">v0.1.0</span>
@@ -536,10 +536,10 @@ export function BrandingPage() {
                       {t("branding.customCssPreview") || "Custom CSS Target"}
                     </span>
                     <div
-                      className="dhpanel-custom-branding-test p-2.5 rounded text-xs border text-center font-mono"
+                      className="builtpanel-custom-branding-test p-2.5 rounded text-xs border text-center font-mono"
                       data-testid="preview-custom-css-box"
                     >
-                      .dhpanel-custom-branding-test
+                      .builtpanel-custom-branding-test
                     </div>
                   </div>
                 )}

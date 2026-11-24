@@ -8,9 +8,10 @@ import {
   Button,
   Badge,
   useToast,
-} from "@dhpanel/ui";
-import { apiFetch } from "@dhpanel/api";
-import { useTranslation } from "@dhpanel/i18n";
+} from "@builtpanel/ui";
+import { useOptionalSession } from "@builtpanel/auth";
+import { loadClientDashboard } from "./api";
+import { useTranslation } from "@builtpanel/i18n";
 import {
   Globe,
   Database,
@@ -45,10 +46,11 @@ function formatBytes(mb: number): string {
 export function ClientDashboardPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const session = useOptionalSession();
   const [data, setData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const FAVORITES_STORAGE_KEY = "dhpanel-client-favorites";
+  const FAVORITES_STORAGE_KEY = "builtpanel-client-favorites";
   const DEFAULT_FAVORITES = ["files", "databases", "domains", "ssl"];
 
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -80,7 +82,7 @@ export function ClientDashboardPage() {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      const res = await apiFetch<ClientDashboardData>("/api/v1/client/dashboard");
+      const res = await loadClientDashboard(session?.data?.limits ?? {});
       setData(res);
     } catch (err: any) {
       toast({

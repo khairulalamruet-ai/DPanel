@@ -1,21 +1,27 @@
 //! `create_tenant` for real: the privileged helper (run as root by the live
 //! script), the agent's handler, and the box's rootless Docker.
-//! Ignored by default. Needs DHPANEL_TEST_HELPER_SOCKET and
-//! DHPANEL_TEST_TENANTS_ROOT (and the helper started with the same root and
+//! Ignored by default. Needs BUILTPANEL_TEST_HELPER_SOCKET and
+//! BUILTPANEL_TEST_TENANTS_ROOT (and the helper started with the same root and
 //! with this user as its agent); see the script that runs it.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::{os::unix::fs::MetadataExt as _, path::PathBuf, sync::Arc};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name, Network, VolumeMount};
-use dhpanel_node_agent::ops::tenant::{TenantContext, create_tenant};
-use dhpanel_node_protocol::{Operation, Output};
+use builtpanel_docker_manager::{
+    ContainerSpec, DockerManager, ImageRef, Name, Network, VolumeMount,
+};
+use builtpanel_node_agent::ops::tenant::{TenantContext, create_tenant};
+use builtpanel_node_protocol::{Operation, Output};
 use uuid::Uuid;
 
 const BUSYBOX: &str =
     "busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -31,8 +37,8 @@ async fn the_directories_the_user_id_and_the_network_are_created_and_usable() {
     // Needs a helper running as root; without one (the ordinary test run) there is
     // nothing to test here.
     let (Some(helper_socket), Some(tenants_root)) = (
-        std::env::var_os("DHPANEL_TEST_HELPER_SOCKET"),
-        std::env::var_os("DHPANEL_TEST_TENANTS_ROOT"),
+        std::env::var_os("BUILTPANEL_TEST_HELPER_SOCKET"),
+        std::env::var_os("BUILTPANEL_TEST_TENANTS_ROOT"),
     ) else {
         eprintln!("skipped: no helper (see the live script)");
         return;
@@ -43,7 +49,7 @@ async fn the_directories_the_user_id_and_the_network_are_created_and_usable() {
         helper_socket,
         tenants_root: tenants_root.clone(),
         docker: docker.clone(),
-        vhosts_root: std::env::temp_dir().join(format!("dh-vhosts-{}", std::process::id())),
+        vhosts_root: std::env::temp_dir().join(format!("bp-vhosts-{}", std::process::id())),
     });
     docker
         .pull_image(&ImageRef::parse(BUSYBOX).unwrap())
@@ -78,21 +84,28 @@ async fn the_directories_the_user_id_and_the_network_are_created_and_usable() {
     assert_eq!(
         (network.as_str(), volume.as_str()),
         (
-            format!("dh-{username}-net").as_str(),
-            format!("dh-{username}-www").as_str()
+            format!("bp-{username}-net").as_str(),
+            format!("bp-{username}-www").as_str()
         )
     );
 
     // On disk: owned by the host id of tenant id 10042, private to it and the agent's group.
-    let agent = std::env::var("DHPANEL_TEST_AGENT_USER").unwrap_or_else(|_| "dev".into());
-    let start: u32 = std::fs::read_to_string("/etc/subuid")
-        .unwrap()
-        .lines()
-        .find_map(|l| {
-            let mut fields = l.split(':');
-            (fields.next() == Some(agent.as_str())).then(|| fields.next().unwrap().parse().unwrap())
-        })
-        .expect("subuid range of the agent user");
+    let agent = std::env::var("BUILTPANEL_TEST_AGENT_USER").unwrap_or_else(|_| "dev".into());
+    // Under a root engine (Kiri) the helper maps a tenant id to itself (BUILTPANEL_TEST_UID_IDENTITY).
+    let identity = std::env::var_os("BUILTPANEL_TEST_UID_IDENTITY").is_some();
+    let start: u32 = if identity {
+        1
+    } else {
+        std::fs::read_to_string("/etc/subuid")
+            .unwrap()
+            .lines()
+            .find_map(|l| {
+                let mut fields = l.split(':');
+                (fields.next() == Some(agent.as_str()))
+                    .then(|| fields.next().unwrap().parse().unwrap())
+            })
+            .expect("subuid range of the agent user")
+    };
     for dir in [PathBuf::from(&root), PathBuf::from(&root).join("www")] {
         let meta = std::fs::metadata(&dir).unwrap();
         assert_eq!(meta.uid(), start + 10_042 - 1, "{dir:?}");
@@ -111,7 +124,7 @@ async fn the_directories_the_user_id_and_the_network_are_created_and_usable() {
 
     // The tenant can really use it: a container running as that id writes into the volume.
     let mut spec = ContainerSpec::new(
-        Name::parse(&format!("dh-{username}-probe")).unwrap(),
+        Name::parse(&format!("bp-{username}-probe")).unwrap(),
         ImageRef::parse(BUSYBOX).unwrap(),
     );
     spec.command = vec![
@@ -172,11 +185,11 @@ async fn the_directories_the_user_id_and_the_network_are_created_and_usable() {
 
     // Clean up what this test made (the script removes the directories).
     let _ = docker.remove(&spec.name, true).await;
-    for name in [volume.clone(), format!("dh-u{}x-www", std::process::id())] {
+    for name in [volume.clone(), format!("bp-u{}x-www", std::process::id())] {
         let _ = docker.remove_volume(&Name::parse(&name).unwrap()).await;
     }
     let _ = docker.remove_network(&net).await;
     let _ = docker
-        .remove_network(&Name::parse(&format!("dh-u{}x-net", std::process::id())).unwrap())
+        .remove_network(&Name::parse(&format!("bp-u{}x-net", std::process::id())).unwrap())
         .await;
 }

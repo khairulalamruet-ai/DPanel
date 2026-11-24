@@ -4,15 +4,15 @@
 
 use std::sync::Arc;
 
-use dhpanel_auth_core::password::{Argon2Params, PasswordHasher};
-use dhpanel_license::{Expect, FileSigningKey, PublicKeys, SigningKey as _};
-use dhpanel_license_authority::{
+use builtpanel_auth_core::password::{Argon2Params, PasswordHasher};
+use builtpanel_license::{Expect, FileSigningKey, PublicKeys, SigningKey as _};
+use builtpanel_license_authority::{
     LaState, Settings,
     config::LaConfig,
     domain_proof::{Answer, BoxFuture, DomainProver, default_prover},
     register_key, router,
 };
-use dhpanel_license_client::{
+use builtpanel_license_client::{
     ClientError, Identity, LicenseClient, Mode, Policy, Stored, evaluate,
 };
 use secrecy::SecretString;
@@ -36,7 +36,7 @@ async fn serve_with(
     prover: Arc<dyn DomainProver>,
     require_domain_proof: bool,
 ) -> Authority {
-    let dir = std::env::temp_dir().join(format!("dh-la-client-{}", Uuid::new_v4().simple()));
+    let dir = std::env::temp_dir().join(format!("bp-la-client-{}", Uuid::new_v4().simple()));
     std::fs::create_dir_all(&dir).unwrap();
     let key = FileSigningKey::generate_to_file(
         &dir.join("license-1.key"),
@@ -162,7 +162,7 @@ async fn make_license(a: &Authority, token: &str, max: i32) -> (String, String) 
         "POST",
         "/api/v1/admin/products",
         Some(token),
-        Some(json!({"slug": "dhpanel", "name": "DHPanel"})),
+        Some(json!({"slug": "builtpanel", "name": "Built Panel"})),
     )
     .await;
     let plan = http(&a.url, "POST", "/api/v1/admin/plans", Some(token), Some(json!({"product_id": p["id"], "name": "Pro", "features": ["mail"], "limits": {"max_nodes": 2}, "max_activations": max, "valid_days": 30}))).await;
@@ -195,8 +195,8 @@ fn client(a: &Authority, keys: PublicKeys, identity_dir: &std::path::Path) -> Li
         &a.url,
         keys,
         Identity::load_or_create(identity_dir).unwrap(),
-        "dhpanel-la",
-        "dhpanel",
+        "builtpanel-la",
+        "builtpanel",
     )
     .unwrap()
     .with_host("web1", "panel.example")
@@ -216,13 +216,13 @@ async fn an_installation_activates_refreshes_and_lets_go_and_a_forged_answer_is_
     let result = tokio::task::spawn_blocking({
         let (identity_dir, a_dir) = (identity_dir.clone(), a.dir.clone());
         move || {
-            let c = LicenseClient::new(&url, keys.clone(), Identity::load_or_create(&identity_dir).unwrap(), "dhpanel-la", "dhpanel").unwrap().with_host("web1", "panel.example");
+            let c = LicenseClient::new(&url, keys.clone(), Identity::load_or_create(&identity_dir).unwrap(), "builtpanel-la", "builtpanel").unwrap().with_host("web1", "panel.example");
             // Activation: verified, and the stored form evaluates as an active license.
             let got = c.activate(&format!("  {key}\n")).unwrap();
             assert_eq!(got.claims.features, ["mail"]);
             assert_eq!(got.license.plan, "Pro");
             let stored = Stored { entitlement: Some(got.document.clone()), last_refresh_ok_at: Some(now()), ..Stored::default() };
-            let expect = Expect { issuer: "dhpanel-la", audience: "dhpanel", installation_id: c.installation_id(), clock_skew: 300, host: dhpanel_license::HostFacts { hostname: "web1", domain: "panel.example" } };
+            let expect = Expect { issuer: "builtpanel-la", audience: "builtpanel", installation_id: c.installation_id(), clock_skew: 300, host: builtpanel_license::HostFacts { hostname: "web1", domain: "panel.example" } };
             let verdict = evaluate(&stored, &keys, &expect, &Policy::default(), now());
             assert_eq!(verdict.mode, Mode::Active);
             assert!(verdict.has_feature("mail"));
@@ -236,12 +236,12 @@ async fn an_installation_activates_refreshes_and_lets_go_and_a_forged_answer_is_
             for f in ["installation.id", "installation.key"] {
                 std::fs::copy(identity_dir.join(f), copy.join(f)).unwrap();
             }
-            let restored = LicenseClient::new(&url, keys.clone(), Identity::load_or_create(&copy).unwrap(), "dhpanel-la", "dhpanel").unwrap().with_host("web1", "panel.example");
+            let restored = LicenseClient::new(&url, keys.clone(), Identity::load_or_create(&copy).unwrap(), "builtpanel-la", "builtpanel").unwrap().with_host("web1", "panel.example");
             assert_eq!(restored.installation_id(), c.installation_id());
             assert!(restored.activate(&key).is_ok());
             // A different installation cannot take the one place.
             let other_dir = a_dir.join("identity-other");
-            let other = LicenseClient::new(&url, keys.clone(), Identity::load_or_create(&other_dir).unwrap(), "dhpanel-la", "dhpanel").unwrap().with_host("web1", "panel.example");
+            let other = LicenseClient::new(&url, keys.clone(), Identity::load_or_create(&other_dir).unwrap(), "builtpanel-la", "builtpanel").unwrap().with_host("web1", "panel.example");
             assert!(matches!(other.activate(&key), Err(ClientError::Refused { ref code, .. }) if code == "activation_limit"));
             // A help request is accepted.
             c.recovery_request("the binaries were replaced by an update that failed").unwrap();
@@ -267,8 +267,8 @@ async fn an_installation_activates_refreshes_and_lets_go_and_a_forged_answer_is_
             &fake_url,
             real_keys,
             Identity::load_or_create(&dir).unwrap(),
-            "dhpanel-la",
-            "dhpanel",
+            "builtpanel-la",
+            "builtpanel",
         )
         .unwrap()
         .with_host("web1", "panel.example");
@@ -302,8 +302,8 @@ async fn an_installation_activates_refreshes_and_lets_go_and_a_forged_answer_is_
         "http://127.0.0.1:9",
         a.keys.clone(),
         Identity::load_or_create(&a.dir.join("identity")).unwrap(),
-        "dhpanel-la",
-        "dhpanel",
+        "builtpanel-la",
+        "builtpanel",
     )
     .unwrap()
     .with_host("web1", "panel.example");
@@ -334,8 +334,8 @@ fn client_refresh(url: &str, keys: PublicKeys, dir: &std::path::Path) -> Result<
         url,
         keys,
         Identity::load_or_create(dir).unwrap(),
-        "dhpanel-la",
-        "dhpanel",
+        "builtpanel-la",
+        "builtpanel",
     )
     .unwrap()
     .with_host("web1", "panel.example")
@@ -373,8 +373,8 @@ fn answer_from(dir: std::path::PathBuf, domain: &'static str) -> AnswerFn {
             "http://127.0.0.1:1",
             PublicKeys::new(),
             Identity::load_or_create(&dir).unwrap(),
-            "dhpanel-la",
-            "dhpanel",
+            "builtpanel-la",
+            "builtpanel",
         )
         .unwrap()
         .with_host("web1", domain);
@@ -392,7 +392,7 @@ fn answer_from(dir: std::path::PathBuf, domain: &'static str) -> AnswerFn {
 async fn a_new_installation_must_be_answered_for_at_its_domain_when_the_check_is_on(pool: PgPool) {
     // The panel answers for the right installation: activation goes through; the authority was
     // told to connect only to the license's bound address.
-    let identity_dir = std::env::temp_dir().join(format!("dh-proof-{}", Uuid::new_v4().simple()));
+    let identity_dir = std::env::temp_dir().join(format!("bp-proof-{}", Uuid::new_v4().simple()));
     let honest = Arc::new(Fake {
         answer: std::sync::Mutex::new(answer_from(identity_dir.clone(), "panel.example")),
         seen: Default::default(),
@@ -434,8 +434,8 @@ async fn a_new_installation_must_be_answered_for_at_its_domain_when_the_check_is
 
     // A domain that does not answer, one that answers with another installation's key, and one
     // that answers for another domain: all refused, and nothing is registered.
-    let stranger = std::env::temp_dir().join(format!("dh-proof-{}", Uuid::new_v4().simple()));
-    let someone_else = std::env::temp_dir().join(format!("dh-proof-{}", Uuid::new_v4().simple()));
+    let stranger = std::env::temp_dir().join(format!("bp-proof-{}", Uuid::new_v4().simple()));
+    let someone_else = std::env::temp_dir().join(format!("bp-proof-{}", Uuid::new_v4().simple()));
     let cases: Vec<(&str, AnswerFn)> = vec![
         ("down", Box::new(|_, _| Err("connection refused".into()))),
         (
@@ -472,8 +472,8 @@ fn client_for(url: &str, keys: PublicKeys, dir: &std::path::Path) -> LicenseClie
         url,
         keys,
         Identity::load_or_create(dir).unwrap(),
-        "dhpanel-la",
-        "dhpanel",
+        "builtpanel-la",
+        "builtpanel",
     )
     .unwrap()
     .with_host("web1", "panel.example")

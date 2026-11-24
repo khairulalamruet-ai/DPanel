@@ -1,5 +1,5 @@
 [package]
-name = "dhpanel-mod-system"
+name = "builtpanel-mod-system"
 description = "System module: switch modules on and off (settings and bootstrap follow)."
 version.workspace = true
 edition.workspace = true
@@ -11,28 +11,30 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-dhpanel-audit.workspace = true
-dhpanel-database.workspace = true
-dhpanel-events.workspace = true
-dhpanel-http-kit.workspace = true
-dhpanel-kernel.workspace = true
-dhpanel-observability.workspace = true
-dhpanel-rbac.workspace = true
-dhpanel-settings.workspace = true
-dhpanel-session.workspace = true
+builtpanel-audit.workspace = true
+builtpanel-database.workspace = true
+builtpanel-events.workspace = true
+builtpanel-http-kit.workspace = true
+builtpanel-kernel.workspace = true
+builtpanel-observability.workspace = true
+builtpanel-rbac.workspace = true
+builtpanel-settings.workspace = true
+builtpanel-session.workspace = true
 axum = "0.8"
+base64 = "0.23"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros"] }
 tracing = "0.1.44"
 utoipa = { version = "6", features = ["uuid"] }
+ureq = { version = "3", default-features = false, features = ["rustls"] }
 uuid = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
-dhpanel-settings.workspace = true
-dhpanel-cache.workspace = true
+builtpanel-settings.workspace = true
+builtpanel-cache.workspace = true
 secrecy = "0.10"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "macros", "uuid", "json", "migrate"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }

@@ -81,7 +81,7 @@ export const CLUSTER_NODES: NodeOption[] = [
 export const RESERVED_USERNAMES = new Set([
   "admin",
   "root",
-  "dhpanel",
+  "builtpanel",
   "system",
   "daemon",
   "nobody",

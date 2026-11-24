@@ -1,0 +1,9 @@
+slug        = "pgadmin"
+name        = "pgAdmin 4"
+category    = "utilities"
+kind        = "unavailable"
+description = "The administration tool for PostgreSQL."
+license     = "PostgreSQL"
+homepage    = "https://www.pgadmin.org"
+covers      = ["pgAdmin 4 (library)"]
+reason      = "it needs a first login chosen before it starts and sign-in through the panel is not built yet; the node already runs phpMyAdmin for MariaDB"

@@ -1,0 +1,8 @@
+slug        = "java-8"
+name        = "Java 8"
+category    = "server_side_scripting"
+kind        = "unavailable"
+description = "Java 8."
+license     = "Apache-2.0"
+covers      = ["Java 8"]
+reason      = "a language runtime or build tool, not a service; put it in your own container image (Containers)"

@@ -9,6 +9,8 @@ describe("HealthCard component", () => {
     await waitFor(() => {
       expect(screen.getByText(/0.1.0/i)).toBeInTheDocument();
     });
-    expect(screen.getByText(/OK/i)).toBeInTheDocument();
+    // The badge ("OK") and the status line ("ok") both show it, now that the default language
+    // is English.
+    expect(screen.getAllByText(/^ok$/i).length).toBeGreaterThanOrEqual(1);
   });
 });

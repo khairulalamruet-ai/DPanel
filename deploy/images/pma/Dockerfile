@@ -22,5 +22,5 @@ RUN composer update --no-dev --no-interaction --no-scripts --optimize-autoloader
 
 FROM base
 COPY --from=libraries /app/vendor /var/www/html/vendor
-LABEL org.opencontainers.image.title="DHPanel database browser (phpMyAdmin)" \
+LABEL org.opencontainers.image.title="Built Panel database browser (phpMyAdmin)" \
       org.opencontainers.image.description="The official phpMyAdmin with its OS packages upgraded and its libraries updated"

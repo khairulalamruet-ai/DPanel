@@ -9,11 +9,11 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use dhpanel_cache::RedisHandle;
-use dhpanel_database::modules as db;
-use dhpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
-use dhpanel_mod_logs::{LogsState, client_router};
-use dhpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
+use builtpanel_cache::RedisHandle;
+use builtpanel_database::modules as db;
+use builtpanel_kernel::{Manifest, Module, ModuleMount, ModuleRoutes, Registry};
+use builtpanel_mod_logs::{LogsState, client_router};
+use builtpanel_session::{CSRF_HEADER, NewSession, SessionConfig, SessionStore, set_cookie};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -174,7 +174,7 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         loop {
             let rows: Vec<(Uuid, Value)> = sqlx::query_as(
-                "SELECT id, payload FROM operations WHERE kind = 'read_log' AND status = 'pending'",
+                "SELECT id, payload FROM operations WHERE kind IN ('read_log', 'read_traffic', 'read_waf_events') AND status = 'pending'",
             )
             .fetch_all(&pool)
             .await
@@ -190,6 +190,33 @@ fn node(pool: PgPool) -> tokio::task::JoinHandle<()> {
                 if payload["username"] == "broken" {
                     sqlx::query("UPDATE operations SET status = 'failed', error = '{\"code\":\"not_found\",\"message\":\"x\",\"retryable\":false}', finished_at = now() WHERE id = $1")
                         .bind(id)
+                        .execute(&pool)
+                        .await
+                        .unwrap();
+                    continue;
+                }
+                if payload["type"] == "read_waf_events" {
+                    let out = json!({"type": "waf_events", "available": true, "partial": false, "events": [
+                        {"at_ms": 5, "method": "GET", "host": "a.example",
+                         "uri": format!("/?limit={} hosts={}", payload["limit"], payload["hosts"]),
+                         "rule_id": 942100, "message": "SQL Injection", "blocked": true}]});
+                    sqlx::query("UPDATE operations SET status = 'succeeded', output = $2, finished_at = now() WHERE id = $1")
+                        .bind(id)
+                        .bind(out)
+                        .execute(&pool)
+                        .await
+                        .unwrap();
+                    continue;
+                }
+                if payload["type"] == "read_traffic" || payload.get("top").is_some() {
+                    let out = json!({"type": "traffic", "requests": 7, "bytes": 700, "status_2xx": 5,
+                        "status_3xx": 1, "status_4xx": 1, "status_5xx": 0, "bots": 2,
+                        "hours": [{"at_ms": 3_600_000, "requests": 7, "bytes": 700}],
+                        "top_paths": [{"path": format!("/top{}", payload["top"]), "requests": 4}],
+                        "partial": false});
+                    sqlx::query("UPDATE operations SET status = 'succeeded', output = $2, finished_at = now() WHERE id = $1")
+                        .bind(id)
+                        .bind(out)
                         .execute(&pool)
                         .await
                         .unwrap();
@@ -280,5 +307,154 @@ async fn logs_are_read_through_the_node_for_the_owner_only(pool: PgPool) {
         (status, got["code"].as_str()),
         (StatusCode::FORBIDDEN, Some("feature_disabled"))
     );
+    played.abort();
+}
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn the_activity_is_the_accounts_own_and_pages(pool: PgPool) {
+    let e = env(&pool, Duration::from_secs(5)).await;
+    let (alice_account, alice_tenant) = client(&pool, "alice", 10_000).await;
+    let (bob_account, bob_tenant) = client(&pool, "bob", 10_001).await;
+    let alice = e.sign_in(alice_account).await;
+    let bob = e.sign_in(bob_account).await;
+    let staff = Uuid::now_v7();
+    for (n, tenant, actor) in [
+        (1, alice_tenant, alice_account),
+        (2, alice_tenant, alice_account),
+        (3, alice_tenant, staff),
+        (4, bob_tenant, bob_account),
+    ] {
+        sqlx::query(
+            "INSERT INTO audit_logs (at, actor_id, actor_ip, action, target_type, target_id, tenant_id, outcome, metadata)
+             VALUES (now() - make_interval(secs => 10 - $1), $2, '203.0.113.9', $3, 'database', 'd1', $4, 'success', '{\"secret\":\"x\"}')",
+        )
+        .bind(f64::from(n))
+        .bind(actor)
+        .bind(if n == 3 { "database.drop" } else { "database.create" })
+        .bind(tenant)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    let (status, got) = e.get(&alice, "/api/v1/client/activity").await;
+    assert_eq!(status, StatusCode::OK, "{got}");
+    let items = got["items"].as_array().unwrap();
+    assert_eq!(items.len(), 3, "only Alice's own account: {got}");
+    // Newest first: the staff entry, then her two.
+    assert_eq!(items[0]["action"], "database.drop");
+    assert_eq!(items[0]["by_you"], false);
+    assert!(items[0]["ip"].is_null(), "staff's address stays hidden");
+    assert_eq!(items[1]["by_you"], true);
+    assert_eq!(items[1]["ip"], "203.0.113.9");
+    assert!(items[1].get("metadata").is_none());
+    // Pages.
+    let (_, first) = e.get(&alice, "/api/v1/client/activity?limit=2").await;
+    assert_eq!(first["items"].as_array().unwrap().len(), 2);
+    let cursor = first["next_cursor"].as_str().unwrap();
+    let (_, rest) = e
+        .get(
+            &alice,
+            &format!("/api/v1/client/activity?limit=2&cursor={cursor}"),
+        )
+        .await;
+    assert_eq!(rest["items"].as_array().unwrap().len(), 1);
+    assert!(rest["next_cursor"].is_null());
+    // A filter, and what is refused.
+    let (_, only) = e
+        .get(&alice, "/api/v1/client/activity?action=database.drop")
+        .await;
+    assert_eq!(only["items"].as_array().unwrap().len(), 1);
+    for q in ["limit=0", "limit=500", "cursor=x", "action=A%20B"] {
+        let (status, got) = e.get(&alice, &format!("/api/v1/client/activity?{q}")).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{q}: {got}");
+    }
+    // Bob sees only his.
+    let (_, got) = e.get(&bob, "/api/v1/client/activity").await;
+    assert_eq!(got["items"].as_array().unwrap().len(), 1);
+}
+
+#[sqlx::test(migrations = "../../../migrations")]
+#[ignore = "needs PostgreSQL + Redis"]
+async fn traffic_is_counted_by_the_node_for_the_owner_only(pool: PgPool) {
+    let e = env(&pool, Duration::from_secs(5)).await;
+    let (alice_account, _) = client(&pool, "alice", 10_000).await;
+    let alice = e.sign_in(alice_account).await;
+    let staff = {
+        let admin: Uuid = sqlx::query_scalar(
+            "INSERT INTO accounts (kind, username, email, password_hash)
+             VALUES ('admin', 'rootuser', 'root@example.com', $1) RETURNING id",
+        )
+        .bind(HASH)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        e.sign_in(admin).await
+    };
+    let played = node(pool.clone());
+    let (status, got) = e.get(&staff, "/api/v1/client/traffic").await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{got}");
+    let (status, got) = e.get(&alice, "/api/v1/client/traffic?range=7d&top=3").await;
+    assert_eq!(status, StatusCode::OK, "{got}");
+    assert_eq!(
+        (got["requests"].as_u64(), got["bots"].as_u64()),
+        (Some(7), Some(2))
+    );
+    assert_eq!(got["range"], "7d");
+    assert_eq!(got["hours"][0]["bytes"], 700);
+    assert_eq!(
+        got["top_paths"][0]["path"], "/top3",
+        "the count asked for is sent on"
+    );
+    // The asked time is a week back from now.
+    let since: i64 = sqlx::query_scalar(
+        "SELECT (payload->>'since_ms')::bigint FROM operations WHERE kind = 'read_traffic' ORDER BY created_at DESC LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    let now_ms = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis(),
+    )
+    .unwrap();
+    assert!(
+        (now_ms - since - 7 * 24 * 3_600_000).abs() < 60_000,
+        "{since}"
+    );
+    for q in ["range=1y", "top=0", "top=51"] {
+        let (status, got) = e.get(&alice, &format!("/api/v1/client/traffic?{q}")).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{q}: {got}");
+    }
+    // What the firewall stopped: the account's own names and the limit are sent on.
+    let (status, got) = e.get(&staff, "/api/v1/client/waf/events").await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{got}");
+    let (status, got) = e.get(&alice, "/api/v1/client/waf/events?limit=7").await;
+    assert_eq!(status, StatusCode::OK, "{got}");
+    assert_eq!(got["available"], true);
+    assert_eq!(got["items"][0]["rule_id"], 942_100);
+    assert_eq!(got["items"][0]["blocked"], true);
+    assert!(
+        got["items"][0]["uri"]
+            .as_str()
+            .unwrap()
+            .starts_with("/?limit=7 hosts="),
+        "{got}"
+    );
+    for q in ["range=1y", "limit=0", "limit=201"] {
+        let (status, got) = e
+            .get(&alice, &format!("/api/v1/client/waf/events?{q}"))
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{q}: {got}");
+    }
+    // A suspended account has no running web server to count.
+    sqlx::query("UPDATE tenants SET status = 'suspended' WHERE username = 'alice'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let (status, _) = e.get(&alice, "/api/v1/client/traffic").await;
+    assert_eq!(status, StatusCode::CONFLICT);
     played.abort();
 }

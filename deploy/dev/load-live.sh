@@ -4,26 +4,26 @@
 #
 #   deploy/dev/remote.sh sh 'deploy/dev/load-live.sh'
 #
-# Needs the release binaries (`cargo build --release -p dhpanel-control-api -p dhpanel-dhctl`), k6 in
+# Needs the release binaries (`cargo build --release -p builtpanel-control-api -p builtpanel-bpctl`), k6 in
 # ~/bin, PostgreSQL and Redis with the secrets of remote.sh. It makes its own database
-# (`dh_load`), runs the panel on 127.0.0.1:18080 and removes both afterwards. A debug build
+# (`bp_load`), runs the panel on 127.0.0.1:18080 and removes both afterwards. A debug build
 # on two cores is a hard case: a pass here is a pass on production hardware.
 set -uo pipefail
 . "$HOME/.cargo/env" 2> /dev/null || true
 BIN="${CARGO_TARGET_DIR:-$HOME/target-rust}/release"
-S="$HOME/.dhpanel-dev/secrets"
+S="$HOME/.builtpanel-dev/secrets"
 BASE_URL="$(cat "$S/database_url")"; BASE_URL="${BASE_URL%/*}"
 WORK="$(mktemp -d)"; PORT=18080; ACCOUNTS=500
 PASSWORD="load-test-password-Zq7-4471"
 cleanup() {
     [ -n "${FAKE:-}" ] && kill "$FAKE" 2> /dev/null
     [ -n "${PID:-}" ] && kill "$PID" 2> /dev/null
-    psql "$(cat "$S/database_url")" -qc 'DROP DATABASE IF EXISTS dh_load' > /dev/null 2>&1
+    psql "$(cat "$S/database_url")" -qc 'DROP DATABASE IF EXISTS bp_load' > /dev/null 2>&1
     rm -rf "$WORK"
 }
 trap cleanup EXIT
-psql "$(cat "$S/database_url")" -qc 'DROP DATABASE IF EXISTS dh_load' -c 'CREATE DATABASE dh_load' || exit 2
-DB="$BASE_URL/dh_load"
+psql "$(cat "$S/database_url")" -qc 'DROP DATABASE IF EXISTS bp_load' -c 'CREATE DATABASE bp_load' || exit 2
+DB="$BASE_URL/bp_load"
 umask 077
 printf '%s' "$DB" > "$WORK/db"; cp "$S/redis_url" "$WORK/redis"; cp "$S/master_key" "$WORK/master"
 mkdir -p "$WORK/pki"
@@ -42,10 +42,10 @@ master_key_file = "$WORK/master"
 [pki]
 ca_dir = "$WORK/pki"
 TOML
-export DHPANEL_CONFIG="$WORK/control.toml"
-"$BIN/dhctl" migrate > /dev/null || exit 2
-"$BIN/dhctl" ca init --dir "$WORK/pki" > /dev/null || exit 2
-printf '%s\n' "$PASSWORD" | "$BIN/dhctl" admin create --username loadadmin --email loadadmin@example.com --password-stdin > /dev/null || exit 2
+export BUILTPANEL_CONFIG="$WORK/control.toml"
+"$BIN/bpctl" migrate > /dev/null || exit 2
+"$BIN/bpctl" ca init --dir "$WORK/pki" > /dev/null || exit 2
+printf '%s\n' "$PASSWORD" | "$BIN/bpctl" admin create --username loadadmin --email loadadmin@example.com --password-stdin > /dev/null || exit 2
 HASH="$(psql "$DB" -Atqc "SELECT password_hash FROM accounts WHERE username = 'loadadmin'")"
 # 500 tenants: an account, a tenant, a domain, a database and a cron job each (the lists the
 # people look at are not empty).
@@ -63,7 +63,7 @@ INSERT INTO domains (tenant_id, fqdn, kind) SELECT id, username || '.example', '
 INSERT INTO databases (tenant_id, name, status) SELECT id, 'db_' || username, 'ready' FROM tenants WHERE username ~ '^load[0-9]+$';
 SQL
 echo "tenants: $(psql "$DB" -Atqc "SELECT count(*) FROM tenants")"
-"$BIN/dhpanel-control-api" > "$WORK/api.log" 2>&1 &
+"$BIN/builtpanel-control-api" > "$WORK/api.log" 2>&1 &
 PID=$!
 # A node that answers at once: no real node is connected, so a loop plays one, taking every
 # pending operation and answering a restart as the agent does. What is measured is the

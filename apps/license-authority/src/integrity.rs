@@ -18,8 +18,8 @@ use base64::{
     Engine as _,
     engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
 };
-use dhpanel_http_kit::{AppError, FieldError};
-use dhpanel_license::{PublicKeys, SignedManifest, verify_with};
+use builtpanel_http_kit::{AppError, FieldError};
+use builtpanel_license::{PublicKeys, SignedManifest, verify_with};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -136,7 +136,7 @@ pub struct NewRelease {
     /// `stable` (the default) or `beta`.
     #[serde(default)]
     pub channel: Option<String>,
-    /// What `dhctl release sign` wrote.
+    /// What `bpctl release sign` wrote.
     pub manifest: SignedManifest,
 }
 
@@ -400,7 +400,7 @@ pub struct ReportRequest {
 /// The text a report is signed over.
 #[must_use]
 pub fn report_text(scan_id: Uuid, files: &BTreeMap<String, String>) -> String {
-    dhpanel_license::integrity_report_text(&scan_id.to_string(), files)
+    builtpanel_license::integrity_report_text(&scan_id.to_string(), files)
 }
 
 /// How a scan came out.

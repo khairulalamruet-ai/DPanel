@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@dhpanel/ui";
-import { useTranslation } from "@dhpanel/i18n";
+import { Button } from "@builtpanel/ui";
+import { useTranslation } from "@builtpanel/i18n";
 import { Save, RotateCcw } from "lucide-react";
 import { JsonSchema } from "./types";
 import { JsonSchemaField } from "./JsonSchemaField";

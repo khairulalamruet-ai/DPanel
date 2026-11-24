@@ -26,15 +26,15 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use dhpanel_audit::{AuditEntry, Outcome};
-use dhpanel_database::{license as store, sqlx::PgPool};
-use dhpanel_http_kit::{AppError, FieldError, ProblemDetails};
-use dhpanel_license_client::ClientError;
-use dhpanel_rbac::{
+use builtpanel_audit::{AuditEntry, Outcome};
+use builtpanel_database::{license as store, sqlx::PgPool};
+use builtpanel_http_kit::{AppError, FieldError, ProblemDetails};
+use builtpanel_license_client::ClientError;
+use builtpanel_rbac::{
     Require,
     permissions::{LicenseManage, LicenseRead},
 };
-use dhpanel_session::SessionStore;
+use builtpanel_session::SessionStore;
 use serde::{Deserialize, Serialize};
 use service::{LicenseService, ServiceError};
 use utoipa::{OpenApi, ToSchema};
@@ -184,7 +184,7 @@ pub struct LicenseView {
 
 async fn view(state: &LicenseState) -> Result<LicenseView, AppError> {
     let row = store::get(&state.db).await.map_err(internal)?;
-    let stored: dhpanel_license_client::Stored =
+    let stored: builtpanel_license_client::Stored =
         serde_json::from_value(row.stored.clone()).unwrap_or_default();
     Ok(LicenseView {
         enforced: row.enforced,
@@ -246,10 +246,10 @@ fn service_error(e: ServiceError) -> AppError {
 
 async fn audited(
     state: &LicenseState,
-    who: &dhpanel_rbac::Principal,
+    who: &builtpanel_rbac::Principal,
     action: &'static str,
 ) -> Result<(), AppError> {
-    dhpanel_audit::insert(
+    builtpanel_audit::insert(
         &state.db,
         &AuditEntry::new(action, Outcome::Success)
             .actor(who.account_id())
@@ -422,7 +422,7 @@ pub async fn restrict(State(r): State<Restrictor>, request: Request, next: Next)
         return next.run(request).await;
     }
     let body = serde_json::json!({
-        "type": "https://docs.dhpanel.dev/problems/license_restricted",
+        "type": "https://docs.builtpanel.dev/problems/license_restricted",
         "title": "Locked",
         "status": 423,
         "code": "license_restricted",

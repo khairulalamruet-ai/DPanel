@@ -1,0 +1,16 @@
+slug        = "tomcat-11"
+name        = "Apache Tomcat 11"
+category    = "java_containers"
+kind        = "container"
+description = "A servlet container for Java web applications."
+license     = "Apache-2.0"
+homepage    = "https://tomcat.apache.org"
+covers      = ["Tomcat"]
+version     = "11.0.29"
+image       = "docker.io/library/tomcat"
+track       = "11"
+tag         = "11.0.29"
+digest      = "sha256:05408121de3ab2c3569254fc001f306451e7d4092169f9924b5c1ec2416b30a7"
+port        = 8080
+memory_mb   = 512
+usage       = "Host \"tomcat-11\", port 8080, from inside your account or on a domain."

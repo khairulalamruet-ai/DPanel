@@ -18,7 +18,7 @@ test.describe("DNS Zone Editor UI (T05.11)", () => {
     await expect(page.getByTestId("select-active-zone")).toBeVisible();
 
     // Nameserver Info Banner
-    await expect(page.getByText(/ns1\.dhpanel\.net/)).toBeVisible();
+    await expect(page.getByText(/ns1\.builtpanel\.net/)).toBeVisible();
     await expect(page.getByTestId("btn-verify-ns")).toBeVisible();
 
     // Table of initial records

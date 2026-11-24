@@ -9,9 +9,9 @@ import {
   Button,
   Input,
   Badge,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { Sparkles, Lock, Trash2, CheckCircle2 } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 import { ServerMemoryInfo } from "./types";
 
 interface DropCachesCardProps {

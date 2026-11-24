@@ -62,7 +62,7 @@ pub(crate) const RESERVED_USERNAMES: &[&str] = &[
     "root",
     "admin",
     "administrator",
-    "dhpanel",
+    "builtpanel",
     "system",
     "daemon",
     "nobody",

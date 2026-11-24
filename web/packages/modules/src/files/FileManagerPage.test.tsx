@@ -1,8 +1,16 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ToastProvider } from "@dhpanel/ui";
+import { ToastProvider } from "@builtpanel/ui";
 import { FileManagerPage } from "./FileManagerPage";
+
+/** The file manager opens at the top of the account's files; the web files are in public_html. */
+async function openPublicHtml() {
+  await waitFor(() => {
+    expect(screen.getByTestId("shortcut-public-html")).toBeInTheDocument();
+  });
+  fireEvent.click(screen.getByTestId("shortcut-public-html"));
+}
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(<ToastProvider>{ui}</ToastProvider>);
@@ -28,6 +36,7 @@ describe("FileManagerPage (T08.09)", () => {
     expect(screen.getByTestId("shortcut-logs")).toBeInTheDocument();
 
     // Check seed items in public_html
+    fireEvent.click(screen.getByTestId("shortcut-public-html"));
     await waitFor(() => {
       expect(screen.getByTestId("file-name-index.php")).toBeInTheDocument();
       expect(screen.getByTestId("file-name-style.css")).toBeInTheDocument();
@@ -38,6 +47,7 @@ describe("FileManagerPage (T08.09)", () => {
 
   it("filters file list with search input", async () => {
     renderWithProviders(<FileManagerPage />);
+    await openPublicHtml();
 
     await waitFor(() => {
       expect(screen.getByTestId("file-name-index.php")).toBeInTheDocument();
@@ -52,6 +62,7 @@ describe("FileManagerPage (T08.09)", () => {
 
   it("opens code editor modal for editable file and allows saving", async () => {
     renderWithProviders(<FileManagerPage />);
+    await openPublicHtml();
 
     await waitFor(() => {
       expect(screen.getByTestId("edit-button-index.php")).toBeInTheDocument();
@@ -65,10 +76,10 @@ describe("FileManagerPage (T08.09)", () => {
     });
 
     const textarea = screen.getByTestId("textarea-file-editor");
-    expect(textarea).toHaveValue("<?php\necho 'Hello from DHPanel!';\n");
+    expect(textarea).toHaveValue("<?php\necho 'Hello from Built Panel!';\n");
 
     fireEvent.change(textarea, {
-      target: { value: "<?php\necho 'Updated DHPanel code!';\n" },
+      target: { value: "<?php\necho 'Updated Built Panel code!';\n" },
     });
 
     const saveBtn = screen.getByTestId("btn-save-file-editor");
@@ -81,6 +92,7 @@ describe("FileManagerPage (T08.09)", () => {
 
   it("opens chmod permissions dialog and updates octal permissions", async () => {
     renderWithProviders(<FileManagerPage />);
+    await openPublicHtml();
 
     await waitFor(() => {
       expect(screen.getByTestId("chmod-trigger-index.php")).toBeInTheDocument();
@@ -156,6 +168,7 @@ describe("FileManagerPage (T08.09)", () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockImplementation(() => true);
 
     renderWithProviders(<FileManagerPage />);
+    await openPublicHtml();
 
     await waitFor(() => {
       expect(screen.getByTestId("delete-button-style.css")).toBeInTheDocument();
@@ -173,16 +186,17 @@ describe("FileManagerPage (T08.09)", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("trash-modal-title")).toBeInTheDocument();
-      expect(screen.getByTestId("trash-item-f_style_css")).toBeInTheDocument();
+      expect(document.querySelector('[data-testid^="trash-item-"]')).not.toBeNull();
     });
 
     // Click restore
-    fireEvent.click(screen.getByTestId("restore-button-f_style_css"));
+    fireEvent.click(document.querySelector('[data-testid^="restore-button-"]') as Element);
 
     // Close trash modal
     fireEvent.click(screen.getByTestId("close-trash-modal"));
 
-    // Verify style.css is back in public_html
+    // style.css is back in public_html (the listing is read again once the modal reports a restore)
+    fireEvent.click(screen.getByTestId("shortcut-public-html"));
     await waitFor(() => {
       expect(screen.getByTestId("file-name-style.css")).toBeInTheDocument();
     });

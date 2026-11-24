@@ -7,9 +7,9 @@ import {
   DialogDescription,
   DialogFooter,
   Button,
-} from "@dhpanel/ui";
+} from "@builtpanel/ui";
 import { AlertTriangle } from "lucide-react";
-import { useTranslation } from "@dhpanel/i18n";
+import { useTranslation } from "@builtpanel/i18n";
 
 interface PageTemplateResetDialogProps {
   open: boolean;

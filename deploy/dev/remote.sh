@@ -9,40 +9,40 @@
 #   deploy/dev/remote.sh sh   '<command>'              run a command in the synced tree
 #   deploy/dev/remote.sh status                        versions, disk and memory
 #
-# Settings come from the environment or from ~/.config/dhpanel/remote.env
+# Settings come from the environment or from ~/.config/builtpanel/remote.env
 # (never committed):
-#   DHPANEL_REMOTE_HOST   user@host of the build box            (required)
-#   DHPANEL_REMOTE_KEY    path to the SSH private key           (required)
+#   BUILTPANEL_REMOTE_HOST   user@host of the build box            (required)
+#   BUILTPANEL_REMOTE_KEY    path to the SSH private key           (required)
 #
 # The box needs: rustup, PostgreSQL 18 and Redis for `rust`; Node and pnpm for
-# `web`; and ~/.dhpanel-dev/secrets/{database_url,redis_test_url} (mode 0600).
+# `web`; and ~/.builtpanel-dev/secrets/{database_url,redis_test_url} (mode 0600).
 # Each worktree gets its own directory (~/work/<worktree name>), so the two
 # agents never overwrite each other; Rust build output is shared in
 # ~/target-rust to save disk.
 set -euo pipefail
 
-CONFIG="${DHPANEL_REMOTE_CONFIG:-$HOME/.config/dhpanel/remote.env}"
+CONFIG="${BUILTPANEL_REMOTE_CONFIG:-$HOME/.config/builtpanel/remote.env}"
 # shellcheck disable=SC1090
 [ -f "$CONFIG" ] && . "$CONFIG"
-: "${DHPANEL_REMOTE_HOST:?set DHPANEL_REMOTE_HOST (or create $CONFIG)}"
-: "${DHPANEL_REMOTE_KEY:?set DHPANEL_REMOTE_KEY (or create $CONFIG)}"
+: "${BUILTPANEL_REMOTE_HOST:?set BUILTPANEL_REMOTE_HOST (or create $CONFIG)}"
+: "${BUILTPANEL_REMOTE_KEY:?set BUILTPANEL_REMOTE_KEY (or create $CONFIG)}"
 
 ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 NAME="$(basename "$ROOT")"
 REMOTE_DIR="work/$NAME"
 
 remote() {
-    ssh -i "$DHPANEL_REMOTE_KEY" -o IdentitiesOnly=yes -o BatchMode=yes \
-        -o ServerAliveInterval=30 "$DHPANEL_REMOTE_HOST" "$@"
+    ssh -i "$BUILTPANEL_REMOTE_KEY" -o IdentitiesOnly=yes -o BatchMode=yes \
+        -o ServerAliveInterval=30 "$BUILTPANEL_REMOTE_HOST" "$@"
 }
 
 # Copies the worktree (tracked and untracked files, minus build output).
 sync_tree() {
     remote "mkdir -p '$REMOTE_DIR'"
-    rsync -az -e "ssh -i $DHPANEL_REMOTE_KEY" --delete \
+    rsync -az -e "ssh -i $BUILTPANEL_REMOTE_KEY" --delete \
         --exclude .git --exclude target --exclude node_modules --exclude dist \
         --exclude playwright-report --exclude test-results --exclude .claude \
-        "$@" "$ROOT/" "$DHPANEL_REMOTE_HOST:$REMOTE_DIR/"
+        "$@" "$ROOT/" "$BUILTPANEL_REMOTE_HOST:$REMOTE_DIR/"
 }
 
 rust_checks() {
@@ -53,7 +53,7 @@ rust_checks() {
 set -uo pipefail
 . "$HOME/.cargo/env"
 cd "$HOME/$1"; what="$2"; rc=0
-S="$HOME/.dhpanel-dev/secrets"
+S="$HOME/.builtpanel-dev/secrets"
 export DATABASE_URL="$(cat "$S/database_url")" REDIS_URL="$(cat "$S/redis_test_url")"
 export SQLX_OFFLINE=true CARGO_TERM_COLOR=never CARGO_TARGET_DIR="$HOME/target-rust"
 # The box has a small disk, and a full one stops PostgreSQL in the middle of a run. Before
@@ -88,7 +88,7 @@ step() { # name, command...
 if [ "$what" = lint ] || [ "$what" = all ]; then
     step fmt cargo fmt --all --check
     step clippy cargo clippy --workspace --all-targets --locked -- -D warnings
-    step clippy-otel cargo clippy --workspace --all-targets --locked --features dhpanel-control-api/otel -- -D warnings
+    step clippy-otel cargo clippy --workspace --all-targets --locked --features builtpanel-control-api/otel -- -D warnings
 fi
 if [ "$what" = test ] || [ "$what" = all ]; then
     # Live tests make Docker networks; a run that dies leaves them behind, and a few
@@ -117,7 +117,7 @@ for name in os.listdir(deps):
     if not m:
         continue
     stem = (m.group(1) or "") + m.group(2)
-    if "dhpanel_" in stem or "_live" in stem or stem.endswith("_schema"):
+    if "builtpanel_" in stem or "_live" in stem or stem.endswith("_schema"):
         groups[(stem, m.group(4) or "")].append((os.path.getmtime(os.path.join(deps, name)), name))
 freed = 0
 for items in groups.values():
@@ -157,7 +157,7 @@ if [ $rc -eq 0 ]; then
         step test pnpm test
         step build pnpm build
     else
-        step playwright-install pnpm --filter @dhpanel/e2e exec playwright install --with-deps chromium
+        step playwright-install pnpm --filter @builtpanel/e2e exec playwright install --with-deps chromium
         step e2e pnpm test:e2e
     fi
 fi

@@ -1,0 +1,8 @@
+slug        = "qdb"
+name        = "QDB"
+category    = "message_queue"
+kind        = "unavailable"
+description = "A queue database."
+license     = "Apache-2.0"
+covers      = ["QDB"]
+reason      = "the project is discontinued and no longer gets security fixes"

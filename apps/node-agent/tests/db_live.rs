@@ -5,19 +5,23 @@
 
 use std::{path::PathBuf, process::Command, sync::Arc, time::Duration};
 
-use dhpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name, Network};
-use dhpanel_domain::TenantUsername;
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{ContainerSpec, DockerManager, ImageRef, Name, Network};
+use builtpanel_domain::TenantUsername;
+use builtpanel_node_agent::ops::{
     db::{CONTAINER, allow_tenant_databases, ensure_db_server, port},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{ErrorCode, Operation, Output};
-use dhpanel_tenant_stack::network_name;
+use builtpanel_node_protocol::{ErrorCode, Operation, Output};
+use builtpanel_tenant_stack::network_name;
 
 const BUSYBOX: &str =
     "busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec";
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -42,7 +46,7 @@ async fn probe_with(
     env: &[(&str, &str)],
 ) -> i64 {
     let mut spec = ContainerSpec::new(
-        Name::parse(&format!("dh-dbprobe-{}-{n}", std::process::id())).unwrap(),
+        Name::parse(&format!("bp-dbprobe-{}-{n}", std::process::id())).unwrap(),
         ImageRef::parse(image).unwrap(),
     );
     spec.env = env
@@ -76,7 +80,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
         return;
     }
     let docker = DockerManager::connect(&socket).unwrap();
-    let root = std::env::temp_dir().join(format!("dh-db-live-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bp-db-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root).unwrap();
     let context = Arc::new(TenantContext {
@@ -135,7 +139,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
         context.clone(),
         Operation::AllowTenantDatabases {
             username: a.as_str().to_owned(),
-            engine: dhpanel_node_protocol::DbEngine::Mysql,
+            engine: builtpanel_node_protocol::DbEngine::Mysql,
         },
     )
     .await
@@ -151,7 +155,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
         context.clone(),
         Operation::AllowTenantDatabases {
             username: a.as_str().to_owned(),
-            engine: dhpanel_node_protocol::DbEngine::Mysql,
+            engine: builtpanel_node_protocol::DbEngine::Mysql,
         },
     )
     .await
@@ -171,7 +175,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
         context.clone(),
         Operation::AllowTenantDatabases {
             username: "nobodyhere".into(),
-            engine: dhpanel_node_protocol::DbEngine::Mysql,
+            engine: builtpanel_node_protocol::DbEngine::Mysql,
         },
     )
     .await
@@ -180,11 +184,11 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
 
     // Databases: made, found again, listed, injection refused, removed.
     {
-        use dhpanel_node_agent::ops::db::{create_database, drop_database};
+        use builtpanel_node_agent::ops::db::{create_database, drop_database};
         use mysql_async::prelude::Queryable as _;
         let create = |name: &str| Operation::CreateDatabase {
             name: name.into(),
-            engine: dhpanel_node_protocol::DbEngine::Mysql,
+            engine: builtpanel_node_protocol::DbEngine::Mysql,
             dedicated: None,
         };
         assert_eq!(
@@ -232,12 +236,12 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             for op in [
                 Operation::CreateDatabase {
                     name: bad.into(),
-                    engine: dhpanel_node_protocol::DbEngine::Mysql,
+                    engine: builtpanel_node_protocol::DbEngine::Mysql,
                     dedicated: None,
                 },
                 Operation::DropDatabase {
                     name: bad.into(),
-                    engine: dhpanel_node_protocol::DbEngine::Mysql,
+                    engine: builtpanel_node_protocol::DbEngine::Mysql,
                     dedicated: None,
                 },
             ] {
@@ -260,7 +264,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
                 context.clone(),
                 Operation::DropDatabase {
                     name: "alice_shop".into(),
-                    engine: dhpanel_node_protocol::DbEngine::Mysql,
+                    engine: builtpanel_node_protocol::DbEngine::Mysql,
                     dedicated: None,
                 }
             )
@@ -273,7 +277,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
                 context.clone(),
                 Operation::DropDatabase {
                     name: "alice_shop".into(),
-                    engine: dhpanel_node_protocol::DbEngine::Mysql,
+                    engine: builtpanel_node_protocol::DbEngine::Mysql,
                     dedicated: None,
                 }
             )
@@ -287,13 +291,13 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
 
     // Users and grants, seen from inside the tenant's own network.
     {
-        use dhpanel_node_agent::ops::db::{
+        use builtpanel_node_agent::ops::db::{
             create_database, drop_database, drop_db_user, grant_db, revoke_db, upsert_db_user,
         };
         use mysql_async::prelude::Queryable as _;
-        let image = dhpanel_tenant_stack::Allowlist::embedded()
+        let image = builtpanel_tenant_stack::Allowlist::embedded()
             .unwrap()
-            .current(dhpanel_tenant_stack::Role::Db)
+            .current(builtpanel_tenant_stack::Role::Db)
             .unwrap()
             .as_str()
             .to_owned();
@@ -302,7 +306,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
                 context.clone(),
                 Operation::CreateDatabase {
                     name: name.into(),
-                    engine: dhpanel_node_protocol::DbEngine::Mysql,
+                    engine: builtpanel_node_protocol::DbEngine::Mysql,
                     dedicated: None,
                 },
             )
@@ -335,8 +339,8 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
         let user = |password: Option<&str>| Operation::UpsertDbUser {
             username: a.as_str().to_owned(),
             name: "dbtest_web".into(),
-            password: password.map(|p| dhpanel_node_protocol::DbPassword(p.into())),
-            engine: dhpanel_node_protocol::DbEngine::Mysql,
+            password: password.map(|p| builtpanel_node_protocol::DbPassword(p.into())),
+            engine: builtpanel_node_protocol::DbEngine::Mysql,
             dedicated: None,
         };
         let upsert = |op: Operation| upsert_db_user(context.clone(), op);
@@ -369,7 +373,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             database: db.into(),
             user: "dbtest_web".into(),
             access: access.into(),
-            engine: dhpanel_node_protocol::DbEngine::Mysql,
+            engine: builtpanel_node_protocol::DbEngine::Mysql,
             dedicated: None,
         };
         let g = |op: Operation| grant_db(context.clone(), op);
@@ -446,14 +450,14 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
                 database: "dbtest_shop".into(),
                 user: "nobody_here".into(),
                 access: "all".into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
             Operation::GrantDb {
                 database: "dbtest_shop".into(),
                 user: "u'@'%' --".into(),
                 access: "all".into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         ] {
@@ -465,7 +469,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             Operation::RevokeDb {
                 database: "dbtest_shop".into(),
                 user: "dbtest_web".into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         )
@@ -476,7 +480,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             Operation::RevokeDb {
                 database: "dbtest_shop".into(),
                 user: "dbtest_web".into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         )
@@ -499,10 +503,10 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
         // Remote access: two more networks stand in for two remote places. The user
         // may come from one of them (same password, same access) and from no other.
         {
-            use dhpanel_node_agent::ops::db::set_db_remote_hosts;
+            use builtpanel_node_agent::ops::db::set_db_remote_hosts;
             let (far1, far2) = (
-                Name::parse(&format!("dh-dbfar1-{}", std::process::id())).unwrap(),
-                Name::parse(&format!("dh-dbfar2-{}", std::process::id())).unwrap(),
+                Name::parse(&format!("bp-dbfar1-{}", std::process::id())).unwrap(),
+                Name::parse(&format!("bp-dbfar2-{}", std::process::id())).unwrap(),
             );
             for net in [&far1, &far2] {
                 docker.ensure_network(net, false).await.unwrap();
@@ -516,7 +520,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
                 username: a.as_str().to_owned(),
                 name: "dbtest_web".into(),
                 cidrs,
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             };
             assert!(
@@ -581,11 +585,12 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             }
         }
         // Sizes: the databases are listed (not the server's own), the one with a table has some size.
-        let Output::DbSizes { items } =
-            dhpanel_node_agent::ops::db::report_db_sizes(context.clone(), Operation::ReportDbSizes)
-                .await
-                .unwrap()
-        else {
+        let Output::DbSizes { items } = builtpanel_node_agent::ops::db::report_db_sizes(
+            context.clone(),
+            Operation::ReportDbSizes,
+        )
+        .await
+        .unwrap() else {
             panic!("not sizes")
         };
         let names: Vec<&str> = items.iter().map(|i| i.name.as_str()).collect();
@@ -612,7 +617,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             Operation::RevokeDb {
                 database: "dbtest_blog".into(),
                 user: "dbtest_web".into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         )
@@ -624,7 +629,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             context.clone(),
             Operation::DropDatabase {
                 name: "dbtest_blog".into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         )
@@ -634,7 +639,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             context.clone(),
             Operation::CreateDatabase {
                 name: "dbtest_blog".into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         )
@@ -652,7 +657,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             context.clone(),
             Operation::DropDbUser {
                 name: "dbtest_web".into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         )
@@ -664,7 +669,7 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
             context.clone(),
             Operation::DropDbUser {
                 name: "dbtest_web".into(),
-                engine: dhpanel_node_protocol::DbEngine::Mysql,
+                engine: builtpanel_node_protocol::DbEngine::Mysql,
                 dedicated: None,
             },
         )
@@ -677,13 +682,13 @@ async fn the_database_server_is_reached_from_its_tenants_network_and_nowhere_els
     // Clean up (the data volume too: this is a test server).
     let _ = docker.remove(&Name::parse(CONTAINER).unwrap(), true).await;
     let _ = docker
-        .remove_volume(&Name::parse("dh-db-data").unwrap())
+        .remove_volume(&Name::parse("bp-db-data").unwrap())
         .await;
     for t in [&a, &b] {
         let _ = docker.remove_network(&network_name(t).unwrap()).await;
     }
     let _ = docker
-        .remove_network(&Name::parse("dh-db-net").unwrap())
+        .remove_network(&Name::parse("bp-db-net").unwrap())
         .await;
     let _ = std::fs::remove_dir_all(&root);
 }

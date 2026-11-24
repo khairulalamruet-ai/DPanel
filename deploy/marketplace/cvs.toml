@@ -1,0 +1,8 @@
+slug        = "cvs"
+name        = "CVS"
+category    = "version_control"
+kind        = "unavailable"
+description = "CVS."
+license     = "GPL-2.0-or-later"
+covers      = ["CVS"]
+reason      = "an account has no shell on the server to run command-line tools; Git is offered"

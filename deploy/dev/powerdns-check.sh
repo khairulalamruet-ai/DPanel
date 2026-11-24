@@ -10,7 +10,7 @@ set -euo pipefail
 : "${PDNS_API_KEY:?set PDNS_API_KEY}"
 API="${1:-http://127.0.0.1:8053}/api/v1/servers/localhost"
 DNS_PORT="${2:-5300}"
-ZONE="dhpanel-check-$$.test."
+ZONE="builtpanel-check-$$.test."
 call() { # method path [json]
   curl -sS -X "$1" -H "X-API-Key: $PDNS_API_KEY" -H 'Content-Type: application/json' \
     ${3:+-d "$3"} -w '\n%{http_code}' "$API$2"

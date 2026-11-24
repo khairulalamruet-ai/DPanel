@@ -5,15 +5,19 @@
 
 use std::{path::PathBuf, process::Command, sync::Arc};
 
-use dhpanel_docker_manager::{DockerManager, Name};
-use dhpanel_node_agent::ops::{
+use builtpanel_docker_manager::{DockerManager, Name};
+use builtpanel_node_agent::ops::{
     ftp::{CONTAINER, drop_ftp_account, ftp_port, sftp_port, upsert_ftp_account},
     tenant::TenantContext,
 };
-use dhpanel_node_protocol::{DbPassword, ErrorCode, Operation, Output};
+use builtpanel_node_protocol::{DbPassword, ErrorCode, Operation, Output};
 use uuid::Uuid;
 
 fn docker_socket() -> PathBuf {
+    // The engine the live tests run against: another one (Kiri) than the rootless Docker of this user.
+    if let Some(path) = std::env::var_os("BUILTPANEL_TEST_DOCKER_SOCKET") {
+        return PathBuf::from(path);
+    }
     let uid = std::fs::read_to_string("/proc/self/status")
         .unwrap()
         .lines()
@@ -93,10 +97,10 @@ async fn accounts_see_only_their_own_files_over_sftp_and_ftps() {
     for name in [CONTAINER] {
         let _ = docker.remove(&Name::parse(name).unwrap(), true).await;
     }
-    for v in ["dh-sftpgo-data", "dh-sftpgo-certs", "dh-sftpgo-tenants"] {
+    for v in ["bp-sftpgo-data", "bp-sftpgo-certs", "bp-sftpgo-tenants"] {
         let _ = docker.remove_volume(&Name::parse(v).unwrap()).await;
     }
-    let base = std::env::temp_dir().join(format!("dh-ftp-live-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("bp-ftp-live-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     let tenants = base.join("tenants");
     std::fs::create_dir_all(&tenants).unwrap();
@@ -356,7 +360,7 @@ async fn accounts_see_only_their_own_files_over_sftp_and_ftps() {
     }
 
     let _ = docker.remove(&Name::parse(CONTAINER).unwrap(), true).await;
-    for v in ["dh-sftpgo-data", "dh-sftpgo-certs", "dh-sftpgo-tenants"] {
+    for v in ["bp-sftpgo-data", "bp-sftpgo-certs", "bp-sftpgo-tenants"] {
         let _ = docker.remove_volume(&Name::parse(v).unwrap()).await;
     }
     in_busybox("docker", &tenants, "rm -rf /t/* 2>/dev/null; true");

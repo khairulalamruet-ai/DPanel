@@ -11,7 +11,7 @@
 - **DoD:** একই ভাবে।
 
 ### T15.04 — Import executor
-- **কী করতে হবে:** Model → DHPanel tenant, domain, DB, file (operation chain)। Dry-run (কী হবে তা দেখানো)। Conflict সমাধান (username বা domain আগে থেকে আছে)।
+- **কী করতে হবে:** Model → Built Panel tenant, domain, DB, file (operation chain)। Dry-run (কী হবে তা দেখানো)। Conflict সমাধান (username বা domain আগে থেকে আছে)।
 - **DoD:** Dry-run রিপোর্ট সঠিক। আসল import-এর পর site চলে।
 
 ### T15.05 — Remote fetch
