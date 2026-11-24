@@ -537,7 +537,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-audit"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-cache",
@@ -559,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-auth-core"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "argon2",
  "base64 0.23.1",
@@ -575,7 +575,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-backup"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "chacha20poly1305",
  "getrandom 0.4.3",
@@ -588,7 +588,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-backup-dest"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-safe-fs",
  "hmac",
@@ -602,7 +602,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-bpctl"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-auth-core",
  "builtpanel-common",
@@ -622,7 +622,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-cache"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "redis",
  "secrecy",
@@ -633,7 +633,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-catalog"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-node-protocol",
  "serde",
@@ -642,11 +642,11 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-common"
-version = "0.1.20"
+version = "0.1.21"
 
 [[package]]
 name = "builtpanel-config"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "figment",
  "secrecy",
@@ -656,7 +656,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-control-api"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -720,7 +720,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-database"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-domain",
  "builtpanel-rbac",
@@ -736,7 +736,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-dispatcher"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-cache",
  "builtpanel-catalog",
@@ -767,7 +767,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-dns"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-database",
  "builtpanel-domain",
@@ -785,7 +785,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-docker-manager"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "bollard",
  "futures-util",
@@ -796,7 +796,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-domain"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "idna",
  "psl",
@@ -807,7 +807,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-events"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-database",
  "builtpanel-kernel",
@@ -821,7 +821,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-feature-gate"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-cache",
  "builtpanel-http-kit",
@@ -836,7 +836,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-fileops"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-backup",
  "builtpanel-node-protocol",
@@ -851,7 +851,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-http-kit"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-observability",
@@ -869,7 +869,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-import"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-domain",
  "flate2",
@@ -882,7 +882,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-kernel"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "serde",
@@ -896,7 +896,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-license"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "base64 0.23.1",
  "ring",
@@ -908,7 +908,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-license-authority"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -933,7 +933,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-license-client"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "base64 0.23.1",
  "builtpanel-license",
@@ -946,7 +946,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-admin"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -970,7 +970,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-apps"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -999,7 +999,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-auth"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -1026,7 +1026,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-backups"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1057,7 +1057,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-cron"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1083,7 +1083,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-databases"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1112,7 +1112,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-domains"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1145,7 +1145,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-files"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1177,7 +1177,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-license"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -1208,7 +1208,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-logs"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-cache",
@@ -1233,7 +1233,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-mail"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1263,7 +1263,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-migration"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "anyhow",
  "axum",
@@ -1295,7 +1295,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-nodes"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "anyhow",
  "axum",
@@ -1331,7 +1331,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-notifications"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-auth-core",
@@ -1360,7 +1360,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-plans"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1382,7 +1382,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-security"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1407,7 +1407,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-services"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "anyhow",
  "axum",
@@ -1438,7 +1438,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-system"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -1467,7 +1467,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-usage"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-cache",
@@ -1490,7 +1490,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-mod-users"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1515,7 +1515,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-node-agent"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-audit",
@@ -1566,7 +1566,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-node-gateway"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-database",
  "builtpanel-node-protocol",
@@ -1583,7 +1583,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-node-protocol"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "serde",
  "serde_json",
@@ -1594,7 +1594,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-observability"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "metrics",
  "metrics-exporter-prometheus",
@@ -1609,7 +1609,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-operations"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-database",
  "builtpanel-node-protocol",
@@ -1622,7 +1622,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-pki"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "getrandom 0.4.3",
  "rcgen",
@@ -1636,7 +1636,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-priv-helper"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-backup",
  "builtpanel-common",
@@ -1651,7 +1651,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-rbac"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "builtpanel-cache",
@@ -1668,7 +1668,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-root-auth"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "rustix",
  "sha-crypt",
@@ -1678,7 +1678,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-safe-fs"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "rustix",
  "thiserror",
@@ -1686,7 +1686,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-session"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -1707,7 +1707,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-settings"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-database",
  "builtpanel-http-kit",
@@ -1721,7 +1721,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-system-backup"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-backup",
  "builtpanel-backup-dest",
@@ -1734,7 +1734,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-tenant-stack"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "bollard",
  "builtpanel-docker-manager",
@@ -1748,7 +1748,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-web-config"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-database",
  "builtpanel-domain",
@@ -1759,7 +1759,7 @@ dependencies = [
 
 [[package]]
 name = "builtpanel-worker"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "builtpanel-common",
 ]
