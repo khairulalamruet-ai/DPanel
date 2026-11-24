@@ -19,6 +19,7 @@
 #   --header 'H: V'      an HTTP header for the download (e.g. 'Authorization: Bearer TOKEN')
 #   --tarball FILE       install from a release archive already on this machine (no download)
 #   --no-agent           the control plane only; nodes are added from other servers
+#   --engine E           podman (the default), docker, docker-kata or kiri; without it a terminal is asked
 #   --no-upgrade         do not update the operating system first (by default every package, the
 #                        kernel included, is brought up to date: apt on Ubuntu/Debian, dnf on
 #                        AlmaLinux/Rocky/RHEL/CentOS Stream; nothing is rebooted for you)
@@ -45,7 +46,7 @@ while [ $# -gt 0 ]; do
         --no-upgrade) UPGRADE=0; shift ;;
         --no-resume) RESUME=0; shift ;;
         --check) CHECK_ONLY=1; PASS+=("$1"); shift ;;
-        -h | --help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) PASS+=("$1"); shift ;;
     esac
 done
@@ -78,6 +79,40 @@ say() { ui_step "$*"; }
 [ "$(uname -s)" = Linux ] || die "Linux only"
 [ "$(id -u)" -eq 0 ] || die "run as root: curl -fsSL <url> | sudo bash"
 [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || die "--repo must look like OWNER/NAME"
+
+# --- which container engine ------------------------------------------------------------------
+# Asked here, before anything is downloaded or rebooted, so the answer survives the reboot some
+# systems need first (it is passed on as --engine). Only on a terminal; without one, or when
+# --engine is given, or when this server's node already has an engine, nothing is asked.
+if [ "$CHECK_ONLY" -eq 0 ] && ! printf '%s\n' ${PASS[@]+"${PASS[@]}"} | grep -Eqx -- '--engine|--no-agent' \
+    && [ ! -s /etc/builtpanel/node-engine ] && { : > /dev/tty; } 2> /dev/null; then
+    {
+        echo
+        echo "  Which container engine should run the hosting accounts?"
+        echo
+        echo "    1) Podman   rootless (default)"
+        echo "    2) Docker   rootless; keeps each visitor's address, so per-address limits (SFTP login bans) work"
+        if [ -c /dev/kvm ]; then
+            echo "    3) Docker + Kata Containers   every container in its own light virtual machine (a root engine)"
+        else
+            echo "    3) Docker + Kata Containers   not available here (no /dev/kvm)"
+        fi
+        echo "    4) Kiri     root engine, beta"
+        echo
+        echo "  Kata Containers is installed with every choice that can use it; this only picks the one that runs."
+        printf '  Choose 1-4 [1] (the default is taken after 60 seconds): '
+    } > /dev/tty
+    engine_pick=""
+    read -r -t 60 engine_pick < /dev/tty || engine_pick=""
+    echo > /dev/tty
+    case "${engine_pick:-1}" in
+        1 | podman) PASS+=(--engine podman) ;;
+        2 | docker) PASS+=(--engine docker) ;;
+        3 | kata | docker-kata) [ -c /dev/kvm ] || die "Kata Containers needs /dev/kvm, which this server does not have: run again and choose 1 or 2"; PASS+=(--engine docker-kata) ;;
+        4 | kiri) PASS+=(--engine kiri) ;;
+        *) die "choose 1, 2, 3 or 4: run again" ;;
+    esac
+fi
 case "$(uname -m)" in x86_64) ARCH=x86_64 ;; aarch64 | arm64) ARCH=aarch64 ;; *) die "x86_64 or aarch64 only" ;; esac
 
 if ! command -v curl > /dev/null || ! command -v tar > /dev/null; then

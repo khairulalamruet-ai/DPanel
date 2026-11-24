@@ -20,15 +20,17 @@
 #   --no-root-login      do not let `root` log in to the panel with this server's root password
 #                        (on by default, like WHM; the helper builtpanel-root-auth checks it)
 #   --engine podman|docker|kiri|docker-kata
-#                        the container engine of the local node: rootless Docker (the default), rootless
-#                        Podman (4.4 or newer; its rootless bridge networks hide the visitor's address from
-#                        the containers, so per-address limits such as SFTP login bans cannot work), or Kiri
+#                        the container engine of the local node: rootless Podman (the default; 4.4 or newer,
+#                        otherwise rootless Docker is used; its rootless bridge networks hide the visitor's
+#                        address from the containers, so per-address limits such as SFTP login bans cannot
+#                        work), rootless Docker (those limits work), or Kiri
 #                        (https://runkiri.com, a root engine in beta: its `kiri` group is root-equivalent, so
 #                        the agent is too). A node with tenants can change between Podman and Docker (their
 #                        files keep the same ids) but not to or from Kiri.
 #                        docker-kata: Docker with Kata Containers (every container in its own light virtual
 #                        machine; needs /dev/kvm, so hardware virtualization or nested virtualization). A root
-#                        engine: the agent is in the `docker` group, which is root-equivalent.
+#                        engine: the agent is in the `docker` group, which is root-equivalent. Kata's files
+#                        are put in place with every other engine too when /dev/kvm exists, ready to switch to.
 #   --no-upgrade         do not update the operating system first (by default every installed package,
 #                        the kernel included, is brought up to date before anything is installed)
 #   --check              only look: what is there, what would be done; changes nothing
@@ -39,7 +41,8 @@
 #
 # What it installs: PostgreSQL 18 (PGDG), Redis, Caddy, a firewall (ufw, or firewalld on the Red Hat
 # family: 22, 80, 443 and the agent port 8444), the control plane as the unprivileged user `builtpanel` under its hardened unit, the CA
-# of the node channel, and with the local node: rootless Docker, the agent and the root helper.
+# of the node channel, and with the local node: the container engine (rootless Podman by default), Kata Containers' files when /dev/kvm
+# exists, the agent and the root helper.
 set -euo pipefail
 
 BIN_DIR=""; WEB_DIR=""; ADMIN_HOSTNAME=""; HOSTNAME_FQDN=""; ADMIN_EMAIL=""; ADMIN_USER=owner; WITH_AGENT=1; ROOT_LOGIN=1; UPGRADE=1; ENGINE=auto; CHECK=0
@@ -73,7 +76,7 @@ while [ $# -gt 0 ]; do
         --admin-username) ADMIN_USER="${2:?--admin-username needs a name}"; shift 2 ;;
         --no-agent) WITH_AGENT=0; shift ;;
         --no-root-login) ROOT_LOGIN=0; shift ;;
-        --engine) ENGINE="${2:?--engine needs podman, docker or kiri}"; shift 2 ;;
+        --engine) ENGINE="${2:?--engine needs podman, docker, kiri or docker-kata}"; shift 2 ;;
         --no-upgrade) UPGRADE=0; shift ;;
         --check) CHECK=1; shift ;;
         -h | --help) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -107,6 +110,34 @@ ui_init
 step=""
 say() { step="$*"; ui_step "$*"; }
 die() { ui_fail "$*"; exit 1; }
+
+# Puts Kata Containers (pinned and checked) under /opt/kata and links its shim; true when it is there.
+# Release 4.4 ships only the Rust runtime (runtime-rs); older ones had the Go shim in /opt/kata/bin.
+kata_shim() {
+    local f
+    for f in /opt/kata/runtime-rs/bin/containerd-shim-kata-v2 /opt/kata/bin/containerd-shim-kata-v2; do
+        [ -x "$f" ] && { echo "$f"; return 0; }
+    done
+    return 1
+}
+kata_stage() {
+    local kata_file kata_dir have shim
+    case "$(uname -m)" in x86_64) kata_file="kata-static-${KATA_VERSION}-amd64.tar.zst" ;; aarch64) kata_file="kata-static-${KATA_VERSION}-arm64.tar.zst" ;; *) return 1 ;; esac
+    if ! shim="$(kata_shim)" || ! "$shim" --version 2> /dev/null | grep -q "$KATA_VERSION"; then
+        if [ "$FAMILY" = rhel ]; then dnf_install zstd; else apt_install zstd; fi || return 1
+        kata_dir="$(mktemp -d /var/tmp/builtpanel-kata.XXXXXX)"
+        if ! curl -fsSL --proto '=https' --tlsv1.2 --retry 3 -o "$kata_dir/$kata_file" "https://github.com/kata-containers/kata-containers/releases/download/${KATA_VERSION}/${kata_file}"; then rm -rf "$kata_dir"; return 1; fi
+        have=$(sha256sum "$kata_dir/$kata_file" | awk '{print $1}')
+        if [ "$have" != "${KATA_SHA256[$kata_file]}" ]; then rm -rf "$kata_dir"; echo "the Kata package does not match the checksum this installer was made with (got $have): nothing was installed" >&2; return 1; fi
+        tar --zstd -xf "$kata_dir/$kata_file" -C / || { rm -rf "$kata_dir"; return 1; }
+        rm -rf "$kata_dir"
+    fi
+    shim="$(kata_shim)" || { echo "the Kata package has no containerd shim" >&2; return 1; }
+    # Docker finds the runtime through containerd's shim name.
+    ln -sf "$shim" /usr/local/bin/containerd-shim-kata-v2
+    rm -f /usr/local/bin/kata-runtime
+    [ ! -x /opt/kata/bin/kata-runtime ] || ln -sf /opt/kata/bin/kata-runtime /usr/local/bin/kata-runtime
+}
 trap 'rc=$?; ui_is_main || exit $rc; ui_cleanup; if [ $rc -ne 0 ] && [ -n "$step" ]; then { echo; echo "install.sh: stopped during \"$step\" (the end of /var/log/builtpanel-install.log):"; tail -n 15 /var/log/builtpanel-install.log 2> /dev/null | sed "s/^/  | /"; echo "fix the cause and run this again"; } >&4; fi' EXIT
 
 # --- what this machine is ------------------------------------------------------------------
@@ -166,10 +197,12 @@ if [ "$CHECK" -eq 1 ]; then
         kiri) engine_label="Kiri $KIRI_VERSION (pinned and checked), a root engine" ;;
         docker) engine_label='rootless Docker' ;;
         podman) engine_label='rootless Podman' ;;
+        auto) engine_label="what this node already uses, else rootless Podman (rootless Docker where Podman is older than 4.4)" ;;
         docker-kata) engine_label="Docker with Kata Containers $KATA_VERSION (pinned and checked), a root engine" ;;
-        *) engine_label='rootless Docker' ;;
+        *) engine_label='rootless Podman' ;;
     esac
     echo "    engine:        $engine_label"
+    echo "    kata:          $([ -c /dev/kvm ] && echo 'files would be put in place (/dev/kvm is there)' || echo 'not possible (no /dev/kvm)')"
     echo "    binaries:      ${need[*]} found and runnable"
     echo "    postgresql 18: $(command -v $PG_BIN/postgres > /dev/null && echo present || echo 'would be installed')"
     echo "    redis:         $(command -v redis-server || echo 'would be installed')"
@@ -577,10 +610,34 @@ else
 fi
 
 if [ "$WITH_AGENT" -eq 1 ]; then
+    ENGINE_AUTO=0
     if [ "$ENGINE" = auto ]; then
-        # An already set up node keeps its engine; a new one gets rootless Docker. Podman is opt-in
-        # (--engine podman): its rootless bridge networks hide the visitor's address from the containers.
-        if [ -s /etc/builtpanel/node-engine ]; then ENGINE="$(cat /etc/builtpanel/node-engine)"; else ENGINE=docker; fi
+        # An already set up node keeps its engine; a new one gets rootless Podman (get.sh asks first
+        # on a terminal and passes the answer as --engine). Podman's rootless bridge networks hide the
+        # visitor's address from the containers (SFTP per-address bans cannot work), which is shown below.
+        if [ -s /etc/builtpanel/node-engine ]; then
+            ENGINE="$(cat /etc/builtpanel/node-engine)"
+        else
+            ENGINE=podman; ENGINE_AUTO=1
+            if [ "$FAMILY" = deb ]; then
+                # Podman 4.4 is the first with netavark and the cgroup v2 limits (Ubuntu 22.04 and Debian 12 ship older).
+                pm_cand="$(apt-cache policy podman 2> /dev/null | awk '/Candidate:/ {print $2}')"; pm_cand="${pm_cand#*:}"; pm_cand="${pm_cand%%[-+~]*}"
+                if [ -z "$pm_cand" ] || [ "$pm_cand" = "(none)" ] || [ "$(printf '%s\n4.4\n' "$pm_cand" | sort -V | head -1)" != 4.4 ]; then
+                    ui_warn "this system's Podman (${pm_cand:-none}) is older than 4.4: using rootless Docker instead"
+                    ENGINE=docker
+                fi
+            fi
+        fi
+    fi
+    # Kata Containers is set up with every local node when the machine can run it (/dev/kvm): its files
+    # are only put in place here; it becomes the engine with --engine docker-kata.
+    if [ "$ENGINE" != docker-kata ] && [ "$ENGINE" != kiri ]; then
+        if [ -c /dev/kvm ]; then
+            say "Kata Containers (every container in its own light virtual machine)"
+            kata_stage || ui_warn "Kata Containers could not be set up (the other engines are not affected); run again, or use --engine docker-kata later"
+        else
+            ui_warn "Kata Containers was not installed: /dev/kvm is missing (hardware or nested virtualization is off)"
+        fi
     fi
     if [ "$ENGINE" = kiri ]; then
         say "the local node (Kiri engine, the agent, the root helper)"
@@ -605,19 +662,7 @@ if [ "$WITH_AGENT" -eq 1 ]; then
     if [ "$ENGINE" = docker-kata ]; then
     say "the local node (Docker with Kata Containers, the agent, the root helper)"
     [ -c /dev/kvm ] || die "/dev/kvm is missing: Kata Containers needs hardware virtualization (on a VPS: nested virtualization, which many providers leave off)"
-    case "$(uname -m)" in x86_64) kata_file="kata-static-${KATA_VERSION}-amd64.tar.zst" ;; aarch64) kata_file="kata-static-${KATA_VERSION}-arm64.tar.zst" ;; *) die "no Kata package for this machine" ;; esac
-    if [ ! -x /opt/kata/bin/containerd-shim-kata-v2 ] || ! /opt/kata/bin/containerd-shim-kata-v2 --version 2> /dev/null | grep -q "$KATA_VERSION"; then
-        if [ "$FAMILY" = rhel ]; then dnf_install zstd; else apt_install zstd; fi
-        kata_dir="$(mktemp -d /var/tmp/builtpanel-kata.XXXXXX)"
-        curl -fsSL --proto '=https' --tlsv1.2 --retry 3 -o "$kata_dir/$kata_file" "https://github.com/kata-containers/kata-containers/releases/download/${KATA_VERSION}/${kata_file}" || die "cannot download Kata Containers ($kata_file)"
-        have=$(sha256sum "$kata_dir/$kata_file" | awk '{print $1}')
-        [ "$have" = "${KATA_SHA256[$kata_file]}" ] || die "the Kata package does not match the checksum this installer was made with (got $have): nothing was installed"
-        tar --zstd -xf "$kata_dir/$kata_file" -C /
-        rm -rf "$kata_dir"
-    fi
-    # Docker finds the runtime through containerd's shim name.
-    ln -sf /opt/kata/bin/containerd-shim-kata-v2 /usr/local/bin/containerd-shim-kata-v2
-    ln -sf /opt/kata/bin/kata-runtime /usr/local/bin/kata-runtime
+    kata_stage || die "Kata Containers could not be installed"
     if ! command -v dockerd > /dev/null; then
         if [ "$FAMILY" = rhel ]; then
             curl -fsSL https://download.docker.com/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo

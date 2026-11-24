@@ -350,7 +350,7 @@ CONF
   say "Kiri is up: $(curl -fsS --unix-socket /run/kiri/docker.sock http://localhost/version 2>/dev/null | sed -n 's/.*"KiriVersion":"\([^"]*\)".*/\1/p')"
 elif [ "$engine" = docker-kata ]; then
   command -v dockerd >/dev/null || die "docker is not installed (install docker-ce, or let the panel's install.sh do it)"
-  [ -x /opt/kata/bin/containerd-shim-kata-v2 ] || die "Kata Containers is not installed in /opt/kata (let the panel's install.sh do it)"
+  [ -x /usr/local/bin/containerd-shim-kata-v2 ] || die "Kata Containers is not installed (let the panel's install.sh put it in /opt/kata and link its shim)"
   [ -c /dev/kvm ] || die "/dev/kvm is missing: Kata Containers needs hardware virtualization"
   say "using Docker with Kata Containers for $AGENT_USER (a root engine: the agent is in the docker group, which is root-equivalent)"
   # Kata is a runtime of the system's Docker, found through containerd's shim name.
@@ -368,7 +368,7 @@ elif [ "$engine" = docker-kata ]; then
   # The proof that matters: a virtual machine really starts (no KVM, or no nested virtualization, fails here).
   say "starting a test container in a Kata virtual machine"
   if ! timeout 180 docker run --rm --runtime kata --network none docker.io/library/busybox:stable true >/dev/null 2>&1; then
-    die "Kata could not start a virtual machine here (journalctl -u docker; kata-runtime check): is nested virtualization on?"
+    die "Kata could not start a virtual machine here (journalctl -u docker): is nested virtualization on?"
   fi
   install -d -m 0755 /etc/systemd/system/builtpanel-agent.service.d
   cat > /etc/systemd/system/builtpanel-agent.service.d/engine.conf <<'CONF'
