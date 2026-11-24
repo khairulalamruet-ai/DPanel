@@ -26,6 +26,19 @@ import {
 } from "lucide-react";
 import { CatalogApp, InstallAppPayload, InstalledApp } from "./types";
 
+const APP_LOGOS: Record<string, string> = {
+  wordpress: "/apps/wordpress.png",
+  wp: "/apps/wordpress.png",
+  laravel: "/apps/laravel.png",
+  joomla: "/apps/joomla.png",
+  drupal: "/apps/drupal.png",
+  static: "/apps/static.png",
+  prestashop: "/apps/prestashop.png",
+  moodle: "/apps/moodle.png",
+  roundcube: "/apps/roundcube.png",
+  whmcs: "/apps/whmcs.png",
+};
+
 interface InstallWizardDialogProps {
   open: boolean;
   app: CatalogApp | null;
@@ -109,8 +122,16 @@ export function InstallWizardDialog({
       <DialogContent data-testid="install-wizard-dialog" className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-              <Download className="h-5 w-5" />
+            <div className="h-10 w-10 rounded-xl bg-white dark:bg-card/90 border border-slate-200 dark:border-slate-800 p-1 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+              {app && (APP_LOGOS[app.id.toLowerCase()] || APP_LOGOS[app.icon.toLowerCase()]) ? (
+                <img
+                  src={APP_LOGOS[app.id.toLowerCase()] || APP_LOGOS[app.icon.toLowerCase()]}
+                  alt={app.name}
+                  className="max-h-full max-w-full object-contain pointer-events-none select-none"
+                />
+              ) : (
+                <Download className="h-5 w-5 text-primary" />
+              )}
             </div>
             <div>
               <DialogTitle data-testid="install-wizard-title" className="text-lg">

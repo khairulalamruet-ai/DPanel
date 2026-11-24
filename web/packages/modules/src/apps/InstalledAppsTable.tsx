@@ -62,7 +62,35 @@ export function InstalledAppsTable({
     return true;
   });
 
+  const APP_LOGOS: Record<string, string> = {
+    wordpress: "/apps/wordpress.png",
+    wp: "/apps/wordpress.png",
+    laravel: "/apps/laravel.png",
+    joomla: "/apps/joomla.png",
+    drupal: "/apps/drupal.png",
+    static: "/apps/static.png",
+    prestashop: "/apps/prestashop.png",
+    moodle: "/apps/moodle.png",
+    roundcube: "/apps/roundcube.png",
+    whmcs: "/apps/whmcs.png",
+  };
+
   const getAppIcon = (catalogId: string) => {
+    const logoSrc = APP_LOGOS[catalogId.toLowerCase()];
+    if (logoSrc) {
+      return (
+        <div className="h-6 w-6 rounded-md bg-white dark:bg-card/90 border border-slate-200 dark:border-slate-800 p-0.5 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+          <img
+            src={logoSrc}
+            alt={catalogId}
+            className="max-h-full max-w-full object-contain pointer-events-none select-none"
+            onError={(e) => {
+              (e.currentTarget as HTMLElement).style.display = "none";
+            }}
+          />
+        </div>
+      );
+    }
     switch (catalogId) {
       case "wordpress":
         return <Globe className="h-4 w-4 text-blue-600" />;
