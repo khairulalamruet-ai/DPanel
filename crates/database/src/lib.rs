@@ -53,6 +53,7 @@ pub mod redirects;
 pub mod resellers;
 pub mod routes;
 pub mod runtime_apps;
+pub mod server_migrations;
 pub mod settings;
 pub mod skeleton;
 pub mod tenant_db;

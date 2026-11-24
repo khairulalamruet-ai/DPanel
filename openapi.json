@@ -10238,6 +10238,379 @@
         ]
       }
     },
+    "/api/v1/admin/system/migrate": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "The newest jobs.",
+        "operationId": "listServerMigrations",
+        "responses": {
+          "200": {
+            "description": "The newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerMigrationView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "Starts installing a node on the new server and joining it to this panel. Answers at once; follow the job\nwith `GET /api/v1/admin/system/migrate/{id}`.",
+        "operationId": "startServerMigration",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerMigrationView"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`migration_running` (one at a time), `node_name_taken`, `license_limit` or an SSH error (`ssh_login_refused`, `ssh_host_key_changed`, `ssh_unreachable`)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid fields",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`enrollment_unavailable`: the panel has no address or CA for nodes to join",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/system/migrate/check": {
+      "post": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "Logs in to the new server and says whether a node can be installed on it.",
+        "operationId": "checkMigrationServer",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the server is like and what stands in the way",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerFacts"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`ssh_login_refused`, `ssh_host_key_changed` or `ssh_unreachable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid fields",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/system/migrate/probe": {
+      "post": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "Shows the host key of the new server (nothing is sent to it, no password).",
+        "operationId": "probeMigrationServer",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProbeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The key the server shows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeView"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`ssh_unreachable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid address, or one the panel may not connect to",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/system/migrate/{id}": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "One job, with its log.",
+        "operationId": "getServerMigration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Job id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerMigrationView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such job",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/system/migrate/{id}/move-accounts": {
+      "post": {
+        "tags": [
+          "nodes"
+        ],
+        "summary": "Starts moving every running account of one node to the new server (one node transfer each).",
+        "operationId": "moveAccountsToMigratedServer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Job id (it must have ended with the node online)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Which transfers started and which accounts were left",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such job or node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`migration_not_done`, `node_unavailable`, `same_node` or `no_backup_destination`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/tenants/{id}/apps": {
       "get": {
         "tags": [
@@ -32409,6 +32782,50 @@
           }
         }
       },
+      "MoveRequest": {
+        "type": "object",
+        "description": "What to move.",
+        "required": [
+          "from_node_id"
+        ],
+        "properties": {
+          "auto_cutover": {
+            "type": "boolean",
+            "description": "Switch each account over as soon as its first copy is there (otherwise each waits for its cutover)."
+          },
+          "from_node_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The node whose accounts are moved (the old server)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "MoveView": {
+        "type": "object",
+        "description": "What `move-accounts` did.",
+        "required": [
+          "started",
+          "skipped"
+        ],
+        "properties": {
+          "skipped": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkippedAccount"
+            },
+            "description": "Accounts that were left where they are."
+          },
+          "started": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Transfers that were started (follow them under `/api/v1/admin/node-transfers`)."
+          }
+        }
+      },
       "Nameservers": {
         "type": "object",
         "description": "The panel's name servers.",
@@ -33822,6 +34239,40 @@
             "type": "string",
             "format": "uuid",
             "description": "Id."
+          }
+        }
+      },
+      "ProbeRequest": {
+        "type": "object",
+        "description": "Which server to look at.",
+        "required": [
+          "host"
+        ],
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "The new server's address (a name or an IP address).",
+            "example": "203.0.113.10"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Its SSH port.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProbeView": {
+        "type": "object",
+        "description": "The key the server shows.",
+        "required": [
+          "host_key_sha256"
+        ],
+        "properties": {
+          "host_key_sha256": {
+            "type": "string",
+            "description": "The host key's SHA-256 fingerprint (`SHA256:...`). Check it against the server before going on."
           }
         }
       },
@@ -35245,6 +35696,63 @@
           }
         }
       },
+      "ServerFacts": {
+        "type": "object",
+        "description": "What the new server is like.",
+        "required": [
+          "os",
+          "arch",
+          "cpus",
+          "memory_mb",
+          "disk_free_gb",
+          "kvm",
+          "root",
+          "problems"
+        ],
+        "properties": {
+          "arch": {
+            "type": "string",
+            "description": "`x86_64` or `aarch64`."
+          },
+          "cpus": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Processor cores.",
+            "minimum": 0
+          },
+          "disk_free_gb": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Free space on `/` in GB.",
+            "minimum": 0
+          },
+          "kvm": {
+            "type": "boolean",
+            "description": "Whether hardware virtualization is there (Kata Containers needs it)."
+          },
+          "memory_mb": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Memory in MB.",
+            "minimum": 0
+          },
+          "os": {
+            "type": "string",
+            "description": "The operating system's name."
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What stands in the way of a node here (empty when nothing does)."
+          },
+          "root": {
+            "type": "boolean",
+            "description": "Whether the login is root."
+          }
+        }
+      },
       "ServerInfoView": {
         "type": "object",
         "description": "What a node says about itself.",
@@ -35313,6 +35821,76 @@
             "format": "int64",
             "description": "Seconds since boot.",
             "minimum": 0
+          }
+        }
+      },
+      "ServerMigrationView": {
+        "type": "object",
+        "description": "One job.",
+        "required": [
+          "id",
+          "host",
+          "port",
+          "ssh_user",
+          "node_name",
+          "status",
+          "phase",
+          "log",
+          "started_at",
+          "updated_at"
+        ],
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "The server's address."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id."
+          },
+          "log": {
+            "type": "string",
+            "description": "The installer's output (the last 64 KB), secrets removed."
+          },
+          "node_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The node, once it has joined."
+          },
+          "node_name": {
+            "type": "string",
+            "description": "The node's name here."
+          },
+          "phase": {
+            "type": "string",
+            "description": "What it is doing: `connecting`, `installing`, `joining`, `joined`, or what went wrong."
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Its SSH port."
+          },
+          "ssh_user": {
+            "type": "string",
+            "description": "The login used."
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start (RFC 3339)."
+          },
+          "status": {
+            "type": "string",
+            "description": "`running`, `completed` or `failed`."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last change (RFC 3339)."
           }
         }
       },
@@ -36004,6 +36582,30 @@
           }
         }
       },
+      "SkippedAccount": {
+        "type": "object",
+        "description": "An account that was not moved.",
+        "required": [
+          "tenant_id",
+          "username",
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why."
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The account."
+          },
+          "username": {
+            "type": "string",
+            "description": "Its name on the server."
+          }
+        }
+      },
       "SmtpRequest": {
         "type": "object",
         "description": "The mail server, to set.",
@@ -36505,6 +37107,46 @@
             "format": "int64",
             "description": "Size of the file in bytes (as uploaded: compressed, if it is).",
             "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "StartRequest": {
+        "type": "object",
+        "description": "Start moving a server.",
+        "required": [
+          "host",
+          "password",
+          "host_key_sha256",
+          "node_name"
+        ],
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "The new server's address."
+          },
+          "host_key_sha256": {
+            "type": "string",
+            "description": "The fingerprint `probe` showed."
+          },
+          "node_name": {
+            "type": "string",
+            "description": "The node's name in this panel: 2-63 characters, a-z, 0-9 and `-`, starting with a letter.",
+            "example": "new-server"
+          },
+          "password": {
+            "type": "string",
+            "description": "The password."
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Its SSH port.",
+            "minimum": 0
+          },
+          "user": {
+            "type": "string",
+            "description": "The login (`root`, or a user that can run `sudo` without a password)."
           }
         },
         "additionalProperties": false

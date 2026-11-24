@@ -1294,12 +1294,14 @@ dependencies = [
 name = "builtpanel-mod-nodes"
 version = "0.1.20"
 dependencies = [
+ "anyhow",
  "axum",
  "base64 0.23.1",
  "builtpanel-audit",
  "builtpanel-cache",
  "builtpanel-database",
  "builtpanel-http-kit",
+ "builtpanel-mod-migration",
  "builtpanel-node-gateway",
  "builtpanel-node-protocol",
  "builtpanel-operations",
@@ -1307,7 +1309,9 @@ dependencies = [
  "builtpanel-rbac",
  "builtpanel-session",
  "getrandom 0.4.3",
+ "rand 0.10.3",
  "rcgen",
+ "russh",
  "secrecy",
  "serde",
  "serde_json",

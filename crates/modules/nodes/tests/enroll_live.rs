@@ -77,6 +77,7 @@ fn env(pool: &PgPool, with_ca: bool) -> Env {
             gateway: None,
             operations: builtpanel_operations::Operations::new(pool.clone()),
             audit: builtpanel_audit::AuditWriter::new(pool.clone()),
+            migrate: Default::default(),
         })
         .layer(axum::middleware::from_fn_with_state(
             Arc::<[std::net::IpAddr]>::from(Vec::new()),

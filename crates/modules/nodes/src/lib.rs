@@ -23,6 +23,7 @@
 
 pub mod enroll;
 pub mod operations;
+pub mod server_migration;
 pub mod token;
 
 use std::{sync::Arc, time::Duration};
@@ -85,6 +86,8 @@ pub struct NodesState {
     pub operations: builtpanel_operations::Operations,
     /// Audit log for outcomes that have no transaction of their own.
     pub audit: AuditWriter,
+    /// Setting up a whole new server over SSH (System, Migrate).
+    pub migrate: server_migration::MigrateSettings,
 }
 
 /// Failed enrollment attempts from one address (an IPv6 /64) allowed inside
@@ -149,6 +152,26 @@ pub fn router() -> Router<NodesState> {
         .route(
             "/api/v1/admin/nodes/enrollments/{id}",
             delete(revoke_enrollment),
+        )
+        .route(
+            "/api/v1/admin/system/migrate",
+            get(server_migration::list).post(server_migration::start),
+        )
+        .route(
+            "/api/v1/admin/system/migrate/probe",
+            axum::routing::post(server_migration::probe),
+        )
+        .route(
+            "/api/v1/admin/system/migrate/check",
+            axum::routing::post(server_migration::check),
+        )
+        .route(
+            "/api/v1/admin/system/migrate/{id}",
+            get(server_migration::show),
+        )
+        .route(
+            "/api/v1/admin/system/migrate/{id}/move-accounts",
+            axum::routing::post(server_migration::move_accounts),
         )
         .route(
             "/api/v1/public/nodes/enroll",
@@ -309,9 +332,67 @@ fn valid_node_name(name: &str) -> bool {
         && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
-/// Where the one-command installer is published (the same release channel as the panel itself).
-const NODE_INSTALLER_URL: &str =
-    "https://github.com/khairulalamruet-ai/DPanel/releases/latest/download/get.sh";
+/// Issues a one-time enrollment token for a new node: checks the license's node limit and the name, stores the
+/// token's hash and writes the audit entry. Returns the stored record and the token text (shown once).
+///
+/// # Errors
+/// `license_limit` and `node_name_taken` (409), or an internal error.
+pub(crate) async fn issue_enrollment(
+    state: &NodesState,
+    account_id: Uuid,
+    name: &str,
+) -> Result<(node_enrollments::EnrollmentToken, String), AppError> {
+    let (secret, hash) = token::generate().map_err(internal)?;
+    let ttl_secs = i64::try_from(state.token_ttl.as_secs()).map_err(internal)?;
+
+    let mut tx = state.db.begin().await.map_err(internal)?;
+    // The license's node limit: the nodes there are, and the tokens waiting to become nodes.
+    let counted = builtpanel_database::sqlx::query_scalar::<_, i64>(
+        "SELECT (SELECT count(*) FROM nodes WHERE status <> 'revoked')
+              + (SELECT count(*) FROM node_enrollment_tokens
+                 WHERE consumed_at IS NULL AND revoked_at IS NULL AND expires_at > now())",
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(internal)?;
+    if let Some(reached) =
+        builtpanel_database::license::check_limit(&mut tx, "max_nodes", counted + 1)
+            .await
+            .map_err(internal)?
+    {
+        return Err(AppError::conflict(
+            "license_limit",
+            format!(
+                "This license allows {} node(s). Remove one or upgrade the license.",
+                reached.limit
+            ),
+        ));
+    }
+    if node_enrollments::name_in_use(&mut tx, name)
+        .await
+        .map_err(internal)?
+    {
+        return Err(AppError::conflict(
+            "node_name_taken",
+            "A node or an unused enrollment token already has this name.",
+        ));
+    }
+    let created = node_enrollments::insert_token(&mut tx, name, &hash, account_id, ttl_secs)
+        .await
+        .map_err(internal)?;
+    builtpanel_audit::insert(
+        &mut *tx,
+        &AuditEntry::new("admin.node_enrollment_created", Outcome::Success)
+            .actor(account_id)
+            .target("node_enrollment", created.id)
+            .metadata(serde_json::json!({ "name": name, "expires_in": ttl_secs })),
+    )
+    .await
+    .map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+
+    Ok((created, secret.expose_secret().to_owned()))
+}
 
 /// Add a node: creates a one-time enrollment token.
 #[utoipa::path(
@@ -342,56 +423,7 @@ pub async fn create_enrollment(
             "Use 2-63 characters: a-z, 0-9 and '-', starting with a letter.",
         )]));
     }
-    let (secret, hash) = token::generate().map_err(internal)?;
-    let ttl_secs = i64::try_from(state.token_ttl.as_secs()).map_err(internal)?;
-
-    let mut tx = state.db.begin().await.map_err(internal)?;
-    // The license's node limit: the nodes there are, and the tokens waiting to become nodes.
-    let counted = builtpanel_database::sqlx::query_scalar::<_, i64>(
-        "SELECT (SELECT count(*) FROM nodes WHERE status <> 'revoked')
-              + (SELECT count(*) FROM node_enrollment_tokens
-                 WHERE consumed_at IS NULL AND revoked_at IS NULL AND expires_at > now())",
-    )
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(internal)?;
-    if let Some(reached) =
-        builtpanel_database::license::check_limit(&mut tx, "max_nodes", counted + 1)
-            .await
-            .map_err(internal)?
-    {
-        return Err(AppError::conflict(
-            "license_limit",
-            format!(
-                "This license allows {} node(s). Remove one or upgrade the license.",
-                reached.limit
-            ),
-        ));
-    }
-    if node_enrollments::name_in_use(&mut tx, &name)
-        .await
-        .map_err(internal)?
-    {
-        return Err(AppError::conflict(
-            "node_name_taken",
-            "A node or an unused enrollment token already has this name.",
-        ));
-    }
-    let created = node_enrollments::insert_token(&mut tx, &name, &hash, who.account_id(), ttl_secs)
-        .await
-        .map_err(internal)?;
-    builtpanel_audit::insert(
-        &mut *tx,
-        &AuditEntry::new("admin.node_enrollment_created", Outcome::Success)
-            .actor(who.account_id())
-            .target("node_enrollment", created.id)
-            .metadata(serde_json::json!({ "name": name, "expires_in": ttl_secs })),
-    )
-    .await
-    .map_err(internal)?;
-    tx.commit().await.map_err(internal)?;
-
-    let token_text = secret.expose_secret().to_owned();
+    let (created, token_text) = issue_enrollment(&state, who.account_id(), &name).await?;
     // The CA fingerprint lets the agent pin the control plane's CA instead of
     // trusting whoever answers at that address.
     let pin = state
@@ -406,8 +438,9 @@ pub async fn create_enrollment(
     // The same join as one command for a blank server. The token travels in the environment of the
     // installer (not on its command line), so it is not shown in the process list.
     let install_command = state.public_url.as_deref().zip(state.ca.as_deref()).map(|(url, ca)| {
+        let installer = &state.migrate.installer_url;
         format!(
-            "curl -fsSL {NODE_INSTALLER_URL} | sudo BUILTPANEL_ENROLL_TOKEN={token_text} bash -s -- --join-server {url} --join-fingerprint sha256:{}",
+            "curl -fsSL {installer} | sudo BUILTPANEL_ENROLL_TOKEN={token_text} bash -s -- --join-server {url} --join-fingerprint sha256:{}",
             ca.fingerprint_sha256()
         )
     });
@@ -603,10 +636,12 @@ pub async fn revoke_node(
 /// OpenAPI fragment (full paths; merge into the root document).
 #[derive(OpenApi)]
 #[openapi(
-    paths(operations::list_operations, operations::get_operation, operations::retry_operation, operations::ping_node, list_nodes, create_enrollment, list_enrollments, revoke_enrollment, revoke_node, enroll::enroll_node),
+    paths(operations::list_operations, operations::get_operation, operations::retry_operation, operations::ping_node, list_nodes, create_enrollment, list_enrollments, revoke_enrollment, revoke_node, enroll::enroll_node, server_migration::probe, server_migration::check, server_migration::start, server_migration::list, server_migration::show, server_migration::move_accounts),
     components(schemas(
         CreateEnrollment, CreatedEnrollment, EnrollmentView, EnrollmentList, NodeView, NodeList, RevokedNode, operations::OperationView, operations::OperationList,
-        enroll::EnrollRequest, enroll::EnrollResponse
+        enroll::EnrollRequest, enroll::EnrollResponse,
+        server_migration::ProbeRequest, server_migration::ProbeView, server_migration::LoginRequest, server_migration::StartRequest,
+        server_migration::MoveRequest, server_migration::ServerFacts, server_migration::ServerMigrationView, server_migration::SkippedAccount, server_migration::MoveView
     )),
     tags((name = "nodes", description = "Add and manage servers (nodes)"))
 )]

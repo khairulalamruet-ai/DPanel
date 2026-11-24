@@ -265,6 +265,7 @@ async fn main() -> ExitCode {
         gateway: gateway.as_ref().map(|(gateway, _)| gateway.clone()),
         operations: operations.clone(),
         audit: builtpanel_audit::AuditWriter::new(db.clone()),
+        migrate: Default::default(),
     };
     let admin = builtpanel_mod_admin::AdminState {
         db: db.clone(),

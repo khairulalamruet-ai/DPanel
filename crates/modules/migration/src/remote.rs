@@ -177,28 +177,18 @@ impl client::Handler for Check {
     }
 }
 
-/// Copies the file at `source.path` to `dest`. `progress` is told how many bytes are saved,
-/// now and then.
-///
-/// # Errors
-/// [`FetchError`]. A file that was begun is removed when the fetch fails.
-pub async fn fetch(
-    source: Source,
-    dest: &Path,
-    max_bytes: u64,
-    mut progress: impl FnMut(u64) + Send,
-) -> Result<Fetched, FetchError> {
-    let Source {
-        host,
-        port,
-        user,
-        credential,
-        host_key,
-        path,
-        allow_local,
-    } = source;
+/// Connects, checks the host key against `host_key` and logs in. Returns the session and the key
+/// fingerprint the server showed.
+async fn open(
+    host: &str,
+    port: u16,
+    user: &str,
+    credential: Credential,
+    host_key: Option<String>,
+    allow_local: bool,
+) -> Result<(client::Handle<Check>, String), FetchError> {
     let expected = host_key.map(|k| k.trim().to_owned());
-    let found = tokio::net::lookup_host((host.as_str(), port))
+    let found = tokio::net::lookup_host((host, port))
         .await
         .map_err(|e| FetchError::Connect(e.to_string()))?
         .collect::<Vec<SocketAddr>>();
@@ -268,6 +258,126 @@ pub async fn fetch(
     if !login.success() {
         return Err(FetchError::Login);
     }
+    Ok((session, host_key))
+}
+
+/// The host key fingerprint (`SHA256:...`) a server shows, without sending it anything: the connection is
+/// refused at the key exchange, before any login.
+///
+/// # Errors
+/// [`FetchError::Refused`] for an address the panel may not connect to, [`FetchError::Connect`] when the
+/// server cannot be reached.
+pub async fn probe_host_key(
+    host: &str,
+    port: u16,
+    allow_local: bool,
+) -> Result<String, FetchError> {
+    match open(
+        host,
+        port,
+        "probe",
+        Credential::Password(SecretString::from(String::new())),
+        None,
+        allow_local,
+    )
+    .await
+    {
+        Err(FetchError::UnknownHostKey(got)) => Ok(got),
+        Err(e) => Err(e),
+        Ok(_) => Err(FetchError::Connect(
+            "the server did not show its key".to_owned(),
+        )),
+    }
+}
+
+/// What a command ended with.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Ran {
+    /// Its exit status (`None` when the server sent none).
+    pub status: Option<u32>,
+}
+
+/// Runs one command on the server and hands every line of its output (stdout and stderr together) to
+/// `on_line`, as it arrives. Only the output reaches `on_line`: the command text is never reported.
+///
+/// # Errors
+/// [`FetchError`] (the login or the host key), or [`FetchError::Remote`] when the command cannot be
+/// started or the server goes silent for too long.
+pub async fn run(
+    source: Source,
+    command: &str,
+    mut on_line: impl FnMut(&str) + Send,
+) -> Result<Ran, FetchError> {
+    let Source {
+        host,
+        port,
+        user,
+        credential,
+        host_key,
+        allow_local,
+        ..
+    } = source;
+    let (session, _) = open(&host, port, &user, credential, host_key, allow_local).await?;
+    let remote = |e: &dyn std::fmt::Display| FetchError::Remote(e.to_string());
+    let mut channel = session
+        .channel_open_session()
+        .await
+        .map_err(|e| remote(&e))?;
+    channel.exec(true, command).await.map_err(|e| remote(&e))?;
+    let mut pending = Vec::<u8>::new();
+    let mut status = None;
+    let flush = |pending: &mut Vec<u8>, on_line: &mut dyn FnMut(&str), all: bool| {
+        while let Some(at) = pending.iter().position(|b| *b == b'\n') {
+            let line: Vec<u8> = pending.drain(..=at).collect();
+            on_line(String::from_utf8_lossy(&line[..line.len() - 1]).trim_end_matches('\r'));
+        }
+        if all && !pending.is_empty() {
+            let line = std::mem::take(pending);
+            on_line(&String::from_utf8_lossy(&line));
+        }
+    };
+    while let Some(msg) = channel.wait().await {
+        match msg {
+            russh::ChannelMsg::Data { data } => {
+                pending.extend_from_slice(&data);
+                flush(&mut pending, &mut on_line, false);
+            }
+            russh::ChannelMsg::ExtendedData { data, .. } => {
+                pending.extend_from_slice(&data);
+                flush(&mut pending, &mut on_line, false);
+            }
+            russh::ChannelMsg::ExitStatus { exit_status } => status = Some(exit_status),
+            _ => {}
+        }
+    }
+    flush(&mut pending, &mut on_line, true);
+    let _ = session
+        .disconnect(russh::Disconnect::ByApplication, "", "en")
+        .await;
+    Ok(Ran { status })
+}
+
+/// Copies the file at `source.path` to `dest`. `progress` is told how many bytes are saved,
+/// now and then.
+///
+/// # Errors
+/// [`FetchError`]. A file that was begun is removed when the fetch fails.
+pub async fn fetch(
+    source: Source,
+    dest: &Path,
+    max_bytes: u64,
+    mut progress: impl FnMut(u64) + Send,
+) -> Result<Fetched, FetchError> {
+    let Source {
+        host,
+        port,
+        user,
+        credential,
+        host_key,
+        path,
+        allow_local,
+    } = source;
+    let (session, host_key) = open(&host, port, &user, credential, host_key, allow_local).await?;
     let remote = |e: &dyn std::fmt::Display| FetchError::Remote(e.to_string());
     let channel = session
         .channel_open_session()

@@ -94,6 +94,7 @@ async fn app(pool: &PgPool, spool: &std::path::Path) -> App {
         gateway: None,
         operations: builtpanel_operations::Operations::new(pool.clone()),
         audit: builtpanel_audit::AuditWriter::new(pool.clone()),
+        migrate: Default::default(),
     };
     let license = Arc::new(
         builtpanel_mod_license::service::LicenseService::new(

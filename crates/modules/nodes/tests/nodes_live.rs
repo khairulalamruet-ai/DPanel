@@ -59,6 +59,7 @@ fn env(pool: &PgPool, public_url: Option<&str>, sudo_secs: u64) -> Env {
             gateway: None,
             operations: builtpanel_operations::Operations::new(pool.clone()),
             audit: builtpanel_audit::AuditWriter::new(pool.clone()),
+            migrate: Default::default(),
         })
         .layer(MockConnectInfo(std::net::SocketAddr::from((
             [198, 51, 100, 7],

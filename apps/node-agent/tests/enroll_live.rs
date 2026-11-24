@@ -74,6 +74,7 @@ async fn control_plane(pool: &PgPool) -> Control {
         gateway: None,
         operations: builtpanel_operations::Operations::new(pool.clone()),
         audit: builtpanel_audit::AuditWriter::new(pool.clone()),
+        migrate: Default::default(),
     };
     let app = router()
         .with_state(state)
