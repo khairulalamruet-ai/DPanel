@@ -352,97 +352,173 @@ async fn main() -> ExitCode {
         modules = %settings.modules().map(|m| m.module.as_str()).collect::<Vec<_>>().join(", "),
         "settings schemas valid"
     );
-    // What the notification channels are to get is sent every half minute (and the inboxes of what
-    // is old are cleared once a day).
-    tokio::spawn({
-        let state = builtpanel_mod_notifications::NotificationsState {
+    // What the notification channels are to get is sent every half minute, and the inboxes of what is old
+    // are cleared once a day. Like every job below, an administrator can change how often it runs
+    // (Server, Scheduled actions).
+    {
+        use builtpanel_mod_system::jobs::{Spec, spawn};
+        use std::time::Duration;
+        let state = Arc::new(builtpanel_mod_notifications::NotificationsState {
             db: db.clone(),
             sessions: notify_sessions,
             settings: Arc::new(std::sync::OnceLock::from(settings.clone())),
             master_key: notify_key,
-        };
-        async move {
-            let mut every = tokio::time::interval(std::time::Duration::from_secs(30));
-            every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            let mut rounds = 0_u32;
-            loop {
-                every.tick().await;
-                builtpanel_mod_notifications::deliver_due(&state).await;
-                rounds = rounds.wrapping_add(1);
-                if rounds % 2880 == 1
-                    && let Err(error) =
-                        builtpanel_database::notifications::prune(&state.db, 90).await
-                {
-                    tracing::warn!(%error, "could not clear the old notifications");
+        });
+        spawn(
+            db.clone(),
+            Spec {
+                key: "notifications_delivery",
+                title: "Send notifications",
+                description: "Sends what the notification channels (mail and others) are waiting for.",
+                default_interval: Duration::from_secs(30),
+                min_interval: Duration::from_secs(10),
+            },
+            {
+                let state = state.clone();
+                move || {
+                    let state = state.clone();
+                    async move {
+                        builtpanel_mod_notifications::deliver_due(&state).await;
+                        Ok(())
+                    }
                 }
-            }
-        }
-    });
+            },
+        );
+        spawn(
+            db.clone(),
+            Spec {
+                key: "notifications_cleanup",
+                title: "Clear old notifications",
+                description: "Removes the notifications that are older than 90 days.",
+                default_interval: Duration::from_secs(24 * 3600),
+                min_interval: Duration::from_secs(3600),
+            },
+            move || {
+                let state = state.clone();
+                async move {
+                    builtpanel_database::notifications::prune(&state.db, 90)
+                        .await
+                        .map(|_| ())
+                        .map_err(|e| e.to_string())
+                }
+            },
+        );
+    }
     // Imports that were running when the panel last stopped cannot go on by themselves.
     if let Err(error) = builtpanel_mod_migration::exec::end_interrupted(&db).await {
         tracing::warn!(%error, "could not end the imports that were interrupted");
     }
-    // Uploaded dumps nobody needs any more are removed; forgotten uploads are cancelled.
-    tokio::spawn({
-        let (db, spool_dir) = (db.clone(), config.imports.spool_dir.clone());
-        async move {
-            let mut every = tokio::time::interval(std::time::Duration::from_secs(120));
-            every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                every.tick().await;
-                if let Err(error) = builtpanel_mod_databases::imports::sweep(&db, &spool_dir).await
-                {
-                    tracing::warn!(%error, "could not sweep the import spool");
+    {
+        use builtpanel_mod_system::jobs::{Spec, spawn};
+        use std::time::Duration;
+        let spool_dir = config.imports.spool_dir.clone();
+        spawn(
+            db.clone(),
+            Spec {
+                key: "spool_sweep",
+                title: "Clean up uploads",
+                description: "Removes uploaded dumps nobody needs any more and cancels forgotten uploads and file transfers.",
+                default_interval: Duration::from_secs(120),
+                min_interval: Duration::from_secs(30),
+            },
+            {
+                let db = db.clone();
+                move || {
+                    let (db, spool_dir) = (db.clone(), spool_dir.clone());
+                    async move {
+                        let mut failed = Vec::new();
+                        if let Err(error) =
+                            builtpanel_mod_databases::imports::sweep(&db, &spool_dir).await
+                        {
+                            failed.push(format!("import spool: {error}"));
+                        }
+                        if let Err(error) =
+                            builtpanel_mod_files::transfers::sweep(&db, &spool_dir).await
+                        {
+                            failed.push(format!("file transfers: {error}"));
+                        }
+                        if failed.is_empty() {
+                            Ok(())
+                        } else {
+                            Err(failed.join("; "))
+                        }
+                    }
                 }
-                if let Err(error) = builtpanel_mod_files::transfers::sweep(&db, &spool_dir).await {
-                    tracing::warn!(%error, "could not sweep the file transfers");
-                }
-            }
-        }
-    });
-    // Scheduled backups are made, and the old ones removed (T09.07).
-    tokio::spawn({
-        let db = db.clone();
-        let system = system_backup::Executor::new(
+            },
+        );
+    }
+    {
+        use builtpanel_mod_system::jobs::{Spec, spawn};
+        use std::time::Duration;
+        let system = Arc::new(system_backup::Executor::new(
             db.clone(),
             system_key,
             std::sync::Arc::new(config.clone()),
             config.imports.spool_dir.join("system-backup"),
+        ));
+        let runner_key = Arc::new(runner_key);
+        spawn(
+            db.clone(),
+            Spec {
+                key: "backup_runner",
+                title: "Backups",
+                description: "Makes the backups that are due, removes the old ones, moves accounts between nodes and makes the panel's own backup.",
+                default_interval: Duration::from_secs(30),
+                min_interval: Duration::from_secs(10),
+            },
+            {
+                let db = db.clone();
+                move || {
+                    let (db, system, runner_key) = (db.clone(), system.clone(), runner_key.clone());
+                    async move {
+                        let now = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0));
+                        let mut failed = Vec::new();
+                        if let Err(error) =
+                            builtpanel_mod_backups::runner::tick(&db, &runner_key, now).await
+                        {
+                            failed.push(format!("backup runner: {error}"));
+                        }
+                        if let Err(error) =
+                            builtpanel_mod_backups::transfer::tick(&db, &runner_key).await
+                        {
+                            failed.push(format!("node transfers: {error}"));
+                        }
+                        system.run().await;
+                        if failed.is_empty() {
+                            Ok(())
+                        } else {
+                            Err(failed.join("; "))
+                        }
+                    }
+                }
+            },
         );
-        async move {
-            let mut every = tokio::time::interval(std::time::Duration::from_secs(30));
-            every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                every.tick().await;
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0));
-                if let Err(error) =
-                    builtpanel_mod_backups::runner::tick(&db, &runner_key, now).await
-                {
-                    tracing::warn!(%error, "the backup runner could not finish a round");
-                }
-                if let Err(error) = builtpanel_mod_backups::transfer::tick(&db, &runner_key).await {
-                    tracing::warn!(%error, "the node transfers could not finish a round");
-                }
-                system.run().await;
-            }
-        }
-    });
+    }
     // Usage readings are rolled up into hours, and old ones removed (T10.09).
-    tokio::spawn({
-        let db = db.clone();
-        async move {
-            let mut every = tokio::time::interval(std::time::Duration::from_secs(900));
-            every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                every.tick().await;
-                if let Err(error) = builtpanel_database::usage::maintain(&db).await {
-                    tracing::warn!(%error, "could not roll up the usage readings");
+    builtpanel_mod_system::jobs::spawn(
+        db.clone(),
+        builtpanel_mod_system::jobs::Spec {
+            key: "usage_rollup",
+            title: "Roll up usage",
+            description: "Rolls the usage readings up into hours and removes the old ones.",
+            default_interval: std::time::Duration::from_secs(900),
+            min_interval: std::time::Duration::from_secs(60),
+        },
+        {
+            let db = db.clone();
+            move || {
+                let db = db.clone();
+                async move {
+                    builtpanel_database::usage::maintain(&db)
+                        .await
+                        .map(|_| ())
+                        .map_err(|e| e.to_string())
                 }
             }
-        }
-    });
+        },
+    );
     // The panel's own update: looks for a new release now and then, tells the administrators about
     // it, and installs it by itself when the settings (system module) say so.
     tokio::spawn(builtpanel_mod_system::update::run_auto(
@@ -451,37 +527,59 @@ async fn main() -> ExitCode {
         std::sync::Arc::new(builtpanel_mod_system::update::UpdateConfig::from_env()),
     ));
     // What has been in the accounts' trash longer than the setting says goes for good.
-    tokio::spawn({
-        let (db, settings) = (db.clone(), settings.clone());
-        async move {
-            let mut every = tokio::time::interval(std::time::Duration::from_secs(3600));
-            every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                every.tick().await;
-                if let Err(error) = builtpanel_mod_files::purge_trash(&db, &settings).await {
-                    tracing::warn!(%error, "could not queue the trash purges");
-                }
-                if let Err(error) = builtpanel_mod_files::measure_usage(&db).await {
-                    tracing::warn!(%error, "could not queue the disk usage measurements");
+    builtpanel_mod_system::jobs::spawn(
+        db.clone(),
+        builtpanel_mod_system::jobs::Spec {
+            key: "trash_and_disk_usage",
+            title: "Empty trash and measure disk use",
+            description: "Removes what has been in the accounts' trash for too long and measures how much disk each account uses.",
+            default_interval: std::time::Duration::from_secs(3600),
+            min_interval: std::time::Duration::from_secs(300),
+        },
+        {
+            let (db, settings) = (db.clone(), settings.clone());
+            move || {
+                let (db, settings) = (db.clone(), settings.clone());
+                async move {
+                    let mut failed = Vec::new();
+                    if let Err(error) = builtpanel_mod_files::purge_trash(&db, &settings).await {
+                        failed.push(format!("trash: {error}"));
+                    }
+                    if let Err(error) = builtpanel_mod_files::measure_usage(&db).await {
+                        failed.push(format!("disk usage: {error}"));
+                    }
+                    if failed.is_empty() {
+                        Ok(())
+                    } else {
+                        Err(failed.join("; "))
+                    }
                 }
             }
-        }
-    });
+        },
+    );
     // Mail: what the mail servers have to be told, the DNS records mail needs, and the hold of a
     // domain that sends too much (T13).
-    tokio::spawn({
-        let (db, settings) = (db.clone(), settings.clone());
-        async move {
-            let mut every = tokio::time::interval(std::time::Duration::from_secs(15));
-            every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                every.tick().await;
-                if let Err(error) = builtpanel_mod_mail::tick::tick(&db, &settings).await {
-                    tracing::warn!(%error, "the mail tick could not finish a round");
+    builtpanel_mod_system::jobs::spawn(
+        db.clone(),
+        builtpanel_mod_system::jobs::Spec {
+            key: "mail_tick",
+            title: "Mail servers",
+            description: "Tells the mail servers what changed, keeps the DNS records mail needs and holds a domain that sends too much.",
+            default_interval: std::time::Duration::from_secs(15),
+            min_interval: std::time::Duration::from_secs(5),
+        },
+        {
+            let (db, settings) = (db.clone(), settings.clone());
+            move || {
+                let (db, settings) = (db.clone(), settings.clone());
+                async move {
+                    builtpanel_mod_mail::tick::tick(&db, &settings)
+                        .await
+                        .map_err(|e| e.to_string())
                 }
             }
-        }
-    });
+        },
+    );
     tokio::spawn(modules::follow_enabled(
         db.clone(),
         mount.clone(),

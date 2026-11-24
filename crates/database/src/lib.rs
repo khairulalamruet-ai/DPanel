@@ -56,6 +56,7 @@ pub mod runtime_apps;
 pub mod server_migrations;
 pub mod settings;
 pub mod skeleton;
+pub mod system_jobs;
 pub mod tenant_db;
 pub mod tenants;
 pub mod transfers;

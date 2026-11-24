@@ -10564,6 +10564,257 @@
         ]
       }
     },
+    "/api/v1/admin/system/jobs": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "The panel's background jobs.",
+        "operationId": "listSystemJobs",
+        "responses": {
+          "200": {
+            "description": "By title",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JobView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.server.read)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/system/jobs/{key}": {
+      "put": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Change how often a job runs, or switch it on or off.",
+        "operationId": "updateSystemJob",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "Job name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The job as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such job",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A repeat time below the job's shortest or above 30 days",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/system/jobs/{key}/run": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Run a job at once (it starts within a couple of seconds, whether or not it is switched on).",
+        "operationId": "runSystemJob",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "Job name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Asked for",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such job",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`job_running`: a run is going on",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/system/jobs/{key}/runs": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "The last runs of a job, the newest first.",
+        "operationId": "listSystemJobRuns",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "Job name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "At most fifty",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunView"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such job",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/system/migrate": {
       "get": {
         "tags": [
@@ -10921,6 +11172,45 @@
           },
           "409": {
             "description": "`migration_not_done`, `node_unavailable`, `same_node` or `no_backup_destination`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/system/tasks": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "What is going on now and what is about to: running jobs, jobs that are due, and the operations waiting\nfor a node or being done by one.",
+        "operationId": "listSystemTasks",
+        "responses": {
+          "200": {
+            "description": "Running first, then by time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`permission_denied` (needs admin.server.read)",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -32501,72 +32791,124 @@
         },
         "additionalProperties": false
       },
-      "JobView": {
+      "JobUpdate": {
         "type": "object",
-        "description": "A job.",
-        "required": [
-          "id",
-          "name",
-          "schedule",
-          "command",
-          "enabled",
-          "timeout_seconds"
-        ],
+        "description": "A change to a job. What is absent stays.",
         "properties": {
-          "command": {
-            "type": "string",
-            "description": "The command line."
-          },
           "enabled": {
-            "type": "boolean",
-            "description": "Whether it runs."
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Switch it on or off."
           },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Id."
-          },
-          "last_exit_code": {
+          "interval_seconds": {
             "type": [
               "integer",
               "null"
             ],
             "format": "int32",
-            "description": "The exit code of the last run."
+            "description": "Seconds between two runs."
           },
-          "last_output": {
+          "reset_interval": {
+            "type": "boolean",
+            "description": "Put the repeat time back to what the job came with (instead of `interval_seconds`)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "JobView": {
+        "type": "object",
+        "description": "One job.",
+        "required": [
+          "key",
+          "title",
+          "description",
+          "interval_seconds",
+          "default_interval_seconds",
+          "min_interval_seconds",
+          "enabled",
+          "running",
+          "run_count"
+        ],
+        "properties": {
+          "default_interval_seconds": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The repeat time it came with."
+          },
+          "description": {
+            "type": "string",
+            "description": "What it does."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether it runs by itself."
+          },
+          "interval_seconds": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The repeat time now, in seconds."
+          },
+          "key": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "last_error": {
             "type": [
               "string",
               "null"
             ],
-            "description": "The end of the last run's output."
+            "description": "What the last failure said."
           },
-          "last_run_at": {
+          "last_finished_at": {
             "type": [
               "string",
               "null"
             ],
-            "description": "When it last ran."
+            "format": "date-time",
+            "description": "When it last ended (RFC 3339)."
+          },
+          "last_started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When it last started (RFC 3339)."
           },
           "last_status": {
             "type": [
               "string",
               "null"
             ],
-            "description": "`ok`, `failed`, `timeout` or `skipped`."
+            "description": "`ok` or `error` (absent before the first run)."
           },
-          "name": {
-            "type": "string",
-            "description": "Its name."
-          },
-          "schedule": {
-            "type": "string",
-            "description": "Five-field schedule (UTC)."
-          },
-          "timeout_seconds": {
+          "min_interval_seconds": {
             "type": "integer",
             "format": "int32",
-            "description": "Stopped after this many seconds."
+            "description": "The shortest repeat time that may be set."
+          },
+          "next_run_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When it runs next (RFC 3339); absent while it is switched off or running."
+          },
+          "run_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Runs so far."
+          },
+          "running": {
+            "type": "boolean",
+            "description": "Whether a run is going on."
+          },
+          "title": {
+            "type": "string",
+            "description": "What the list calls it."
           }
         }
       },
@@ -35842,6 +36184,41 @@
           }
         }
       },
+      "RunView": {
+        "type": "object",
+        "description": "One past run.",
+        "required": [
+          "started_at",
+          "finished_at",
+          "ok",
+          "manual",
+          "message"
+        ],
+        "properties": {
+          "finished_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End (RFC 3339)."
+          },
+          "manual": {
+            "type": "boolean",
+            "description": "Whether an administrator started it."
+          },
+          "message": {
+            "type": "string",
+            "description": "What it said (the failure when there was one)."
+          },
+          "ok": {
+            "type": "boolean",
+            "description": "Whether it went well."
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start (RFC 3339)."
+          }
+        }
+      },
       "RuntimeAppList": {
         "type": "object",
         "description": "The account's applications.",
@@ -38514,6 +38891,44 @@
             "format": "int64",
             "description": "Data and index size, in bytes.",
             "minimum": 0
+          }
+        }
+      },
+      "TaskView": {
+        "type": "object",
+        "description": "Something that is going on, or about to.",
+        "required": [
+          "kind",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Since when it runs, or when it runs next (RFC 3339)."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`job` (a background job of the panel) or `operation` (work on its way to a node)."
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is."
+          },
+          "node": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where (a node's name), for an operation."
+          },
+          "status": {
+            "type": "string",
+            "description": "`running`, `scheduled`, `waiting` (an operation for a node that has not taken it yet) or `working`."
           }
         }
       },

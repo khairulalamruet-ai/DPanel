@@ -25,6 +25,7 @@
 //!   transaction.
 
 pub mod bootstrap;
+pub mod jobs;
 pub mod search;
 pub mod update;
 
@@ -33,7 +34,7 @@ use std::{collections::BTreeSet, sync::Arc};
 use axum::{
     Json, Router,
     extract::{FromRef, Path, State},
-    routing::{get, put},
+    routing::{get, post, put},
 };
 use builtpanel_audit::{AuditEntry, Outcome};
 use builtpanel_database::{modules as db, sqlx::PgPool};
@@ -88,6 +89,11 @@ pub fn router() -> Router<SystemState> {
         .route("/api/v1/admin/modules", get(list_modules))
         .route("/api/v1/admin/modules/{name}", put(set_module))
         .route("/api/v1/admin/system-logs", get(system_logs))
+        .route("/api/v1/admin/system/jobs", get(jobs::list))
+        .route("/api/v1/admin/system/jobs/{key}", put(jobs::update))
+        .route("/api/v1/admin/system/jobs/{key}/run", post(jobs::run_now))
+        .route("/api/v1/admin/system/jobs/{key}/runs", get(jobs::runs))
+        .route("/api/v1/admin/system/tasks", get(jobs::tasks))
         .route("/api/v1/admin/settings", get(list_settings))
         .route(
             "/api/v1/admin/settings/{module}",
@@ -710,14 +716,16 @@ pub async fn put_settings(
 #[openapi(
     paths(
         bootstrap::admin_bootstrap, bootstrap::client_bootstrap, bootstrap::public_branding, search::search, system_logs, list_modules, set_module, list_settings, get_settings,
-        put_settings, update::status, update::check, update::apply
+        put_settings, update::status, update::check, update::apply, jobs::list, jobs::update, jobs::run_now,
+        jobs::runs, jobs::tasks
     ),
     components(schemas(
         ModuleView, ModuleList, SetModule, ModuleChange, SettingsView, SettingsList, PutSettings,
         SettingsChange, SystemLogLine, SystemLogList, bootstrap::Bootstrap, bootstrap::BootstrapUser, bootstrap::BootstrapMfa,
         bootstrap::BootstrapNav, bootstrap::BootstrapModule, bootstrap::Branding, search::SearchHit,
         update::UpdateStatus, update::UpdateOffer, update::UpdateRun, update::UpdateHistoryItem,
-        update::CheckResult, update::ApplyUpdate, update::ApplyStarted
+        update::CheckResult, update::ApplyUpdate, update::ApplyStarted, jobs::JobView, jobs::RunView,
+        jobs::JobUpdate, jobs::TaskView
     )),
     tags((name = "system", description = "Modules and settings"))
 )]
