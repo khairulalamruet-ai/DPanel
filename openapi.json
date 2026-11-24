@@ -8422,6 +8422,144 @@
         ]
       }
     },
+    "/api/v1/admin/nodes/{id}/terminal": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Opens a terminal on the node: a WebSocket (see the module's description for its frames). The answer to the\nrequest is `101 Switching Protocols`.",
+        "operationId": "adminTerminal",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "The WebSocket opens; send the login frame first"
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `origin_not_allowed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`too_many_terminals` or `node_address_unknown`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/nodes/{id}/terminal/host-key": {
+      "post": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Shows the host key of the node's SSH server (nothing is sent to it, no password).",
+        "operationId": "adminTerminalHostKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Node id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "The session's csrf_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Where the terminal connects and the key shown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminalTarget"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`reauth_required` (sudo mode), `permission_denied` (needs admin.server.manage) or `csrf_failed`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such node",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`node_address_unknown` or `ssh_unreachable`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/notifications/smtp": {
       "get": {
         "tags": [
@@ -39165,6 +39303,31 @@
             "type": "string",
             "description": "System user name on the node.",
             "example": "alice"
+          }
+        }
+      },
+      "TerminalTarget": {
+        "type": "object",
+        "description": "Where the terminal connects to, and the key the node shows.",
+        "required": [
+          "host",
+          "port",
+          "host_key_sha256"
+        ],
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "The node's address."
+          },
+          "host_key_sha256": {
+            "type": "string",
+            "description": "The host key's SHA-256 fingerprint (`SHA256:...`). Check it before sending a password."
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Its SSH port.",
+            "minimum": 0
           }
         }
       },

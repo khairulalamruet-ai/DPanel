@@ -64,11 +64,13 @@ async fn env(pool: &PgPool, wait: Duration) -> Env {
                     db: pool.clone(),
                     sessions: sessions.clone(),
                     wait,
+                    terminal: Default::default(),
                 })),
                 client: Some(client_router().with_state(ServicesState {
                     db: pool.clone(),
                     sessions: sessions.clone(),
                     wait,
+                    terminal: Default::default(),
                 })),
                 ..ModuleRoutes::none()
             }

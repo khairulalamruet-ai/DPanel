@@ -150,7 +150,8 @@ pub fn allowed(ip: IpAddr, allow_local: bool) -> bool {
     }
 }
 
-struct Check {
+/// Checks the server's host key (opaque: it is only the type of an open session).
+pub struct Check {
     expected: Option<String>,
     seen: Arc<Mutex<Option<String>>>,
 }
@@ -287,6 +288,107 @@ pub async fn probe_host_key(
         Ok(_) => Err(FetchError::Connect(
             "the server did not show its key".to_owned(),
         )),
+    }
+}
+
+/// An interactive shell on another server: a login, a terminal of a given size, and the bytes both ways.
+pub struct Shell {
+    session: client::Handle<Check>,
+    channel: russh::Channel<client::Msg>,
+    /// The host key fingerprint the server showed (`SHA256:...`).
+    pub host_key: String,
+}
+
+/// What a shell says.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ShellEvent {
+    /// Output (standard output and error come together on a terminal).
+    Data(Vec<u8>),
+    /// The shell ended (its exit status, when the server sent one).
+    Ended(Option<u32>),
+}
+
+impl Shell {
+    /// Logs in (the host key must match `source.host_key`) and starts a shell on a terminal of
+    /// `cols` x `rows` characters. `source.path` is not used.
+    ///
+    /// # Errors
+    /// [`FetchError`]; its text never contains the credential.
+    pub async fn open(source: Source, cols: u32, rows: u32) -> Result<Self, FetchError> {
+        let Source {
+            host,
+            port,
+            user,
+            credential,
+            host_key,
+            allow_local,
+            ..
+        } = source;
+        let (session, host_key) =
+            open(&host, port, &user, credential, host_key, allow_local).await?;
+        let remote = |e: &dyn std::fmt::Display| FetchError::Remote(e.to_string());
+        let channel = session
+            .channel_open_session()
+            .await
+            .map_err(|e| remote(&e))?;
+        channel
+            .request_pty(true, "xterm-256color", cols, rows, 0, 0, &[])
+            .await
+            .map_err(|e| remote(&e))?;
+        channel.request_shell(true).await.map_err(|e| remote(&e))?;
+        Ok(Self {
+            session,
+            channel,
+            host_key,
+        })
+    }
+
+    /// Sends keystrokes.
+    ///
+    /// # Errors
+    /// [`FetchError::Remote`] when the connection is gone.
+    pub async fn write(&self, data: &[u8]) -> Result<(), FetchError> {
+        self.channel
+            .data(data)
+            .await
+            .map_err(|e| FetchError::Remote(e.to_string()))
+    }
+
+    /// Tells the server the terminal changed size.
+    ///
+    /// # Errors
+    /// [`FetchError::Remote`] when the connection is gone.
+    pub async fn resize(&self, cols: u32, rows: u32) -> Result<(), FetchError> {
+        self.channel
+            .window_change(cols, rows, 0, 0)
+            .await
+            .map_err(|e| FetchError::Remote(e.to_string()))
+    }
+
+    /// The next thing the shell says; waits for it. Safe to drop and call again.
+    pub async fn next(&mut self) -> ShellEvent {
+        let mut status = None;
+        loop {
+            match self.channel.wait().await {
+                Some(
+                    russh::ChannelMsg::Data { data } | russh::ChannelMsg::ExtendedData { data, .. },
+                ) => {
+                    return ShellEvent::Data(data.to_vec());
+                }
+                Some(russh::ChannelMsg::ExitStatus { exit_status }) => status = Some(exit_status),
+                Some(_) => {}
+                None => return ShellEvent::Ended(status),
+            }
+        }
+    }
+
+    /// Ends the session.
+    pub async fn close(self) {
+        let _ = self.channel.close().await;
+        let _ = self
+            .session
+            .disconnect(russh::Disconnect::ByApplication, "", "en")
+            .await;
     }
 }
 

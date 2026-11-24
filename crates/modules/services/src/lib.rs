@@ -25,6 +25,8 @@
 //! module, decides that (`restart_container`), so another account's container, the node's
 //! database or a name that does not exist all answer `404`.
 
+pub mod terminal;
+
 use std::time::Duration;
 
 use axum::{
@@ -66,6 +68,8 @@ pub struct ServicesState {
     pub sessions: SessionStore,
     /// How long a request waits for the node before answering `202`.
     pub wait: Duration,
+    /// The terminal on a node (Server, Terminal).
+    pub terminal: terminal::TerminalSettings,
 }
 
 impl FromRef<ServicesState> for PgPool {
@@ -95,6 +99,11 @@ pub fn admin_router() -> Router<ServicesState> {
         )
         .route("/api/v1/admin/nodes/{id}/server/reboot", post(reboot_node))
         .route("/api/v1/admin/nodes/{id}/server/drop-swap", post(drop_swap))
+        .route(
+            "/api/v1/admin/nodes/{id}/terminal/host-key",
+            post(terminal::host_key),
+        )
+        .route("/api/v1/admin/nodes/{id}/terminal", get(terminal::terminal))
         .route("/api/v1/admin/nodes/{id}/server/stats", get(server_stats))
         .route(
             "/api/v1/admin/nodes/{id}/server/processes",
@@ -1941,7 +1950,8 @@ pub async fn node_service_log(
     paths(
         list_services, restart_service, list_processes, signal_process, server_info,
         set_timezone, set_swap, drop_caches, drop_swap, server_stats, host_processes, host_process, signal_host_process, reboot_node, node_services, restart_node_service, node_service_log,
-        ssh_access, set_ssh_settings, add_ssh_key, remove_ssh_key, write_sshd_config
+        ssh_access, set_ssh_settings, add_ssh_key, remove_ssh_key, write_sshd_config,
+        terminal::host_key, terminal::terminal
     ),
     components(schemas(
         ServiceView, ServiceList, ServiceRestarted, Pending, ProcessView, ProcessList, SignalRequest,
@@ -1949,7 +1959,7 @@ pub async fn node_service_log(
         ServerActionView, NodeServiceView, NodeServiceList,
         ServiceLogLine, ServiceLog, SshKeyView, SshAccessView, SshSettingsRequest, SshKeyRequest,
         SshKeyRemoveRequest, SshConfigRequest, ServerStatsView, DiskUsageView, DiskIoView, NetIoView,
-        HostProcessView, HostProcessDetailView, HostSignalRequest, HostSignalled
+        HostProcessView, HostProcessDetailView, HostSignalRequest, HostSignalled, terminal::TerminalTarget
     )),
     tags((name = "services", description = "An account's own services"))
 )]

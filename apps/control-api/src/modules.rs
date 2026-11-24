@@ -570,6 +570,7 @@ pub fn mount(
                             db: db.clone(),
                             sessions: sessions.clone(),
                             wait: builtpanel_mod_services::DEFAULT_WAIT,
+                            terminal: Default::default(),
                         };
                         ModuleRoutes {
                             admin: Some(
